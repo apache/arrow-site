@@ -1,0 +1,891 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pyarrow.parquet &mdash; pyarrow  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="pyarrow  documentation" href="../../index.html"/>
+        <link rel="up" title="pyarrow" href="../pyarrow.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> pyarrow
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Install PyArrow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pandas.html">Pandas Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../filesystems.html">File interfaces and Memory Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../parquet.html">Reading/Writing Parquet files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_involved.html">Getting Involved</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Additional Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../jemalloc.html">jemalloc MemoryPool</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyarrow</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../pyarrow.html">pyarrow</a> &raquo;</li>
+        
+      <li>pyarrow.parquet</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for pyarrow.parquet</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed to the Apache Software Foundation (ASF) under one</span>
+<span class="c1"># or more contributor license agreements.  See the NOTICE file</span>
+<span class="c1"># distributed with this work for additional information</span>
+<span class="c1"># regarding copyright ownership.  The ASF licenses this file</span>
+<span class="c1"># to you under the Apache License, Version 2.0 (the</span>
+<span class="c1"># &quot;License&quot;); you may not use this file except in compliance</span>
+<span class="c1"># with the License.  You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing,</span>
+<span class="c1"># software distributed under the License is distributed on an</span>
+<span class="c1"># &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</span>
+<span class="c1"># KIND, either express or implied.  See the License for the</span>
+<span class="c1"># specific language governing permissions and limitations</span>
+<span class="c1"># under the License.</span>
+
+<span class="kn">import</span> <span class="nn">six</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">pyarrow.filesystem</span> <span class="k">import</span> <span class="n">LocalFilesystem</span>
+<span class="kn">from</span> <span class="nn">pyarrow._parquet</span> <span class="k">import</span> <span class="p">(</span><span class="n">ParquetReader</span><span class="p">,</span> <span class="n">FileMetaData</span><span class="p">,</span>  <span class="c1"># noqa</span>
+                              <span class="n">RowGroupMetaData</span><span class="p">,</span> <span class="n">ParquetSchema</span><span class="p">,</span>
+                              <span class="n">ParquetWriter</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">pyarrow._parquet</span> <span class="k">as</span> <span class="nn">_parquet</span>  <span class="c1"># noqa</span>
+<span class="kn">import</span> <span class="nn">pyarrow._array</span> <span class="k">as</span> <span class="nn">_array</span>
+<span class="kn">import</span> <span class="nn">pyarrow._table</span> <span class="k">as</span> <span class="nn">_table</span>
+
+
+<span class="c1"># ----------------------------------------------------------------------</span>
+<span class="c1"># Reading a single Parquet file</span>
+
+
+<div class="viewcode-block" id="ParquetFile"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile">[docs]</a><span class="k">class</span> <span class="nc">ParquetFile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reader interface for a single Parquet file</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : str or pyarrow.io.NativeFile</span>
+<span class="sd">        Readable source. For passing Python file objects or byte buffers,</span>
+<span class="sd">        see pyarrow.io.PythonFileInterface or pyarrow.io.BufferReader.</span>
+<span class="sd">    metadata : ParquetFileMetadata, default None</span>
+<span class="sd">        Use existing metadata object, rather than reading from file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ParquetFile.__init__"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reader</span> <span class="o">=</span> <span class="n">ParquetReader</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">metadata</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">schema</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_row_groups</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">num_row_groups</span>
+
+    <span class="k">def</span> <span class="nf">read_row_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read a single row group from a Parquet file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns: list</span>
+<span class="sd">            If not None, only these columns will be read from the row group.</span>
+<span class="sd">        nthreads : int, default 1</span>
+<span class="sd">            Number of columns to read in parallel. If &gt; 1, requires that the</span>
+<span class="sd">            underlying file source is threadsafe</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pyarrow.table.Table</span>
+<span class="sd">            Content of the row group as a table (of columns)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">column_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nthreads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="n">nthreads</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">read_row_group</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">column_indices</span><span class="o">=</span><span class="n">column_indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read a Table from Parquet format</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns: list</span>
+<span class="sd">            If not None, only these columns will be read from the file.</span>
+<span class="sd">        nthreads : int, default 1</span>
+<span class="sd">            Number of columns to read in parallel. If &gt; 1, requires that the</span>
+<span class="sd">            underlying file source is threadsafe</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pyarrow.table.Table</span>
+<span class="sd">            Content of the file as a table (of columns)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">column_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nthreads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="n">nthreads</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">read_all</span><span class="p">(</span><span class="n">column_indices</span><span class="o">=</span><span class="n">column_indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_column_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column_names</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">column_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">column_name_idx</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">column_names</span><span class="p">]</span></div>
+
+
+<span class="c1"># ----------------------------------------------------------------------</span>
+<span class="c1"># Metadata container providing instructions about reading a single Parquet</span>
+<span class="c1"># file, possibly part of a partitioned dataset</span>
+
+
+<span class="k">class</span> <span class="nc">ParquetDatasetPiece</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A single chunk of a potentially larger Parquet dataset to read. The</span>
+<span class="sd">    arguments will indicate to read either a single row group or all row</span>
+<span class="sd">    groups, and whether to add partition keys to the resulting pyarrow.Table</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to file in the file system where this piece is located</span>
+<span class="sd">    partition_keys : list of tuples</span>
+<span class="sd">      [(column name, ordinal index)]</span>
+<span class="sd">    row_group : int, default None</span>
+<span class="sd">        Row group to load. By default, reads all row groups</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">row_group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">partition_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">row_group</span> <span class="o">=</span> <span class="n">row_group</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span> <span class="o">=</span> <span class="n">partition_keys</span> <span class="ow">or</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">ParquetDatasetPiece</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">path</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">row_group</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">row_group</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">(</span><span class="si">{1!r}</span><span class="s1">, row_group=</span><span class="si">{2!r}</span><span class="s1">, partition_keys=</span><span class="si">{3!r}</span><span class="s1">)&#39;</span>
+                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">row_group</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">partition_str</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">=</span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+                                      <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="s1">&#39;partition[</span><span class="si">{0}</span><span class="s1">] &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">partition_str</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_group</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="s1">&#39; | row_group=</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">row_group</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">open_file_func</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a function that can create an open ParquetFile object, return the</span>
+<span class="sd">        file&#39;s metadata</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_open</span><span class="p">(</span><span class="n">open_file_func</span><span class="p">)</span><span class="o">.</span><span class="n">metadata</span>
+
+    <span class="k">def</span> <span class="nf">_open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">open_file_func</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns instance of ParquetFile</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">open_file_func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reader</span><span class="p">,</span> <span class="n">ParquetFile</span><span class="p">):</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">reader</span>
+
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">partitions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+             <span class="n">open_file_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read this piece as a pyarrow.Table</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : list of column names, default None</span>
+<span class="sd">        nthreads : int, default 1</span>
+<span class="sd">            For multithreaded file reads</span>
+<span class="sd">        partitions : ParquetPartitions, default None</span>
+<span class="sd">        open_file_func : function, default None</span>
+<span class="sd">            A function that knows how to construct a ParquetFile object given</span>
+<span class="sd">            the file path in this piece</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        table : pyarrow.Table</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">open_file_func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_open</span><span class="p">(</span><span class="n">open_file_func</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_group</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_row_group</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">row_group</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
+                                          <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">partitions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Must pass partition sets&#39;</span><span class="p">)</span>
+
+            <span class="c1"># Here, the index is the categorical code of the partition where</span>
+            <span class="c1"># this piece is located. Suppose we had</span>
+            <span class="c1">#</span>
+            <span class="c1"># /foo=a/0.parq</span>
+            <span class="c1"># /foo=b/0.parq</span>
+            <span class="c1"># /foo=c/0.parq</span>
+            <span class="c1">#</span>
+            <span class="c1"># Then we assign a=0, b=1, c=2. And the resulting Table pieces will</span>
+            <span class="c1"># have a DictionaryArray column named foo having the constant index</span>
+            <span class="c1"># value as indicated. The distinct categories of the partition have</span>
+            <span class="c1"># been computed in the ParquetManifest</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">):</span>
+                <span class="c1"># The partition code is the same for all values in this piece</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;i4&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">))</span>
+
+                <span class="c1"># This is set of all partition values, computed as part of the</span>
+                <span class="c1"># manifest, so [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;] as in our example above.</span>
+                <span class="n">dictionary</span> <span class="o">=</span> <span class="n">partitions</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">dictionary</span>
+
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">_array</span><span class="o">.</span><span class="n">DictionaryArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">)</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">_table</span><span class="o">.</span><span class="n">Column</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">arr</span><span class="p">)</span>
+                <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">append_column</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">table</span>
+
+
+<span class="k">def</span> <span class="nf">_is_parquet_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;parq&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;parquet&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">PartitionSet</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A data structure for cataloguing the observed Parquet partitions at a</span>
+<span class="sd">    particular level. So if we have</span>
+
+<span class="sd">    /foo=a/bar=0</span>
+<span class="sd">    /foo=a/bar=1</span>
+<span class="sd">    /foo=a/bar=2</span>
+<span class="sd">    /foo=b/bar=0</span>
+<span class="sd">    /foo=b/bar=1</span>
+<span class="sd">    /foo=b/bar=2</span>
+
+<span class="sd">    Then we have two partition sets, one for foo, another for bar. As we visit</span>
+<span class="sd">    levels of the partition hierarchy, a PartitionSet tracks the distinct</span>
+<span class="sd">    values and assigns categorical codes to use when reading the pieces</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keys</span> <span class="o">=</span> <span class="n">keys</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_indices</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dictionary</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the index of the partition value if it is known, otherwise assign</span>
+<span class="sd">        one</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_indices</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_indices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">key_indices</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">key_indices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+            <span class="k">return</span> <span class="n">index</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dictionary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dictionary</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;No known partition keys&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Only integer and string partition types are supported right now</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">integer_keys</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">]</span>
+            <span class="n">dictionary</span> <span class="o">=</span> <span class="n">_array</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">integer_keys</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">dictionary</span> <span class="o">=</span> <span class="n">_array</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dictionary</span> <span class="o">=</span> <span class="n">dictionary</span>
+        <span class="k">return</span> <span class="n">dictionary</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_sorted</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span> <span class="o">==</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ParquetPartitions</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partition_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Record a partition value at a particular level, returning the distinct</span>
+<span class="sd">        code for that value at that level. Example:</span>
+
+<span class="sd">        partitions.get_index(1, &#39;foo&#39;, &#39;a&#39;) returns 0</span>
+<span class="sd">        partitions.get_index(1, &#39;foo&#39;, &#39;b&#39;) returns 1</span>
+<span class="sd">        partitions.get_index(1, &#39;foo&#39;, &#39;c&#39;) returns 2</span>
+<span class="sd">        partitions.get_index(1, &#39;foo&#39;, &#39;a&#39;) returns 0</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        level : int</span>
+<span class="sd">            The nesting level of the partition we are observing</span>
+<span class="sd">        name : string</span>
+<span class="sd">            The partition name</span>
+<span class="sd">        key : string or int</span>
+<span class="sd">            The partition value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_names</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1"> was the name of the partition in &#39;</span>
+                                 <span class="s1">&#39;another level&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+
+            <span class="n">part_set</span> <span class="o">=</span> <span class="n">PartitionSet</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">part_set</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">partition_names</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level</span><span class="p">]</span><span class="o">.</span><span class="n">get_index</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">is_string</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ParquetManifest</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pathsep</span><span class="o">=</span><span class="s1">&#39;/&#39;</span><span class="p">,</span>
+                 <span class="n">partition_scheme</span><span class="o">=</span><span class="s1">&#39;hive&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filesystem</span> <span class="o">=</span> <span class="n">filesystem</span> <span class="ow">or</span> <span class="n">LocalFilesystem</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pathsep</span> <span class="o">=</span> <span class="n">pathsep</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dirpath</span> <span class="o">=</span> <span class="n">dirpath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partition_scheme</span> <span class="o">=</span> <span class="n">partition_scheme</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partitions</span> <span class="o">=</span> <span class="n">ParquetPartitions</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_visit_level</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dirpath</span><span class="p">,</span> <span class="p">[])</span>
+
+    <span class="k">def</span> <span class="nf">_visit_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">):</span>
+        <span class="n">directories</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">fs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filesystem</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">base_path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;</span><span class="si">{0}</span><span class="s1">&quot; is not a directory&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base_path</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">fs</span><span class="o">.</span><span class="n">ls</span><span class="p">(</span><span class="n">base_path</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">_is_parquet_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                    <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_common_metadata&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span> <span class="o">=</span> <span class="n">path</span>
+                <span class="k">elif</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_metadata&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span> <span class="o">=</span> <span class="n">path</span>
+                <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_should_silently_exclude</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ignoring path: </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="n">directories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">directories</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Found files in an intermediate &#39;</span>
+                             <span class="s1">&#39;directory: </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base_path</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">directories</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_visit_directories</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">directories</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_push_pieces</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_should_silently_exclude</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pathsep</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tail</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.crc&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">tail</span> <span class="ow">in</span> <span class="n">EXCLUDED_PARQUET_PATHS</span>
+
+    <span class="k">def</span> <span class="nf">_visit_directories</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">directories</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">directories</span><span class="p">:</span>
+            <span class="n">head</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">_path_split</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathsep</span><span class="p">)</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">_parse_hive_partition</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span>
+
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partitions</span><span class="o">.</span><span class="n">get_index</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+            <span class="n">dir_part_keys</span> <span class="o">=</span> <span class="n">part_keys</span> <span class="o">+</span> <span class="p">[(</span><span class="n">name</span><span class="p">,</span> <span class="n">index</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_visit_level</span><span class="p">(</span><span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">dir_part_keys</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_parse_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_scheme</span> <span class="o">==</span> <span class="s1">&#39;hive&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_parse_hive_partition</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;partition schema: </span><span class="si">{0}</span><span class="s1">&#39;</span>
+                                      <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition_scheme</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_push_pieces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
+            <span class="n">ParquetDatasetPiece</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">partition_keys</span><span class="o">=</span><span class="n">part_keys</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span>
+        <span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">_parse_hive_partition</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s1">&#39;=&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Directory name did not appear to be a &#39;</span>
+                         <span class="s1">&#39;partition: </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_path_split</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">sep</span><span class="p">):</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="n">sep</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">head</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">path</span><span class="p">[:</span><span class="n">i</span><span class="p">],</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span>
+    <span class="n">head</span> <span class="o">=</span> <span class="n">head</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="n">sep</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">head</span><span class="p">,</span> <span class="n">tail</span>
+
+
+<span class="n">EXCLUDED_PARQUET_PATHS</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;_SUCCESS&#39;</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="ParquetDataset"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset">[docs]</a><span class="k">class</span> <span class="nc">ParquetDataset</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Encapsulates details of reading a complete Parquet dataset possibly</span>
+<span class="sd">    consisting of multiple files and partitions in subdirectories</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path_or_paths : str or List[str]</span>
+<span class="sd">        A directory name, single file name, or list of file names</span>
+<span class="sd">    filesystem : Filesystem, default None</span>
+<span class="sd">        If nothing passed, paths assumed to be found in the local on-disk</span>
+<span class="sd">        filesystem</span>
+<span class="sd">    metadata : pyarrow.parquet.FileMetaData</span>
+<span class="sd">        Use metadata obtained elsewhere to validate file schemas</span>
+<span class="sd">    schema : pyarrow.parquet.Schema</span>
+<span class="sd">        Use schema obtained elsewhere to validate file schemas. Alternative to</span>
+<span class="sd">        metadata parameter</span>
+<span class="sd">    split_row_groups : boolean, default False</span>
+<span class="sd">        Divide files into pieces for each row group in the file</span>
+<span class="sd">    validate_schema : boolean, default True</span>
+<span class="sd">        Check that individual file schemas are all the same / compatible</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ParquetDataset.__init__"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">split_row_groups</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fs</span> <span class="o">=</span> <span class="n">LocalFilesystem</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fs</span> <span class="o">=</span> <span class="n">filesystem</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">paths</span> <span class="o">=</span> <span class="n">path_or_paths</span>
+
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">partitions</span><span class="p">,</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span><span class="p">)</span> <span class="o">=</span> <span class="n">_make_manifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="n">schema</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">split_row_groups</span> <span class="o">=</span> <span class="n">split_row_groups</span>
+
+        <span class="k">if</span> <span class="n">split_row_groups</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;split_row_groups not yet implemented&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">validate_schema</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">validate_schemas</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">validate_schemas</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">open_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_open_file_func</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="n">open_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span><span class="p">)</span><span class="o">.</span><span class="n">schema</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">open_file</span><span class="p">)</span><span class="o">.</span><span class="n">schema</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">schema</span>
+
+        <span class="c1"># Verify schemas are all equal</span>
+        <span class="k">for</span> <span class="n">piece</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">:</span>
+            <span class="n">file_metadata</span> <span class="o">=</span> <span class="n">piece</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">open_file</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">file_metadata</span><span class="o">.</span><span class="n">schema</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Schema in </span><span class="si">{0!s}</span><span class="s1"> was different. &#39;</span>
+                                 <span class="s1">&#39;</span><span class="si">{1!s}</span><span class="s1"> vs </span><span class="si">{2!s}</span><span class="s1">&#39;</span>
+                                 <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="n">file_metadata</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read multiple Parquet files as a single pyarrow.Table</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : List[str]</span>
+<span class="sd">            Names of columns to read from the file</span>
+<span class="sd">        nthreads : int, default 1</span>
+<span class="sd">            Number of columns to read in parallel. Requires that the underlying</span>
+<span class="sd">            file source is threadsafe</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pyarrow.Table</span>
+<span class="sd">            Content of the file as a table (of columns)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">open_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_open_file_func</span><span class="p">()</span>
+
+        <span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">piece</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">:</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">piece</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">,</span>
+                               <span class="n">partitions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">partitions</span><span class="p">,</span>
+                               <span class="n">open_file_func</span><span class="o">=</span><span class="n">open_file</span><span class="p">)</span>
+            <span class="n">tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+
+        <span class="n">all_data</span> <span class="o">=</span> <span class="n">_table</span><span class="o">.</span><span class="n">concat_tables</span><span class="p">(</span><span class="n">tables</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">all_data</span>
+
+    <span class="k">def</span> <span class="nf">_get_open_file_func</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="p">,</span> <span class="n">LocalFilesystem</span><span class="p">):</span>
+            <span class="k">def</span> <span class="nf">open_file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">meta</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">open_file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">),</span>
+                                   <span class="n">metadata</span><span class="o">=</span><span class="n">meta</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">open_file</span></div>
+
+
+<span class="k">def</span> <span class="nf">_make_manifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">fs</span><span class="p">,</span> <span class="n">pathsep</span><span class="o">=</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
+    <span class="n">partitions</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">metadata_path</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># Dask passes a directory as a list of length 1</span>
+        <span class="n">path_or_paths</span> <span class="o">=</span> <span class="n">path_or_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">is_string</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="ow">and</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
+        <span class="n">manifest</span> <span class="o">=</span> <span class="n">ParquetManifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span>
+                                   <span class="n">pathsep</span><span class="o">=</span><span class="n">pathsep</span><span class="p">)</span>
+        <span class="n">metadata_path</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">metadata_path</span>
+        <span class="n">pieces</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">pieces</span>
+        <span class="n">partitions</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">partitions</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">path_or_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">path_or_paths</span><span class="p">]</span>
+
+        <span class="c1"># List of paths</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Must pass at least one file path&#39;</span><span class="p">)</span>
+
+        <span class="n">pieces</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">path_or_paths</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s1">&#39;Passed non-file path: </span><span class="si">{0}</span><span class="s1">&#39;</span>
+                              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+            <span class="n">piece</span> <span class="o">=</span> <span class="n">ParquetDatasetPiece</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">piece</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pieces</span><span class="p">,</span> <span class="n">partitions</span><span class="p">,</span> <span class="n">metadata_path</span>
+
+
+<div class="viewcode-block" id="read_table"><a class="viewcode-back" href="../../generated/pyarrow.parquet.read_table.html#pyarrow.parquet.read_table">[docs]</a><span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read a Table from Parquet format</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source: str or pyarrow.io.NativeFile</span>
+<span class="sd">        Location of Parquet dataset. If a string passed, can be a single file</span>
+<span class="sd">        name or directory name. For passing Python file objects or byte</span>
+<span class="sd">        buffers, see pyarrow.io.PythonFileInterface or pyarrow.io.BufferReader.</span>
+<span class="sd">    columns: list</span>
+<span class="sd">        If not None, only these columns will be read from the file.</span>
+<span class="sd">    nthreads : int, default 1</span>
+<span class="sd">        Number of columns to read in parallel. Requires that the underlying</span>
+<span class="sd">        file source is threadsafe</span>
+<span class="sd">    metadata : FileMetaData</span>
+<span class="sd">        If separately computed</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pyarrow.Table</span>
+<span class="sd">        Content of the file as a table (of columns)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">is_string</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+        <span class="n">fs</span> <span class="o">=</span> <span class="n">LocalFilesystem</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">fs</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
+                                   <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
+
+    <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="write_table"><a class="viewcode-back" href="../../generated/pyarrow.parquet.write_table.html#pyarrow.parquet.write_table">[docs]</a><span class="k">def</span> <span class="nf">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;1.0&#39;</span><span class="p">,</span>
+                <span class="n">use_dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;snappy&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a Table to Parquet format</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    table : pyarrow.Table</span>
+<span class="sd">    where: string or pyarrow.io.NativeFile</span>
+<span class="sd">    row_group_size : int, default None</span>
+<span class="sd">        The maximum number of rows in each Parquet RowGroup. As a default,</span>
+<span class="sd">        we will write a single RowGroup per file.</span>
+<span class="sd">    version : {&quot;1.0&quot;, &quot;2.0&quot;}, default &quot;1.0&quot;</span>
+<span class="sd">        The Parquet format version, defaults to 1.0</span>
+<span class="sd">    use_dictionary : bool or list</span>
+<span class="sd">        Specify if we should use dictionary encoding in general or only for</span>
+<span class="sd">        some columns.</span>
+<span class="sd">    compression : str or dict</span>
+<span class="sd">        Specify the compression codec, either on a general basis or per-column.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">row_group_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;chunk_size&#39;</span><span class="p">,</span> <span class="n">row_group_size</span><span class="p">)</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+                           <span class="n">use_dictionary</span><span class="o">=</span><span class="n">use_dictionary</span><span class="p">,</span>
+                           <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+                           <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="write_metadata"><a class="viewcode-back" href="../../generated/pyarrow.parquet.write_metadata.html#pyarrow.parquet.write_metadata">[docs]</a><span class="k">def</span> <span class="nf">write_metadata</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;1.0&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write metadata-only Parquet file from schema</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    schema : pyarrow.Schema</span>
+<span class="sd">    where: string or pyarrow.io.NativeFile</span>
+<span class="sd">    version : {&quot;1.0&quot;, &quot;2.0&quot;}, default &quot;1.0&quot;</span>
+<span class="sd">        The Parquet format version, defaults to 1.0</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016 Apache Software Foundation.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
