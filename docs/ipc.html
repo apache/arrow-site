@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <title>Arrow Messaging and IPC</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Jekyll v3.4.3">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <title>Apache Arrow Homepage</title>
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+    <script src="/assets/javascripts/bootstrap.min.js"></script>
+  </head>
+
+
+<body class="wrap">
+  <div class="container">
+    <nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">Apache Arrow&#8482;&nbsp;&nbsp;&nbsp;</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown"
+             role="button" aria-haspopup="true"
+             aria-expanded="false">Specification<span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a href="/docs/memory_layout.html">Memory Layout</a></li>
+            <li><a href="/docs/metadata.html">Metadata</a></li>
+            <li><a href="/docs/ipc.html">Messaging / IPC</a></li>
+          </ul>
+        </li>
+
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown"
+             role="button" aria-haspopup="true"
+             aria-expanded="false">Code Documentation<span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a href="/docs/python">Python</a></li>
+            <li><a href="/docs/java">Java</a></li>
+          </ul>
+        </li>
+        <!-- <li><a href="/blog">Blog</a></li> -->
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown"
+             role="button" aria-haspopup="true"
+             aria-expanded="false">ASF Links<span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a href="http://www.apache.org/">ASF Website</a></li>
+            <li><a href="http://www.apache.org/licenses/">License</a></li>
+            <li><a href="http://www.apache.org/foundation/sponsorship.html">Donate</a></li>
+            <li><a href="http://www.apache.org/foundation/thanks.html">Thanks</a></li>
+            <li><a href="http://www.apache.org/security/">Security</a></li>
+          </ul>
+        </li>
+      </ul>
+      <a href="http://www.apache.org/">
+        <img style="float:right;" src="/img/asf_logo.svg" width="120px"/>
+      </a>
+      </div><!-- /.navbar-collapse -->
+    </div>
+  </nav>
+
+
+    <!--
+
+-->
+
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<h1 id="interprocess-messaging--communication-ipc">Interprocess messaging / communication (IPC)</h1>
+
+<h2 id="encapsulated-message-format">Encapsulated message format</h2>
+
+<p>Data components in the stream and file formats are represented as encapsulated
+<em>messages</em> consisting of:</p>
+
+<ul>
+  <li>A length prefix indicating the metadata size</li>
+  <li>The message metadata as a <a href="https://github.com/google]/flatbuffers">Flatbuffer</a></li>
+  <li>Padding bytes to an 8-byte boundary</li>
+  <li>The message body</li>
+</ul>
+
+<p>Schematically, we have:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>&lt;metadata_size: int32&gt;
+&lt;metadata_flatbuffer: bytes&gt;
+&lt;padding&gt;
+&lt;message body&gt;
+</code></pre>
+</div>
+
+<p>The <code class="highlighter-rouge">metadata_size</code> includes the size of the flatbuffer plus padding. The
+<code class="highlighter-rouge">Message</code> flatbuffer includes a version number, the particular message (as a
+flatbuffer union), and the size of the message body:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>table Message {
+  version: org.apache.arrow.flatbuf.MetadataVersion;
+  header: MessageHeader;
+  bodyLength: long;
+}
+</code></pre>
+</div>
+
+<p>Currently, we support 4 types of messages:</p>
+
+<ul>
+  <li>Schema</li>
+  <li>RecordBatch</li>
+  <li>DictionaryBatch</li>
+  <li>Tensor</li>
+</ul>
+
+<h2 id="streaming-format">Streaming format</h2>
+
+<p>We provide a streaming format for record batches. It is presented as a sequence
+of encapsulated messages, each of which follows the format above. The schema
+comes first in the stream, and it is the same for all of the record batches
+that follow. If any fields in the schema are dictionary-encoded, one or more
+<code class="highlighter-rouge">DictionaryBatch</code> messages will follow the schema.</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>&lt;SCHEMA&gt;
+&lt;DICTIONARY 0&gt;
+...
+&lt;DICTIONARY k - 1&gt;
+&lt;RECORD BATCH 0&gt;
+...
+&lt;RECORD BATCH n - 1&gt;
+&lt;EOS [optional]: int32&gt;
+</code></pre>
+</div>
+
+<p>When a stream reader implementation is reading a stream, after each message, it
+may read the next 4 bytes to know how large the message metadata that follows
+is. Once the message flatbuffer is read, you can then read the message body.</p>
+
+<p>The stream writer can signal end-of-stream (EOS) either by writing a 0 length
+as an <code class="highlighter-rouge">int32</code> or simply closing the stream interface.</p>
+
+<h2 id="file-format">File format</h2>
+
+<p>We define a “file format” supporting random access in a very similar format to
+the streaming format. The file starts and ends with a magic string <code class="highlighter-rouge">ARROW1</code>
+(plus padding). What follows in the file is identical to the stream format. At
+the end of the file, we write a <em>footer</em> including offsets and sizes for each
+of the data blocks in the file, so that random access is possible. See
+<a href="https://github.com/apache/arrow/blob/master/format/File.fbs">format/File.fbs</a> for the precise details of the file footer.</p>
+
+<p>Schematically we have:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>&lt;magic number "ARROW1"&gt;
+&lt;empty padding bytes [to 8 byte boundary]&gt;
+&lt;STREAMING FORMAT&gt;
+&lt;FOOTER&gt;
+&lt;FOOTER SIZE: int32&gt;
+&lt;magic number "ARROW1"&gt;
+</code></pre>
+</div>
+
+<h3 id="recordbatch-body-structure">RecordBatch body structure</h3>
+
+<p>The <code class="highlighter-rouge">RecordBatch</code> metadata contains a depth-first (pre-order) flattened set of
+field metadata and physical memory buffers (some comments from <a href="https://github.com/apache/arrow/blob/master/format/Message.fbs">Message.fbs</a>
+have been shortened / removed):</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>table RecordBatch {
+  length: long;
+  nodes: [FieldNode];
+  buffers: [Buffer];
+}
+
+struct FieldNode {
+  length: long;
+  null_count: long;
+}
+
+struct Buffer {
+  /// The shared memory page id where this buffer is located. Currently this is
+  /// not used
+  page: int;
+
+  /// The relative offset into the shared memory page where the bytes for this
+  /// buffer starts
+  offset: long;
+
+  /// The absolute length (in bytes) of the memory buffer. The memory is found
+  /// from offset (inclusive) to offset + length (non-inclusive).
+  length: long;
+}
+</code></pre>
+</div>
+
+<p>In the context of a file, the <code class="highlighter-rouge">page</code> is not used, and the <code class="highlighter-rouge">Buffer</code> offsets use
+as a frame of reference the start of the message body. So, while in a general
+IPC setting these offsets may be anyplace in one or more shared memory regions,
+in the file format the offsets start from 0.</p>
+
+<p>The location of a record batch and the size of the metadata block as well as
+the body of buffers is stored in the file footer:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>struct Block {
+  offset: long;
+  metaDataLength: int;
+  bodyLength: long;
+}
+</code></pre>
+</div>
+
+<p>Some notes about this</p>
+
+<ul>
+  <li>The <code class="highlighter-rouge">Block</code> offset indicates the starting byte of the record batch.</li>
+  <li>The metadata length includes the flatbuffer size, the record batch metadata
+flatbuffer, and any padding bytes</li>
+</ul>
+
+<h3 id="dictionary-batches">Dictionary Batches</h3>
+
+<p>Dictionary batches have not yet been implemented, while they are provided for
+in the metadata. For the time being, the <code class="highlighter-rouge">DICTIONARY</code> segments shown above in
+the file do not appear in any of the file implementations.</p>
+
+<h3 id="tensor-multi-dimensional-array-message-format">Tensor (Multi-dimensional Array) Message Format</h3>
+
+<p>The <code class="highlighter-rouge">Tensor</code> message types provides a way to write a multidimensional array of
+fixed-size values (such as a NumPy ndarray) using Arrow’s shared memory
+tools. Arrow implementations in general are not required to implement this data
+format, though we provide a reference implementation in C++.</p>
+
+<p>When writing a standalone encapsulated tensor message, we use the format as
+indicated above, but additionally align the starting offset (if writing to a
+shared memory region) to be a multiple of 8:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>&lt;PADDING&gt;
+&lt;metadata size: int32&gt;
+&lt;metadata&gt;
+&lt;tensor body&gt;
+</code></pre>
+</div>
+
+
+
+    <hr></hr>
+
+    <footer class="footer">
+  <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+  <p>&copy; 2017 Apache Software Foundation</p>
+</footer>
+
+  </div>
+</body>
+</html>

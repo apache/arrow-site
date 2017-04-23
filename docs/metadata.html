@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <title>Arrow Metadata</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Jekyll v3.4.3">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <title>Apache Arrow Homepage</title>
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+    <script src="/assets/javascripts/bootstrap.min.js"></script>
+  </head>
+
+
+<body class="wrap">
+  <div class="container">
+    <nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">Apache Arrow&#8482;&nbsp;&nbsp;&nbsp;</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown"
+             role="button" aria-haspopup="true"
+             aria-expanded="false">Specification<span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a href="/docs/memory_layout.html">Memory Layout</a></li>
+            <li><a href="/docs/metadata.html">Metadata</a></li>
+            <li><a href="/docs/ipc.html">Messaging / IPC</a></li>
+          </ul>
+        </li>
+
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown"
+             role="button" aria-haspopup="true"
+             aria-expanded="false">Code Documentation<span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a href="/docs/python">Python</a></li>
+            <li><a href="/docs/java">Java</a></li>
+          </ul>
+        </li>
+        <!-- <li><a href="/blog">Blog</a></li> -->
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown"
+             role="button" aria-haspopup="true"
+             aria-expanded="false">ASF Links<span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a href="http://www.apache.org/">ASF Website</a></li>
+            <li><a href="http://www.apache.org/licenses/">License</a></li>
+            <li><a href="http://www.apache.org/foundation/sponsorship.html">Donate</a></li>
+            <li><a href="http://www.apache.org/foundation/thanks.html">Thanks</a></li>
+            <li><a href="http://www.apache.org/security/">Security</a></li>
+          </ul>
+        </li>
+      </ul>
+      <a href="http://www.apache.org/">
+        <img style="float:right;" src="/img/asf_logo.svg" width="120px"/>
+      </a>
+      </div><!-- /.navbar-collapse -->
+    </div>
+  </nav>
+
+
+    <!--
+
+-->
+
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<h1 id="metadata-logical-types-schemas-data-headers">Metadata: Logical types, schemas, data headers</h1>
+
+<p>This is documentation for the Arrow metadata specification, which enables
+systems to communicate the</p>
+
+<ul>
+  <li>
+    <p>Logical array types (which are implemented using the physical memory layouts
+specified in <a href="https://github.com/apache/arrow/blob/master/format/Layout.md">Layout.md</a>)</p>
+  </li>
+  <li>
+    <p>Schemas for table-like collections of Arrow data structures</p>
+  </li>
+  <li>
+    <p>“Data headers” indicating the physical locations of memory buffers sufficient
+to reconstruct a Arrow data structures without copying memory.</p>
+  </li>
+</ul>
+
+<h2 id="canonical-implementation">Canonical implementation</h2>
+
+<p>We are using <a href="http://github.com/google/flatbuffers">Flatbuffers</a> for low-overhead reading and writing of the Arrow
+metadata. See <a href="https://github.com/apache/arrow/blob/master/format/Message.fbs">Message.fbs</a>.</p>
+
+<h2 id="schemas">Schemas</h2>
+
+<p>The <code class="highlighter-rouge">Schema</code> type describes a table-like structure consisting of any number of
+Arrow arrays, each of which can be interpreted as a column in the table. A
+schema by itself does not describe the physical structure of any particular set
+of data.</p>
+
+<p>A schema consists of a sequence of <strong>fields</strong>, which are metadata describing
+the columns. The Flatbuffers IDL for a field is:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>table Field {
+  // Name is not required, in i.e. a List
+  name: string;
+  nullable: bool;
+  type: Type;
+  // present only if the field is dictionary encoded
+  // will point to a dictionary provided by a DictionaryBatch message
+  dictionary: long;
+  // children apply only to Nested data types like Struct, List and Union
+  children: [Field];
+  /// layout of buffers produced for this type (as derived from the Type)
+  /// does not include children
+  /// each recordbatch will return instances of those Buffers.
+  layout: [ VectorLayout ];
+  // User-defined metadata
+  custom_metadata: [ KeyValue ];
+}
+</code></pre>
+</div>
+
+<p>The <code class="highlighter-rouge">type</code> is the logical type of the field. Nested types, such as List,
+Struct, and Union, have a sequence of child fields.</p>
+
+<p>a JSON representation of the schema is also provided:
+Field:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"name_of_the_field"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"nullable"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"type"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">Type</span><span class="w"> </span><span class="err">*/</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"children"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">Field</span><span class="w"> </span><span class="err">*/</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"typeLayout"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nt">"vectors"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">VectorLayout</span><span class="w"> </span><span class="err">*/</span><span class="w"> </span><span class="p">]</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+<p>VectorLayout:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"type"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"DATA|OFFSET|VALIDITY|TYPE"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"typeBitWidth"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">int</span><span class="w"> </span><span class="err">*/</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+<p>Type:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"null|struct|list|union|int|floatingpoint|utf8|binary|fixedsizebinary|bool|decimal|date|time|timestamp|interval"</span><span class="w">
+  </span><span class="err">//</span><span class="w"> </span><span class="err">fields</span><span class="w"> </span><span class="err">as</span><span class="w"> </span><span class="err">defined</span><span class="w"> </span><span class="err">in</span><span class="w"> </span><span class="err">the</span><span class="w"> </span><span class="err">Flatbuffer</span><span class="w"> </span><span class="err">depending</span><span class="w"> </span><span class="err">on</span><span class="w"> </span><span class="err">the</span><span class="w"> </span><span class="err">type</span><span class="w"> </span><span class="err">name</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+<p>Union:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"union"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"mode"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"Sparse|Dense"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"typeIds"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">integer</span><span class="w"> </span><span class="err">*/</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>The <code class="highlighter-rouge">typeIds</code> field in the Union are the codes used to denote each type, which
+may be different from the index of the child array. This is so that the union
+type ids do not have to be enumerated from 0.</p>
+
+<p>Int:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"int"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"bitWidth"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">integer</span><span class="w"> </span><span class="err">*/</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"isSigned"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">boolean</span><span class="w"> </span><span class="err">*/</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+<p>FloatingPoint:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"floatingpoint"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"precision"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"HALF|SINGLE|DOUBLE"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+<p>Decimal:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"decimal"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"precision"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">integer</span><span class="w"> </span><span class="err">*/</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"scale"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">integer</span><span class="w"> </span><span class="err">*/</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Timestamp:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"timestamp"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"unit"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"SECOND|MILLISECOND|MICROSECOND|NANOSECOND"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Date:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"unit"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"DAY|MILLISECOND"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Time:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"time"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"unit"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"SECOND|MILLISECOND|MICROSECOND|NANOSECOND"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"bitWidth"</span><span class="p">:</span><span class="w"> </span><span class="err">/*</span><span class="w"> </span><span class="err">integer:</span><span class="w"> </span><span class="mi">32</span><span class="w"> </span><span class="err">or</span><span class="w"> </span><span class="mi">64</span><span class="w"> </span><span class="err">*/</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<p>Interval:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"interval"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"unit"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"YEAR_MONTH|DAY_TIME"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+<p>Schema:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"fields"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="err">/*</span><span class="w"> </span><span class="err">Field</span><span class="w"> </span><span class="err">*/</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
+<h2 id="record-data-headers">Record data headers</h2>
+
+<p>A record batch is a collection of top-level named, equal length Arrow arrays
+(or vectors). If one of the arrays contains nested data, its child arrays are
+not required to be the same length as the top-level arrays.</p>
+
+<p>One can be thought of as a realization of a particular schema. The metadata
+describing a particular record batch is called a “data header”. Here is the
+Flatbuffers IDL for a record batch data header</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>table RecordBatch {
+  length: long;
+  nodes: [FieldNode];
+  buffers: [Buffer];
+}
+</code></pre>
+</div>
+
+<p>The <code class="highlighter-rouge">RecordBatch</code> metadata provides for record batches with length exceeding
+2^31 - 1, but Arrow implementations are not required to implement support
+beyond this size.</p>
+
+<p>The <code class="highlighter-rouge">nodes</code> and <code class="highlighter-rouge">buffers</code> fields are produced by a depth-first traversal /
+flattening of a schema (possibly containing nested types) for a given in-memory
+data set.</p>
+
+<h3 id="buffers">Buffers</h3>
+
+<p>A buffer is metadata describing a contiguous memory region relative to some
+virtual address space. This may include:</p>
+
+<ul>
+  <li>Shared memory, e.g. a memory-mapped file</li>
+  <li>An RPC message received in-memory</li>
+  <li>Data in a file</li>
+</ul>
+
+<p>The key form of the Buffer type is:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>struct Buffer {
+  offset: long;
+  length: long;
+}
+</code></pre>
+</div>
+
+<p>In the context of a record batch, each field has some number of buffers
+associated with it, which are derived from their physical memory layout.</p>
+
+<p>Each logical type (separate from its children, if it is a nested type) has a
+deterministic number of buffers associated with it. These will be specified in
+the logical types section.</p>
+
+<h3 id="field-metadata">Field metadata</h3>
+
+<p>The <code class="highlighter-rouge">FieldNode</code> values contain metadata about each level in a nested type
+hierarchy.</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>struct FieldNode {
+  /// The number of value slots in the Arrow array at this level of a nested
+  /// tree
+  length: long;
+
+  /// The number of observed nulls.
+  null_count: lohng;
+}
+</code></pre>
+</div>
+
+<p>The <code class="highlighter-rouge">FieldNode</code> metadata provides for fields with length exceeding 2^31 - 1,
+but Arrow implementations are not required to implement support for large
+arrays.</p>
+
+<h2 id="flattening-of-nested-data">Flattening of nested data</h2>
+
+<p>Nested types are flattened in the record batch in depth-first order. When
+visiting each field in the nested type tree, the metadata is appended to the
+top-level <code class="highlighter-rouge">fields</code> array and the buffers associated with that field (but not
+its children) are appended to the <code class="highlighter-rouge">buffers</code> array.</p>
+
+<p>For example, let’s consider the schema</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>col1: Struct&lt;a: Int32, b: List&lt;Int64&gt;, c: Float64&gt;
+col2: Utf8
+</code></pre>
+</div>
+
+<p>The flattened version of this is:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>FieldNode 0: Struct name='col1'
+FieldNode 1: Int32 name=a'
+FieldNode 2: List name='b'
+FieldNode 3: Int64 name='item'  # arbitrary
+FieldNode 4: Float64 name='c'
+FieldNode 5: Utf8 name='col2'
+</code></pre>
+</div>
+
+<p>For the buffers produced, we would have the following (as described in more
+detail for each type below):</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>buffer 0: field 0 validity bitmap
+
+buffer 1: field 1 validity bitmap
+buffer 2: field 1 values &lt;int32_t*&gt;
+
+buffer 3: field 2 validity bitmap
+buffer 4: field 2 list offsets &lt;int32_t*&gt;
+
+buffer 5: field 3 validity bitmap
+buffer 6: field 3 values &lt;int64_t*&gt;
+
+buffer 7: field 4 validity bitmap
+buffer 8: field 4 values &lt;double*&gt;
+
+buffer 9: field 5 validity bitmap
+buffer 10: field 5 offsets &lt;int32_t*&gt;
+buffer 11: field 5 data &lt;uint8_t*&gt;
+</code></pre>
+</div>
+
+<h2 id="logical-types">Logical types</h2>
+
+<p>A logical type consists of a type name and metadata along with an explicit
+mapping to a physical memory representation. These may fall into some different
+categories:</p>
+
+<ul>
+  <li>Types represented as fixed-width primitive arrays (for example: C-style
+integers and floating point numbers)</li>
+  <li>Types having equivalent memory layout to a physical nested type (e.g. strings
+use the list representation, but logically are not nested types)</li>
+</ul>
+
+<h3 id="integers">Integers</h3>
+
+<p>In the first version of Arrow we provide the standard 8-bit through 64-bit size
+standard C integer types, both signed and unsigned:</p>
+
+<ul>
+  <li>Signed types: Int8, Int16, Int32, Int64</li>
+  <li>Unsigned types: UInt8, UInt16, UInt32, UInt64</li>
+</ul>
+
+<p>The IDL looks like:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>table Int {
+  bitWidth: int;
+  is_signed: bool;
+}
+</code></pre>
+</div>
+
+<p>The integer endianness is currently set globally at the schema level. If a
+schema is set to be little-endian, then all integer types occurring within must
+be little-endian. Integers that are part of other data representations, such as
+list offsets and union types, must have the same endianness as the entire
+record batch.</p>
+
+<h3 id="floating-point-numbers">Floating point numbers</h3>
+
+<p>We provide 3 types of floating point numbers as fixed bit-width primitive array</p>
+
+<ul>
+  <li>Half precision, 16-bit width</li>
+  <li>Single precision, 32-bit width</li>
+  <li>Double precision, 64-bit width</li>
+</ul>
+
+<p>The IDL looks like:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>enum Precision:int {HALF, SINGLE, DOUBLE}
+
+table FloatingPoint {
+  precision: Precision;
+}
+</code></pre>
+</div>
+
+<h3 id="boolean">Boolean</h3>
+
+<p>The Boolean logical type is represented as a 1-bit wide primitive physical
+type. The bits are numbered using least-significant bit (LSB) ordering.</p>
+
+<p>Like other fixed bit-width primitive types, boolean data appears as 2 buffers
+in the data header (one bitmap for the validity vector and one for the values).</p>
+
+<h3 id="list">List</h3>
+
+<p>The <code class="highlighter-rouge">List</code> logical type is the logical (and identically-named) counterpart to
+the List physical type.</p>
+
+<p>In data header form, the list field node contains 2 buffers:</p>
+
+<ul>
+  <li>Validity bitmap</li>
+  <li>List offsets</li>
+</ul>
+
+<p>The buffers associated with a list’s child field are handled recursively
+according to the child logical type (e.g. <code class="highlighter-rouge">List&lt;Utf8&gt;</code> vs. <code class="highlighter-rouge">List&lt;Boolean&gt;</code>).</p>
+
+<h3 id="utf8-and-binary">Utf8 and Binary</h3>
+
+<p>We specify two logical types for variable length bytes:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">Utf8</code> data is unicode values with UTF-8 encoding</li>
+  <li><code class="highlighter-rouge">Binary</code> is any other variable length bytes</li>
+</ul>
+
+<p>These types both have the same memory layout as the nested type <code class="highlighter-rouge">List&lt;UInt8&gt;</code>,
+with the constraint that the inner bytes can contain no null values. From a
+logical type perspective they are primitive, not nested types.</p>
+
+<p>In data header form, while <code class="highlighter-rouge">List&lt;UInt8&gt;</code> would appear as 2 field nodes (<code class="highlighter-rouge">List</code>
+and <code class="highlighter-rouge">UInt8</code>) and 4 buffers (2 for each of the nodes, as per above), these types
+have a simplified representation single field node (of <code class="highlighter-rouge">Utf8</code> or <code class="highlighter-rouge">Binary</code>
+logical type, which have no children) and 3 buffers:</p>
+
+<ul>
+  <li>Validity bitmap</li>
+  <li>List offsets</li>
+  <li>Byte data</li>
+</ul>
+
+<h3 id="decimal">Decimal</h3>
+
+<p>TBD</p>
+
+<h3 id="timestamp">Timestamp</h3>
+
+<p>All timestamps are stored as a 64-bit integer, with one of four unit
+resolutions: second, millisecond, microsecond, and nanosecond.</p>
+
+<h3 id="date">Date</h3>
+
+<p>We support two different date types:</p>
+
+<ul>
+  <li>Days since the UNIX epoch as a 32-bit integer</li>
+  <li>Milliseconds since the UNIX epoch as a 64-bit integer</li>
+</ul>
+
+<h3 id="time">Time</h3>
+
+<p>Time supports the same unit resolutions: second, millisecond, microsecond, and
+nanosecond. We represent time as the smallest integer accommodating the
+indicated unit. For second and millisecond: 32-bit, for the others 64-bit.</p>
+
+<h2 id="dictionary-encoding">Dictionary encoding</h2>
+
+
+
+    <hr></hr>
+
+    <footer class="footer">
+  <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+  <p>&copy; 2017 Apache Software Foundation</p>
+</footer>
+
+  </div>
+</body>
+</html>
