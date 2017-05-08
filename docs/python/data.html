@@ -1,0 +1,524 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>In-Memory Data Model &#8212; pyarrow  documentation</title>
+    
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="IPC: Fast Streaming and Serialization" href="ipc.html" />
+    <link rel="prev" title="Memory and IO Interfaces" href="memory.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="ipc.html" title="IPC: Fast Streaming and Serialization"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="memory.html" title="Memory and IO Interfaces"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyarrow  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">In-Memory Data Model</a><ul>
+<li><a class="reference internal" href="#type-metadata">Type Metadata</a></li>
+<li><a class="reference internal" href="#schemas">Schemas</a></li>
+<li><a class="reference internal" href="#arrays">Arrays</a><ul>
+<li><a class="reference internal" href="#dictionary-arrays">Dictionary Arrays</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#record-batches">Record Batches</a></li>
+<li><a class="reference internal" href="#tables">Tables</a></li>
+<li><a class="reference internal" href="#custom-schema-and-field-metadata">Custom Schema and Field Metadata</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="memory.html"
+                        title="previous chapter">Memory and IO Interfaces</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ipc.html"
+                        title="next chapter">IPC: Fast Streaming and Serialization</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/data.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="in-memory-data-model">
+<span id="data"></span><h1>In-Memory Data Model<a class="headerlink" href="#in-memory-data-model" title="Permalink to this headline">¶</a></h1>
+<p>Apache Arrow defines columnar array data structures by composing type metadata
+with memory buffers, like the ones explained in the documentation on
+<a class="reference internal" href="memory.html#io"><span class="std std-ref">Memory and IO</span></a>. These data structures are exposed in Python through
+a series of interrelated classes:</p>
+<ul class="simple">
+<li><strong>Type Metadata</strong>: Instances of <code class="docutils literal"><span class="pre">pyarrow.DataType</span></code>, which describe a logical
+array type</li>
+<li><strong>Schemas</strong>: Instances of <code class="docutils literal"><span class="pre">pyarrow.Schema</span></code>, which describe a named
+collection of types. These can be thought of as the column types in a
+table-like object.</li>
+<li><strong>Arrays</strong>: Instances of <code class="docutils literal"><span class="pre">pyarrow.Array</span></code>, which are atomic, contiguous
+columnar data structures composed from Arrow Buffer objects</li>
+<li><strong>Record Batches</strong>: Instances of <code class="docutils literal"><span class="pre">pyarrow.RecordBatch</span></code>, which are a
+collection of Array objects with a particular Schema</li>
+<li><strong>Tables</strong>: Instances of <code class="docutils literal"><span class="pre">pyarrow.Table</span></code>, a logical table data structure in
+which each column consists of one or more <code class="docutils literal"><span class="pre">pyarrow.Array</span></code> objects of the
+same type.</li>
+</ul>
+<p>We will examine these in the sections below in a series of examples.</p>
+<div class="section" id="type-metadata">
+<span id="data-types"></span><h2>Type Metadata<a class="headerlink" href="#type-metadata" title="Permalink to this headline">¶</a></h2>
+<p>Apache Arrow defines language agnostic column-oriented data structures for
+array data. These include:</p>
+<ul class="simple">
+<li><strong>Fixed-length primitive types</strong>: numbers, booleans, date and times, fixed
+size binary, decimals, and other values that fit into a given number</li>
+<li><strong>Variable-length primitive types</strong>: binary, string</li>
+<li><strong>Nested types</strong>: list, struct, and union</li>
+<li><strong>Dictionary type</strong>: An encoded categorical type (more on this later)</li>
+</ul>
+<p>Each logical data type in Arrow has a corresponding factory function for
+creating an instance of that type object in Python:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="kn">as</span> <span class="nn">pa</span>
+
+<span class="gp">In [2]: </span><span class="n">t1</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">()</span>
+
+<span class="gp">In [3]: </span><span class="n">t2</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()</span>
+
+<span class="gp">In [4]: </span><span class="n">t3</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">binary</span><span class="p">()</span>
+
+<span class="gp">In [5]: </span><span class="n">t4</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">binary</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="gp">In [6]: </span><span class="n">t5</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">timestamp</span><span class="p">(</span><span class="s1">&#39;ms&#39;</span><span class="p">)</span>
+
+<span class="gp">In [7]: </span><span class="n">t1</span>
+<span class="gh">Out[7]: </span><span class="go">DataType(int32)</span>
+
+<span class="gp">In [8]: </span><span class="k">print</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span>
+<span class="go">                        int32</span>
+
+<span class="gp">In [9]: </span><span class="k">print</span><span class="p">(</span><span class="n">t4</span><span class="p">)</span>
+<span class="go">                              fixed_size_binary[10]</span>
+
+<span class="gp">In [10]: </span><span class="k">print</span><span class="p">(</span><span class="n">t5</span><span class="p">)</span>
+<span class="go">                                                    timestamp[ms]</span>
+</pre></div>
+</div>
+<p>We use the name <strong>logical type</strong> because the <strong>physical</strong> storage may be the
+same for one or more types. For example, <code class="docutils literal"><span class="pre">int64</span></code>, <code class="docutils literal"><span class="pre">float64</span></code>, and
+<code class="docutils literal"><span class="pre">timestamp[ms]</span></code> all occupy 64 bits per value.</p>
+<p>These objects are <cite>metadata</cite>; they are used for describing the data in arrays,
+schemas, and record batches. In Python, they can be used in functions where the
+input data (e.g. Python objects) may be coerced to more than one Arrow type.</p>
+<p>The <a class="reference internal" href="generated/pyarrow.Field.html#pyarrow.Field" title="pyarrow.Field"><code class="xref py py-class docutils literal"><span class="pre">Field</span></code></a> type is a type plus a name and optional
+user-defined metadata:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [11]: </span><span class="n">f0</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;int32_field&#39;</span><span class="p">,</span> <span class="n">t1</span><span class="p">)</span>
+
+<span class="gp">In [12]: </span><span class="n">f0</span>
+<span class="gh">Out[12]: </span><span class="go">pyarrow.Field&lt;int32_field: int32&gt;</span>
+
+<span class="gp">In [13]: </span><span class="n">f0</span><span class="o">.</span><span class="n">name</span>
+<span class="go">                                           Out[13]: &#39;int32_field&#39;</span>
+
+<span class="gp">In [14]: </span><span class="n">f0</span><span class="o">.</span><span class="n">type</span>
+<span class="go">                                                                  Out[14]: DataType(int32)</span>
+</pre></div>
+</div>
+<p>Arrow supports <strong>nested value types</strong> like list, struct, and union. When
+creating these, you must pass types or fields to indicate the data types of the
+types&#8217; children. For example, we can define a list of int32 values with:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [15]: </span><span class="n">t6</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span>
+
+<span class="gp">In [16]: </span><span class="n">t6</span>
+<span class="gh">Out[16]: </span><span class="go">DataType(list&lt;item: int32&gt;)</span>
+</pre></div>
+</div>
+<p>A <cite>struct</cite> is a collection of named fields:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [17]: </span><span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;s0&#39;</span><span class="p">,</span> <span class="n">t1</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;s1&#39;</span><span class="p">,</span> <span class="n">t2</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;s2&#39;</span><span class="p">,</span> <span class="n">t4</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;s3&#39;</span><span class="p">,</span> <span class="n">t6</span><span class="p">)</span>
+<span class="gp">   ....: </span><span class="p">]</span>
+<span class="gp">   ....: </span>
+
+<span class="gp">In [18]: </span><span class="n">t7</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">struct</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span>
+
+<span class="gp">In [19]: </span><span class="k">print</span><span class="p">(</span><span class="n">t7</span><span class="p">)</span>
+<span class="go">struct&lt;s0: int32, s1: string, s2: fixed_size_binary[10], s3: list&lt;item: int32&gt;&gt;</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="api.html#api-types"><span class="std std-ref">Data Types API</span></a> for a full listing of data type
+functions.</p>
+</div>
+<div class="section" id="schemas">
+<span id="data-schema"></span><h2>Schemas<a class="headerlink" href="#schemas" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="generated/pyarrow.Schema.html#pyarrow.Schema" title="pyarrow.Schema"><code class="xref py py-class docutils literal"><span class="pre">Schema</span></code></a> type is similar to the <code class="docutils literal"><span class="pre">struct</span></code> array type; it
+defines the column names and types in a record batch or table data
+structure. The <code class="docutils literal"><span class="pre">pyarrow.schema</span></code> factory function makes new Schema objects in
+Python:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [20]: </span><span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;s0&#39;</span><span class="p">,</span> <span class="n">t1</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;s1&#39;</span><span class="p">,</span> <span class="n">t2</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;s2&#39;</span><span class="p">,</span> <span class="n">t4</span><span class="p">),</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;s3&#39;</span><span class="p">,</span> <span class="n">t6</span><span class="p">)</span>
+<span class="gp">   ....: </span><span class="p">]</span>
+<span class="gp">   ....: </span>
+
+<span class="gp">In [21]: </span><span class="n">my_schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span>
+
+<span class="gp">In [22]: </span><span class="n">my_schema</span>
+<span class="gh">Out[22]: </span><span class="go"></span>
+<span class="go">s0: int32</span>
+<span class="go">s1: string</span>
+<span class="go">s2: fixed_size_binary[10]</span>
+<span class="go">s3: list&lt;item: int32&gt;</span>
+</pre></div>
+</div>
+<p>In some applications, you may not create schemas directly, only using the ones
+that are embedded in <a class="reference internal" href="ipc.html#ipc"><span class="std std-ref">IPC messages</span></a>.</p>
+</div>
+<div class="section" id="arrays">
+<span id="data-array"></span><h2>Arrays<a class="headerlink" href="#arrays" title="Permalink to this headline">¶</a></h2>
+<p>For each data type, there is an accompanying array data structure for holding
+memory buffers that define a single contiguous chunk of columnar array
+data. When you are using PyArrow, this data may come from IPC tools, though it
+can also be created from various types of Python sequences (lists, NumPy
+arrays, pandas data).</p>
+<p>A simple way to create arrays is with <code class="docutils literal"><span class="pre">pyarrow.array</span></code>, which is similar to
+the <code class="docutils literal"><span class="pre">numpy.array</span></code> function:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [23]: </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+
+<span class="gp">In [24]: </span><span class="n">arr</span>
+<span class="gh">Out[24]: </span><span class="go"></span>
+<span class="go">&lt;pyarrow._array.Int64Array object at 0x2b0bcdd11318&gt;</span>
+<span class="go">[</span>
+<span class="go">  1,</span>
+<span class="go">  2,</span>
+<span class="go">  NA,</span>
+<span class="go">  3</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+<p>The array&#8217;s <code class="docutils literal"><span class="pre">type</span></code> attribute is the corresponding piece of type metadata:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [25]: </span><span class="n">arr</span><span class="o">.</span><span class="n">type</span>
+<span class="gh">Out[25]: </span><span class="go">DataType(int64)</span>
+</pre></div>
+</div>
+<p>Each in-memory array has a known length and null count (which will be 0 if
+there are no null values):</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [26]: </span><span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+<span class="gh">Out[26]: </span><span class="go">4</span>
+
+<span class="gp">In [27]: </span><span class="n">arr</span><span class="o">.</span><span class="n">null_count</span>
+<span class="go">           Out[27]: 1</span>
+</pre></div>
+</div>
+<p>Scalar values can be selected with normal indexing.  <code class="docutils literal"><span class="pre">pyarrow.array</span></code> converts
+<code class="docutils literal"><span class="pre">None</span></code> values to Arrow nulls; we return the special <code class="docutils literal"><span class="pre">pyarrow.NA</span></code> value for
+nulls:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [28]: </span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gh">Out[28]: </span><span class="go">1</span>
+
+<span class="gp">In [29]: </span><span class="n">arr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="go">           Out[29]: NA</span>
+</pre></div>
+</div>
+<p>Arrow data is immutable, so values can be selected but not assigned.</p>
+<p>Arrays can be sliced without copying:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [30]: </span><span class="n">arr</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+<span class="gh">Out[30]: </span><span class="go">3</span>
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">pyarrow.array</span></code> can create simple nested data structures like lists:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [31]: </span><span class="n">nested_arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([[],</span> <span class="bp">None</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+
+<span class="gp">In [32]: </span><span class="k">print</span><span class="p">(</span><span class="n">nested_arr</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+<span class="go">list&lt;item: int64&gt;</span>
+</pre></div>
+</div>
+<div class="section" id="dictionary-arrays">
+<h3>Dictionary Arrays<a class="headerlink" href="#dictionary-arrays" title="Permalink to this headline">¶</a></h3>
+<p>The <strong>Dictionary</strong> type in PyArrow is a special array type that is similar to a
+factor in R or a <code class="docutils literal"><span class="pre">pandas.Categorical</span></code>. It enables one or more record batches
+in a file or stream to transmit integer <em>indices</em> referencing a shared
+<strong>dictionary</strong> containing the distinct values in the logical array. This is
+particularly often used with strings to save memory and improve performance.</p>
+<p>The way that dictionaries are handled in the Apache Arrow format and the way
+they appear in C++ and Python is slightly different. We define a special
+<a class="reference internal" href="generated/pyarrow.DictionaryArray.html#pyarrow.DictionaryArray" title="pyarrow.DictionaryArray"><code class="xref py py-class docutils literal"><span class="pre">DictionaryArray</span></code></a> type with a corresponding dictionary type. Let&#8217;s
+consider an example:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [33]: </span><span class="n">indices</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+
+<span class="gp">In [34]: </span><span class="n">dictionary</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="s1">&#39;baz&#39;</span><span class="p">])</span>
+
+<span class="gp">In [35]: </span><span class="n">dict_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">DictionaryArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">)</span>
+
+<span class="gp">In [36]: </span><span class="n">dict_array</span>
+<span class="gh">Out[36]: </span><span class="go"></span>
+<span class="go">&lt;pyarrow._array.DictionaryArray object at 0x2b0bcdd19588&gt;</span>
+<span class="go">[</span>
+<span class="go">  &#39;foo&#39;,</span>
+<span class="go">  &#39;bar&#39;,</span>
+<span class="go">  &#39;foo&#39;,</span>
+<span class="go">  &#39;bar&#39;,</span>
+<span class="go">  &#39;baz&#39;,</span>
+<span class="go">  &#39;foo&#39;,</span>
+<span class="go">  NA,</span>
+<span class="go">  &#39;baz&#39;</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+<p>Here we have:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [37]: </span><span class="k">print</span><span class="p">(</span><span class="n">dict_array</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+<span class="go">dictionary&lt;values=string, indices=int64&gt;</span>
+
+<span class="gp">In [38]: </span><span class="n">dict_array</span><span class="o">.</span><span class="n">indices</span>
+<span class="go">                                         Out[38]: </span>
+<span class="go">&lt;pyarrow._array.Int64Array object at 0x2b0bcdd29908&gt;</span>
+<span class="go">[</span>
+<span class="go">  0,</span>
+<span class="go">  1,</span>
+<span class="go">  0,</span>
+<span class="go">  1,</span>
+<span class="go">  2,</span>
+<span class="go">  0,</span>
+<span class="go">  NA,</span>
+<span class="go">  2</span>
+<span class="go">]</span>
+
+<span class="gp">In [39]: </span><span class="n">dict_array</span><span class="o">.</span><span class="n">dictionary</span>
+<span class="go">                                                                                                                                                    Out[39]: </span>
+<span class="go">&lt;pyarrow._array.StringArray object at 0x2b0bcdd29818&gt;</span>
+<span class="go">[</span>
+<span class="go">  &#39;foo&#39;,</span>
+<span class="go">  &#39;bar&#39;,</span>
+<span class="go">  &#39;baz&#39;</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+<p>When using <a class="reference internal" href="generated/pyarrow.DictionaryArray.html#pyarrow.DictionaryArray" title="pyarrow.DictionaryArray"><code class="xref py py-class docutils literal"><span class="pre">DictionaryArray</span></code></a> with pandas, the analogue is
+<code class="docutils literal"><span class="pre">pandas.Categorical</span></code> (more on this later):</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [40]: </span><span class="n">dict_array</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+<span class="gh">Out[40]: </span><span class="go"></span>
+<span class="go">[foo, bar, foo, bar, baz, foo, NaN, baz]</span>
+<span class="go">Categories (3, object): [foo, bar, baz]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="record-batches">
+<span id="data-record-batch"></span><h2>Record Batches<a class="headerlink" href="#record-batches" title="Permalink to this headline">¶</a></h2>
+<p>A <strong>Record Batch</strong> in Apache Arrow is a collection of equal-length array
+instances. Let&#8217;s consider a collection of arrays:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [41]: </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]),</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="s1">&#39;baz&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">]),</span>
+<span class="gp">   ....: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">True</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">])</span>
+<span class="gp">   ....: </span><span class="p">]</span>
+<span class="gp">   ....: </span>
+</pre></div>
+</div>
+<p>A record batch can be created from this list of arrays using
+<code class="docutils literal"><span class="pre">RecordBatch.from_arrays</span></code>:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [42]: </span><span class="n">batch</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">RecordBatch</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;f0&#39;</span><span class="p">,</span> <span class="s1">&#39;f1&#39;</span><span class="p">,</span> <span class="s1">&#39;f2&#39;</span><span class="p">])</span>
+
+<span class="gp">In [43]: </span><span class="n">batch</span><span class="o">.</span><span class="n">num_columns</span>
+<span class="gh">Out[43]: </span><span class="go">3</span>
+
+<span class="gp">In [44]: </span><span class="n">batch</span><span class="o">.</span><span class="n">num_rows</span>
+<span class="go">           Out[44]: 4</span>
+
+<span class="gp">In [45]: </span><span class="n">batch</span><span class="o">.</span><span class="n">schema</span>
+<span class="go">                      Out[45]: </span>
+<span class="go">f0: int64</span>
+<span class="go">f1: string</span>
+<span class="go">f2: bool</span>
+<span class="go">-- metadata --</span>
+
+<span class="gp">In [46]: </span><span class="n">batch</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="go">                                                                             Out[46]: </span>
+<span class="go">&lt;pyarrow._array.StringArray object at 0x2b0bcdd36f98&gt;</span>
+<span class="go">[</span>
+<span class="go">  &#39;foo&#39;,</span>
+<span class="go">  &#39;bar&#39;,</span>
+<span class="go">  &#39;baz&#39;,</span>
+<span class="go">  NA</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+<p>A record batch can be sliced without copying memory like an array:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [47]: </span><span class="n">batch2</span> <span class="o">=</span> <span class="n">batch</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+<span class="gp">In [48]: </span><span class="n">batch2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="gh">Out[48]: </span><span class="go"></span>
+<span class="go">&lt;pyarrow._array.StringArray object at 0x2b0bcdd36ea8&gt;</span>
+<span class="go">[</span>
+<span class="go">  &#39;bar&#39;,</span>
+<span class="go">  &#39;baz&#39;,</span>
+<span class="go">  NA</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="tables">
+<span id="data-table"></span><h2>Tables<a class="headerlink" href="#tables" title="Permalink to this headline">¶</a></h2>
+<p>The PyArrow <a class="reference internal" href="generated/pyarrow.Table.html#pyarrow.Table" title="pyarrow.Table"><code class="xref py py-class docutils literal"><span class="pre">Table</span></code></a> type is not part of the Apache Arrow
+specification, but is rather a tool to help with wrangling multiple record
+batches and array pieces as a single logical dataset. As a relevant example, we
+may receive multiple small record batches in a socket stream, then need to
+concatenate them into contiguous memory for use in NumPy or pandas. The Table
+object makes this efficient without requiring additional memory copying.</p>
+<p>Considering the record batch we created above, we can create a Table containing
+one or more copies of the batch using <code class="docutils literal"><span class="pre">Table.from_batches</span></code>:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [49]: </span><span class="n">batches</span> <span class="o">=</span> <span class="p">[</span><span class="n">batch</span><span class="p">]</span> <span class="o">*</span> <span class="mi">5</span>
+
+<span class="gp">In [50]: </span><span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_batches</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span>
+
+<span class="gp">In [51]: </span><span class="n">table</span>
+<span class="gh">Out[51]: </span><span class="go"></span>
+<span class="go">pyarrow.Table</span>
+<span class="go">f0: int64</span>
+<span class="go">f1: string</span>
+<span class="go">f2: bool</span>
+<span class="go">-- metadata --</span>
+
+<span class="gp">In [52]: </span><span class="n">table</span><span class="o">.</span><span class="n">num_rows</span>
+<span class="go">                                                                     Out[52]: 20</span>
+</pre></div>
+</div>
+<p>The table&#8217;s columns are instances of <a class="reference internal" href="generated/pyarrow.Column.html#pyarrow.Column" title="pyarrow.Column"><code class="xref py py-class docutils literal"><span class="pre">Column</span></code></a>, which is a container
+for one or more arrays of the same type.</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [53]: </span><span class="n">c</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="gp">In [54]: </span><span class="n">c</span>
+<span class="gh">Out[54]: </span><span class="go">&lt;pyarrow._table.Column at 0x2b0bcda54f00&gt;</span>
+
+<span class="gp">In [55]: </span><span class="n">c</span><span class="o">.</span><span class="n">data</span>
+<span class="go">                                                   Out[55]: &lt;pyarrow._table.ChunkedArray at 0x2b0bcda54ed0&gt;</span>
+
+<span class="gp">In [56]: </span><span class="n">c</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">num_chunks</span>
+<span class="go">                                                                                                            Out[56]: 5</span>
+
+<span class="gp">In [57]: </span><span class="n">c</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">                                                                                                                       Out[57]: </span>
+<span class="go">&lt;pyarrow._array.Int64Array object at 0x2b0bcdd4b3b8&gt;</span>
+<span class="go">[</span>
+<span class="go">  1,</span>
+<span class="go">  2,</span>
+<span class="go">  3,</span>
+<span class="go">  4</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+<p>As you&#8217;ll see in the <span class="xref std std-ref">pandas section</span>, we can convert thee
+objects to contiguous NumPy arrays for use in pandas:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span></span><span class="gp">In [58]: </span><span class="n">c</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+<span class="gh">Out[58]: </span><span class="go"></span>
+<span class="go">0     1</span>
+<span class="go">1     2</span>
+<span class="go">2     3</span>
+<span class="go">3     4</span>
+<span class="go">4     1</span>
+<span class="go">5     2</span>
+<span class="go">6     3</span>
+<span class="go">7     4</span>
+<span class="go">8     1</span>
+<span class="go">9     2</span>
+<span class="go">10    3</span>
+<span class="go">11    4</span>
+<span class="go">12    1</span>
+<span class="go">13    2</span>
+<span class="go">14    3</span>
+<span class="go">15    4</span>
+<span class="go">16    1</span>
+<span class="go">17    2</span>
+<span class="go">18    3</span>
+<span class="go">19    4</span>
+<span class="go">Name: f0, dtype: int64</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="custom-schema-and-field-metadata">
+<h2>Custom Schema and Field Metadata<a class="headerlink" href="#custom-schema-and-field-metadata" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="ipc.html" title="IPC: Fast Streaming and Serialization"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="memory.html" title="Memory and IO Interfaces"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pyarrow  documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016-2017 Apache Software Foundation.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.5.
+    </div>
+  </body>
+</html>
