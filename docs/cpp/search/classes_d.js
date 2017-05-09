@@ -1,14 +1,19 @@
 var searchData=
 [
-  ['random',['Random',['../classarrow_1_1_random.html',1,'arrow']]],
-  ['randomaccessfile',['RandomAccessFile',['../classarrow_1_1io_1_1_random_access_file.html',1,'arrow::io']]],
-  ['rangeequalsvisitor',['RangeEqualsVisitor',['../classarrow_1_1_range_equals_visitor.html',1,'arrow']]],
-  ['readable',['Readable',['../classarrow_1_1io_1_1_readable.html',1,'arrow::io']]],
-  ['readablefile',['ReadableFile',['../classarrow_1_1io_1_1_readable_file.html',1,'arrow::io']]],
-  ['readablefileimpl',['ReadableFileImpl',['../classarrow_1_1io_1_1_readable_file_1_1_readable_file_impl.html',1,'arrow::io::ReadableFile']]],
-  ['readwritefileinterface',['ReadWriteFileInterface',['../classarrow_1_1io_1_1_read_write_file_interface.html',1,'arrow::io']]],
-  ['rebind',['rebind',['../structarrow_1_1stl__allocator_1_1rebind.html',1,'arrow::stl_allocator']]],
-  ['recordbatch',['RecordBatch',['../classarrow_1_1_record_batch.html',1,'arrow']]],
-  ['recordbatchwriter',['RecordBatchWriter',['../classarrow_1_1ipc_1_1_record_batch_writer.html',1,'arrow::ipc']]],
-  ['resizablebuffer',['ResizableBuffer',['../classarrow_1_1_resizable_buffer.html',1,'arrow']]]
+  ['pandasblock',['PandasBlock',['../classarrow_1_1py_1_1_pandas_block.html',1,'arrow::py']]],
+  ['pandasconverter',['PandasConverter',['../classarrow_1_1py_1_1_pandas_converter.html',1,'arrow::py']]],
+  ['pandasoptions',['PandasOptions',['../structarrow_1_1py_1_1_pandas_options.html',1,'arrow::py']]],
+  ['poolbuffer',['PoolBuffer',['../classarrow_1_1_pool_buffer.html',1,'arrow']]],
+  ['prettyprintoptions',['PrettyPrintOptions',['../structarrow_1_1_pretty_print_options.html',1,'arrow']]],
+  ['primitivearray',['PrimitiveArray',['../classarrow_1_1_primitive_array.html',1,'arrow']]],
+  ['primitivebuilder',['PrimitiveBuilder',['../classarrow_1_1_primitive_builder.html',1,'arrow']]],
+  ['primitivebuilder_3c_20t_20_3e',['PrimitiveBuilder&lt; T &gt;',['../classarrow_1_1_primitive_builder.html',1,'arrow']]],
+  ['primitivectype',['PrimitiveCType',['../classarrow_1_1_primitive_c_type.html',1,'arrow']]],
+  ['pyacquiregil',['PyAcquireGIL',['../classarrow_1_1py_1_1_py_acquire_g_i_l.html',1,'arrow::py']]],
+  ['pybuffer',['PyBuffer',['../classarrow_1_1py_1_1_py_buffer.html',1,'arrow::py']]],
+  ['pybytesreader',['PyBytesReader',['../classarrow_1_1py_1_1_py_bytes_reader.html',1,'arrow::py']]],
+  ['pyobjectstringify',['PyObjectStringify',['../structarrow_1_1py_1_1_py_object_stringify.html',1,'arrow::py']]],
+  ['pyoutputstream',['PyOutputStream',['../classarrow_1_1py_1_1_py_output_stream.html',1,'arrow::py']]],
+  ['pyreadablefile',['PyReadableFile',['../classarrow_1_1py_1_1_py_readable_file.html',1,'arrow::py']]],
+  ['pythonfile',['PythonFile',['../classarrow_1_1py_1_1_python_file.html',1,'arrow::py']]]
 ];

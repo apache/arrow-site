@@ -1,5 +1,7 @@
 var searchData=
 [
+  ['windows',['Windows',['../md__windows.html',1,'']]],
+  ['windows_2emd',['Windows.md',['../_windows_8md.html',1,'']]],
   ['windows_5fcompatibility_2eh',['windows_compatibility.h',['../windows__compatibility_8h.html',1,'']]],
   ['wrap',['Wrap',['../structarrow_1_1py_1_1_wrap_bytes_3_01_string_array_01_4.html#ab79b7aea73a0f09c6e51fa92743e99f8',1,'arrow::py::WrapBytes&lt; StringArray &gt;::Wrap()'],['../structarrow_1_1py_1_1_wrap_bytes_3_01_binary_array_01_4.html#ae6fce495fd2605409f0f37999b5a19df',1,'arrow::py::WrapBytes&lt; BinaryArray &gt;::Wrap()'],['../structarrow_1_1py_1_1_wrap_bytes_3_01_fixed_size_binary_array_01_4.html#a653e5d65fc9b6c72533175042c28cd2c',1,'arrow::py::WrapBytes&lt; FixedSizeBinaryArray &gt;::Wrap()']]],
   ['wrapbytes',['WrapBytes',['../structarrow_1_1py_1_1_wrap_bytes.html',1,'arrow::py']]],

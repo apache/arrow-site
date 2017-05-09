@@ -1,5 +1,12 @@
 var searchData=
 [
-  ['value_5ftype',['value_type',['../classarrow_1_1stl__allocator.html#a116d180eeb40ae7a06fbc93dd59f71b6',1,'arrow::stl_allocator::value_type()'],['../classarrow_1_1_numeric_array.html#afd31bfd5f4362d391e159ffbea507e58',1,'arrow::NumericArray::value_type()'],['../classarrow_1_1_primitive_builder.html#a7232c92a1ba781092ee68d2a65196dcf',1,'arrow::PrimitiveBuilder::value_type()'],['../structarrow_1_1py_1_1npy__traits_3_01_n_p_y___b_o_o_l_01_4.html#a42499fb4ac9b079489d00deeca970513',1,'arrow::py::npy_traits&lt; NPY_BOOL &gt;::value_type()'],['../structarrow_1_1py_1_1npy__traits_3_01_n_p_y___f_l_o_a_t32_01_4.html#ac4f0f93aca081275901533304241e795',1,'arrow::py::npy_traits&lt; NPY_FLOAT32 &gt;::value_type()'],['../structarrow_1_1py_1_1npy__traits_3_01_n_p_y___f_l_o_a_t64_01_4.html#a2eb0a5e2660cbbad37ac7a008d137afb',1,'arrow::py::npy_traits&lt; NPY_FLOAT64 &gt;::value_type()'],['../structarrow_1_1py_1_1npy__traits_3_01_n_p_y___d_a_t_e_t_i_m_e_01_4.html#a7e8a9bdcee7b2cc346629648d7e9b13e',1,'arrow::py::npy_traits&lt; NPY_DATETIME &gt;::value_type()'],['../structarrow_1_1py_1_1npy__traits_3_01_n_p_y___o_b_j_e_c_t_01_4.html#a216fb5a04574dec58e40c8066c121e9e',1,'arrow::py::npy_traits&lt; NPY_OBJECT &gt;::value_type()'],['../structarrow_1_1decimal_1_1_decimal.html#a237f7e82c58e0a7567fa5dd55bcb1865',1,'arrow::decimal::Decimal::value_type()']]],
-  ['vectorlayoutoffset',['VectorLayoutOffset',['../namespacearrow_1_1ipc.html#a5ebcc69c67e3a95be6a12dd264beabfd',1,'arrow::ipc']]]
+  ['uint16block',['UInt16Block',['../namespacearrow_1_1py.html#a03149ef2c32744a4b80705191884b773',1,'arrow::py']]],
+  ['uint16builder',['UInt16Builder',['../namespacearrow.html#a6f7720234c751cfa79a0d6d4e2014485',1,'arrow']]],
+  ['uint32block',['UInt32Block',['../namespacearrow_1_1py.html#acc7f1ea856a470586ebdfd927b6aaf27',1,'arrow::py']]],
+  ['uint32builder',['UInt32Builder',['../namespacearrow.html#a54e6101656a21b97a88179c8d1c453b9',1,'arrow']]],
+  ['uint64block',['UInt64Block',['../namespacearrow_1_1py.html#ac985ee4d2e9e846725819ce76d66f0bc',1,'arrow::py']]],
+  ['uint64builder',['UInt64Builder',['../namespacearrow.html#a1777cb0f7c98036ad6f078fa0f1a6829',1,'arrow']]],
+  ['uint8block',['UInt8Block',['../namespacearrow_1_1py.html#a56725e0824d2c88a4e928478afa774bd',1,'arrow::py']]],
+  ['uint8builder',['UInt8Builder',['../namespacearrow.html#adab028f188008a82d790cd69ac351a3b',1,'arrow']]],
+  ['unit',['Unit',['../classarrow_1_1_timestamp_type.html#a895411d8d9ceffe0aa91d125aea7b429',1,'arrow::TimestampType']]]
 ];

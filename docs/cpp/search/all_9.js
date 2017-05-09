@@ -21,7 +21,6 @@ var searchData=
   ['initialize',['Initialize',['../structarrow_1_1io_1_1_lib_hdfs_shim.html#a0301cbac951b02efb401d87de5cbf9b8',1,'arrow::io::LibHdfsShim']]],
   ['initmemorymap',['InitMemoryMap',['../classarrow_1_1io_1_1_memory_map_fixture.html#a63e2cbe37530900d62ec7c339130ac60',1,'arrow::io::MemoryMapFixture']]],
   ['initnullbitmap',['InitNullBitmap',['../classarrow_1_1py_1_1_pandas_converter.html#aded70e9fc85261f1e4fa2f22c2053835',1,'arrow::py::PandasConverter']]],
-  ['initnumpy',['InitNumPy',['../namespacearrow_1_1py.html#ac06c5c225911e567acf38571301d29f5',1,'arrow::py']]],
   ['inmemorysource',['InMemorySource',['../classarrow_1_1_in_memory_source.html#a9507fba1c0c227ef6f79dfbada81b512',1,'arrow::InMemorySource']]],
   ['inmemorysource',['InMemorySource',['../classarrow_1_1_in_memory_source.html',1,'arrow']]],
   ['inputstream',['InputStream',['../classarrow_1_1io_1_1_input_stream.html',1,'arrow::io']]],

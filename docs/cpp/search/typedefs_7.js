@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['makerecordbatch',['MakeRecordBatch',['../namespacearrow_1_1ipc.html#a1579008ce5505753a26057b65535d5de',1,'arrow::ipc']]]
+  ['keyvalueoffset',['KeyValueOffset',['../namespacearrow_1_1ipc.html#a499dbd06d4700a2d1d5786f859461baf',1,'arrow::ipc']]]
 ];

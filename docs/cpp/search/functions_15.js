@@ -4,7 +4,7 @@ var searchData=
   ['validate_5fprecision',['validate_precision',['../namespacearrow_1_1py.html#a7c408fabe2afbd84c6877572032b5fa6',1,'arrow::py']]],
   ['validatecolumns',['ValidateColumns',['../classarrow_1_1_table.html#a4e2b13a2f550f8c10261d8567f424557',1,'arrow::Table']]],
   ['validatedata',['ValidateData',['../classarrow_1_1_column.html#a1a26dc8ee0f1ddca5da50bab6f39f1d7',1,'arrow::Column']]],
-  ['value',['Value',['../classarrow_1_1_numeric_array.html#a2311017ad534010c755d4c9465a3bfc0',1,'arrow::NumericArray::Value()'],['../classarrow_1_1_boolean_array.html#af77d14c69319d30fbd87044a5004ab80',1,'arrow::BooleanArray::Value()']]],
+  ['value',['Value',['../classarrow_1_1_numeric_array.html#a2311017ad534010c755d4c9465a3bfc0',1,'arrow::NumericArray::Value()'],['../classarrow_1_1_boolean_array.html#af77d14c69319d30fbd87044a5004ab80',1,'arrow::BooleanArray::Value()'],['../classarrow_1_1_key_value_metadata.html#a6138fd0c4ce0b4817398e3f344027e6b',1,'arrow::KeyValueMetadata::value()']]],
   ['value_5fbuilder',['value_builder',['../classarrow_1_1_list_builder.html#a7ea83941ddde40eb428a7438880c473f',1,'arrow::ListBuilder']]],
   ['value_5ffield',['value_field',['../classarrow_1_1_list_type.html#a3118c52090d282e20e746dc94a954867',1,'arrow::ListType']]],
   ['value_5flength',['value_length',['../classarrow_1_1_list_array.html#a5f20b2a0693b7c317525ca0e4805465e',1,'arrow::ListArray::value_length()'],['../classarrow_1_1_binary_array.html#aacf32b2ed8d93dada5dc3c139662c59c',1,'arrow::BinaryArray::value_length()']]],
