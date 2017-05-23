@@ -9,6 +9,16 @@ var searchData=
   ['readwritefileinterface',['ReadWriteFileInterface',['../classarrow_1_1io_1_1_read_write_file_interface.html',1,'arrow::io']]],
   ['rebind',['rebind',['../structarrow_1_1stl__allocator_1_1rebind.html',1,'arrow::stl_allocator']]],
   ['recordbatch',['RecordBatch',['../classarrow_1_1_record_batch.html',1,'arrow']]],
+  ['recordbatchfilereader',['RecordBatchFileReader',['../classarrow_1_1ipc_1_1_record_batch_file_reader.html',1,'arrow::ipc']]],
+  ['recordbatchfilereaderimpl',['RecordBatchFileReaderImpl',['../classarrow_1_1ipc_1_1_record_batch_file_reader_1_1_record_batch_file_reader_impl.html',1,'arrow::ipc::RecordBatchFileReader']]],
+  ['recordbatchfilewriter',['RecordBatchFileWriter',['../classarrow_1_1ipc_1_1_record_batch_file_writer.html',1,'arrow::ipc']]],
+  ['recordbatchfilewriterimpl',['RecordBatchFileWriterImpl',['../classarrow_1_1ipc_1_1_record_batch_file_writer_1_1_record_batch_file_writer_impl.html',1,'arrow::ipc::RecordBatchFileWriter']]],
+  ['recordbatchreader',['RecordBatchReader',['../classarrow_1_1ipc_1_1_record_batch_reader.html',1,'arrow::ipc']]],
+  ['recordbatchserializer',['RecordBatchSerializer',['../classarrow_1_1ipc_1_1_record_batch_serializer.html',1,'arrow::ipc']]],
+  ['recordbatchstreamreader',['RecordBatchStreamReader',['../classarrow_1_1ipc_1_1_record_batch_stream_reader.html',1,'arrow::ipc']]],
+  ['recordbatchstreamreaderimpl',['RecordBatchStreamReaderImpl',['../classarrow_1_1ipc_1_1_record_batch_stream_reader_1_1_record_batch_stream_reader_impl.html',1,'arrow::ipc::RecordBatchStreamReader']]],
+  ['recordbatchstreamwriter',['RecordBatchStreamWriter',['../classarrow_1_1ipc_1_1_record_batch_stream_writer.html',1,'arrow::ipc']]],
+  ['recordbatchstreamwriterimpl',['RecordBatchStreamWriterImpl',['../classarrow_1_1ipc_1_1_record_batch_stream_writer_1_1_record_batch_stream_writer_impl.html',1,'arrow::ipc::RecordBatchStreamWriter']]],
   ['recordbatchwriter',['RecordBatchWriter',['../classarrow_1_1ipc_1_1_record_batch_writer.html',1,'arrow::ipc']]],
   ['resizablebuffer',['ResizableBuffer',['../classarrow_1_1_resizable_buffer.html',1,'arrow']]]
 ];

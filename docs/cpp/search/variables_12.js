@@ -4,6 +4,5 @@ var searchData=
   ['value_5fbuilder_5f',['value_builder_',['../classarrow_1_1_list_builder.html#a00a35582f91c728aa10e05f73eea4d5f',1,'arrow::ListBuilder']]],
   ['value_5fconverter_5f',['value_converter_',['../classarrow_1_1py_1_1_list_converter.html#a6c78977b81950eacaaa3d89fe40d5a25',1,'arrow::py::ListConverter']]],
   ['value_5foffsets_5f',['value_offsets_',['../classarrow_1_1_list_array.html#a268114b574b342d448a99072c0c9949b',1,'arrow::ListArray::value_offsets_()'],['../classarrow_1_1_binary_array.html#a345f34119978baa4b3d3d13ab4dedd26',1,'arrow::BinaryArray::value_offsets_()'],['../classarrow_1_1_union_array.html#a94c12ba13c72dfcdc86c5ca1a09732f4',1,'arrow::UnionArray::value_offsets_()']]],
-  ['values_5f',['values_',['../classarrow_1_1_list_array.html#a91f03f5edcf1ad3d7a67af94ef14d2f5',1,'arrow::ListArray::values_()'],['../classarrow_1_1_list_builder.html#a69c5b939f5f622c21dcdfd32a5c8fceb',1,'arrow::ListBuilder::values_()']]],
-  ['visitor',['visitor',['../structarrow_1_1_accept_virtual_visitor.html#ae8f8c70a8ed8fa960e65c01342968451',1,'arrow::AcceptVirtualVisitor']]]
+  ['values_5f',['values_',['../classarrow_1_1_list_array.html#a91f03f5edcf1ad3d7a67af94ef14d2f5',1,'arrow::ListArray::values_()'],['../classarrow_1_1_list_builder.html#a69c5b939f5f622c21dcdfd32a5c8fceb',1,'arrow::ListBuilder::values_()']]]
 ];

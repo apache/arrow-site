@@ -1,7 +1,7 @@
 var searchData=
 [
   ['id_5f',['id_',['../classarrow_1_1_data_type.html#aa2704f1cfc50018d02e109b32f67e422',1,'arrow::DataType']]],
-  ['impl_5f',['impl_',['../classarrow_1_1ipc_1_1_stream_writer.html#a297403dd71cd5c86a20dfad832571df1',1,'arrow::ipc::StreamWriter']]],
+  ['impl_5f',['impl_',['../classarrow_1_1ipc_1_1_record_batch_stream_writer.html#ad1e199bbd642f0a914639e0a44bc7c4c',1,'arrow::ipc::RecordBatchStreamWriter']]],
   ['indent',['indent',['../structarrow_1_1_pretty_print_options.html#a974e5687d8e630eff8ae79ecc2d8848a',1,'arrow::PrettyPrintOptions']]],
   ['indices_5f',['indices_',['../classarrow_1_1_dictionary_array.html#afadfd10eed612e5d06e073ffe01022da',1,'arrow::DictionaryArray']]],
   ['is_5fmutable_5f',['is_mutable_',['../classarrow_1_1_buffer.html#acfefa777b4d7d6a2f7a8ea23549dac46',1,'arrow::Buffer']]],

@@ -8,5 +8,14 @@ var searchData=
   ['prot_5fwrite',['PROT_WRITE',['../mman_8h.html#a2a79c8ceefb8fc25a940ae07a3d94429',1,'mman.h']]],
   ['py_5farray_5funique_5fsymbol',['PY_ARRAY_UNIQUE_SYMBOL',['../numpy__interop_8h.html#a7d399fcbebb74300921248d831d6ab6f',1,'numpy_interop.h']]],
   ['py_5freturn_5fif_5ferror',['PY_RETURN_IF_ERROR',['../common_8h.html#acae7d13f31abc214abe5d1e7c901b72f',1,'common.h']]],
-  ['pyarrow_5fis_5fpy2',['PYARROW_IS_PY2',['../common_8h.html#a3736d68f2c04b7b41de8a06fb198b577',1,'common.h']]]
+  ['pyarrow_5fis_5fpy2',['PYARROW_IS_PY2',['../common_8h.html#a3736d68f2c04b7b41de8a06fb198b577',1,'common.h']]],
+  ['pyarrow_5fwrap_5farray',['pyarrow_wrap_array',['../pyarrow__api_8h.html#a9d6dfcebf2c97584626d3cd411b938c2',1,'pyarrow_api.h']]],
+  ['pyarrow_5fwrap_5fbatch',['pyarrow_wrap_batch',['../pyarrow__api_8h.html#aa42f7515bd56c2920995fecd1ba292ec',1,'pyarrow_api.h']]],
+  ['pyarrow_5fwrap_5fbuffer',['pyarrow_wrap_buffer',['../pyarrow__api_8h.html#a7fcf8175d70388be90936df1688d5202',1,'pyarrow_api.h']]],
+  ['pyarrow_5fwrap_5fcolumn',['pyarrow_wrap_column',['../pyarrow__api_8h.html#a1b7419e29a7fb581ef9560711147f112',1,'pyarrow_api.h']]],
+  ['pyarrow_5fwrap_5fdata_5ftype',['pyarrow_wrap_data_type',['../pyarrow__api_8h.html#a89401788eacbc76143117285801e42c6',1,'pyarrow_api.h']]],
+  ['pyarrow_5fwrap_5ffield',['pyarrow_wrap_field',['../pyarrow__api_8h.html#a8a7eb632e1f8158bd93f6bde687f4ba1',1,'pyarrow_api.h']]],
+  ['pyarrow_5fwrap_5fschema',['pyarrow_wrap_schema',['../pyarrow__api_8h.html#ab5cb5d6609caf5167b1c76c914290626',1,'pyarrow_api.h']]],
+  ['pyarrow_5fwrap_5ftable',['pyarrow_wrap_table',['../pyarrow__api_8h.html#a4d519cd5aa6215e09ec01bc96141942e',1,'pyarrow_api.h']]],
+  ['pyarrow_5fwrap_5ftensor',['pyarrow_wrap_tensor',['../pyarrow__api_8h.html#a91ddef473100019ff5eb5b5dceea9d55',1,'pyarrow_api.h']]]
 ];

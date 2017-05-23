@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['acceptvirtualvisitor',['AcceptVirtualVisitor',['../structarrow_1_1_accept_virtual_visitor.html',1,'arrow']]],
   ['approxequalsvisitor',['ApproxEqualsVisitor',['../classarrow_1_1_approx_equals_visitor.html',1,'arrow']]],
   ['array',['Array',['../classarrow_1_1_array.html',1,'arrow']]],
   ['arraybuilder',['ArrayBuilder',['../classarrow_1_1_array_builder.html',1,'arrow']]],
