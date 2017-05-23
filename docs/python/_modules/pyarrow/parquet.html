@@ -78,6 +78,8 @@
 <span class="c1"># specific language governing permissions and limitations</span>
 <span class="c1"># under the License.</span>
 
+<span class="kn">import</span> <span class="nn">json</span>
+
 <span class="kn">import</span> <span class="nn">six</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -87,8 +89,7 @@
                               <span class="n">RowGroupMetaData</span><span class="p">,</span> <span class="n">ParquetSchema</span><span class="p">,</span>
                               <span class="n">ParquetWriter</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">pyarrow._parquet</span> <span class="k">as</span> <span class="nn">_parquet</span>  <span class="c1"># noqa</span>
-<span class="kn">import</span> <span class="nn">pyarrow._array</span> <span class="k">as</span> <span class="nn">_array</span>
-<span class="kn">import</span> <span class="nn">pyarrow._table</span> <span class="k">as</span> <span class="nn">_table</span>
+<span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">lib</span>
 
 
 <span class="c1"># ----------------------------------------------------------------------</span>
@@ -165,14 +166,31 @@
         <span class="n">column_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">nthreads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="n">nthreads</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">read_all</span><span class="p">(</span><span class="n">column_indices</span><span class="o">=</span><span class="n">column_indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">column_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+        <span class="n">custom_metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">metadata</span>
+
+        <span class="k">if</span> <span class="n">custom_metadata</span> <span class="ow">and</span> <span class="sa">b</span><span class="s1">&#39;pandas&#39;</span> <span class="ow">in</span> <span class="n">custom_metadata</span><span class="p">:</span>
+            <span class="n">index_columns</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span>
+                <span class="n">custom_metadata</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;pandas&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span>
+            <span class="p">)[</span><span class="s1">&#39;index_columns&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">index_columns</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">column_indices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">index_columns</span><span class="p">:</span>
+            <span class="n">column_indices</span> <span class="o">+=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">column_name_idx</span><span class="p">,</span> <span class="n">index_columns</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">nthreads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="n">nthreads</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">read_all</span><span class="p">(</span><span class="n">column_indices</span><span class="o">=</span><span class="n">column_indices</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_column_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column_names</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">column_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">column_name_idx</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">column_names</span><span class="p">]</span></div>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">column_name_idx</span><span class="p">,</span> <span class="n">column_names</span><span class="p">))</span></div>
 
 
 <span class="c1"># ----------------------------------------------------------------------</span>
@@ -304,8 +322,8 @@
                 <span class="c1"># manifest, so [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;] as in our example above.</span>
                 <span class="n">dictionary</span> <span class="o">=</span> <span class="n">partitions</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">dictionary</span>
 
-                <span class="n">arr</span> <span class="o">=</span> <span class="n">_array</span><span class="o">.</span><span class="n">DictionaryArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">)</span>
-                <span class="n">col</span> <span class="o">=</span> <span class="n">_table</span><span class="o">.</span><span class="n">Column</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">arr</span><span class="p">)</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">DictionaryArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">)</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">Column</span><span class="o">.</span><span class="n">from_array</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">arr</span><span class="p">)</span>
                 <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">append_column</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">table</span>
@@ -361,9 +379,9 @@
         <span class="c1"># Only integer and string partition types are supported right now</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">integer_keys</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">]</span>
-            <span class="n">dictionary</span> <span class="o">=</span> <span class="n">_array</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">integer_keys</span><span class="p">)</span>
+            <span class="n">dictionary</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">integer_keys</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-            <span class="n">dictionary</span> <span class="o">=</span> <span class="n">_array</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span>
+            <span class="n">dictionary</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_dictionary</span> <span class="o">=</span> <span class="n">dictionary</span>
         <span class="k">return</span> <span class="n">dictionary</span>
@@ -602,7 +620,7 @@
                                <span class="n">open_file_func</span><span class="o">=</span><span class="n">open_file</span><span class="p">)</span>
             <span class="n">tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
 
-        <span class="n">all_data</span> <span class="o">=</span> <span class="n">_table</span><span class="o">.</span><span class="n">concat_tables</span><span class="p">(</span><span class="n">tables</span><span class="p">)</span>
+        <span class="n">all_data</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">concat_tables</span><span class="p">(</span><span class="n">tables</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">all_data</span>
 
     <span class="k">def</span> <span class="nf">_get_open_file_func</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -626,7 +644,7 @@
 
     <span class="k">if</span> <span class="n">is_string</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="ow">and</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
         <span class="n">manifest</span> <span class="o">=</span> <span class="n">ParquetManifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span>
-                                   <span class="n">pathsep</span><span class="o">=</span><span class="n">pathsep</span><span class="p">)</span>
+                                   <span class="n">pathsep</span><span class="o">=</span><span class="n">fs</span><span class="o">.</span><span class="n">pathsep</span><span class="p">)</span>
         <span class="n">metadata_path</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">metadata_path</span>
         <span class="n">pieces</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">pieces</span>
         <span class="n">partitions</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">partitions</span>
@@ -680,6 +698,43 @@
 
     <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">pf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read a Table from Parquet format, reconstructing the index values if</span>
+<span class="sd">    available.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source: str or pyarrow.io.NativeFile</span>
+<span class="sd">        Location of Parquet dataset. If a string passed, can be a single file</span>
+<span class="sd">        name. For passing Python file objects or byte buffers,</span>
+<span class="sd">        see pyarrow.io.PythonFileInterface or pyarrow.io.BufferReader.</span>
+<span class="sd">    columns: list</span>
+<span class="sd">        If not None, only these columns will be read from the file.</span>
+<span class="sd">    nthreads : int, default 1</span>
+<span class="sd">        Number of columns to read in parallel. Requires that the underlying</span>
+<span class="sd">        file source is threadsafe</span>
+<span class="sd">    metadata : FileMetaData</span>
+<span class="sd">        If separately computed</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pyarrow.Table</span>
+<span class="sd">        Content of the file as a Table of Columns, including DataFrame indexes</span>
+<span class="sd">        as Columns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">is_string</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+        <span class="n">fs</span> <span class="o">=</span> <span class="n">LocalFilesystem</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                <span class="s1">&#39;Reading a directory of Parquet files with DataFrame index &#39;</span>
+                <span class="s1">&#39;metadata is not yet supported&#39;</span>
+            <span class="p">)</span>
+
+    <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pf</span><span class="o">.</span><span class="n">read_pandas</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="write_table"><a class="viewcode-back" href="../../generated/pyarrow.parquet.write_table.html#pyarrow.parquet.write_table">[docs]</a><span class="k">def</span> <span class="nf">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;1.0&#39;</span><span class="p">,</span>

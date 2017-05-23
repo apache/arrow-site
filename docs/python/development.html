@@ -226,10 +226,27 @@ pyarrow/tests/test_tensor.py ................
 </div>
 <div class="section" id="windows">
 <h2>Windows<a class="headerlink" href="#windows" title="Permalink to this headline">¶</a></h2>
-<p>First, make sure you can <a class="reference external" href="https://github.com/apache/arrow/blob/master/cpp/doc/Windows.md">build the C++ library</a>.</p>
-<p>Now, we need to build and install the C++ libraries someplace.</p>
+<p>First, we bootstrap a conda environment similar to the <a class="reference external" href="https://github.com/apache/arrow/blob/master/cpp/doc/Windows.md">C++ build instructions</a>. This
+includes all the dependencies for Arrow and the Apache Parquet C++ libraries.</p>
+<p>First, starting from fresh clones of Apache Arrow and parquet-cpp:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>git clone https://github.com/apache/arrow.git
+git clone https://github.com/apache/parquet-cpp.git
+</pre></div>
+</div>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>conda create -n arrow-dev cmake git boost-cpp ^
+      flatbuffers snappy zlib brotli thrift-cpp rapidjson
+activate arrow-dev
+</pre></div>
+</div>
+<p>As one git housekeeping item, we must run this command in our Arrow clone:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span><span class="nb">cd</span> arrow
+git config core.symlinks <span class="nb">true</span>
+</pre></div>
+</div>
+<p>Now, we build and install Arrow C++ libraries</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span>mkdir cpp<span class="se">\b</span>uild
 <span class="nb">cd</span> cpp<span class="se">\b</span>uild
+<span class="nb">set</span> <span class="nv">ARROW_BUILD_TOOLCHAIN</span><span class="o">=</span>%CONDA_PREFIX%<span class="se">\L</span>ibrary
 <span class="nb">set</span> <span class="nv">ARROW_HOME</span><span class="o">=</span>C:<span class="se">\t</span>hirdparty
 cmake -G <span class="s2">&quot;Visual Studio 14 2015 Win64&quot;</span> ^
       -DCMAKE_INSTALL_PREFIX<span class="o">=</span>%ARROW_HOME% ^
@@ -240,13 +257,31 @@ cmake --build . --target INSTALL --config Release
 <span class="nb">cd</span> ..<span class="se">\.</span>.
 </pre></div>
 </div>
+<p>Now, we build parquet-cpp and install the result in the same place:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>mkdir ..<span class="se">\p</span>arquet-cpp<span class="se">\b</span>uild
+<span class="nb">pushd</span> ..<span class="se">\p</span>arquet-cpp<span class="se">\b</span>uild
+<span class="nb">set</span> <span class="nv">PARQUET_BUILD_TOOLCHAIN</span><span class="o">=</span>%CONDA_PREFIX%<span class="se">\L</span>ibrary
+<span class="nb">set</span> <span class="nv">PARQUET_HOME</span><span class="o">=</span>C:<span class="se">\t</span>hirdparty
+cmake -G <span class="s2">&quot;Visual Studio 14 2015 Win64&quot;</span> ^
+      -DCMAKE_INSTALL_PREFIX<span class="o">=</span>%PARQUET_HOME% ^
+      -DCMAKE_BUILD_TYPE<span class="o">=</span>Release ^
+      -DPARQUET_ZLIB_VENDORED<span class="o">=</span>off ^
+      -DPARQUET_BUILD_TESTS<span class="o">=</span>off ..
+cmake --build . --target INSTALL --config Release
+<span class="nb">popd</span>
+</pre></div>
+</div>
 <p>After that, we must put the install directory&#8217;s bin path in our <code class="docutils literal"><span class="pre">%PATH%</span></code>:</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span><span class="nb">set</span> <span class="nv">PATH</span><span class="o">=</span>%ARROW_HOME%<span class="se">\b</span>in<span class="p">;</span>%PATH%
 </pre></div>
 </div>
 <p>Now, we can build pyarrow:</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span><span class="nb">cd</span> python
-python setup.py build_ext --inplace
+python setup.py build_ext --inplace --with-parquet
+</pre></div>
+</div>
+<p>Then run the unit tests with:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>py.test pyarrow -v
 </pre></div>
 </div>
 <div class="section" id="running-c-unit-tests-with-python">
