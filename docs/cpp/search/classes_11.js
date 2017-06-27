@@ -1,13 +1,20 @@
 var searchData=
 [
-  ['uint16type',['UInt16Type',['../classarrow_1_1_u_int16_type.html',1,'arrow']]],
-  ['uint32type',['UInt32Type',['../classarrow_1_1_u_int32_type.html',1,'arrow']]],
-  ['uint64type',['UInt64Type',['../classarrow_1_1_u_int64_type.html',1,'arrow']]],
-  ['uint8type',['UInt8Type',['../classarrow_1_1_u_int8_type.html',1,'arrow']]],
-  ['unboxdate',['UnboxDate',['../structarrow_1_1py_1_1_unbox_date.html',1,'arrow::py']]],
-  ['unboxdate_3c_20date32type_20_3e',['UnboxDate&lt; Date32Type &gt;',['../structarrow_1_1py_1_1_unbox_date_3_01_date32_type_01_4.html',1,'arrow::py']]],
-  ['unboxdate_3c_20date64type_20_3e',['UnboxDate&lt; Date64Type &gt;',['../structarrow_1_1py_1_1_unbox_date_3_01_date64_type_01_4.html',1,'arrow::py']]],
-  ['unionarray',['UnionArray',['../classarrow_1_1_union_array.html',1,'arrow']]],
-  ['uniontype',['UnionType',['../classarrow_1_1_union_type.html',1,'arrow']]],
-  ['utf8converter',['UTF8Converter',['../classarrow_1_1py_1_1_u_t_f8_converter.html',1,'arrow::py']]]
+  ['scalarvisitor',['ScalarVisitor',['../classarrow_1_1py_1_1_scalar_visitor.html',1,'arrow::py']]],
+  ['schema',['Schema',['../classarrow_1_1_schema.html',1,'arrow']]],
+  ['schemawriter',['SchemaWriter',['../classarrow_1_1ipc_1_1json_1_1internal_1_1_schema_writer.html',1,'arrow::ipc::json::internal']]],
+  ['seekable',['Seekable',['../classarrow_1_1io_1_1_seekable.html',1,'arrow::io']]],
+  ['seqconverter',['SeqConverter',['../classarrow_1_1py_1_1_seq_converter.html',1,'arrow::py']]],
+  ['seqvisitor',['SeqVisitor',['../classarrow_1_1py_1_1_seq_visitor.html',1,'arrow::py']]],
+  ['snappycodec',['SnappyCodec',['../classarrow_1_1_snappy_codec.html',1,'arrow']]],
+  ['status',['Status',['../classarrow_1_1_status.html',1,'arrow']]],
+  ['stdinstream',['StdinStream',['../classarrow_1_1io_1_1_stdin_stream.html',1,'arrow::io']]],
+  ['stdoutstream',['StdoutStream',['../classarrow_1_1io_1_1_stdout_stream.html',1,'arrow::io']]],
+  ['stl_5fallocator',['stl_allocator',['../classarrow_1_1stl__allocator.html',1,'arrow']]],
+  ['stringarray',['StringArray',['../classarrow_1_1_string_array.html',1,'arrow']]],
+  ['stringbuilder',['StringBuilder',['../classarrow_1_1_string_builder.html',1,'arrow']]],
+  ['stringtype',['StringType',['../classarrow_1_1_string_type.html',1,'arrow']]],
+  ['structarray',['StructArray',['../classarrow_1_1_struct_array.html',1,'arrow']]],
+  ['structbuilder',['StructBuilder',['../classarrow_1_1_struct_builder.html',1,'arrow']]],
+  ['structtype',['StructType',['../classarrow_1_1_struct_type.html',1,'arrow']]]
 ];

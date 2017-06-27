@@ -1,10 +1,13 @@
 var searchData=
 [
-  ['jsonarrayreader',['JsonArrayReader',['../classarrow_1_1ipc_1_1_json_array_reader.html',1,'arrow::ipc']]],
-  ['jsonarraywriter',['JsonArrayWriter',['../classarrow_1_1ipc_1_1_json_array_writer.html',1,'arrow::ipc']]],
-  ['jsonreader',['JsonReader',['../classarrow_1_1ipc_1_1_json_reader.html',1,'arrow::ipc']]],
-  ['jsonreaderimpl',['JsonReaderImpl',['../classarrow_1_1ipc_1_1_json_reader_1_1_json_reader_impl.html',1,'arrow::ipc::JsonReader']]],
-  ['jsonschemawriter',['JsonSchemaWriter',['../classarrow_1_1ipc_1_1_json_schema_writer.html',1,'arrow::ipc']]],
-  ['jsonwriter',['JsonWriter',['../classarrow_1_1ipc_1_1_json_writer.html',1,'arrow::ipc']]],
-  ['jsonwriterimpl',['JsonWriterImpl',['../classarrow_1_1ipc_1_1_json_writer_1_1_json_writer_impl.html',1,'arrow::ipc::JsonWriter']]]
+  ['halffloattype',['HalfFloatType',['../classarrow_1_1_half_float_type.html',1,'arrow']]],
+  ['hdfsanyfileimpl',['HdfsAnyFileImpl',['../classarrow_1_1io_1_1_hdfs_any_file_impl.html',1,'arrow::io']]],
+  ['hdfsclient',['HdfsClient',['../classarrow_1_1io_1_1_hdfs_client.html',1,'arrow::io']]],
+  ['hdfsclientimpl',['HdfsClientImpl',['../classarrow_1_1io_1_1_hdfs_client_1_1_hdfs_client_impl.html',1,'arrow::io::HdfsClient']]],
+  ['hdfsconnectionconfig',['HdfsConnectionConfig',['../structarrow_1_1io_1_1_hdfs_connection_config.html',1,'arrow::io']]],
+  ['hdfsoutputstream',['HdfsOutputStream',['../classarrow_1_1io_1_1_hdfs_output_stream.html',1,'arrow::io']]],
+  ['hdfsoutputstreamimpl',['HdfsOutputStreamImpl',['../classarrow_1_1io_1_1_hdfs_output_stream_1_1_hdfs_output_stream_impl.html',1,'arrow::io::HdfsOutputStream']]],
+  ['hdfspathinfo',['HdfsPathInfo',['../structarrow_1_1io_1_1_hdfs_path_info.html',1,'arrow::io']]],
+  ['hdfsreadablefile',['HdfsReadableFile',['../classarrow_1_1io_1_1_hdfs_readable_file.html',1,'arrow::io']]],
+  ['hdfsreadablefileimpl',['HdfsReadableFileImpl',['../classarrow_1_1io_1_1_hdfs_readable_file_1_1_hdfs_readable_file_impl.html',1,'arrow::io::HdfsReadableFile']]]
 ];

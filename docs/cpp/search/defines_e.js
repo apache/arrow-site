@@ -1,14 +1,24 @@
 var searchData=
 [
+  ['pad_5frequest',['pad_request',['../dlmalloc_8c.html#abc9ba9df02632268a7b15ef992a94035',1,'dlmalloc.c']]],
+  ['page_5falign',['page_align',['../dlmalloc_8c.html#a26099b7c631584ea0a7df48d5663b316',1,'dlmalloc.c']]],
+  ['pinuse',['pinuse',['../dlmalloc_8c.html#a7d865edc2d2e8b7a33b3eb02ee22c2e7',1,'dlmalloc.c']]],
+  ['pinuse_5fbit',['PINUSE_BIT',['../dlmalloc_8c.html#aa41e697181baeec7157ff5f0f6ae747a',1,'dlmalloc.c']]],
+  ['plasma_5fdefault_5frelease_5fdelay',['PLASMA_DEFAULT_RELEASE_DELAY',['../client_8h.html#ac6a4959f813315451e993a3dfe28cac7',1,'client.h']]],
+  ['plasma_5fprotocol_5fversion',['PLASMA_PROTOCOL_VERSION',['../plasma_2io_8h.html#ac1eb4de6995f6a189a764d1cfd960999',1,'io.h']]],
+  ['postaction',['POSTACTION',['../dlmalloc_8c.html#a8c176fdaf0d14b883ba250c8a569b88e',1,'dlmalloc.c']]],
+  ['preaction',['PREACTION',['../dlmalloc_8c.html#a9abf67cb3bc9027f0b44bab676e05f09',1,'dlmalloc.c']]],
+  ['prev_5fchunk',['prev_chunk',['../dlmalloc_8c.html#aee72e7631ab6012eb488e4ad9863d431',1,'dlmalloc.c']]],
   ['primitive_5fcase',['PRIMITIVE_CASE',['../feather_8cc.html#a926a27d32687b99875064d0b24c5eab0',1,'feather.cc']]],
   ['primitive_5ftraits',['PRIMITIVE_TRAITS',['../type__traits_8h.html#a3883a60bdbf082f79b39a80fd1b33cdb',1,'type_traits.h']]],
+  ['proceed_5fon_5ferror',['PROCEED_ON_ERROR',['../dlmalloc_8c.html#afac2a7b1a6efb14fc268051f90d0f1d3',1,'dlmalloc.c']]],
   ['prot_5fexec',['PROT_EXEC',['../mman_8h.html#a77848f068638e916c72cd543f5ecb815',1,'mman.h']]],
   ['prot_5fnone',['PROT_NONE',['../mman_8h.html#a6a982b48b8d3eb8eccd17e0d54ee5379',1,'mman.h']]],
   ['prot_5fread',['PROT_READ',['../mman_8h.html#a15bf68ce8b590838b3a5c0b639d8d519',1,'mman.h']]],
   ['prot_5fwrite',['PROT_WRITE',['../mman_8h.html#a2a79c8ceefb8fc25a940ae07a3d94429',1,'mman.h']]],
   ['py_5farray_5funique_5fsymbol',['PY_ARRAY_UNIQUE_SYMBOL',['../numpy__interop_8h.html#a7d399fcbebb74300921248d831d6ab6f',1,'numpy_interop.h']]],
-  ['py_5freturn_5fif_5ferror',['PY_RETURN_IF_ERROR',['../common_8h.html#acae7d13f31abc214abe5d1e7c901b72f',1,'common.h']]],
-  ['pyarrow_5fis_5fpy2',['PYARROW_IS_PY2',['../common_8h.html#a3736d68f2c04b7b41de8a06fb198b577',1,'common.h']]],
+  ['py_5freturn_5fif_5ferror',['PY_RETURN_IF_ERROR',['../arrow_2python_2common_8h.html#acae7d13f31abc214abe5d1e7c901b72f',1,'common.h']]],
+  ['pyarrow_5fis_5fpy2',['PYARROW_IS_PY2',['../arrow_2python_2common_8h.html#a3736d68f2c04b7b41de8a06fb198b577',1,'common.h']]],
   ['pyarrow_5fwrap_5farray',['pyarrow_wrap_array',['../pyarrow__api_8h.html#a9d6dfcebf2c97584626d3cd411b938c2',1,'pyarrow_api.h']]],
   ['pyarrow_5fwrap_5fbatch',['pyarrow_wrap_batch',['../pyarrow__api_8h.html#aa42f7515bd56c2920995fecd1ba292ec',1,'pyarrow_api.h']]],
   ['pyarrow_5fwrap_5fbuffer',['pyarrow_wrap_buffer',['../pyarrow__api_8h.html#a7fcf8175d70388be90936df1688d5202',1,'pyarrow_api.h']]],
@@ -17,5 +27,6 @@ var searchData=
   ['pyarrow_5fwrap_5ffield',['pyarrow_wrap_field',['../pyarrow__api_8h.html#a8a7eb632e1f8158bd93f6bde687f4ba1',1,'pyarrow_api.h']]],
   ['pyarrow_5fwrap_5fschema',['pyarrow_wrap_schema',['../pyarrow__api_8h.html#ab5cb5d6609caf5167b1c76c914290626',1,'pyarrow_api.h']]],
   ['pyarrow_5fwrap_5ftable',['pyarrow_wrap_table',['../pyarrow__api_8h.html#a4d519cd5aa6215e09ec01bc96141942e',1,'pyarrow_api.h']]],
-  ['pyarrow_5fwrap_5ftensor',['pyarrow_wrap_tensor',['../pyarrow__api_8h.html#a91ddef473100019ff5eb5b5dceea9d55',1,'pyarrow_api.h']]]
+  ['pyarrow_5fwrap_5ftensor',['pyarrow_wrap_tensor',['../pyarrow__api_8h.html#a91ddef473100019ff5eb5b5dceea9d55',1,'pyarrow_api.h']]],
+  ['pymodinit_5ffunc',['PyMODINIT_FUNC',['../extension_8cc.html#a75c7c5d977b65e67c0b0d80fc079004f',1,'extension.cc']]]
 ];

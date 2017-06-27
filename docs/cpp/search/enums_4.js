@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['precision',['Precision',['../classarrow_1_1_floating_point.html#aa585c0815b471db6d35d916d9e887b7a',1,'arrow::FloatingPoint']]]
+  ['metadataversion',['MetadataVersion',['../namespacearrow_1_1ipc.html#aa5d7ec68a8c707271bab98af9bc0ac77',1,'arrow::ipc']]]
 ];

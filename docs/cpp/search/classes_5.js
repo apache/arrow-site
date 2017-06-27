@@ -1,13 +1,22 @@
 var searchData=
 [
-  ['halffloattype',['HalfFloatType',['../classarrow_1_1_half_float_type.html',1,'arrow']]],
-  ['hdfsanyfileimpl',['HdfsAnyFileImpl',['../classarrow_1_1io_1_1_hdfs_any_file_impl.html',1,'arrow::io']]],
-  ['hdfsclient',['HdfsClient',['../classarrow_1_1io_1_1_hdfs_client.html',1,'arrow::io']]],
-  ['hdfsclientimpl',['HdfsClientImpl',['../classarrow_1_1io_1_1_hdfs_client_1_1_hdfs_client_impl.html',1,'arrow::io::HdfsClient']]],
-  ['hdfsconnectionconfig',['HdfsConnectionConfig',['../structarrow_1_1io_1_1_hdfs_connection_config.html',1,'arrow::io']]],
-  ['hdfsoutputstream',['HdfsOutputStream',['../classarrow_1_1io_1_1_hdfs_output_stream.html',1,'arrow::io']]],
-  ['hdfsoutputstreamimpl',['HdfsOutputStreamImpl',['../classarrow_1_1io_1_1_hdfs_output_stream_1_1_hdfs_output_stream_impl.html',1,'arrow::io::HdfsOutputStream']]],
-  ['hdfspathinfo',['HdfsPathInfo',['../structarrow_1_1io_1_1_hdfs_path_info.html',1,'arrow::io']]],
-  ['hdfsreadablefile',['HdfsReadableFile',['../classarrow_1_1io_1_1_hdfs_readable_file.html',1,'arrow::io']]],
-  ['hdfsreadablefileimpl',['HdfsReadableFileImpl',['../classarrow_1_1io_1_1_hdfs_readable_file_1_1_hdfs_readable_file_impl.html',1,'arrow::io::HdfsReadableFile']]]
+  ['fatallog',['FatalLog',['../classarrow_1_1internal_1_1_fatal_log.html',1,'arrow::internal']]],
+  ['field',['Field',['../classarrow_1_1_field.html',1,'arrow']]],
+  ['fieldmetadata',['FieldMetadata',['../structarrow_1_1_field_metadata.html',1,'arrow']]],
+  ['fileblock',['FileBlock',['../structarrow_1_1ipc_1_1_file_block.html',1,'arrow::ipc']]],
+  ['fileinterface',['FileInterface',['../classarrow_1_1io_1_1_file_interface.html',1,'arrow::io']]],
+  ['filemode',['FileMode',['../structarrow_1_1io_1_1_file_mode.html',1,'arrow::io']]],
+  ['fileoutputstream',['FileOutputStream',['../classarrow_1_1io_1_1_file_output_stream.html',1,'arrow::io']]],
+  ['fileoutputstreamimpl',['FileOutputStreamImpl',['../classarrow_1_1io_1_1_file_output_stream_1_1_file_output_stream_impl.html',1,'arrow::io::FileOutputStream']]],
+  ['filesystemclient',['FileSystemClient',['../classarrow_1_1io_1_1_file_system_client.html',1,'arrow::io']]],
+  ['fixedsizebinaryarray',['FixedSizeBinaryArray',['../classarrow_1_1_fixed_size_binary_array.html',1,'arrow']]],
+  ['fixedsizebinarybuilder',['FixedSizeBinaryBuilder',['../classarrow_1_1_fixed_size_binary_builder.html',1,'arrow']]],
+  ['fixedsizebinarytype',['FixedSizeBinaryType',['../classarrow_1_1_fixed_size_binary_type.html',1,'arrow']]],
+  ['fixedsizebufferwriter',['FixedSizeBufferWriter',['../classarrow_1_1io_1_1_fixed_size_buffer_writer.html',1,'arrow::io']]],
+  ['fixedwidthbytesconverter',['FixedWidthBytesConverter',['../classarrow_1_1py_1_1_fixed_width_bytes_converter.html',1,'arrow::py']]],
+  ['fixedwidthtype',['FixedWidthType',['../classarrow_1_1_fixed_width_type.html',1,'arrow']]],
+  ['float32block',['Float32Block',['../classarrow_1_1py_1_1_float32_block.html',1,'arrow::py']]],
+  ['float64block',['Float64Block',['../classarrow_1_1py_1_1_float64_block.html',1,'arrow::py']]],
+  ['floatingpoint',['FloatingPoint',['../classarrow_1_1_floating_point.html',1,'arrow']]],
+  ['floattype',['FloatType',['../classarrow_1_1_float_type.html',1,'arrow']]]
 ];

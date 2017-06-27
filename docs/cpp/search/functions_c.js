@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['length',['length',['../classarrow_1_1_array.html#a49c7fb3f73d2d43e7338591c5a8bd8bf',1,'arrow::Array::length()'],['../classarrow_1_1_buffer_builder.html#abd87c9b423a1662ba9f0a6c53fb32381',1,'arrow::BufferBuilder::length()'],['../classarrow_1_1_array_builder.html#a296ac75b9b3d877192e37681c66513ba',1,'arrow::ArrayBuilder::length()'],['../classarrow_1_1_chunked_array.html#a4df41bf1a05cd1083a2c4502e0a85f87',1,'arrow::ChunkedArray::length()'],['../classarrow_1_1_column.html#aafda8e7be9dbc335820622b4e98e9bdd',1,'arrow::Column::length()']]],
+  ['length',['length',['../classarrow_1_1_array.html#a9d79327fd562c7bb36455979a3d56c20',1,'arrow::Array::length()'],['../classarrow_1_1_buffer_builder.html#abd87c9b423a1662ba9f0a6c53fb32381',1,'arrow::BufferBuilder::length()'],['../classarrow_1_1_array_builder.html#a2c99eda3af97e27847b080170d073e57',1,'arrow::ArrayBuilder::length()'],['../classarrow_1_1_chunked_array.html#ac1f7583f0ac57c82db285ab3667fbb3d',1,'arrow::ChunkedArray::length()'],['../classarrow_1_1_column.html#a96a97a171ac55cd4f1e417943ade4d99',1,'arrow::Column::length()']]],
   ['list',['list',['../namespacearrow.html#afd77a9ecf7ccf1b6117b2710d49f3f93',1,'arrow::list(const std::shared_ptr&lt; DataType &gt; &amp;value_type)'],['../namespacearrow.html#a9467c742cbb8bf6b72bd92a5e778a637',1,'arrow::list(const std::shared_ptr&lt; Field &gt; &amp;value_field)']]],
   ['listarray',['ListArray',['../classarrow_1_1_list_array.html#abaeb13c66936303d30f744ae369ceb8a',1,'arrow::ListArray']]],
   ['listbuilder',['ListBuilder',['../classarrow_1_1_list_builder.html#a5eb4f70628753fd4676c14ef0e50e279',1,'arrow::ListBuilder::ListBuilder(MemoryPool *pool, std::shared_ptr&lt; ArrayBuilder &gt; value_builder, const std::shared_ptr&lt; DataType &gt; &amp;type=nullptr)'],['../classarrow_1_1_list_builder.html#a329a2dc88be23bd93b7ac68488f7873b',1,'arrow::ListBuilder::ListBuilder(MemoryPool *pool, std::shared_ptr&lt; Array &gt; values, const std::shared_ptr&lt; DataType &gt; &amp;type=nullptr)']]],
@@ -16,5 +16,6 @@ var searchData=
   ['loadprimitive',['LoadPrimitive',['../classarrow_1_1_array_loader.html#a24af6bd0cbd9deaf52b158d6d4237c8c',1,'arrow::ArrayLoader']]],
   ['loadvalues',['LoadValues',['../classarrow_1_1ipc_1_1feather_1_1_table_reader_1_1_table_reader_impl.html#a95bbbaba9a921f1bab4e6e2cf1a89c23',1,'arrow::ipc::feather::TableReader::TableReaderImpl']]],
   ['lock',['lock',['../classarrow_1_1io_1_1_random_access_file.html#a2c52831f6121cc1a751f1573e58c6bf9',1,'arrow::io::RandomAccessFile']]],
-  ['loggingmemorypool',['LoggingMemoryPool',['../classarrow_1_1_logging_memory_pool.html#ae66b4e6c015eb35577696ab5f7644f78',1,'arrow::LoggingMemoryPool']]]
+  ['loggingmemorypool',['LoggingMemoryPool',['../classarrow_1_1_logging_memory_pool.html#ae66b4e6c015eb35577696ab5f7644f78',1,'arrow::LoggingMemoryPool']]],
+  ['lrucache',['LRUCache',['../class_l_r_u_cache.html#a6f624ad11516bc5c8b56ab19250902bb',1,'LRUCache']]]
 ];

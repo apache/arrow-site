@@ -1,5 +1,13 @@
 var searchData=
 [
+  ['adaptiveintbuilder',['AdaptiveIntBuilder',['../classarrow_1_1_adaptive_int_builder.html',1,'arrow']]],
+  ['adaptiveintbuilderbase',['AdaptiveIntBuilderBase',['../classarrow_1_1_adaptive_int_builder_base.html',1,'arrow']]],
+  ['adaptiveuintbuilder',['AdaptiveUIntBuilder',['../classarrow_1_1_adaptive_u_int_builder.html',1,'arrow']]],
+  ['aeapistate',['aeApiState',['../structae_api_state.html',1,'']]],
+  ['aeeventloop',['aeEventLoop',['../structae_event_loop.html',1,'']]],
+  ['aefileevent',['aeFileEvent',['../structae_file_event.html',1,'']]],
+  ['aefiredevent',['aeFiredEvent',['../structae_fired_event.html',1,'']]],
+  ['aetimeevent',['aeTimeEvent',['../structae_time_event.html',1,'']]],
   ['approxequalsvisitor',['ApproxEqualsVisitor',['../classarrow_1_1_approx_equals_visitor.html',1,'arrow']]],
   ['array',['Array',['../classarrow_1_1_array.html',1,'arrow']]],
   ['arraybuilder',['ArrayBuilder',['../classarrow_1_1_array_builder.html',1,'arrow']]],
@@ -9,7 +17,9 @@ var searchData=
   ['arrayloadercontext',['ArrayLoaderContext',['../structarrow_1_1_array_loader_context.html',1,'arrow']]],
   ['arraymetadata',['ArrayMetadata',['../structarrow_1_1ipc_1_1feather_1_1_array_metadata.html',1,'arrow::ipc::feather']]],
   ['arrayprinter',['ArrayPrinter',['../classarrow_1_1_array_printer.html',1,'arrow']]],
+  ['arrayreader',['ArrayReader',['../classarrow_1_1ipc_1_1json_1_1internal_1_1_array_reader.html',1,'arrow::ipc::json::internal']]],
   ['arrayvisitor',['ArrayVisitor',['../classarrow_1_1_array_visitor.html',1,'arrow']]],
+  ['arraywriter',['ArrayWriter',['../classarrow_1_1ipc_1_1json_1_1internal_1_1_array_writer.html',1,'arrow::ipc::json::internal']]],
   ['arrow_5ftraits',['arrow_traits',['../structarrow_1_1py_1_1arrow__traits.html',1,'arrow::py']]],
   ['arrow_5ftraits_3c_20type_3a_3abinary_20_3e',['arrow_traits&lt; Type::BINARY &gt;',['../structarrow_1_1py_1_1arrow__traits_3_01_type_1_1_b_i_n_a_r_y_01_4.html',1,'arrow::py']]],
   ['arrow_5ftraits_3c_20type_3a_3abool_20_3e',['arrow_traits&lt; Type::BOOL &gt;',['../structarrow_1_1py_1_1arrow__traits_3_01_type_1_1_b_o_o_l_01_4.html',1,'arrow::py']]],

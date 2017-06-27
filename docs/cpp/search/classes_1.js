@@ -8,6 +8,7 @@ var searchData=
   ['booleanarray',['BooleanArray',['../classarrow_1_1_boolean_array.html',1,'arrow']]],
   ['booleanbuilder',['BooleanBuilder',['../classarrow_1_1_boolean_builder.html',1,'arrow']]],
   ['booleantype',['BooleanType',['../classarrow_1_1_boolean_type.html',1,'arrow']]],
+  ['brotlicodec',['BrotliCodec',['../classarrow_1_1_brotli_codec.html',1,'arrow']]],
   ['buffer',['Buffer',['../classarrow_1_1_buffer.html',1,'arrow']]],
   ['bufferbuilder',['BufferBuilder',['../classarrow_1_1_buffer_builder.html',1,'arrow']]],
   ['bufferdescr',['BufferDescr',['../classarrow_1_1_buffer_descr.html',1,'arrow']]],

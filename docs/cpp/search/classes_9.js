@@ -1,9 +1,7 @@
 var searchData=
 [
-  ['libhdfsshim',['LibHdfsShim',['../structarrow_1_1io_1_1_lib_hdfs_shim.html',1,'arrow::io']]],
-  ['listarray',['ListArray',['../classarrow_1_1_list_array.html',1,'arrow']]],
-  ['listbuilder',['ListBuilder',['../classarrow_1_1_list_builder.html',1,'arrow']]],
-  ['listconverter',['ListConverter',['../classarrow_1_1py_1_1_list_converter.html',1,'arrow::py']]],
-  ['listtype',['ListType',['../classarrow_1_1_list_type.html',1,'arrow']]],
-  ['loggingmemorypool',['LoggingMemoryPool',['../classarrow_1_1_logging_memory_pool.html',1,'arrow']]]
+  ['jsonreader',['JsonReader',['../classarrow_1_1ipc_1_1_json_reader.html',1,'arrow::ipc']]],
+  ['jsonreaderimpl',['JsonReaderImpl',['../classarrow_1_1ipc_1_1_json_reader_1_1_json_reader_impl.html',1,'arrow::ipc::JsonReader']]],
+  ['jsonwriter',['JsonWriter',['../classarrow_1_1ipc_1_1_json_writer.html',1,'arrow::ipc']]],
+  ['jsonwriterimpl',['JsonWriterImpl',['../classarrow_1_1ipc_1_1_json_writer_1_1_json_writer_impl.html',1,'arrow::ipc::JsonWriter']]]
 ];

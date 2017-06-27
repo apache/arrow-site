@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['type',['Type',['../classarrow_1_1ipc_1_1_message.html#a6d6973b3b03de50d7be9dbab4db910db',1,'arrow::ipc::Message::Type()'],['../structarrow_1_1io_1_1_file_mode.html#a41b6fb9caec96f1e634fb8052c9a9310',1,'arrow::io::FileMode::type()'],['../structarrow_1_1io_1_1_object_type.html#a1058f546342de12b2b2ade7410f4de7a',1,'arrow::io::ObjectType::type()'],['../structarrow_1_1ipc_1_1feather_1_1_column_type.html#ab87c3cfee4ce14205f19dfd9bf5a0424',1,'arrow::ipc::feather::ColumnType::type()'],['../classarrow_1_1py_1_1_pandas_block.html#a8294db4f4eb12585e2aadeae7c12fbf4',1,'arrow::py::PandasBlock::type()'],['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44',1,'arrow::Type::type()'],['../structarrow_1_1_time_unit.html#a561ef51c3755bd873f8f86f5bc4ec1ff',1,'arrow::TimeUnit::type()']]]
+  ['precision',['Precision',['../classarrow_1_1_floating_point.html#aa585c0815b471db6d35d916d9e887b7a',1,'arrow::FloatingPoint']]]
 ];
