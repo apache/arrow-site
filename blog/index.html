@@ -111,6 +111,157 @@
     
   <div class="container">
     <h2>
+      Speeding up PySpark with Apache Arrow
+      <a href="/blog/2017/07/26/spark-arrow/" class="permalink" title="Permalink">∞</a>
+    </h2>
+
+    
+
+    <div class="panel">
+      <div class="panel-body">
+        <div>
+          <span class="label label-default">Published</span>
+          <span class="published">
+            <i class="fa fa-calendar"></i>
+            26 Jul 2017
+          </span>
+        </div>
+        <div>
+          <span class="label label-default">By</span>
+          <a href=""><i class="fa fa-user"></i>  (BryanCutler)</a>
+        </div>
+      </div>
+    </div>
+    <!--
+
+-->
+
+<p><em><a href="https://github.com/BryanCutler">Bryan Cutler</a> is a software engineer at IBM’s Spark Technology Center <a href="http://www.spark.tc/">STC</a></em></p>
+
+<p>Beginning with <a href="https://spark.apache.org/">Apache Spark</a> version 2.3, <a href="https://arrow.apache.org/">Apache Arrow</a> will be a supported
+dependency and begin to offer increased performance with columnar data transfer.
+If you are a Spark user that prefers to work in Python and Pandas, this is a cause
+to be excited over! The initial work is limited to collecting a Spark DataFrame
+with <code class="highlighter-rouge">toPandas()</code>, which I will discuss below, however there are many additional
+improvements that are currently <a href="https://issues.apache.org/jira/issues/?filter=12335725&amp;jql=project%20%3D%20SPARK%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)%20AND%20text%20~%20%22arrow%22%20ORDER%20BY%20createdDate%20DESC">underway</a>.</p>
+
+<h1 id="optimizing-spark-conversion-to-pandas">Optimizing Spark Conversion to Pandas</h1>
+
+<p>The previous way of converting a Spark DataFrame to Pandas with <code class="highlighter-rouge">DataFrame.toPandas()</code>
+in PySpark was painfully inefficient. Basically, it worked by first collecting all
+rows to the Spark driver. Next, each row would get serialized into Python’s pickle
+format and sent to a Python worker process. This child process unpickles each row into
+a huge list of tuples. Finally, a Pandas DataFrame is created from the list using
+<code class="highlighter-rouge">pandas.DataFrame.from_records()</code>.</p>
+
+<p>This all might seem like standard procedure, but suffers from 2 glaring issues: 1)
+even using CPickle, Python serialization is a slow process and 2) creating
+a <code class="highlighter-rouge">pandas.DataFrame</code> using <code class="highlighter-rouge">from_records</code> must slowly iterate over the list of pure
+Python data and convert each value to Pandas format. See <a href="https://gist.github.com/wesm/0cb5531b1c2e346a0007">here</a> for a detailed
+analysis.</p>
+
+<p>Here is where Arrow really shines to help optimize these steps: 1) Once the data is
+in Arrow memory format, there is no need to serialize/pickle anymore as Arrow data can
+be sent directly to the Python process, 2) When the Arrow data is received in Python,
+then pyarrow can utilize zero-copy methods to create a <code class="highlighter-rouge">pandas.DataFrame</code> from entire
+chunks of data at once instead of processing individual scalar values. Additionally,
+the conversion to Arrow data can be done on the JVM and pushed back for the Spark
+executors to perform in parallel, drastically reducing the load on the driver.</p>
+
+<p>As of the merging of <a href="https://issues.apache.org/jira/browse/SPARK-13534">SPARK-13534</a>, the use of Arrow when calling <code class="highlighter-rouge">toPandas()</code>
+needs to be enabled by setting the SQLConf “spark.sql.execution.arrow.enable” to
+“true”.  Let’s look at a simple usage example.</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /__ / .__/\_,_/_/ /_/\_\   version 2.3.0-SNAPSHOT
+      /_/
+
+Using Python version 2.7.13 (default, Dec 20 2016 23:09:15)
+SparkSession available as 'spark'.
+
+In [1]: from pyspark.sql.functions import rand
+   ...: df = spark.range(1 &lt;&lt; 22).toDF("id").withColumn("x", rand())
+   ...: df.printSchema()
+   ...: 
+root
+ |-- id: long (nullable = false)
+ |-- x: double (nullable = false)
+
+
+In [2]: %time pdf = df.toPandas()
+CPU times: user 17.4 s, sys: 792 ms, total: 18.1 s
+Wall time: 20.7 s
+
+In [3]: spark.conf.set("spark.sql.execution.arrow.enable", "true")
+
+In [4]: %time pdf = df.toPandas()
+CPU times: user 40 ms, sys: 32 ms, total: 72 ms                                 
+Wall time: 737 ms
+
+In [5]: pdf.describe()
+Out[5]: 
+                 id             x
+count  4.194304e+06  4.194304e+06
+mean   2.097152e+06  4.998996e-01
+std    1.210791e+06  2.887247e-01
+min    0.000000e+00  8.291929e-07
+25%    1.048576e+06  2.498116e-01
+50%    2.097152e+06  4.999210e-01
+75%    3.145727e+06  7.498380e-01
+max    4.194303e+06  9.999996e-01
+</code></pre>
+</div>
+
+<p>This example was run locally on my laptop using Spark defaults so the times
+shown should not be taken precisely. Even though, it is clear there is a huge
+performance boost and using Arrow took something that was excruciatingly slow
+and speeds it up to be barely noticeable.</p>
+
+<h1 id="notes-on-usage">Notes on Usage</h1>
+
+<p>Here are some things to keep in mind before making use of this new feature. At
+the time of writing this, pyarrow will not be installed automatically with
+pyspark and needs to be manually installed, see installation <a href="https://github.com/apache/arrow/blob/master/site/install.md">instructions</a>.
+It is planned to add pyarrow as a pyspark dependency so that 
+<code class="highlighter-rouge">&gt; pip install pyspark</code> will also install pyarrow.</p>
+
+<p>Currently, the controlling SQLConf is disabled by default. This can be enabled
+programmatically as in the example above or by adding the line
+“spark.sql.execution.arrow.enable=true” to <code class="highlighter-rouge">SPARK_HOME/conf/spark-defaults.conf</code>.</p>
+
+<p>Also, not all Spark data types are currently supported and limited to primitive
+types. Expanded type support is in the works and expected to also be in the Spark
+2.3 release.</p>
+
+<h1 id="future-improvements">Future Improvements</h1>
+
+<p>As mentioned, this was just a first step in using Arrow to make life easier for
+Spark Python users. A few exciting initiatives in the works are to allow for
+vectorized UDF evaluation (<a href="https://issues.apache.org/jira/browse/SPARK-21190">SPARK-21190</a>, <a href="https://issues.apache.org/jira/browse/SPARK-21404">SPARK-21404</a>), and the ability
+to apply a function on grouped data using a Pandas DataFrame (<a href="https://issues.apache.org/jira/browse/SPARK-20396">SPARK-20396</a>).
+Just as Arrow helped in converting a Spark to Pandas, it can also work in the
+other direction when creating a Spark DataFrame from an existing Pandas
+DataFrame (<a href="https://issues.apache.org/jira/browse/SPARK-20791">SPARK-20791</a>). Stay tuned for more!</p>
+
+<h1 id="collaborators">Collaborators</h1>
+
+<p>Reaching this first milestone was a group effort from both the Apache Arrow and
+Spark communities. Thanks to the hard work of <a href="https://github.com/wesm">Wes McKinney</a>, <a href="https://github.com/icexelloss">Li Jin</a>,
+<a href="https://github.com/holdenk">Holden Karau</a>, Reynold Xin, Wenchen Fan, Shane Knapp and many others that
+helped push this effort forwards.</p>
+
+
+  </div>
+
+  
+
+  
+    
+  <div class="container">
+    <h2>
       Apache Arrow 0.5.0 Release
       <a href="/blog/2017/07/25/0.5.0-release/" class="permalink" title="Permalink">∞</a>
     </h2>
