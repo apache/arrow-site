@@ -1,13 +1,12 @@
 var searchData=
 [
-  ['capacity_5f',['capacity_',['../classarrow_1_1_buffer.html#a45ee7f1e21f9f3f4cb8233be8d64731e',1,'arrow::Buffer::capacity_()'],['../classarrow_1_1_array_builder.html#aeb92737fe5ada5b372459705c1690d7e',1,'arrow::ArrayBuilder::capacity_()']]],
-  ['child',['child',['../structmalloc__tree__chunk.html#a560fa0afc644c1e05f4fab62818ab6cd',1,'malloc_tree_chunk']]],
-  ['children_5f',['children_',['../classarrow_1_1_struct_array.html#a2cba8a6d4aa6db38c35a6afa669dd990',1,'arrow::StructArray::children_()'],['../classarrow_1_1_union_array.html#ad2982559e1217fb4d434329b8aacfe87',1,'arrow::UnionArray::children_()'],['../classarrow_1_1_array_builder.html#a9b2ede82de7d728f80eaa17ac8f7327d',1,'arrow::ArrayBuilder::children_()'],['../classarrow_1_1_data_type.html#a8dd2f042289733133c386463afcea902',1,'arrow::DataType::children_()']]],
-  ['chunks_5f',['chunks_',['../classarrow_1_1_chunked_array.html#a438707b92386f68a63348c30743bc159',1,'arrow::ChunkedArray']]],
-  ['client',['client',['../struct_get_request.html#a353786bc105a794ae66a5cb035ae6a10',1,'GetRequest']]],
-  ['client_5f',['client_',['../class_test_plasma_store.html#a75fed7ce87f04e8594072a32298281ee',1,'TestPlasmaStore']]],
-  ['clientdata',['clientData',['../structae_file_event.html#a001285b3f180bb6e776a97190fe47b7b',1,'aeFileEvent::clientData()'],['../structae_time_event.html#ad31bed95bafc0baa81fe645f56a11503',1,'aeTimeEvent::clientData()']]],
-  ['clients',['clients',['../struct_object_table_entry.html#a05310e9f0af6c8334881a2175625ed07',1,'ObjectTableEntry']]],
-  ['column_5ftype_5fenum_5fmapping',['COLUMN_TYPE_ENUM_MAPPING',['../namespacearrow_1_1ipc_1_1feather.html#a4dd460ddfbe0d3885e7f89d30ed7e49d',1,'arrow::ipc::feather']]],
-  ['count',['count',['../struct_client_mmap_table_entry.html#ab6ee6e9fc600868dee94ebf2c7bd6ab3',1,'ClientMmapTableEntry::count()'],['../struct_object_in_use_entry.html#ae2233557b020ae0275ae931687cd398a',1,'ObjectInUseEntry::count()']]]
+  ['data_5f',['data_',['../classarrow_1_1internal_1_1_array_data_wrapper.html#a10744c8a8bed489c030e85c728ee9ce5',1,'arrow::internal::ArrayDataWrapper::data_()'],['../classarrow_1_1_array.html#aa8047296b1e2027f4089fceca3714597',1,'arrow::Array::data_()'],['../classarrow_1_1_buffer.html#af468a7a1f346f9a6a29738bf585a3548',1,'arrow::Buffer::data_()'],['../classarrow_1_1_buffer_builder.html#a58dae3a8f530eba77e77d045d86e8396',1,'arrow::BufferBuilder::data_()'],['../classarrow_1_1_primitive_builder.html#a36dc52fb246e1ed17854ba9240509374',1,'arrow::PrimitiveBuilder::data_()'],['../classarrow_1_1_adaptive_int_builder_base.html#a02ebb7b564e24c624a2973818b21a16f',1,'arrow::AdaptiveIntBuilderBase::data_()'],['../classarrow_1_1_boolean_builder.html#a5fe19df6b73b6d8a415b19f43d436f86',1,'arrow::BooleanBuilder::data_()'],['../classarrow_1_1_column.html#ad362479f06033fdcf67cd45a7e354ab1',1,'arrow::Column::data_()'],['../classarrow_1_1_tensor.html#a00dd73d91a790484b94aabcb4fedcdc7',1,'arrow::Tensor::data_()']]],
+  ['decimal',['Decimal',['../namespacearrow_1_1decimal.html#ac2063f92270a114baf5eac9559adb1e3',1,'arrow::decimal']]],
+  ['dict_5fbuilder_5f',['dict_builder_',['../classarrow_1_1_dictionary_builder.html#a17d3ba268ab5d9c0e062ea954d4935dc',1,'arrow::DictionaryBuilder']]],
+  ['dictionaries_5f',['dictionaries_',['../classarrow_1_1ipc_1_1_record_batch_stream_writer_1_1_record_batch_stream_writer_impl.html#a66360d69fe397b0658867a01f101e60f',1,'arrow::ipc::RecordBatchStreamWriter::RecordBatchStreamWriterImpl']]],
+  ['dictionary_5f',['dictionary_',['../classarrow_1_1py_1_1_categorical_block.html#aeb777ef2610ae0ee246d826fe9bc456a',1,'arrow::py::CategoricalBlock']]],
+  ['dictionary_5fmemo_5f',['dictionary_memo_',['../classarrow_1_1ipc_1_1_record_batch_stream_writer_1_1_record_batch_stream_writer_impl.html#a8b3b084570e6f21312abedb48a449f2a',1,'arrow::ipc::RecordBatchStreamWriter::RecordBatchStreamWriterImpl']]],
+  ['dim_5fnames_5f',['dim_names_',['../classarrow_1_1_tensor.html#a84f88a8835ecb20532f89fb804b8ce2a',1,'arrow::Tensor']]],
+  ['driver',['driver',['../structarrow_1_1io_1_1_hdfs_connection_config.html#ab780754ce4e655edb1545ff9cb203d06',1,'arrow::io::HdfsConnectionConfig']]],
+  ['driver_5f',['driver_',['../classarrow_1_1io_1_1_hdfs_any_file_impl.html#a6e5ccc70b0ab006c93ec50cbfc104ab8',1,'arrow::io::HdfsAnyFileImpl']]]
 ];

@@ -1,21 +1,4 @@
 var searchData=
 [
-  ['next_5fchunk',['next_chunk',['../dlmalloc_8c.html#a891ae6952dcc03f81e75b91666400f51',1,'dlmalloc.c']]],
-  ['next_5fpinuse',['next_pinuse',['../dlmalloc_8c.html#a62c85451d286c94329b31175ff6aa991',1,'dlmalloc.c']]],
-  ['no_5fimport_5farray',['NO_IMPORT_ARRAY',['../numpy__interop_8h.html#ad2cd12e09a08db7cbcae2e74f723d6c4',1,'numpy_interop.h']]],
-  ['no_5fmallinfo',['NO_MALLINFO',['../dlmalloc_8c.html#abdaef093c0ac7f4ffca5df2d2b2f0560',1,'dlmalloc.c']]],
-  ['no_5fmalloc_5fstats',['NO_MALLOC_STATS',['../dlmalloc_8c.html#aa5a986d0460a969befdb7efd79ef049c',1,'dlmalloc.c']]],
-  ['no_5fsegment_5ftraversal',['NO_SEGMENT_TRAVERSAL',['../dlmalloc_8c.html#a6413d234d61f597fccc2aac39e33941c',1,'dlmalloc.c']]],
-  ['noinline',['NOINLINE',['../dlmalloc_8c.html#a1b173d22e57d9395897acbd8de62d505',1,'dlmalloc.c']]],
-  ['npy_5farray_5faligned',['NPY_ARRAY_ALIGNED',['../numpy__interop_8h.html#ae60e185ff8ade7341b0c53ca1e80255f',1,'numpy_interop.h']]],
-  ['npy_5farray_5fnotswapped',['NPY_ARRAY_NOTSWAPPED',['../numpy__interop_8h.html#ac8a802bab03d4971c4d59b840579808e',1,'numpy_interop.h']]],
-  ['npy_5farray_5fupdateifcopy',['NPY_ARRAY_UPDATEIFCOPY',['../numpy__interop_8h.html#a118a68a7b8d21e9cbf1c2ac3d61542ef',1,'numpy_interop.h']]],
-  ['npy_5farray_5fwriteable',['NPY_ARRAY_WRITEABLE',['../numpy__interop_8h.html#a685e97c65cc63ab8073772796cbcbcfd',1,'numpy_interop.h']]],
-  ['npy_5fint_5fdecl',['NPY_INT_DECL',['../python_2type__traits_8h.html#a46d295fdbaad623f3dfaa80f7f7fe720',1,'type_traits.h']]],
-  ['nsmallbins',['NSMALLBINS',['../dlmalloc_8c.html#afe898942dfe9b3557981d0dc935fddde',1,'dlmalloc.c']]],
-  ['ntreebins',['NTREEBINS',['../dlmalloc_8c.html#a187fe34f71c63b486f6d79ac51117061',1,'dlmalloc.c']]],
-  ['num_5fbind_5fattempts',['NUM_BIND_ATTEMPTS',['../plasma_2io_8cc.html#aa43669d940668f7c2f4c748235d3e778',1,'io.cc']]],
-  ['num_5fconnect_5fattempts',['NUM_CONNECT_ATTEMPTS',['../plasma_2io_8cc.html#ae0f2fc5d28be5aeda444793f4b863071',1,'io.cc']]],
-  ['numpy_5fimport_5farray',['NUMPY_IMPORT_ARRAY',['../init_8cc.html#ae83f4406311058e17359fe41f3239f95',1,'init.cc']]],
-  ['numpy_5ftype_5fcase',['NUMPY_TYPE_CASE',['../numpy__convert_8cc.html#ae33a7750a59efcc93ccd6ea33948937b',1,'numpy_convert.cc']]]
+  ['o_5fbinary',['O_BINARY',['../file_8cc.html#a36fa9b2e726512bc17a7a6d3e39002be',1,'file.cc']]]
 ];

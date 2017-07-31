@@ -8,7 +8,7 @@ var searchData=
   ['datetime_5fwith_5ftz',['DATETIME_WITH_TZ',['../classarrow_1_1py_1_1_pandas_block.html#a8294db4f4eb12585e2aadeae7c12fbf4aaceebb5da872a65a892a404fefd837f8',1,'arrow::py::PandasBlock']]],
   ['day',['DAY',['../namespacearrow.html#a04410292f01b108a8a8af3c7077afcdaa5b1d59b5451c06afb65ab1bc2713cfb4',1,'arrow']]],
   ['day_5ftime',['DAY_TIME',['../classarrow_1_1_interval_type.html#a391ecfe216945c38e0edc084f1e6614fac6700171f39a6376e558b63f81e789f7',1,'arrow::IntervalType']]],
-  ['decimal',['DECIMAL',['../classarrow_1_1py_1_1_pandas_block.html#a8294db4f4eb12585e2aadeae7c12fbf4a28bfeb4ceddcb4390edfbb36c33cc0ba',1,'arrow::py::PandasBlock::DECIMAL()'],['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44a014fe7104b592dbd7c70e4e861774a63',1,'arrow::Type::DECIMAL()']]],
+  ['decimal',['DECIMAL',['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44a014fe7104b592dbd7c70e4e861774a63',1,'arrow::Type']]],
   ['deflate',['DEFLATE',['../classarrow_1_1_g_zip_codec.html#a61e80e6eb225c4f17a5d6e9cd4ce1621ad0ccb2b0bf797c855bd687d307d03735',1,'arrow::GZipCodec']]],
   ['dense',['DENSE',['../namespacearrow.html#a8f5c97201fa51210e007f33a600e295da0706fbbd929bd8abc4de386c53d439ff',1,'arrow']]],
   ['dictionary',['DICTIONARY',['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44a3c38b5820a3de12d71713473550c6280',1,'arrow::Type']]],

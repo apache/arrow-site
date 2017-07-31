@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['dateunit',['DateUnit',['../namespacearrow.html#a04410292f01b108a8a8af3c7077afcda',1,'arrow']]]
+  ['cachelevel',['CacheLevel',['../classarrow_1_1_cpu_info.html#a890f4f69f78663820be8bfd591b69a8b',1,'arrow::CpuInfo']]]
 ];

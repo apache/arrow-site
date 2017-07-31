@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['hdfs',['HDFS',['../md_HDFS.html',1,'']]]
+  ['deprecated_20list',['Deprecated List',['../deprecated.html',1,'']]]
 ];

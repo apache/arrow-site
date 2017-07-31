@@ -1,8 +1,5 @@
 var searchData=
 [
-  ['u16',['U16',['../xxhash_8cc.html#adf928e51a60dba0df29d615401cc55a8',1,'xxhash.cc']]],
-  ['u32',['U32',['../xxhash_8cc.html#ac3df7cf3c8cb172a588adec881447d68',1,'xxhash.cc']]],
-  ['u64',['U64',['../xxhash_8cc.html#a24c386d3758eba951eb7532fdbb45804',1,'xxhash.cc']]],
   ['uint16block',['UInt16Block',['../namespacearrow_1_1py.html#a03149ef2c32744a4b80705191884b773',1,'arrow::py']]],
   ['uint16builder',['UInt16Builder',['../namespacearrow.html#a6f7720234c751cfa79a0d6d4e2014485',1,'arrow']]],
   ['uint32block',['UInt32Block',['../namespacearrow_1_1py.html#acc7f1ea856a470586ebdfd927b6aaf27',1,'arrow::py']]],

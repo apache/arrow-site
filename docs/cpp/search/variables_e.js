@@ -1,15 +1,15 @@
 var searchData=
 [
-  ['object',['object',['../struct_object_in_use_entry.html#a1203485a7a0f5b8b9535ac22947c1948',1,'ObjectInUseEntry']]],
-  ['object_5fid',['object_id',['../struct_object_request.html#a93d7efd884a742ee6b0aa168d66e8c2b',1,'ObjectRequest::object_id()'],['../struct_object_table_entry.html#a4a44112af4c7f48e008f31ad97eb445e',1,'ObjectTableEntry::object_id()']]],
-  ['object_5fids',['object_ids',['../struct_get_request.html#a1069a0932c307175c197a12675e4ef21',1,'GetRequest']]],
-  ['object_5fnotifications',['object_notifications',['../struct_notification_queue.html#afbcf1d23d116a1cc02891083ce5261ed',1,'NotificationQueue']]],
-  ['objects',['objects',['../struct_plasma_store_info.html#a909901159f9bb4e593dcaeabb22aaa7a',1,'PlasmaStoreInfo::objects()'],['../struct_get_request.html#a3731e304c7fe313e8382226cc83f3072',1,'GetRequest::objects()']]],
-  ['offset',['offset',['../structarrow_1_1ipc_1_1feather_1_1_array_metadata.html#a0d7189c6211058994296ea9da33e9740',1,'arrow::ipc::feather::ArrayMetadata::offset()'],['../structarrow_1_1ipc_1_1_file_block.html#aa8b2d60c43fc6c6afa22dcf5c2830f99',1,'arrow::ipc::FileBlock::offset()'],['../structarrow_1_1_field_metadata.html#a0f418f408657fddeac3fe25aa86807a4',1,'arrow::FieldMetadata::offset()'],['../structarrow_1_1_buffer_metadata.html#a69147b5f4f63cf4f50213b7b490187ea',1,'arrow::BufferMetadata::offset()'],['../struct_object_table_entry.html#abbcdd4cb3592622afc363006ccce3e77',1,'ObjectTableEntry::offset()']]],
-  ['offset_5f',['offset_',['../classarrow_1_1_array.html#a581cecab69f86737603be4c3bd5835bd',1,'arrow::Array']]],
-  ['offset_5fbuilder_5f',['offset_builder_',['../classarrow_1_1_list_builder.html#a285b847f0193fad1548ab3e65735e41d',1,'arrow::ListBuilder']]],
-  ['ordblks',['ordblks',['../structmallinfo.html#afaac6d1e005097fa1ed835684e23bfa7',1,'mallinfo']]],
-  ['ordered',['ordered',['../structarrow_1_1ipc_1_1feather_1_1_category_metadata.html#ac71dd7ac37b723ef3943654fdcc72f05',1,'arrow::ipc::feather::CategoryMetadata']]],
-  ['out_5f',['out_',['../classarrow_1_1py_1_1_pandas_converter.html#ab12f30558533f2e62556c879beeb3430',1,'arrow::py::PandasConverter']]],
-  ['owner',['owner',['../structarrow_1_1io_1_1_hdfs_path_info.html#a4d1e5aa6d3c36115c3d22dc6169c1a15',1,'arrow::io::HdfsPathInfo']]]
+  ['random_5fseed_5f',['random_seed_',['../classarrow_1_1_test_base.html#a4a52d10e2eebc892cced2a2efa62969e',1,'arrow::TestBase']]],
+  ['raw_5fdata_5f',['raw_data_',['../classarrow_1_1_binary_array.html#a93bf4f13beb09105229f7e0b758ee145',1,'arrow::BinaryArray::raw_data_()'],['../classarrow_1_1_primitive_builder.html#a4bec68717fa585c5f2af5e8a9c25e675',1,'arrow::PrimitiveBuilder::raw_data_()'],['../classarrow_1_1_adaptive_int_builder_base.html#a3341fff45cd727a5d6f6ae063df32868',1,'arrow::AdaptiveIntBuilderBase::raw_data_()'],['../classarrow_1_1_boolean_builder.html#adbea6f2e45cf2a6739834cf14bc40c08',1,'arrow::BooleanBuilder::raw_data_()']]],
+  ['raw_5ftype_5fids_5f',['raw_type_ids_',['../classarrow_1_1_union_array.html#a3177a84d9b1c886dc0859f7c20bf1704',1,'arrow::UnionArray']]],
+  ['raw_5fvalue_5foffsets_5f',['raw_value_offsets_',['../classarrow_1_1_list_array.html#aa7d3ae828afbf931dac9157dc75fe8d6',1,'arrow::ListArray::raw_value_offsets_()'],['../classarrow_1_1_binary_array.html#a1b738a6a695d28e790ed4d7fe78cb18e',1,'arrow::BinaryArray::raw_value_offsets_()'],['../classarrow_1_1_union_array.html#a2cd1c82dec5b8dcedc94c05fe9dbe872',1,'arrow::UnionArray::raw_value_offsets_()']]],
+  ['raw_5fvalues_5f',['raw_values_',['../classarrow_1_1_primitive_array.html#ab45d78650d5214bf6c3d0706693c448b',1,'arrow::PrimitiveArray']]],
+  ['record_5fbatches_5f',['record_batches_',['../classarrow_1_1ipc_1_1_record_batch_stream_writer_1_1_record_batch_stream_writer_impl.html#a49d747fe6762b5a03ab34333e8b17129',1,'arrow::ipc::RecordBatchStreamWriter::RecordBatchStreamWriterImpl']]],
+  ['recordbatchstreamwriterimpl',['RecordBatchStreamWriterImpl',['../classarrow_1_1ipc_1_1_record_batch_stream_writer.html#a38780b171958b6ac66d851990c37eed2',1,'arrow::ipc::RecordBatchStreamWriter']]],
+  ['repeat_5fcount_5f',['repeat_count_',['../classarrow_1_1_rle_decoder.html#a3322b6e9e41a478d05c0a771142d61d7',1,'arrow::RleDecoder']]],
+  ['replication',['replication',['../structarrow_1_1io_1_1_hdfs_path_info.html#a3b2fcdb2a344f54080c9b67de4bda71c',1,'arrow::io::HdfsPathInfo']]],
+  ['result_5f',['result_',['../classarrow_1_1_range_equals_visitor.html#a2ef9521622b231350f03ac30a81f1584',1,'arrow::RangeEqualsVisitor::result_()'],['../classarrow_1_1_type_equals_visitor.html#a5d2f72283f6b532f4fb33c1f5f5a0cf5',1,'arrow::TypeEqualsVisitor::result_()']]],
+  ['right_5f',['right_',['../classarrow_1_1_range_equals_visitor.html#ab13eaca6a7d74e62c0bc615c9f509304',1,'arrow::RangeEqualsVisitor::right_()'],['../classarrow_1_1_type_equals_visitor.html#a702f80418dffea6a23289f8ebe4e7044',1,'arrow::TypeEqualsVisitor::right_()']]],
+  ['right_5fstart_5fidx_5f',['right_start_idx_',['../classarrow_1_1_range_equals_visitor.html#a8d45c806649ad102d079b340422593e4',1,'arrow::RangeEqualsVisitor']]]
 ];
