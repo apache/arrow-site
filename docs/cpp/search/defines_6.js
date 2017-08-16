@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['file_5fmap_5fexecute',['FILE_MAP_EXECUTE',['../mman_8h.html#a7eee74d8247396bbf6fa81d4613b359b',1,'mman.h']]]
+  ['handle_5fsigpipe',['HANDLE_SIGPIPE',['../plasma_8h.html#a5a339f6de3598691949f20d166212131',1,'plasma.h']]]
 ];

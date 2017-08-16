@@ -1,24 +1,15 @@
 var searchData=
 [
-  ['common_2ecc',['common.cc',['../common_8cc.html',1,'']]],
-  ['common_2eh',['common.h',['../common_8h.html',1,'']]],
-  ['compare_2ecc',['compare.cc',['../compare_8cc.html',1,'']]],
+  ['client_2eh',['client.h',['../client_8h.html',1,'']]],
+  ['common_2eh',['common.h',['../arrow_2python_2common_8h.html',1,'(Global Namespace)'],['../plasma_2common_8h.html',1,'(Global Namespace)']]],
   ['compare_2eh',['compare.h',['../compare_8h.html',1,'']]],
   ['compiler_2dutil_2eh',['compiler-util.h',['../compiler-util_8h.html',1,'']]],
-  ['compression_2ecc',['compression.cc',['../compression_8cc.html',1,'']]],
   ['compression_2eh',['compression.h',['../compression_8h.html',1,'']]],
-  ['compression_5fbrotli_2ecc',['compression_brotli.cc',['../compression__brotli_8cc.html',1,'']]],
   ['compression_5fbrotli_2eh',['compression_brotli.h',['../compression__brotli_8h.html',1,'']]],
-  ['compression_5flz4_2ecc',['compression_lz4.cc',['../compression__lz4_8cc.html',1,'']]],
   ['compression_5flz4_2eh',['compression_lz4.h',['../compression__lz4_8h.html',1,'']]],
-  ['compression_5fsnappy_2ecc',['compression_snappy.cc',['../compression__snappy_8cc.html',1,'']]],
   ['compression_5fsnappy_2eh',['compression_snappy.h',['../compression__snappy_8h.html',1,'']]],
-  ['compression_5fzlib_2ecc',['compression_zlib.cc',['../compression__zlib_8cc.html',1,'']]],
   ['compression_5fzlib_2eh',['compression_zlib.h',['../compression__zlib_8h.html',1,'']]],
-  ['compression_5fzstd_2ecc',['compression_zstd.cc',['../compression__zstd_8cc.html',1,'']]],
   ['compression_5fzstd_2eh',['compression_zstd.h',['../compression__zstd_8h.html',1,'']]],
-  ['config_2ecc',['config.cc',['../config_8cc.html',1,'']]],
-  ['config_2eh',['config.h',['../config_8h.html',1,'']]],
-  ['cpu_2dinfo_2ecc',['cpu-info.cc',['../cpu-info_8cc.html',1,'']]],
+  ['config_2eh',['config.h',['../arrow_2python_2config_8h.html',1,'(Global Namespace)'],['../plasma_2thirdparty_2ae_2config_8h.html',1,'(Global Namespace)']]],
   ['cpu_2dinfo_2eh',['cpu-info.h',['../cpu-info_8h.html',1,'']]]
 ];

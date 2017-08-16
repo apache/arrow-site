@@ -1,7 +1,8 @@
 var searchData=
 [
-  ['scalar',['Scalar',['../classarrow_1_1_dictionary_builder.html#a83fef1f2730059a868a1ca8cec45481c',1,'arrow::DictionaryBuilder']]],
-  ['size_5ftype',['size_type',['../classarrow_1_1stl__allocator.html#aa8a67276663a6f604bc1c34d7602e9df',1,'arrow::stl_allocator::size_type()'],['../classarrow_1_1py_1_1_ndarray1_d_indexer.html#a1292bfad93b4aa33d53af65828842a0e',1,'arrow::py::Ndarray1DIndexer::size_type()']]],
-  ['streamreader',['StreamReader',['../namespacearrow_1_1ipc.html#a39b9dbf1d9bca1ba81da5517c1780cdc',1,'arrow::ipc']]],
-  ['streamwriter',['StreamWriter',['../namespacearrow_1_1ipc.html#a4f8cfbcfa47eeb61fb9a83c30818d0a0',1,'arrow::ipc']]]
+  ['uint16builder',['UInt16Builder',['../namespacearrow.html#a6f7720234c751cfa79a0d6d4e2014485',1,'arrow']]],
+  ['uint32builder',['UInt32Builder',['../namespacearrow.html#a54e6101656a21b97a88179c8d1c453b9',1,'arrow']]],
+  ['uint64builder',['UInt64Builder',['../namespacearrow.html#a1777cb0f7c98036ad6f078fa0f1a6829',1,'arrow']]],
+  ['uint8builder',['UInt8Builder',['../namespacearrow.html#adab028f188008a82d790cd69ac351a3b',1,'arrow']]],
+  ['unit',['Unit',['../classarrow_1_1_timestamp_type.html#a895411d8d9ceffe0aa91d125aea7b429',1,'arrow::TimestampType']]]
 ];

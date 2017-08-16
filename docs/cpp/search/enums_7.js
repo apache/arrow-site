@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['statuscode',['StatusCode',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188f',1,'arrow']]]
+  ['precision',['Precision',['../classarrow_1_1_floating_point.html#aa585c0815b471db6d35d916d9e887b7a',1,'arrow::FloatingPoint']]]
 ];

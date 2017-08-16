@@ -1,14 +1,12 @@
 var searchData=
 [
-  ['page',['page',['../structarrow_1_1ipc_1_1_buffer_metadata.html#a5aaece22f9f14aeb1d98daf6c55adb11',1,'arrow::ipc::BufferMetadata']]],
-  ['parent_5f',['parent_',['../classarrow_1_1_buffer.html#a3feb5a490cbd9699837067931476c65b',1,'arrow::Buffer']]],
-  ['path_5f',['path_',['../classarrow_1_1io_1_1_o_s_file.html#ab0fd08a54496b157e46ca07e206a7e85',1,'arrow::io::OSFile::path_()'],['../classarrow_1_1io_1_1_hdfs_any_file_impl.html#a80d2c641fc61846a6523b490deee3681',1,'arrow::io::HdfsAnyFileImpl::path_()']]],
-  ['permissions',['permissions',['../structarrow_1_1io_1_1_hdfs_path_info.html#af52863d30be7e7fbf0f3e419853d78ac',1,'arrow::io::HdfsPathInfo']]],
-  ['placement_5farr_5f',['placement_arr_',['../classarrow_1_1py_1_1_pandas_block.html#ad3588af11eb3189f4b318a00f218e2b0',1,'arrow::py::PandasBlock']]],
-  ['placement_5fdata_5f',['placement_data_',['../classarrow_1_1py_1_1_pandas_block.html#a16728459476eeff5198a91b2a2b797ba',1,'arrow::py::PandasBlock']]],
-  ['pool_5f',['pool_',['../classarrow_1_1_buffer_builder.html#ad4b857975203084d5856758a90f669a4',1,'arrow::BufferBuilder::pool_()'],['../classarrow_1_1_array_builder.html#a33e3aa20cedda9f6d8581809437f1c86',1,'arrow::ArrayBuilder::pool_()'],['../classarrow_1_1ipc_1_1_record_batch_serializer.html#ac8709772dc1e36e10145fb273b726cc2',1,'arrow::ipc::RecordBatchSerializer::pool_()'],['../classarrow_1_1ipc_1_1_record_batch_stream_writer_1_1_record_batch_stream_writer_impl.html#af55ae297d621f4c13a9eb3ab2cf9ddc0',1,'arrow::ipc::RecordBatchStreamWriter::RecordBatchStreamWriterImpl::pool_()'],['../classarrow_1_1py_1_1_pandas_converter.html#add2a20efc04b28d370a7a79c32325172',1,'arrow::py::PandasConverter::pool_()'],['../classarrow_1_1_test_base.html#aab729f71ccb448314e59f92ea626bc8c',1,'arrow::TestBase::pool_()'],['../classarrow_1_1_test_builder.html#af14f485dd005a32b7e1488cb4ab14355',1,'arrow::TestBuilder::pool_()']]],
-  ['popcnt',['POPCNT',['../classarrow_1_1_cpu_info.html#ae342a62dfe1a66ddf9dfd8c2b5374a39',1,'arrow::CpuInfo']]],
-  ['port',['port',['../structarrow_1_1io_1_1_hdfs_connection_config.html#ade93c1d9226f3725e225db43d7f24f14',1,'arrow::io::HdfsConnectionConfig']]],
-  ['position_5f',['position_',['../classarrow_1_1ipc_1_1_record_batch_stream_writer_1_1_record_batch_stream_writer_impl.html#ad3a790e5786ff53caff4f9044fbbe8d8',1,'arrow::ipc::RecordBatchStreamWriter::RecordBatchStreamWriterImpl']]],
-  ['ptr_5f',['ptr_',['../structarrow_1_1internal_1_1_wrapped_binary.html#a66d1b0b99f4141657c753d2f5afa44ad',1,'arrow::internal::WrappedBinary']]]
+  ['object_5fid',['object_id',['../structplasma_1_1_object_request.html#a0b090ab0f96576bcd70493154a3583ab',1,'plasma::ObjectRequest::object_id()'],['../structplasma_1_1_object_table_entry.html#a9b35a72da1a4ca1f0b9970b9f7e53072',1,'plasma::ObjectTableEntry::object_id()']]],
+  ['object_5fnotifications',['object_notifications',['../structplasma_1_1_notification_queue.html#a7c1f4fbe746eb74e19e2e00237833c14',1,'plasma::NotificationQueue']]],
+  ['objects',['objects',['../structplasma_1_1_plasma_store_info.html#a1972fc2e24de109bae2293746a7ad990',1,'plasma::PlasmaStoreInfo']]],
+  ['objectstatuslocal',['ObjectStatusLocal',['../namespaceplasma.html#a3eb1f03a21e0d30051f71ea0dffb60b6',1,'plasma']]],
+  ['objectstatusremote',['ObjectStatusRemote',['../namespaceplasma.html#adad270e3180efe944d7e720ff0e02973',1,'plasma']]],
+  ['offset',['offset',['../structarrow_1_1ipc_1_1feather_1_1_array_metadata.html#a0d7189c6211058994296ea9da33e9740',1,'arrow::ipc::feather::ArrayMetadata::offset()'],['../structarrow_1_1ipc_1_1_field_metadata.html#ade643a1c4628139bb9feea157d897a97',1,'arrow::ipc::FieldMetadata::offset()'],['../structarrow_1_1ipc_1_1_buffer_metadata.html#ad0ab2e3116ce6619de55507504fb1858',1,'arrow::ipc::BufferMetadata::offset()'],['../structarrow_1_1ipc_1_1_file_block.html#aa8b2d60c43fc6c6afa22dcf5c2830f99',1,'arrow::ipc::FileBlock::offset()'],['../structplasma_1_1_object_table_entry.html#a119a8275cb3f0749c6e2aedd7d938bd8',1,'plasma::ObjectTableEntry::offset()']]],
+  ['offsets_5fbuilder_5f',['offsets_builder_',['../classarrow_1_1_list_builder.html#ae11fe094b2280b16e8b35714f839d3c0',1,'arrow::ListBuilder::offsets_builder_()'],['../classarrow_1_1_binary_builder.html#a25e78f8e1f3678f61d54ae3148ab45a1',1,'arrow::BinaryBuilder::offsets_builder_()']]],
+  ['ordered',['ordered',['../structarrow_1_1ipc_1_1feather_1_1_category_metadata.html#ac71dd7ac37b723ef3943654fdcc72f05',1,'arrow::ipc::feather::CategoryMetadata']]],
+  ['owner',['owner',['../structarrow_1_1io_1_1_hdfs_path_info.html#a4d1e5aa6d3c36115c3d22dc6169c1a15',1,'arrow::io::HdfsPathInfo']]]
 ];

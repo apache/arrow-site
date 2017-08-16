@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['windows_2emd',['Windows.md',['../_windows_8md.html',1,'']]],
-  ['windows_5fcompatibility_2eh',['windows_compatibility.h',['../windows__compatibility_8h.html',1,'']]],
-  ['writer_2ecc',['writer.cc',['../writer_8cc.html',1,'']]],
-  ['writer_2eh',['writer.h',['../writer_8h.html',1,'']]]
+  ['visibility_2eh',['visibility.h',['../visibility_8h.html',1,'']]],
+  ['visitor_2eh',['visitor.h',['../visitor_8h.html',1,'']]],
+  ['visitor_5finline_2eh',['visitor_inline.h',['../visitor__inline_8h.html',1,'']]]
 ];

@@ -1,8 +1,8 @@
 var searchData=
 [
-  ['unit',['unit',['../structarrow_1_1ipc_1_1feather_1_1_timestamp_metadata.html#a890ed856d56872c8f1c25936e7597adf',1,'arrow::ipc::feather::TimestampMetadata::unit()'],['../structarrow_1_1ipc_1_1feather_1_1_time_metadata.html#a001c55846e13d17168478f77a1e79821',1,'arrow::ipc::feather::TimeMetadata::unit()']]],
-  ['unit_5f',['unit_',['../classarrow_1_1_date_type.html#a75883ba6050d976e4386fa5573febabb',1,'arrow::DateType::unit_()'],['../classarrow_1_1_time_type.html#a4969fc68a0db512dbd75255f2731dc59',1,'arrow::TimeType::unit_()']]],
-  ['uordblks',['uordblks',['../structmallinfo.html#a4676f74c10d8bf8b79585b04d520356f',1,'mallinfo']]],
-  ['user',['user',['../structarrow_1_1io_1_1_hdfs_connection_config.html#a14e2d5125e7f6a279f9dd3d860606601',1,'arrow::io::HdfsConnectionConfig']]],
-  ['usmblks',['usmblks',['../structmallinfo.html#a470a5e18a1f5eb3cac48020268ca49b8',1,'mallinfo']]]
+  ['value',['value',['../structarrow_1_1_is_unsigned_int.html#a445fa4898364948e9d9185d71f9eb274',1,'arrow::IsUnsignedInt::value()'],['../structarrow_1_1_is_signed_int.html#abc4a825ae09fe403a9374ab16ad2f8f3',1,'arrow::IsSignedInt::value()'],['../structarrow_1_1_is_integer.html#a05e3402d1e3a655b2bdf95e107fb3323',1,'arrow::IsInteger::value()'],['../structarrow_1_1_is_floating_point.html#affd2c10a021930476de1878394d0e9aa',1,'arrow::IsFloatingPoint::value()'],['../structarrow_1_1_is_numeric.html#aa31d6aea56a7c972d8c233b36da35abd',1,'arrow::IsNumeric::value()'],['../structarrow_1_1decimal_1_1_decimal.html#a93ecf0e98e5f41e400d528348892a4b2',1,'arrow::decimal::Decimal::value()']]],
+  ['value_5fbuilder_5f',['value_builder_',['../classarrow_1_1_list_builder.html#ac5be66dfc8135e48881e8d0d939e7fea',1,'arrow::ListBuilder']]],
+  ['value_5fdata_5fbuilder_5f',['value_data_builder_',['../classarrow_1_1_binary_builder.html#adca4b2a7142b3c57f805cb1ec6686601',1,'arrow::BinaryBuilder']]],
+  ['values_5f',['values_',['../classarrow_1_1_list_builder.html#a69c5b939f5f622c21dcdfd32a5c8fceb',1,'arrow::ListBuilder']]],
+  ['values_5fbuilder_5f',['values_builder_',['../classarrow_1_1_dictionary_builder.html#a14c4ef674213b564fac87a8239d0f010',1,'arrow::DictionaryBuilder']]]
 ];

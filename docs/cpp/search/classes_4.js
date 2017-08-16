@@ -1,23 +1,5 @@
 var searchData=
 [
-  ['fatallog',['FatalLog',['../classarrow_1_1internal_1_1_fatal_log.html',1,'arrow::internal']]],
-  ['field',['Field',['../classarrow_1_1_field.html',1,'arrow']]],
-  ['fieldmetadata',['FieldMetadata',['../structarrow_1_1ipc_1_1_field_metadata.html',1,'arrow::ipc']]],
-  ['fileblock',['FileBlock',['../structarrow_1_1ipc_1_1_file_block.html',1,'arrow::ipc']]],
-  ['fileinterface',['FileInterface',['../classarrow_1_1io_1_1_file_interface.html',1,'arrow::io']]],
-  ['filemode',['FileMode',['../structarrow_1_1io_1_1_file_mode.html',1,'arrow::io']]],
-  ['fileoutputstream',['FileOutputStream',['../classarrow_1_1io_1_1_file_output_stream.html',1,'arrow::io']]],
-  ['fileoutputstreamimpl',['FileOutputStreamImpl',['../classarrow_1_1io_1_1_file_output_stream_1_1_file_output_stream_impl.html',1,'arrow::io::FileOutputStream']]],
-  ['filesystemclient',['FileSystemClient',['../classarrow_1_1io_1_1_file_system_client.html',1,'arrow::io']]],
-  ['fixedsizebinaryarray',['FixedSizeBinaryArray',['../classarrow_1_1_fixed_size_binary_array.html',1,'arrow']]],
-  ['fixedsizebinarybuilder',['FixedSizeBinaryBuilder',['../classarrow_1_1_fixed_size_binary_builder.html',1,'arrow']]],
-  ['fixedsizebinarytype',['FixedSizeBinaryType',['../classarrow_1_1_fixed_size_binary_type.html',1,'arrow']]],
-  ['fixedsizebufferwriter',['FixedSizeBufferWriter',['../classarrow_1_1io_1_1_fixed_size_buffer_writer.html',1,'arrow::io']]],
-  ['fixedwidthbytesconverter',['FixedWidthBytesConverter',['../classarrow_1_1py_1_1_fixed_width_bytes_converter.html',1,'arrow::py']]],
-  ['fixedwidthtype',['FixedWidthType',['../classarrow_1_1_fixed_width_type.html',1,'arrow']]],
-  ['flatarray',['FlatArray',['../classarrow_1_1_flat_array.html',1,'arrow']]],
-  ['float32block',['Float32Block',['../classarrow_1_1py_1_1_float32_block.html',1,'arrow::py']]],
-  ['float64block',['Float64Block',['../classarrow_1_1py_1_1_float64_block.html',1,'arrow::py']]],
-  ['floatingpoint',['FloatingPoint',['../classarrow_1_1_floating_point.html',1,'arrow']]],
-  ['floattype',['FloatType',['../classarrow_1_1_float_type.html',1,'arrow']]]
+  ['eventloop',['EventLoop',['../classplasma_1_1_event_loop.html',1,'plasma']]],
+  ['evictionpolicy',['EvictionPolicy',['../classplasma_1_1_eviction_policy.html',1,'plasma']]]
 ];

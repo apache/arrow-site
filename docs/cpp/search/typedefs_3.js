@@ -8,7 +8,6 @@ var searchData=
   ['decimal32',['Decimal32',['../namespacearrow_1_1decimal.html#a50355962eac4d6cdba26b35e4fd04e42',1,'arrow::decimal']]],
   ['decimal64',['Decimal64',['../namespacearrow_1_1decimal.html#a2209fbfc9988ce9e9638ac177955bd59',1,'arrow::decimal']]],
   ['dictionarymap',['DictionaryMap',['../namespacearrow_1_1ipc.html#ac4462a1d18d35a0a17f3f6333d83cb3f',1,'arrow::ipc']]],
-  ['dictionaryoffset',['DictionaryOffset',['../namespacearrow_1_1ipc.html#a32af8d9695bfea7dbd4b2c1f6c81ae3a',1,'arrow::ipc']]],
   ['dictionarytypemap',['DictionaryTypeMap',['../namespacearrow_1_1ipc.html#a1a0b4525820946e0c01415d765c26ef5',1,'arrow::ipc']]],
   ['difference_5ftype',['difference_type',['../classarrow_1_1stl__allocator.html#a152ab29988f774a19a9e03a22485badf',1,'arrow::stl_allocator']]],
   ['doublebuilder',['DoubleBuilder',['../namespacearrow.html#ab98cad76b29efffe92c6c88af8947873',1,'arrow']]]
