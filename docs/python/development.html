@@ -73,7 +73,8 @@
 <li class="toctree-l1"><a class="reference internal" href="memory.html">Memory and IO Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data.html">In-Memory Data Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ipc.html">IPC: Fast Streaming and Serialization</a></li>
-<li class="toctree-l1"><a class="reference internal" href="filesystems.html">Filesystem Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filesystems.html">File System Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plasma.html">The Plasma In-Memory Object Store</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pandas.html">Using PyArrow with pandas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parquet.html">Reading and Writing the Apache Parquet Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
@@ -189,9 +190,9 @@ git clone https://github.com/apache/parquet-cpp.git
 </div>
 <p>You should now see</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span>$ ls -l
-total 8
-drwxrwxr-x <span class="m">12</span> wesm wesm <span class="m">4096</span> Apr <span class="m">15</span> 19:19 arrow/
-drwxrwxr-x <span class="m">12</span> wesm wesm <span class="m">4096</span> Apr <span class="m">15</span> 19:19 parquet-cpp/
+total <span class="m">8</span>
+drwxrwxr-x <span class="m">12</span> wesm wesm <span class="m">4096</span> Apr <span class="m">15</span> <span class="m">19</span>:19 arrow/
+drwxrwxr-x <span class="m">12</span> wesm wesm <span class="m">4096</span> Apr <span class="m">15</span> <span class="m">19</span>:19 parquet-cpp/
 </pre></div>
 </div>
 <div class="section" id="using-conda">
@@ -199,9 +200,9 @@ drwxrwxr-x <span class="m">12</span> wesm wesm <span class="m">4096</span> Apr <
 <p>Let&#8217;s create a conda environment with all the C++ build and Python dependencies
 from conda-forge:</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span>conda create -y -q -n pyarrow-dev <span class="se">\</span>
-      <span class="nv">python</span><span class="o">=</span>3.6 numpy six setuptools cython pandas pytest <span class="se">\</span>
+      <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.6 numpy six setuptools cython pandas pytest <span class="se">\</span>
       cmake flatbuffers rapidjson boost-cpp thrift-cpp snappy zlib <span class="se">\</span>
-      brotli jemalloc -c conda-forge
+      brotli jemalloc lz4-c zstd -c conda-forge
 <span class="nb">source</span> activate pyarrow-dev
 </pre></div>
 </div>
@@ -263,6 +264,7 @@ about our build toolchain:</p>
 cmake -DCMAKE_BUILD_TYPE<span class="o">=</span><span class="nv">$ARROW_BUILD_TYPE</span> <span class="se">\</span>
       -DCMAKE_INSTALL_PREFIX<span class="o">=</span><span class="nv">$ARROW_HOME</span> <span class="se">\</span>
       -DARROW_PYTHON<span class="o">=</span>on <span class="se">\</span>
+      -DARROW_PLASMA<span class="o">=</span>on <span class="se">\</span>
       -DARROW_BUILD_TESTS<span class="o">=</span>OFF <span class="se">\</span>
       ..
 make -j4
@@ -270,6 +272,8 @@ make install
 <span class="nb">popd</span>
 </pre></div>
 </div>
+<p>If you don&#8217;t want to build and install the Plasma in-memory object store,
+you can omit the <code class="docutils literal"><span class="pre">-DARROW_PLASMA=on</span></code> flag.</p>
 <p>Now, optionally build and install the Apache Parquet libraries in your
 toolchain:</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span>mkdir parquet-cpp/build
@@ -290,14 +294,15 @@ make install
 <p>Now, build pyarrow:</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span><span class="nb">cd</span> arrow/python
 python setup.py build_ext --build-type<span class="o">=</span><span class="nv">$ARROW_BUILD_TYPE</span> <span class="se">\</span>
-       --with-parquet --inplace
+       --with-parquet --with-plasma --inplace
 </pre></div>
 </div>
-<p>If you did not build parquet-cpp, you can omit <code class="docutils literal"><span class="pre">--with-parquet</span></code>.</p>
+<p>If you did not build parquet-cpp, you can omit <code class="docutils literal"><span class="pre">--with-parquet</span></code> and if
+you did not build with plasma, you can omit <code class="docutils literal"><span class="pre">--with-plasma</span></code>.</p>
 <p>You should be able to run the unit tests with:</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span>$ py.test <span class="nv">pyarrow</span>
 <span class="o">================================</span> <span class="nb">test</span> session <span class="nv">starts</span> <span class="o">====================</span>
-platform linux -- Python 3.6.1, pytest-3.0.7, py-1.4.33, pluggy-0.4.0
+platform linux -- Python <span class="m">3</span>.6.1, pytest-3.0.7, py-1.4.33, pluggy-0.4.0
 rootdir: /home/wesm/arrow-clone/python, inifile:
 collected <span class="m">198</span> items
 
@@ -314,15 +319,16 @@ pyarrow/tests/test_schema.py .........
 pyarrow/tests/test_table.py .............
 pyarrow/tests/test_tensor.py ................
 
-<span class="o">======================</span> <span class="m">181</span> passed, <span class="m">17</span> skipped in 0.98 <span class="nv">seconds</span> <span class="o">===========</span>
+<span class="o">======================</span> <span class="m">181</span> passed, <span class="m">17</span> skipped in <span class="m">0</span>.98 <span class="nv">seconds</span> <span class="o">===========</span>
 </pre></div>
 </div>
 <p>You can build a wheel by running:</p>
 <div class="highlight-shell"><div class="highlight"><pre><span></span>python setup.py build_ext --build-type<span class="o">=</span><span class="nv">$ARROW_BUILD_TYPE</span> <span class="se">\</span>
-       --with-parquet --bundle-arrow-cpp bdist_wheel
+       --with-parquet --with-plasma --bundle-arrow-cpp bdist_wheel
 </pre></div>
 </div>
-<p>Again, if you did not build parquet-cpp, you should omit <code class="docutils literal"><span class="pre">--with-parquet</span></code>.</p>
+<p>Again, if you did not build parquet-cpp, you should omit <code class="docutils literal"><span class="pre">--with-parquet</span></code> and
+if you did not build with plasma, you should omit <code class="docutils literal"><span class="pre">--with-plasma</span></code>.</p>
 </div>
 </div>
 <div class="section" id="developing-on-windows">
@@ -353,7 +359,6 @@ cmake -G <span class="s2">&quot;Visual Studio 14 2015 Win64&quot;</span> ^
       -DCMAKE_INSTALL_PREFIX<span class="o">=</span>%ARROW_HOME% ^
       -DCMAKE_BUILD_TYPE<span class="o">=</span>Release ^
       -DARROW_BUILD_TESTS<span class="o">=</span>off ^
-      -DARROW_ZLIB_VENDORED<span class="o">=</span>off ^
       -DARROW_PYTHON<span class="o">=</span>on ..
 cmake --build . --target INSTALL --config Release
 <span class="nb">cd</span> ..<span class="se">\.</span>.

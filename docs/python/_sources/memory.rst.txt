@@ -142,18 +142,6 @@ the stream is garbaged-collected, all of the memory is freed:
    stream = None
    pa.total_allocated_bytes()
 
-Classes and functions that may allocate memory will often have an option to
-pass in a custom memory pool:
-
-.. ipython:: python
-
-   my_pool = pa.jemalloc_memory_pool()
-   my_pool
-   my_pool.bytes_allocated()
-   stream = pa.BufferOutputStream(my_pool)
-   stream.write(b'foo')
-   my_pool.bytes_allocated()
-
 On-Disk and Memory Mapped Files
 -------------------------------
 
@@ -226,10 +214,3 @@ file interfaces that can read and write to Arrow Buffers.
    reader.read(7)
 
 These have similar semantics to Python's built-in ``io.BytesIO``.
-
-Hadoop Filesystem
------------------
-
-:class:`~pyarrow.HdfsFile` is an implementation of :class:`~pyarrow.NativeFile`
-that can read and write to the Hadoop filesytem. Read more in the
-:ref:`Filesystems Section <hdfs>`.

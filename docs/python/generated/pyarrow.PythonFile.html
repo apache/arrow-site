@@ -30,7 +30,7 @@
     <script type="text/javascript" src="../_static/bootstrap-sphinx.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="pyarrow.Message" href="pyarrow.Message.html" />
+    <link rel="next" title="pyarrow.LocalFileSystem" href="pyarrow.LocalFileSystem.html" />
     <link rel="prev" title="pyarrow.create_memory_map" href="pyarrow.create_memory_map.html" />
 <meta charset='utf-8'>
 <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
@@ -73,7 +73,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../memory.html">Memory and IO Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../data.html">In-Memory Data Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ipc.html">IPC: Fast Streaming and Serialization</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../filesystems.html">Filesystem Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../filesystems.html">File System Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../plasma.html">The Plasma In-Memory Object Store</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../pandas.html">Using PyArrow with pandas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../parquet.html">Reading and Writing the Apache Parquet Format</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -105,7 +106,7 @@
     </a>
   </li>
   <li>
-    <a href="pyarrow.Message.html" title="Next Chapter: pyarrow.Message"><span class="glyphicon glyphicon-chevron-right visible-sm"></span><span class="hidden-sm hidden-tablet">pyarrow.Message &raquo;</span>
+    <a href="pyarrow.LocalFileSystem.html" title="Next Chapter: pyarrow.LocalFileSystem"><span class="glyphicon glyphicon-chevron-right visible-sm"></span><span class="hidden-sm hidden-tablet">pyarrow.Local... &raquo;</span>
     </a>
   </li>
               
@@ -165,19 +166,19 @@
 <td>Read file completely to local path (rather than reading completely into memory).</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pyarrow.PythonFile.read" title="pyarrow.PythonFile.read"><code class="xref py py-obj docutils literal"><span class="pre">read</span></code></a>(self[,&nbsp;nbytes])</td>
-<td></td>
+<td>Read indicated number of bytes from file, or read all remaining bytes</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pyarrow.PythonFile.read_buffer" title="pyarrow.PythonFile.read_buffer"><code class="xref py py-obj docutils literal"><span class="pre">read_buffer</span></code></a>(self[,&nbsp;nbytes])</td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pyarrow.PythonFile.seek" title="pyarrow.PythonFile.seek"><code class="xref py py-obj docutils literal"><span class="pre">seek</span></code></a>(self,&nbsp;int64_t&nbsp;position)</td>
-<td></td>
+<tr class="row-odd"><td><a class="reference internal" href="#pyarrow.PythonFile.seek" title="pyarrow.PythonFile.seek"><code class="xref py py-obj docutils literal"><span class="pre">seek</span></code></a>(self,&nbsp;int64_t&nbsp;position,&nbsp;int&nbsp;whence=0)</td>
+<td>Change current file stream position</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pyarrow.PythonFile.size" title="pyarrow.PythonFile.size"><code class="xref py py-obj docutils literal"><span class="pre">size</span></code></a>(self)</td>
-<td></td>
+<td>Return file size</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pyarrow.PythonFile.tell" title="pyarrow.PythonFile.tell"><code class="xref py py-obj docutils literal"><span class="pre">tell</span></code></a>(self)</td>
-<td></td>
+<td>Return current stream position</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pyarrow.PythonFile.upload" title="pyarrow.PythonFile.upload"><code class="xref py py-obj docutils literal"><span class="pre">upload</span></code></a>(self,&nbsp;stream[,&nbsp;buffer_size])</td>
 <td>Pipe file-like object to file</td>
@@ -225,7 +226,19 @@ memory). First seeks to the beginning of the file.</p>
 <dl class="method">
 <dt id="pyarrow.PythonFile.read">
 <code class="descname">read</code><span class="sig-paren">(</span><em>self</em>, <em>nbytes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.PythonFile.read" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Read indicated number of bytes from file, or read all remaining bytes
+if no argument passed</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nbytes</strong> (<em>int</em><em>, </em><em>default None</em>) &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>data</strong> (<em>bytes</em>)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyarrow.PythonFile.read_buffer">
@@ -234,18 +247,46 @@ memory). First seeks to the beginning of the file.</p>
 
 <dl class="method">
 <dt id="pyarrow.PythonFile.seek">
-<code class="descname">seek</code><span class="sig-paren">(</span><em>self</em>, <em>int64_t position</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.PythonFile.seek" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">seek</code><span class="sig-paren">(</span><em>self</em>, <em>int64_t position</em>, <em>int whence=0</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.PythonFile.seek" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change current file stream position</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>position</strong> (<em>int</em>) &#8211; Byte offset, interpreted relative to value of whence argument</li>
+<li><strong>whence</strong> (<em>int</em><em>, </em><em>default 0</em>) &#8211; Point of reference for seek offset</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Values of whence:
+* 0 &#8211; start of stream (the default); offset should be zero or positive
+* 1 &#8211; current stream position; offset may be negative
+* 2 &#8211; end of stream; offset is usually negative</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>new_position</strong> (<em>the new absolute stream position</em>)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyarrow.PythonFile.size">
 <code class="descname">size</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.PythonFile.size" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Return file size</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyarrow.PythonFile.tell">
 <code class="descname">tell</code><span class="sig-paren">(</span><em>self</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.PythonFile.tell" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Return current stream position</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyarrow.PythonFile.upload">
