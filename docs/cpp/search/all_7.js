@@ -12,6 +12,7 @@ var searchData=
   ['hasdescription',['HasDescription',['../classarrow_1_1ipc_1_1feather_1_1_table_metadata.html#a0df3eea1ca589beda683831a553b1736',1,'arrow::ipc::feather::TableMetadata::HasDescription()'],['../classarrow_1_1ipc_1_1feather_1_1_table_reader.html#a9993890e5a918cf5f1499d6d90f601a8',1,'arrow::ipc::feather::TableReader::HasDescription()']]],
   ['hasdictionary',['HasDictionary',['../classarrow_1_1ipc_1_1_dictionary_memo.html#abfbb76f816b51b76e70af5859c1b0678',1,'arrow::ipc::DictionaryMemo']]],
   ['hasdictionaryid',['HasDictionaryId',['../classarrow_1_1ipc_1_1_dictionary_memo.html#a9e6c29e40aaf94885a05aee6c8282e5d',1,'arrow::ipc::DictionaryMemo']]],
+  ['haserror',['HasError',['../classarrow_1_1compute_1_1_function_context.html#a4240c42d4fb40bb3c09d4c3c18139509',1,'arrow::compute::FunctionContext']]],
   ['hash',['Hash',['../classarrow_1_1_hash_util.html#a7379a70ec7f527773ee6bd034571ad15',1,'arrow::HashUtil::Hash()'],['../classplasma_1_1_plasma_client.html#ae2d7bf52e6d6b6c56f52ebeeb1717e41',1,'plasma::PlasmaClient::Hash()']]],
   ['hash_2dutil_2eh',['hash-util.h',['../hash-util_8h.html',1,'']]],
   ['hash_5fcombine_5fseed',['HASH_COMBINE_SEED',['../classarrow_1_1_hash_util.html#af16452734d367cbf15820e269f869d74',1,'arrow::HashUtil']]],
@@ -36,6 +37,8 @@ var searchData=
   ['header',['header',['../classarrow_1_1ipc_1_1_message.html#a68fda3f801ed4cd05f5e9530dcfe8a34',1,'arrow::ipc::Message']]],
   ['helpers_2eh',['helpers.h',['../helpers_8h.html',1,'']]],
   ['hex',['hex',['../classplasma_1_1_unique_i_d.html#a7d960f1c661c8bef8281d30f6a2019a7',1,'plasma::UniqueID']]],
+  ['high_5fbits',['high_bits',['../classarrow_1_1_decimal128.html#aba1a88ab68d88695c980ea2475e21967',1,'arrow::Decimal128']]],
   ['host',['host',['../structarrow_1_1io_1_1_hdfs_connection_config.html#a9385f8c5533c7bc031a002ff4a1f1b12',1,'arrow::io::HdfsConnectionConfig']]],
+  ['hugepages_5fenabled',['hugepages_enabled',['../structplasma_1_1_plasma_store_info.html#adfe6fe4ff281fdd8e613b82349755b40',1,'plasma::PlasmaStoreInfo']]],
   ['hdfs',['HDFS',['../md__h_d_f_s.html',1,'']]]
 ];

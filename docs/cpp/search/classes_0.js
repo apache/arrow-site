@@ -8,6 +8,7 @@ var searchData=
   ['aetimeevent',['aeTimeEvent',['../structae_time_event.html',1,'']]],
   ['array',['Array',['../classarrow_1_1_array.html',1,'arrow']]],
   ['arraybuilder',['ArrayBuilder',['../classarrow_1_1_array_builder.html',1,'arrow']]],
+  ['arraydata',['ArrayData',['../structarrow_1_1_array_data.html',1,'arrow']]],
   ['arraymetadata',['ArrayMetadata',['../structarrow_1_1ipc_1_1feather_1_1_array_metadata.html',1,'arrow::ipc::feather']]],
   ['arrayvisitor',['ArrayVisitor',['../classarrow_1_1_array_visitor.html',1,'arrow']]]
 ];

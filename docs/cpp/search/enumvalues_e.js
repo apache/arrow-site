@@ -2,6 +2,7 @@ var searchData=
 [
   ['schema',['SCHEMA',['../classarrow_1_1ipc_1_1_message.html#a6d6973b3b03de50d7be9dbab4db910dbadd37198990318877501c5bf3941cd5e9',1,'arrow::ipc::Message']]],
   ['second',['SECOND',['../structarrow_1_1_time_unit.html#a561ef51c3755bd873f8f86f5bc4ec1ffa1c81ae790d85d35422c1757e0b20be7a',1,'arrow::TimeUnit']]],
+  ['serializationerror',['SerializationError',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fa64353c9071b50ec2fe6b90ed122471a8',1,'arrow']]],
   ['single',['SINGLE',['../classarrow_1_1_floating_point.html#aa585c0815b471db6d35d916d9e887b7aa56a099153ea585f17f6040494c0873ac',1,'arrow::FloatingPoint']]],
   ['snappy',['SNAPPY',['../structarrow_1_1_compression.html#a8abcec0357242c077a2905d645f2163faaa503712f544219feb56bf8b6bf1f5cc',1,'arrow::Compression']]],
   ['sparse',['SPARSE',['../namespacearrow.html#a8f5c97201fa51210e007f33a600e295da0459833ba9cad7cfd7bbfe10d7bbbe6e',1,'arrow']]],

@@ -1,5 +1,6 @@
 var searchData=
 [
+  ['makearray',['MakeArray',['../namespacearrow.html#afb8595b074fc27a018140f07a26ac23e',1,'arrow']]],
   ['makebuilder',['MakeBuilder',['../namespacearrow.html#a08900491dab187842698af9cca156b17',1,'arrow']]],
   ['makedictionarybuilder',['MakeDictionaryBuilder',['../namespacearrow.html#a3e801efb741e74e60d97df3a5261de50',1,'arrow']]],
   ['makedirectory',['MakeDirectory',['../classarrow_1_1io_1_1_hadoop_file_system.html#a86312271eb37d6e9f98f2b1094919c76',1,'arrow::io::HadoopFileSystem::MakeDirectory()'],['../classarrow_1_1io_1_1_file_system.html#a7e8e6633ff7145b38cca49311a6e17ee',1,'arrow::io::FileSystem::MakeDirectory()']]],
@@ -8,6 +9,7 @@ var searchData=
   ['max_5fmemory',['max_memory',['../classarrow_1_1_memory_pool.html#a4d1fe541389b4afd4d49d727dc3088f0',1,'arrow::MemoryPool::max_memory()'],['../classarrow_1_1_default_memory_pool.html#a463322488d1a2be8297ac55205bab14b',1,'arrow::DefaultMemoryPool::max_memory()'],['../classarrow_1_1_logging_memory_pool.html#af41a546412c98aa4439b53ec4df257bf',1,'arrow::LoggingMemoryPool::max_memory()']]],
   ['maxbuffersize',['MaxBufferSize',['../classarrow_1_1_rle_encoder.html#af421f0591967c246893182caf8d8db67',1,'arrow::RleEncoder']]],
   ['maxcompressedlen',['MaxCompressedLen',['../classarrow_1_1_codec.html#a681cbd4b926f3c7163362cd9c99647fe',1,'arrow::Codec::MaxCompressedLen()'],['../classarrow_1_1_brotli_codec.html#aa0c06b400f5b5fb8f11dbc37b216eeb6',1,'arrow::BrotliCodec::MaxCompressedLen()'],['../classarrow_1_1_lz4_codec.html#a07d78cbc579ee62328f75e1ffd0c3603',1,'arrow::Lz4Codec::MaxCompressedLen()'],['../classarrow_1_1_snappy_codec.html#a2d3ac25a671c595d360c932083ca0fb0',1,'arrow::SnappyCodec::MaxCompressedLen()'],['../classarrow_1_1_g_zip_codec.html#aec1301d516c51b1bc750689e9593e885',1,'arrow::GZipCodec::MaxCompressedLen()'],['../classarrow_1_1_z_s_t_d_codec.html#acc80b39516070b1344e60ad77fd68f90',1,'arrow::ZSTDCodec::MaxCompressedLen()']]],
+  ['memory_5fpool',['memory_pool',['../classarrow_1_1compute_1_1_function_context.html#a6a40381868c74845a698123ce6f2a4d3',1,'arrow::compute::FunctionContext']]],
   ['memorypool',['MemoryPool',['../classarrow_1_1_memory_pool.html#aa4b251669cc9858c40cffda6caedde75',1,'arrow::MemoryPool']]],
   ['message',['Message',['../classarrow_1_1ipc_1_1_message.html#a5d8158a45f9fb32753ff78934e757090',1,'arrow::ipc::Message::Message()'],['../classarrow_1_1_status.html#ad67b92854b41e7f0c5951b114b195284',1,'arrow::Status::message()']]],
   ['metadata',['metadata',['../classarrow_1_1ipc_1_1_message.html#a8576bf515d0c89a05e88f9d35b22abc8',1,'arrow::ipc::Message::metadata()'],['../classarrow_1_1_field.html#a899a4cef4c13946c9996095ca53e8004',1,'arrow::Field::metadata()'],['../classarrow_1_1_schema.html#a7cae195f4fb47288e228330f0848fd69',1,'arrow::Schema::metadata()']]],
@@ -18,5 +20,5 @@ var searchData=
   ['model_5fname',['model_name',['../classarrow_1_1_cpu_info.html#a36a4ad552ed1cc7683cdda2d9168fce4',1,'arrow::CpuInfo']]],
   ['murmurhash2_5f64',['MurmurHash2_64',['../classarrow_1_1_hash_util.html#a2901d71d89109a041d5e9cee0414d224',1,'arrow::HashUtil']]],
   ['mutable_5fdata',['mutable_data',['../classarrow_1_1_buffer.html#a5a9cb9324d3f7e323eb070b553c925aa',1,'arrow::Buffer::mutable_data()'],['../classplasma_1_1_unique_i_d.html#a6183ad9ace0e3942ec96d8369bf5fbff',1,'plasma::UniqueID::mutable_data()']]],
-  ['mutablebuffer',['MutableBuffer',['../classarrow_1_1_mutable_buffer.html#ae5484cdf9af52f3740bf4b5f1888b38f',1,'arrow::MutableBuffer::MutableBuffer(uint8_t *data, int64_t size)'],['../classarrow_1_1_mutable_buffer.html#a040537aacfcb9b0445b396411e4efb4a',1,'arrow::MutableBuffer::MutableBuffer(const std::shared_ptr&lt; Buffer &gt; &amp;parent, int64_t offset, int64_t size)'],['../classarrow_1_1_mutable_buffer.html#a3b01c712ad660aea1b10a0ad2b232ac7',1,'arrow::MutableBuffer::MutableBuffer()']]]
+  ['mutablebuffer',['MutableBuffer',['../classarrow_1_1_mutable_buffer.html#a541704eb0b7720aa712e294634cf58f9',1,'arrow::MutableBuffer::MutableBuffer(uint8_t *data, const int64_t size)'],['../classarrow_1_1_mutable_buffer.html#a594a044b4a2915aec40de4fe9ddd492d',1,'arrow::MutableBuffer::MutableBuffer(const std::shared_ptr&lt; Buffer &gt; &amp;parent, const int64_t offset, const int64_t size)'],['../classarrow_1_1_mutable_buffer.html#a3b01c712ad660aea1b10a0ad2b232ac7',1,'arrow::MutableBuffer::MutableBuffer()']]]
 ];

@@ -15,5 +15,6 @@ var searchData=
   ['fixedwidthtype',['FixedWidthType',['../classarrow_1_1_fixed_width_type.html',1,'arrow']]],
   ['flatarray',['FlatArray',['../classarrow_1_1_flat_array.html',1,'arrow']]],
   ['floatingpoint',['FloatingPoint',['../classarrow_1_1_floating_point.html',1,'arrow']]],
-  ['floattype',['FloatType',['../classarrow_1_1_float_type.html',1,'arrow']]]
+  ['floattype',['FloatType',['../classarrow_1_1_float_type.html',1,'arrow']]],
+  ['functioncontext',['FunctionContext',['../classarrow_1_1compute_1_1_function_context.html',1,'arrow::compute']]]
 ];

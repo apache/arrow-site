@@ -1,6 +1,7 @@
 var searchData=
 [
   ['table',['Table',['../classarrow_1_1_table.html',1,'arrow']]],
+  ['tablebatchreader',['TableBatchReader',['../classarrow_1_1_table_batch_reader.html',1,'arrow']]],
   ['tablebuilder',['TableBuilder',['../classarrow_1_1ipc_1_1feather_1_1_table_builder.html',1,'arrow::ipc::feather']]],
   ['tablemetadata',['TableMetadata',['../classarrow_1_1ipc_1_1feather_1_1_table_metadata.html',1,'arrow::ipc::feather']]],
   ['tablereader',['TableReader',['../classarrow_1_1ipc_1_1feather_1_1_table_reader.html',1,'arrow::ipc::feather']]],

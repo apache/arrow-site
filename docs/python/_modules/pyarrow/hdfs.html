@@ -1,15 +1,11 @@
 <!DOCTYPE html>
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
     <title>pyarrow.hdfs &#8212; pyarrow  documentation</title>
-    
     <link rel="stylesheet" href="../../_static/bootstrap-sphinx.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
@@ -23,7 +19,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript" src="../../_static/js/jquery-1.11.0.min.js"></script>
     <script type="text/javascript" src="../../_static/js/jquery-fix.js"></script>
     <script type="text/javascript" src="../../_static/bootstrap-3.3.6/js/bootstrap.min.js"></script>
@@ -36,7 +32,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 
   </head>
-  <body role="document">
+  <body>
 
   <div id="navbar" class="navbar navbar-default navbar-fixed-top">
     <div class="container">
@@ -70,7 +66,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../development.html">Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../memory.html">Memory and IO Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../data.html">In-Memory Data Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../ipc.html">IPC: Fast Streaming and Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../filesystems.html">File System Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../plasma.html">The Plasma In-Memory Object Store</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pandas.html">Using PyArrow with pandas</a></li>
@@ -141,6 +137,7 @@
 <span class="c1"># specific language governing permissions and limitations</span>
 <span class="c1"># under the License.</span>
 
+<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">posixpath</span>
 
 <span class="kn">from</span> <span class="nn">pyarrow.util</span> <span class="k">import</span> <span class="n">implements</span>
@@ -156,6 +153,9 @@
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kerb_ticket</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">driver</span><span class="o">=</span><span class="s1">&#39;libhdfs&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">driver</span> <span class="o">==</span> <span class="s1">&#39;libhdfs&#39;</span><span class="p">:</span>
+            <span class="n">_maybe_set_hadoop_classpath</span><span class="p">()</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">kerb_ticket</span><span class="p">,</span> <span class="n">driver</span><span class="p">)</span>
 
     <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">isdir</span><span class="p">)</span>
@@ -166,17 +166,32 @@
     <span class="k">def</span> <span class="nf">isfile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">HadoopFileSystem</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
-    <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">delete</span><span class="p">)</span>
-<div class="viewcode-block" id="HadoopFileSystem.delete"><a class="viewcode-back" href="../../generated/pyarrow.HadoopFileSystem.delete.html#pyarrow.HadoopFileSystem.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="HadoopFileSystem.delete"><a class="viewcode-back" href="../../generated/pyarrow.HadoopFileSystem.delete.html#pyarrow.HadoopFileSystem.delete">[docs]</a>    <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">delete</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">HadoopFileSystem</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="p">)</span></div>
 
-    <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">mkdir</span><span class="p">)</span>
-<div class="viewcode-block" id="HadoopFileSystem.mkdir"><a class="viewcode-back" href="../../generated/pyarrow.HadoopFileSystem.mkdir.html#pyarrow.HadoopFileSystem.mkdir">[docs]</a>    <span class="k">def</span> <span class="nf">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">create_parents</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="HadoopFileSystem.mkdir"><a class="viewcode-back" href="../../generated/pyarrow.HadoopFileSystem.mkdir.html#pyarrow.HadoopFileSystem.mkdir">[docs]</a>    <span class="k">def</span> <span class="nf">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create directory in HDFS</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : string</span>
+<span class="sd">            Directory path to create, including any parent directories</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        libhdfs does not support create_parents=False, so we ignore this here</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">HadoopFileSystem</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
 
-    <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">rename</span><span class="p">)</span>
-<div class="viewcode-block" id="HadoopFileSystem.rename"><a class="viewcode-back" href="../../generated/pyarrow.HadoopFileSystem.rename.html#pyarrow.HadoopFileSystem.rename">[docs]</a>    <span class="k">def</span> <span class="nf">rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">):</span>
+<div class="viewcode-block" id="HadoopFileSystem.rename"><a class="viewcode-back" href="../../generated/pyarrow.HadoopFileSystem.rename.html#pyarrow.HadoopFileSystem.rename">[docs]</a>    <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">rename</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">HadoopFileSystem</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="HadoopFileSystem.exists"><a class="viewcode-back" href="../../generated/pyarrow.HadoopFileSystem.exists.html#pyarrow.HadoopFileSystem.exists">[docs]</a>    <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">exists</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">HadoopFileSystem</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="HadoopFileSystem.ls"><a class="viewcode-back" href="../../generated/pyarrow.HadoopFileSystem.ls.html#pyarrow.HadoopFileSystem.ls">[docs]</a>    <span class="k">def</span> <span class="nf">ls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -214,6 +229,21 @@
         <span class="k">for</span> <span class="n">dirname</span> <span class="ow">in</span> <span class="n">directories</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">tup</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_path_join</span><span class="p">(</span><span class="n">top_path</span><span class="p">,</span> <span class="n">dirname</span><span class="p">)):</span>
                 <span class="k">yield</span> <span class="n">tup</span></div>
+
+
+<span class="k">def</span> <span class="nf">_maybe_set_hadoop_classpath</span><span class="p">():</span>
+    <span class="kn">import</span> <span class="nn">subprocess</span>
+
+    <span class="k">if</span> <span class="s1">&#39;hadoop&#39;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CLASSPATH&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="s1">&#39;HADOOP_HOME&#39;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+        <span class="n">hadoop_bin</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">/bin/hadoop&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;HADOOP_HOME&#39;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">hadoop_bin</span> <span class="o">=</span> <span class="s1">&#39;hadoop&#39;</span>
+
+    <span class="n">classpath</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="n">hadoop_bin</span><span class="p">,</span> <span class="s1">&#39;classpath&#39;</span><span class="p">,</span> <span class="s1">&#39;--glob&#39;</span><span class="p">])</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CLASSPATH&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">classpath</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_libhdfs_walk_files_dirs</span><span class="p">(</span><span class="n">top_path</span><span class="p">,</span> <span class="n">contents</span><span class="p">):</span>
@@ -275,7 +305,7 @@
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.5.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.<br/>
     </p>
   </div>
 </footer>

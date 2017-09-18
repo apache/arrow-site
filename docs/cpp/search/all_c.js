@@ -1,6 +1,7 @@
 var searchData=
 [
   ['macros_2eh',['macros.h',['../macros_8h.html',1,'']]],
+  ['makearray',['MakeArray',['../namespacearrow.html#afb8595b074fc27a018140f07a26ac23e',1,'arrow']]],
   ['makebuilder',['MakeBuilder',['../namespacearrow.html#a08900491dab187842698af9cca156b17',1,'arrow']]],
   ['makedictionarybuilder',['MakeDictionaryBuilder',['../namespacearrow.html#a3e801efb741e74e60d97df3a5261de50',1,'arrow']]],
   ['makedirectory',['MakeDirectory',['../classarrow_1_1io_1_1_hadoop_file_system.html#a86312271eb37d6e9f98f2b1094919c76',1,'arrow::io::HadoopFileSystem::MakeDirectory()'],['../classarrow_1_1io_1_1_file_system.html#a7e8e6633ff7145b38cca49311a6e17ee',1,'arrow::io::FileSystem::MakeDirectory()']]],
@@ -22,16 +23,20 @@ var searchData=
   ['maxbuffersize',['MaxBufferSize',['../classarrow_1_1_rle_encoder.html#af421f0591967c246893182caf8d8db67',1,'arrow::RleEncoder']]],
   ['maxcompressedlen',['MaxCompressedLen',['../classarrow_1_1_codec.html#a681cbd4b926f3c7163362cd9c99647fe',1,'arrow::Codec::MaxCompressedLen()'],['../classarrow_1_1_brotli_codec.html#aa0c06b400f5b5fb8f11dbc37b216eeb6',1,'arrow::BrotliCodec::MaxCompressedLen()'],['../classarrow_1_1_lz4_codec.html#a07d78cbc579ee62328f75e1ffd0c3603',1,'arrow::Lz4Codec::MaxCompressedLen()'],['../classarrow_1_1_snappy_codec.html#a2d3ac25a671c595d360c932083ca0fb0',1,'arrow::SnappyCodec::MaxCompressedLen()'],['../classarrow_1_1_g_zip_codec.html#aec1301d516c51b1bc750689e9593e885',1,'arrow::GZipCodec::MaxCompressedLen()'],['../classarrow_1_1_z_s_t_d_codec.html#acc80b39516070b1344e60ad77fd68f90',1,'arrow::ZSTDCodec::MaxCompressedLen()']]],
   ['maxfd',['maxfd',['../structae_event_loop.html#aedf39e37f559c83d9a0ae1ae07e5b8c1',1,'aeEventLoop']]],
-  ['maximum',['maximum',['../structarrow_1_1decimal_1_1_decimal_precision_3_01int32__t_01_4.html#a8b111cf38217428c1e8dafb617d05426',1,'arrow::decimal::DecimalPrecision&lt; int32_t &gt;::maximum()'],['../structarrow_1_1decimal_1_1_decimal_precision_3_01int64__t_01_4.html#a27265984ed47eaf5b87787d73058cec8',1,'arrow::decimal::DecimalPrecision&lt; int64_t &gt;::maximum()'],['../structarrow_1_1decimal_1_1_decimal_precision_3_01int128__t_01_4.html#af6847bc9f79651eaf038a035426eca0a',1,'arrow::decimal::DecimalPrecision&lt; int128_t &gt;::maximum()']]],
+  ['memcopy_5fblocksize_5f',['memcopy_blocksize_',['../classarrow_1_1io_1_1_fixed_size_buffer_writer.html#a453111d056bbca66fa4a25557ddfe8a4',1,'arrow::io::FixedSizeBufferWriter']]],
+  ['memcopy_5fnum_5fthreads_5f',['memcopy_num_threads_',['../classarrow_1_1io_1_1_fixed_size_buffer_writer.html#a3d16e4ece6d223b6e1c2e5eea58a2e11',1,'arrow::io::FixedSizeBufferWriter']]],
+  ['memcopy_5fthreshold_5f',['memcopy_threshold_',['../classarrow_1_1io_1_1_fixed_size_buffer_writer.html#a7b7b1973fa5168cfd7c1b4223de0705f',1,'arrow::io::FixedSizeBufferWriter']]],
   ['memory_2eh',['memory.h',['../io_2memory_8h.html',1,'(Global Namespace)'],['../util_2memory_8h.html',1,'(Global Namespace)']]],
   ['memory_5fcapacity',['memory_capacity',['../structplasma_1_1_plasma_store_info.html#a0ff2596ca76b82f76c5b10a9859fe227',1,'plasma::PlasmaStoreInfo']]],
+  ['memory_5fpool',['memory_pool',['../classarrow_1_1compute_1_1_function_context.html#a6a40381868c74845a698123ce6f2a4d3',1,'arrow::compute::FunctionContext']]],
   ['memory_5fpool_2eh',['memory_pool.h',['../memory__pool_8h.html',1,'']]],
   ['memorymappedfile',['MemoryMappedFile',['../classarrow_1_1io_1_1_memory_mapped_file.html',1,'arrow::io']]],
   ['memorypool',['MemoryPool',['../classarrow_1_1_memory_pool.html',1,'arrow::MemoryPool'],['../classarrow_1_1_memory_pool.html#aa4b251669cc9858c40cffda6caedde75',1,'arrow::MemoryPool::MemoryPool()']]],
   ['message',['Message',['../classarrow_1_1ipc_1_1_message.html',1,'arrow::ipc::Message'],['../classarrow_1_1ipc_1_1_message.html#a5d8158a45f9fb32753ff78934e757090',1,'arrow::ipc::Message::Message()'],['../classarrow_1_1_status.html#ad67b92854b41e7f0c5951b114b195284',1,'arrow::Status::message()']]],
+  ['message_2eh',['message.h',['../message_8h.html',1,'']]],
   ['messagereader',['MessageReader',['../classarrow_1_1ipc_1_1_message_reader.html',1,'arrow::ipc']]],
   ['metadata',['metadata',['../structplasma_1_1_object_buffer.html#a07263351e10e71e5b371bc139763c4dc',1,'plasma::ObjectBuffer::metadata()'],['../classarrow_1_1ipc_1_1_message.html#a8576bf515d0c89a05e88f9d35b22abc8',1,'arrow::ipc::Message::metadata()'],['../classarrow_1_1_field.html#a899a4cef4c13946c9996095ca53e8004',1,'arrow::Field::metadata()'],['../classarrow_1_1_schema.html#a7cae195f4fb47288e228330f0848fd69',1,'arrow::Schema::metadata()']]],
-  ['metadata_2eh',['metadata.h',['../metadata_8h.html',1,'']]],
+  ['metadata_2dinternal_2eh',['metadata-internal.h',['../metadata-internal_8h.html',1,'']]],
   ['metadata_5flength',['metadata_length',['../structarrow_1_1ipc_1_1_file_block.html#a5047e811c3d25c37c2398e63292c8e26',1,'arrow::ipc::FileBlock']]],
   ['metadata_5foffset',['metadata_offset',['../structplasma_1_1_plasma_object.html#ad12648a15f841885eb9543b200382352',1,'plasma::PlasmaObject']]],
   ['metadata_5fsize',['metadata_size',['../structplasma_1_1_object_buffer.html#a4abaffd262b9ebd5fc6721fd55cc59b3',1,'plasma::ObjectBuffer::metadata_size()'],['../structplasma_1_1_plasma_object.html#a82a59120f6c86f8cf5121c6a100718fb',1,'plasma::PlasmaObject::metadata_size()']]],
@@ -40,7 +45,6 @@ var searchData=
   ['micro',['MICRO',['../structarrow_1_1_time_unit.html#a561ef51c3755bd873f8f86f5bc4ec1ffaf8ce7e9dc4001c956488dd701d567cb1',1,'arrow::TimeUnit']]],
   ['milli',['MILLI',['../structarrow_1_1_time_unit.html#a561ef51c3755bd873f8f86f5bc4ec1ffadc3335445f7fa1b26f9c78754a1f217b',1,'arrow::TimeUnit::MILLI()'],['../namespacearrow.html#a04410292f01b108a8a8af3c7077afcdaa8f06f9f0a1efa42a2ad3ec880b0a1f70',1,'arrow::MILLI()']]],
   ['minbuffersize',['MinBufferSize',['../classarrow_1_1_rle_encoder.html#aef37304aaa5e6b58f819c74d03afedbc',1,'arrow::RleEncoder']]],
-  ['minimum',['minimum',['../structarrow_1_1decimal_1_1_decimal_precision_3_01int32__t_01_4.html#acece9756bcb8e91fc2e6244aaa584514',1,'arrow::decimal::DecimalPrecision&lt; int32_t &gt;::minimum()'],['../structarrow_1_1decimal_1_1_decimal_precision_3_01int64__t_01_4.html#aaefa400580396b00407bb01fd323a0f5',1,'arrow::decimal::DecimalPrecision&lt; int64_t &gt;::minimum()'],['../structarrow_1_1decimal_1_1_decimal_precision_3_01int128__t_01_4.html#af91806be3a862fc60ea1cc96ee0f84ce',1,'arrow::decimal::DecimalPrecision&lt; int128_t &gt;::minimum()']]],
   ['mman_2eh',['mman.h',['../mman_8h.html',1,'']]],
   ['mmap_5fsize',['mmap_size',['../structplasma_1_1object__handle.html#a6cbc7351c0d1c6fd641730b0b2a19874',1,'plasma::object_handle']]],
   ['mockoutputstream',['MockOutputStream',['../classarrow_1_1io_1_1_mock_output_stream.html',1,'arrow::io::MockOutputStream'],['../classarrow_1_1io_1_1_mock_output_stream.html#aeffcb55e9b83be6037d8596d116f183b',1,'arrow::io::MockOutputStream::MockOutputStream()']]],
@@ -55,6 +59,6 @@ var searchData=
   ['murmur_5fr',['MURMUR_R',['../classarrow_1_1_hash_util.html#ab0f0a88f886fcd37a522b6e2c200bc67',1,'arrow::HashUtil']]],
   ['murmurhash2_5f64',['MurmurHash2_64',['../classarrow_1_1_hash_util.html#a2901d71d89109a041d5e9cee0414d224',1,'arrow::HashUtil']]],
   ['mutable_5fdata',['mutable_data',['../classarrow_1_1_buffer.html#a5a9cb9324d3f7e323eb070b553c925aa',1,'arrow::Buffer::mutable_data()'],['../classplasma_1_1_unique_i_d.html#a6183ad9ace0e3942ec96d8369bf5fbff',1,'plasma::UniqueID::mutable_data()']]],
-  ['mutable_5fdata_5f',['mutable_data_',['../classarrow_1_1_buffer.html#ad36e306b99bc8427865bcac9b2d4f7e5',1,'arrow::Buffer']]],
-  ['mutablebuffer',['MutableBuffer',['../classarrow_1_1_mutable_buffer.html',1,'arrow::MutableBuffer'],['../classarrow_1_1_mutable_buffer.html#ae5484cdf9af52f3740bf4b5f1888b38f',1,'arrow::MutableBuffer::MutableBuffer(uint8_t *data, int64_t size)'],['../classarrow_1_1_mutable_buffer.html#a040537aacfcb9b0445b396411e4efb4a',1,'arrow::MutableBuffer::MutableBuffer(const std::shared_ptr&lt; Buffer &gt; &amp;parent, int64_t offset, int64_t size)'],['../classarrow_1_1_mutable_buffer.html#a3b01c712ad660aea1b10a0ad2b232ac7',1,'arrow::MutableBuffer::MutableBuffer()']]]
+  ['mutable_5fdata_5f',['mutable_data_',['../classarrow_1_1_buffer.html#ad36e306b99bc8427865bcac9b2d4f7e5',1,'arrow::Buffer::mutable_data_()'],['../classarrow_1_1io_1_1_fixed_size_buffer_writer.html#a8244bba29dde32c4c664d8d809e7e8c7',1,'arrow::io::FixedSizeBufferWriter::mutable_data_()']]],
+  ['mutablebuffer',['MutableBuffer',['../classarrow_1_1_mutable_buffer.html',1,'arrow::MutableBuffer'],['../classarrow_1_1_mutable_buffer.html#a541704eb0b7720aa712e294634cf58f9',1,'arrow::MutableBuffer::MutableBuffer(uint8_t *data, const int64_t size)'],['../classarrow_1_1_mutable_buffer.html#a594a044b4a2915aec40de4fe9ddd492d',1,'arrow::MutableBuffer::MutableBuffer(const std::shared_ptr&lt; Buffer &gt; &amp;parent, const int64_t offset, const int64_t size)'],['../classarrow_1_1_mutable_buffer.html#a3b01c712ad660aea1b10a0ad2b232ac7',1,'arrow::MutableBuffer::MutableBuffer()']]]
 ];

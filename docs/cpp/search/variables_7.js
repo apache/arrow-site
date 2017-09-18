@@ -5,5 +5,6 @@ var searchData=
   ['hash_5fslots_5f',['hash_slots_',['../classarrow_1_1_dictionary_builder.html#a54e42b41cda2c0745b476ad9b205abf2',1,'arrow::DictionaryBuilder']]],
   ['hash_5ftable_5f',['hash_table_',['../classarrow_1_1_dictionary_builder.html#a1c415c8894c03225bccff49a5fcde704',1,'arrow::DictionaryBuilder']]],
   ['hash_5ftable_5fsize_5f',['hash_table_size_',['../classarrow_1_1_dictionary_builder.html#a2f731b0e16a6d42cfc1bba01a94d8b17',1,'arrow::DictionaryBuilder']]],
-  ['host',['host',['../structarrow_1_1io_1_1_hdfs_connection_config.html#a9385f8c5533c7bc031a002ff4a1f1b12',1,'arrow::io::HdfsConnectionConfig']]]
+  ['host',['host',['../structarrow_1_1io_1_1_hdfs_connection_config.html#a9385f8c5533c7bc031a002ff4a1f1b12',1,'arrow::io::HdfsConnectionConfig']]],
+  ['hugepages_5fenabled',['hugepages_enabled',['../structplasma_1_1_plasma_store_info.html#adfe6fe4ff281fdd8e613b82349755b40',1,'plasma::PlasmaStoreInfo']]]
 ];

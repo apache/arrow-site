@@ -2,6 +2,7 @@ var searchData=
 [
   ['kdigestsize',['kDigestSize',['../namespaceplasma.html#a9063b8c2b48b267f01082f522b5a3d61',1,'plasma']]],
   ['kerb_5fticket',['kerb_ticket',['../structarrow_1_1io_1_1_hdfs_connection_config.html#afff850aed45fa5726af4f9af3db9f427',1,'arrow::io::HdfsConnectionConfig']]],
+  ['kernel_2eh',['kernel.h',['../kernel_8h.html',1,'']]],
   ['keventloopread',['kEventLoopRead',['../namespaceplasma.html#ae84cd1d6c21a08a2bedf3d1f308a371d',1,'plasma']]],
   ['keventlooptimerdone',['kEventLoopTimerDone',['../namespaceplasma.html#aa25f7f9aa7f8808dd0d42553b16cf31b',1,'plasma']]],
   ['keventloopwrite',['kEventLoopWrite',['../namespaceplasma.html#aa384c4e46a42a377972561a3cbafb472',1,'plasma']]],

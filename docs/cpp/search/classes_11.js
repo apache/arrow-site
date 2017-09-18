@@ -1,7 +1,9 @@
 var searchData=
 [
   ['schema',['Schema',['../classarrow_1_1_schema.html',1,'arrow']]],
+  ['scopedref',['ScopedRef',['../classarrow_1_1py_1_1_scoped_ref.html',1,'arrow::py']]],
   ['seekable',['Seekable',['../classarrow_1_1io_1_1_seekable.html',1,'arrow::io']]],
+  ['serializedpyobject',['SerializedPyObject',['../structarrow_1_1py_1_1_serialized_py_object.html',1,'arrow::py']]],
   ['snappycodec',['SnappyCodec',['../classarrow_1_1_snappy_codec.html',1,'arrow']]],
   ['status',['Status',['../classarrow_1_1_status.html',1,'arrow']]],
   ['stdinstream',['StdinStream',['../classarrow_1_1io_1_1_stdin_stream.html',1,'arrow::io']]],

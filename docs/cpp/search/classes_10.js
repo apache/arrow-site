@@ -9,7 +9,7 @@ var searchData=
   ['recordbatch',['RecordBatch',['../classarrow_1_1_record_batch.html',1,'arrow']]],
   ['recordbatchfilereader',['RecordBatchFileReader',['../classarrow_1_1ipc_1_1_record_batch_file_reader.html',1,'arrow::ipc']]],
   ['recordbatchfilewriter',['RecordBatchFileWriter',['../classarrow_1_1ipc_1_1_record_batch_file_writer.html',1,'arrow::ipc']]],
-  ['recordbatchreader',['RecordBatchReader',['../classarrow_1_1ipc_1_1_record_batch_reader.html',1,'arrow::ipc']]],
+  ['recordbatchreader',['RecordBatchReader',['../classarrow_1_1_record_batch_reader.html',1,'arrow']]],
   ['recordbatchstreamreader',['RecordBatchStreamReader',['../classarrow_1_1ipc_1_1_record_batch_stream_reader.html',1,'arrow::ipc']]],
   ['recordbatchstreamwriter',['RecordBatchStreamWriter',['../classarrow_1_1ipc_1_1_record_batch_stream_writer.html',1,'arrow::ipc']]],
   ['recordbatchwriter',['RecordBatchWriter',['../classarrow_1_1ipc_1_1_record_batch_writer.html',1,'arrow::ipc']]],
