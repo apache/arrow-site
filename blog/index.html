@@ -122,6 +122,315 @@
     
   <div class="container">
     <h2>
+      Fast Python Serialization with Ray and Apache Arrow
+      <a href="/blog/2017/10/15/fast-python-serialization-with-ray-and-arrow/" class="permalink" title="Permalink">∞</a>
+    </h2>
+
+    
+
+    <div class="panel">
+      <div class="panel-body">
+        <div>
+          <span class="label label-default">Published</span>
+          <span class="published">
+            <i class="fa fa-calendar"></i>
+            15 Oct 2017
+          </span>
+        </div>
+        <div>
+          <span class="label label-default">By</span>
+          <a href=""><i class="fa fa-user"></i>  (Philipp Moritz, Robert Nishihara)</a>
+        </div>
+      </div>
+    </div>
+    <!--
+
+-->
+
+<p><em>This was originally posted on the <a href="https://ray-project.github.io/">Ray blog</a>. <a href="https://people.eecs.berkeley.edu/~pcmoritz/">Philipp Moritz</a> and <a href="http://www.robertnishihara.com">Robert Nishihara</a> are graduate students at UC Berkeley.</em></p>
+
+<p>This post elaborates on the integration between <a href="http://ray.readthedocs.io/en/latest/index.html">Ray</a> and <a href="https://arrow.apache.org/">Apache Arrow</a>.
+The main problem this addresses is <a href="https://en.wikipedia.org/wiki/Serialization">data serialization</a>.</p>
+
+<p>From <a href="https://en.wikipedia.org/wiki/Serialization">Wikipedia</a>, <strong>serialization</strong> is</p>
+
+<blockquote>
+  <p>… the process of translating data structures or object state into a format
+that can be stored … or transmitted … and reconstructed later (possibly
+in a different computer environment).</p>
+</blockquote>
+
+<p>Why is any translation necessary? Well, when you create a Python object, it may
+have pointers to other Python objects, and these objects are all allocated in
+different regions of memory, and all of this has to make sense when unpacked by
+another process on another machine.</p>
+
+<p>Serialization and deserialization are <strong>bottlenecks in parallel and distributed
+computing</strong>, especially in machine learning applications with large objects and
+large quantities of data.</p>
+
+<h2 id="design-goals">Design Goals</h2>
+
+<p>As Ray is optimized for machine learning and AI applications, we have focused a
+lot on serialization and data handling, with the following design goals:</p>
+
+<ol>
+  <li>It should be very efficient with <strong>large numerical data</strong> (this includes
+NumPy arrays and Pandas DataFrames, as well as objects that recursively contain
+Numpy arrays and Pandas DataFrames).</li>
+  <li>It should be about as fast as Pickle for <strong>general Python types</strong>.</li>
+  <li>It should be compatible with <strong>shared memory</strong>, allowing multiple processes
+to use the same data without copying it.</li>
+  <li><strong>Deserialization</strong> should be extremely fast (when possible, it should not
+require reading the entire serialized object).</li>
+  <li>It should be <strong>language independent</strong> (eventually we’d like to enable Python
+workers to use objects created by workers in Java or other languages and vice
+versa).</li>
+</ol>
+
+<h2 id="our-approach-and-alternatives">Our Approach and Alternatives</h2>
+
+<p>The go-to serialization approach in Python is the <strong>pickle</strong> module. Pickle is
+very general, especially if you use variants like <a href="https://github.com/cloudpipe/cloudpickle/">cloudpickle</a>. However, it
+does not satisfy requirements 1, 3, 4, or 5. Alternatives like <strong>json</strong> satisfy
+5, but not 1-4.</p>
+
+<p><strong>Our Approach:</strong> To satisfy requirements 1-5, we chose to use the
+<a href="https://arrow.apache.org/">Apache Arrow</a> format as our underlying data representation. In collaboration
+with the Apache Arrow team, we built <a href="https://arrow.apache.org/docs/python/ipc.html#arbitrary-object-serialization">libraries</a> for mapping general Python
+objects to and from the Arrow format. Some properties of this approach:</p>
+
+<ul>
+  <li>The data layout is language independent (requirement 5).</li>
+  <li>Offsets into a serialized data blob can be computed in constant time without
+reading the full object (requirements 1 and 4).</li>
+  <li>Arrow supports <strong>zero-copy reads</strong>, so objects can naturally be stored in
+shared memory and used by multiple processes (requirements 1 and 3).</li>
+  <li>We can naturally fall back to pickle for anything we can’t handle well
+(requirement 2).</li>
+</ul>
+
+<p><strong>Alternatives to Arrow:</strong> We could have built on top of
+<a href="https://developers.google.com/protocol-buffers/"><strong>Protocol Buffers</strong></a>, but protocol buffers really isn’t designed for
+numerical data, and that approach wouldn’t satisfy 1, 3, or 4. Building on top
+of <a href="https://google.github.io/flatbuffers/"><strong>Flatbuffers</strong></a> actually could be made to work, but it would have
+required implementing a lot of the facilities that Arrow already has and we
+preferred a columnar data layout more optimized for big data.</p>
+
+<h2 id="speedups">Speedups</h2>
+
+<p>Here we show some performance improvements over Python’s pickle module. The
+experiments were done using <code class="highlighter-rouge">pickle.HIGHEST_PROTOCOL</code>. Code for generating these
+plots is included at the end of the post.</p>
+
+<p><strong>With NumPy arrays:</strong> In machine learning and AI applications, data (e.g.,
+images, neural network weights, text documents) are typically represented as
+data structures containing NumPy arrays. When using NumPy arrays, the speedups
+are impressive.</p>
+
+<p>The fact that the Ray bars for deserialization are barely visible is not a
+mistake. This is a consequence of the support for zero-copy reads (the savings
+largely come from the lack of memory movement).</p>
+
+<div align="center">
+<img src="/assets/fast_python_serialization_with_ray_and_arrow/speedups0.png" width="365" height="255" />
+<img src="/assets/fast_python_serialization_with_ray_and_arrow/speedups1.png" width="365" height="255" />
+</div>
+
+<p>Note that the biggest wins are with deserialization. The speedups here are
+multiple orders of magnitude and get better as the NumPy arrays get larger
+(thanks to design goals 1, 3, and 4). Making <strong>deserialization</strong> fast is
+important for two reasons. First, an object may be serialized once and then
+deserialized many times (e.g., an object that is broadcast to all workers).
+Second, a common pattern is for many objects to be serialized in parallel and
+then aggregated and deserialized one at a time on a single worker making
+deserialization the bottleneck.</p>
+
+<p><strong>Without NumPy arrays:</strong> When using regular Python objects, for which we
+cannot take advantage of shared memory, the results are comparable to pickle.</p>
+
+<div align="center">
+<img src="/assets/fast_python_serialization_with_ray_and_arrow/speedups2.png" width="365" height="255" />
+<img src="/assets/fast_python_serialization_with_ray_and_arrow/speedups3.png" width="365" height="255" />
+</div>
+
+<p>These are just a few examples of interesting Python objects. The most important
+case is the case where NumPy arrays are nested within other objects. Note that
+our serialization library works with very general Python types including custom
+Python classes and deeply nested objects.</p>
+
+<h2 id="the-api">The API</h2>
+
+<p>The serialization library can be used directly through pyarrow as follows. More
+documentation is available <a href="https://arrow.apache.org/docs/python/ipc.html#arbitrary-object-serialization">here</a>.</p>
+
+<div class="language-python highlighter-rouge"><pre class="highlight"><code><span class="n">x</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="s">'hello'</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">])]</span>
+<span class="n">serialized_x</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
+<span class="n">deserialized_x</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">serialized_x</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>It can be used directly through the Ray API as follows.</p>
+
+<div class="language-python highlighter-rouge"><pre class="highlight"><code><span class="n">x</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="s">'hello'</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">])]</span>
+<span class="n">x_id</span> <span class="o">=</span> <span class="n">ray</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">deserialized_x</span> <span class="o">=</span> <span class="n">ray</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">x_id</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h2 id="data-representation">Data Representation</h2>
+
+<p>We use Apache Arrow as the underlying language-independent data layout. Objects
+are stored in two parts: a <strong>schema</strong> and a <strong>data blob</strong>. At a high level, the
+data blob is roughly a flattened concatenation of all of the data values
+recursively contained in the object, and the schema defines the types and
+nesting structure of the data blob.</p>
+
+<p><strong>Technical Details:</strong> Python sequences (e.g., dictionaries, lists, tuples,
+sets) are encoded as Arrow <a href="http://arrow.apache.org/docs/memory_layout.html#dense-union-type">UnionArrays</a> of other types (e.g., bools, ints,
+strings, bytes, floats, doubles, date64s, tensors (i.e., NumPy arrays), lists,
+tuples, dicts and sets). Nested sequences are encoded using Arrow
+<a href="http://arrow.apache.org/docs/memory_layout.html#list-type">ListArrays</a>. All tensors are collected and appended to the end of the
+serialized object, and the UnionArray contains references to these tensors.</p>
+
+<p>To give a concrete example, consider the following object.</p>
+
+<div class="language-python highlighter-rouge"><pre class="highlight"><code><span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="s">'hello'</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">])]</span>
+</code></pre>
+</div>
+
+<p>It would be represented in Arrow with the following structure.</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>UnionArray(type_ids=[tuple, string, int, int, ndarray],
+           tuples=ListArray(offsets=[0, 2],
+                            UnionArray(type_ids=[int, int],
+                                       ints=[1, 2])),
+           strings=['hello'],
+           ints=[3, 4],
+           ndarrays=[&lt;offset of numpy array&gt;])
+</code></pre>
+</div>
+
+<p>Arrow uses Flatbuffers to encode serialized schemas. <strong>Using only the schema, we
+can compute the offsets of each value in the data blob without scanning through
+the data blob</strong> (unlike Pickle, this is what enables fast deserialization). This
+means that we can avoid copying or otherwise converting large arrays and other
+values during deserialization. Tensors are appended at the end of the UnionArray
+and can be efficiently shared and accessed using shared memory.</p>
+
+<p>Note that the actual object would be laid out in memory as shown below.</p>
+
+<div align="center">
+<img src="/assets/fast_python_serialization_with_ray_and_arrow/python_object.png" width="600" />
+</div>
+<div><i>The layout of a Python object in the heap. Each box is allocated in a
+different memory region, and arrows between boxes represent pointers.</i></div>
+<p><br /></p>
+
+<p>The Arrow serialized representation would be as follows.</p>
+
+<div align="center">
+<img src="/assets/fast_python_serialization_with_ray_and_arrow/arrow_object.png" width="400" />
+</div>
+<div><i>The memory layout of the Arrow-serialized object.</i></div>
+<p><br /></p>
+
+<h2 id="getting-involved">Getting Involved</h2>
+
+<p>We welcome contributions, especially in the following areas.</p>
+
+<ul>
+  <li>Use the C++ and Java implementations of Arrow to implement versions of this
+for C++ and Java.</li>
+  <li>Implement support for more Python types and better test coverage.</li>
+</ul>
+
+<h2 id="reproducing-the-figures-above">Reproducing the Figures Above</h2>
+
+<p>For reference, the figures can be reproduced with the following code.
+Benchmarking <code class="highlighter-rouge">ray.put</code> and <code class="highlighter-rouge">ray.get</code> instead of <code class="highlighter-rouge">pyarrow.serialize</code> and
+<code class="highlighter-rouge">pyarrow.deserialize</code> gives similar figures. The plots were generated at this
+<a href="https://github.com/apache/arrow/tree/894f7400977693b4e0e8f4b9845fd89481f6bf29">commit</a>.</p>
+
+<div class="language-python highlighter-rouge"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">pyarrow</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">timeit</span>
+
+
+<span class="k">def</span> <span class="nf">benchmark_object</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">number</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="c"># Time serialization and deserialization for pickle.</span>
+    <span class="n">pickle_serialize</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span>
+        <span class="k">lambda</span><span class="p">:</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">),</span>
+        <span class="n">number</span><span class="o">=</span><span class="n">number</span><span class="p">)</span>
+    <span class="n">serialized_obj</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+    <span class="n">pickle_deserialize</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">serialized_obj</span><span class="p">),</span>
+                                       <span class="n">number</span><span class="o">=</span><span class="n">number</span><span class="p">)</span>
+
+    <span class="c"># Time serialization and deserialization for Ray.</span>
+    <span class="n">ray_serialize</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span>
+        <span class="k">lambda</span><span class="p">:</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="n">number</span><span class="p">)</span>
+    <span class="n">serialized_obj</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
+    <span class="n">ray_deserialize</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span>
+        <span class="k">lambda</span><span class="p">:</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">serialized_obj</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="n">number</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">[[</span><span class="n">pickle_serialize</span><span class="p">,</span> <span class="n">pickle_deserialize</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">ray_serialize</span><span class="p">,</span> <span class="n">ray_deserialize</span><span class="p">]]</span>
+
+
+<span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="n">pickle_times</span><span class="p">,</span> <span class="n">ray_times</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mf">3.8</span><span class="p">,</span> <span class="mf">2.7</span><span class="p">)</span>
+
+    <span class="n">bar_width</span> <span class="o">=</span> <span class="mf">0.35</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">opacity</span> <span class="o">=</span> <span class="mf">0.6</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pickle_times</span><span class="p">,</span> <span class="n">bar_width</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">'r'</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">'Pickle'</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="n">bar_width</span><span class="p">,</span> <span class="n">ray_times</span><span class="p">,</span> <span class="n">bar_width</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">'c'</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">'Ray'</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s">'bold'</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">'Time (seconds)'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s">'serialization'</span><span class="p">,</span> <span class="s">'deserialization'</span><span class="p">]</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="n">bar_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s">'plot-'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s">'.png'</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="s">'png'</span><span class="p">)</span>
+
+
+<span class="n">test_objects</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">50000</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)],</span>
+    <span class="p">{</span><span class="s">'weight-'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">):</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">50000</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)},</span>
+    <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="nb">set</span><span class="p">([</span><span class="s">'string1'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="s">'string2'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100000</span><span class="p">)},</span>
+    <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200000</span><span class="p">)]</span>
+<span class="p">]</span>
+
+<span class="n">titles</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">'List of large numpy arrays'</span><span class="p">,</span>
+    <span class="s">'Dictionary of large numpy arrays'</span><span class="p">,</span>
+    <span class="s">'Large dictionary of small sets'</span><span class="p">,</span>
+    <span class="s">'Large list of strings'</span>
+<span class="p">]</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">test_objects</span><span class="p">)):</span>
+    <span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="n">benchmark_object</span><span class="p">(</span><span class="n">test_objects</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">titles</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">i</span><span class="p">)</span>
+</code></pre>
+</div>
+
+
+  </div>
+
+  
+
+  
+    
+  <div class="container">
+    <h2>
       Apache Arrow 0.7.0 Release
       <a href="/blog/2017/09/19/0.7.0-release/" class="permalink" title="Permalink">∞</a>
     </h2>

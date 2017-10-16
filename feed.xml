@@ -1,4 +1,281 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.4.3">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-10-04T16:46:38-04:00</updated><id>/</id><entry><title type="html">Apache Arrow 0.7.0 Release</title><link href="/blog/2017/09/19/0.7.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.7.0 Release" /><published>2017-09-19T00:00:00-04:00</published><updated>2017-09-19T00:00:00-04:00</updated><id>/blog/2017/09/19/0.7.0-release</id><content type="html" xml:base="/blog/2017/09/19/0.7.0-release/">&lt;!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.4.3">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2017-10-16T10:09:06-04:00</updated><id>/</id><entry><title type="html">Fast Python Serialization with Ray and Apache Arrow</title><link href="/blog/2017/10/15/fast-python-serialization-with-ray-and-arrow/" rel="alternate" type="text/html" title="Fast Python Serialization with Ray and Apache Arrow" /><published>2017-10-15T10:00:00-04:00</published><updated>2017-10-15T10:00:00-04:00</updated><id>/blog/2017/10/15/fast-python-serialization-with-ray-and-arrow</id><content type="html" xml:base="/blog/2017/10/15/fast-python-serialization-with-ray-and-arrow/">&lt;!--
+
+--&gt;
+
+&lt;p&gt;&lt;em&gt;This was originally posted on the &lt;a href=&quot;https://ray-project.github.io/&quot;&gt;Ray blog&lt;/a&gt;. &lt;a href=&quot;https://people.eecs.berkeley.edu/~pcmoritz/&quot;&gt;Philipp Moritz&lt;/a&gt; and &lt;a href=&quot;http://www.robertnishihara.com&quot;&gt;Robert Nishihara&lt;/a&gt; are graduate students at UC Berkeley.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;This post elaborates on the integration between &lt;a href=&quot;http://ray.readthedocs.io/en/latest/index.html&quot;&gt;Ray&lt;/a&gt; and &lt;a href=&quot;https://arrow.apache.org/&quot;&gt;Apache Arrow&lt;/a&gt;.
+The main problem this addresses is &lt;a href=&quot;https://en.wikipedia.org/wiki/Serialization&quot;&gt;data serialization&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;From &lt;a href=&quot;https://en.wikipedia.org/wiki/Serialization&quot;&gt;Wikipedia&lt;/a&gt;, &lt;strong&gt;serialization&lt;/strong&gt; is&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;… the process of translating data structures or object state into a format
+that can be stored … or transmitted … and reconstructed later (possibly
+in a different computer environment).&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Why is any translation necessary? Well, when you create a Python object, it may
+have pointers to other Python objects, and these objects are all allocated in
+different regions of memory, and all of this has to make sense when unpacked by
+another process on another machine.&lt;/p&gt;
+
+&lt;p&gt;Serialization and deserialization are &lt;strong&gt;bottlenecks in parallel and distributed
+computing&lt;/strong&gt;, especially in machine learning applications with large objects and
+large quantities of data.&lt;/p&gt;
+
+&lt;h2 id=&quot;design-goals&quot;&gt;Design Goals&lt;/h2&gt;
+
+&lt;p&gt;As Ray is optimized for machine learning and AI applications, we have focused a
+lot on serialization and data handling, with the following design goals:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;It should be very efficient with &lt;strong&gt;large numerical data&lt;/strong&gt; (this includes
+NumPy arrays and Pandas DataFrames, as well as objects that recursively contain
+Numpy arrays and Pandas DataFrames).&lt;/li&gt;
+  &lt;li&gt;It should be about as fast as Pickle for &lt;strong&gt;general Python types&lt;/strong&gt;.&lt;/li&gt;
+  &lt;li&gt;It should be compatible with &lt;strong&gt;shared memory&lt;/strong&gt;, allowing multiple processes
+to use the same data without copying it.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;Deserialization&lt;/strong&gt; should be extremely fast (when possible, it should not
+require reading the entire serialized object).&lt;/li&gt;
+  &lt;li&gt;It should be &lt;strong&gt;language independent&lt;/strong&gt; (eventually we’d like to enable Python
+workers to use objects created by workers in Java or other languages and vice
+versa).&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;our-approach-and-alternatives&quot;&gt;Our Approach and Alternatives&lt;/h2&gt;
+
+&lt;p&gt;The go-to serialization approach in Python is the &lt;strong&gt;pickle&lt;/strong&gt; module. Pickle is
+very general, especially if you use variants like &lt;a href=&quot;https://github.com/cloudpipe/cloudpickle/&quot;&gt;cloudpickle&lt;/a&gt;. However, it
+does not satisfy requirements 1, 3, 4, or 5. Alternatives like &lt;strong&gt;json&lt;/strong&gt; satisfy
+5, but not 1-4.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Our Approach:&lt;/strong&gt; To satisfy requirements 1-5, we chose to use the
+&lt;a href=&quot;https://arrow.apache.org/&quot;&gt;Apache Arrow&lt;/a&gt; format as our underlying data representation. In collaboration
+with the Apache Arrow team, we built &lt;a href=&quot;https://arrow.apache.org/docs/python/ipc.html#arbitrary-object-serialization&quot;&gt;libraries&lt;/a&gt; for mapping general Python
+objects to and from the Arrow format. Some properties of this approach:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;The data layout is language independent (requirement 5).&lt;/li&gt;
+  &lt;li&gt;Offsets into a serialized data blob can be computed in constant time without
+reading the full object (requirements 1 and 4).&lt;/li&gt;
+  &lt;li&gt;Arrow supports &lt;strong&gt;zero-copy reads&lt;/strong&gt;, so objects can naturally be stored in
+shared memory and used by multiple processes (requirements 1 and 3).&lt;/li&gt;
+  &lt;li&gt;We can naturally fall back to pickle for anything we can’t handle well
+(requirement 2).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;Alternatives to Arrow:&lt;/strong&gt; We could have built on top of
+&lt;a href=&quot;https://developers.google.com/protocol-buffers/&quot;&gt;&lt;strong&gt;Protocol Buffers&lt;/strong&gt;&lt;/a&gt;, but protocol buffers really isn’t designed for
+numerical data, and that approach wouldn’t satisfy 1, 3, or 4. Building on top
+of &lt;a href=&quot;https://google.github.io/flatbuffers/&quot;&gt;&lt;strong&gt;Flatbuffers&lt;/strong&gt;&lt;/a&gt; actually could be made to work, but it would have
+required implementing a lot of the facilities that Arrow already has and we
+preferred a columnar data layout more optimized for big data.&lt;/p&gt;
+
+&lt;h2 id=&quot;speedups&quot;&gt;Speedups&lt;/h2&gt;
+
+&lt;p&gt;Here we show some performance improvements over Python’s pickle module. The
+experiments were done using &lt;code class=&quot;highlighter-rouge&quot;&gt;pickle.HIGHEST_PROTOCOL&lt;/code&gt;. Code for generating these
+plots is included at the end of the post.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;With NumPy arrays:&lt;/strong&gt; In machine learning and AI applications, data (e.g.,
+images, neural network weights, text documents) are typically represented as
+data structures containing NumPy arrays. When using NumPy arrays, the speedups
+are impressive.&lt;/p&gt;
+
+&lt;p&gt;The fact that the Ray bars for deserialization are barely visible is not a
+mistake. This is a consequence of the support for zero-copy reads (the savings
+largely come from the lack of memory movement).&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/assets/fast_python_serialization_with_ray_and_arrow/speedups0.png&quot; width=&quot;365&quot; height=&quot;255&quot; /&gt;
+&lt;img src=&quot;/assets/fast_python_serialization_with_ray_and_arrow/speedups1.png&quot; width=&quot;365&quot; height=&quot;255&quot; /&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Note that the biggest wins are with deserialization. The speedups here are
+multiple orders of magnitude and get better as the NumPy arrays get larger
+(thanks to design goals 1, 3, and 4). Making &lt;strong&gt;deserialization&lt;/strong&gt; fast is
+important for two reasons. First, an object may be serialized once and then
+deserialized many times (e.g., an object that is broadcast to all workers).
+Second, a common pattern is for many objects to be serialized in parallel and
+then aggregated and deserialized one at a time on a single worker making
+deserialization the bottleneck.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Without NumPy arrays:&lt;/strong&gt; When using regular Python objects, for which we
+cannot take advantage of shared memory, the results are comparable to pickle.&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/assets/fast_python_serialization_with_ray_and_arrow/speedups2.png&quot; width=&quot;365&quot; height=&quot;255&quot; /&gt;
+&lt;img src=&quot;/assets/fast_python_serialization_with_ray_and_arrow/speedups3.png&quot; width=&quot;365&quot; height=&quot;255&quot; /&gt;
+&lt;/div&gt;
+
+&lt;p&gt;These are just a few examples of interesting Python objects. The most important
+case is the case where NumPy arrays are nested within other objects. Note that
+our serialization library works with very general Python types including custom
+Python classes and deeply nested objects.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-api&quot;&gt;The API&lt;/h2&gt;
+
+&lt;p&gt;The serialization library can be used directly through pyarrow as follows. More
+documentation is available &lt;a href=&quot;https://arrow.apache.org/docs/python/ipc.html#arbitrary-object-serialization&quot;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'hello'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;5.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;6.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])]&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;serialized_x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pyarrow&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;serialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_buffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;deserialized_x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pyarrow&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;deserialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;serialized_x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;It can be used directly through the Ray API as follows.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'hello'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;5.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;6.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])]&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;x_id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ray&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;deserialized_x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ray&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x_id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;data-representation&quot;&gt;Data Representation&lt;/h2&gt;
+
+&lt;p&gt;We use Apache Arrow as the underlying language-independent data layout. Objects
+are stored in two parts: a &lt;strong&gt;schema&lt;/strong&gt; and a &lt;strong&gt;data blob&lt;/strong&gt;. At a high level, the
+data blob is roughly a flattened concatenation of all of the data values
+recursively contained in the object, and the schema defines the types and
+nesting structure of the data blob.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Technical Details:&lt;/strong&gt; Python sequences (e.g., dictionaries, lists, tuples,
+sets) are encoded as Arrow &lt;a href=&quot;http://arrow.apache.org/docs/memory_layout.html#dense-union-type&quot;&gt;UnionArrays&lt;/a&gt; of other types (e.g., bools, ints,
+strings, bytes, floats, doubles, date64s, tensors (i.e., NumPy arrays), lists,
+tuples, dicts and sets). Nested sequences are encoded using Arrow
+&lt;a href=&quot;http://arrow.apache.org/docs/memory_layout.html#list-type&quot;&gt;ListArrays&lt;/a&gt;. All tensors are collected and appended to the end of the
+serialized object, and the UnionArray contains references to these tensors.&lt;/p&gt;
+
+&lt;p&gt;To give a concrete example, consider the following object.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;[(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'hello'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;5.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;6.0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;It would be represented in Arrow with the following structure.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;UnionArray(type_ids=[tuple, string, int, int, ndarray],
+           tuples=ListArray(offsets=[0, 2],
+                            UnionArray(type_ids=[int, int],
+                                       ints=[1, 2])),
+           strings=['hello'],
+           ints=[3, 4],
+           ndarrays=[&amp;lt;offset of numpy array&amp;gt;])
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Arrow uses Flatbuffers to encode serialized schemas. &lt;strong&gt;Using only the schema, we
+can compute the offsets of each value in the data blob without scanning through
+the data blob&lt;/strong&gt; (unlike Pickle, this is what enables fast deserialization). This
+means that we can avoid copying or otherwise converting large arrays and other
+values during deserialization. Tensors are appended at the end of the UnionArray
+and can be efficiently shared and accessed using shared memory.&lt;/p&gt;
+
+&lt;p&gt;Note that the actual object would be laid out in memory as shown below.&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/assets/fast_python_serialization_with_ray_and_arrow/python_object.png&quot; width=&quot;600&quot; /&gt;
+&lt;/div&gt;
+&lt;div&gt;&lt;i&gt;The layout of a Python object in the heap. Each box is allocated in a
+different memory region, and arrows between boxes represent pointers.&lt;/i&gt;&lt;/div&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+
+&lt;p&gt;The Arrow serialized representation would be as follows.&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/assets/fast_python_serialization_with_ray_and_arrow/arrow_object.png&quot; width=&quot;400&quot; /&gt;
+&lt;/div&gt;
+&lt;div&gt;&lt;i&gt;The memory layout of the Arrow-serialized object.&lt;/i&gt;&lt;/div&gt;
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;getting-involved&quot;&gt;Getting Involved&lt;/h2&gt;
+
+&lt;p&gt;We welcome contributions, especially in the following areas.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Use the C++ and Java implementations of Arrow to implement versions of this
+for C++ and Java.&lt;/li&gt;
+  &lt;li&gt;Implement support for more Python types and better test coverage.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;reproducing-the-figures-above&quot;&gt;Reproducing the Figures Above&lt;/h2&gt;
+
+&lt;p&gt;For reference, the figures can be reproduced with the following code.
+Benchmarking &lt;code class=&quot;highlighter-rouge&quot;&gt;ray.put&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;ray.get&lt;/code&gt; instead of &lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow.serialize&lt;/code&gt; and
+&lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow.deserialize&lt;/code&gt; gives similar figures. The plots were generated at this
+&lt;a href=&quot;https://github.com/apache/arrow/tree/894f7400977693b4e0e8f4b9845fd89481f6bf29&quot;&gt;commit&lt;/a&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;pickle&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;pyarrow&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;matplotlib.pyplot&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;plt&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;numpy&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;np&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;timeit&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;benchmark_object&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;c&quot;&gt;# Time serialization and deserialization for pickle.&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;pickle_serialize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;timeit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pickle&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dumps&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;protocol&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pickle&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;HIGHEST_PROTOCOL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;serialized_obj&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pickle&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dumps&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pickle&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;HIGHEST_PROTOCOL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;pickle_deserialize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;timeit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pickle&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;loads&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;serialized_obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt;
+                                       &lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;# Time serialization and deserialization for Ray.&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;ray_serialize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;timeit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pyarrow&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;serialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_buffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;serialized_obj&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pyarrow&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;serialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_buffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;ray_deserialize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;timeit&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;timeit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pyarrow&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;deserialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;serialized_obj&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;number&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pickle_serialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pickle_deserialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ray_serialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ray_deserialize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]]&lt;/span&gt;
+
+
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;plot&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pickle_times&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ray_times&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;fig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ax&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;subplots&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;fig&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;set_size_inches&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mf&quot;&gt;3.8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;2.7&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;bar_width&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;0.35&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;index&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arange&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;opacity&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;0.6&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;index&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pickle_times&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bar_width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;alpha&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;opacity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;color&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'r'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;label&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'Pickle'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;index&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bar_width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ray_times&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bar_width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;alpha&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;opacity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;color&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'c'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;label&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'Ray'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;title&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fontweight&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'bold'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ylabel&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'Time (seconds)'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fontsize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;labels&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'serialization'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'deserialization'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;xticks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;index&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bar_width&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;labels&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fontsize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;legend&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fontsize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bbox_to_anchor&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tight_layout&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;yticks&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fontsize&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;plt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;savefig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'plot-'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;str&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'.png'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;format&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'png'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+
+&lt;span class=&quot;n&quot;&gt;test_objects&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;50000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)],&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'weight-'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;str&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;randn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;50000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)},&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;set&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'string1'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;str&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'string2'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;str&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)])&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)},&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;str&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;200000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)]&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;titles&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+    &lt;span class=&quot;s&quot;&gt;'List of large numpy arrays'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s&quot;&gt;'Dictionary of large numpy arrays'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s&quot;&gt;'Large dictionary of small sets'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+    &lt;span class=&quot;s&quot;&gt;'Large list of strings'&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;test_objects&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)):&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;plot&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;benchmark_object&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;test_objects&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]),&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;titles&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;</content><author><name>Philipp Moritz, Robert Nishihara</name></author><summary type="html">This post describes how serialization works in Ray.</summary></entry><entry><title type="html">Apache Arrow 0.7.0 Release</title><link href="/blog/2017/09/19/0.7.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.7.0 Release" /><published>2017-09-19T00:00:00-04:00</published><updated>2017-09-19T00:00:00-04:00</updated><id>/blog/2017/09/19/0.7.0-release</id><content type="html" xml:base="/blog/2017/09/19/0.7.0-release/">&lt;!--
 
 --&gt;
 
@@ -935,142 +1212,6 @@ instructions for getting started.&lt;/p&gt;
 &lt;h3 id=&quot;contributors&quot;&gt;Contributors&lt;/h3&gt;
 
 &lt;p&gt;Thanks to all who contributed patches to this release.&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;$ git shortlog -sn apache-arrow-0.2.0..apache-arrow-0.3.0
-    119 Wes McKinney
-     55 Kouhei Sutou
-     18 Uwe L. Korn
-     17 Julien Le Dem
-      9 Phillip Cloud
-      6 Bryan Cutler
-      5 Philipp Moritz
-      5 Emilio Lahr-Vivaz
-      4 Max Risuhin
-      4 Johan Mabille
-      4 Jeff Knupp
-      3 Steven Phillips
-      3 Miki Tebeka
-      2 Leif Walsh
-      2 Jeff Reback
-      2 Brian Hulette
-      1 Tsuyoshi Ozawa
-      1 rvernica
-      1 Nong Li
-      1 Julien Lafaye
-      1 Itai Incze
-      1 Holden Karau
-      1 Deepak Majeti
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;</content><author><name>wesm</name></author></entry><entry><title type="html">Apache Arrow 0.3.0リリース</title><link href="/blog/2017/05/08/0.3-release-japanese/" rel="alternate" type="text/html" title="Apache Arrow 0.3.0リリース" /><published>2017-05-08T00:00:00-04:00</published><updated>2017-05-08T00:00:00-04:00</updated><id>/blog/2017/05/08/0.3-release-japanese</id><content type="html" xml:base="/blog/2017/05/08/0.3-release-japanese/">&lt;!--
-
---&gt;
-
-&lt;p&gt;&lt;a href=&quot;/blog/2017/05/08/0.3-release/&quot;&gt;原文（English）&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;Apache Arrowチームは0.3.0のリリースをアナウンスできてうれしいです。2月にリリースした0.2.0から10週間の活発な開発の結果が今回のリリースです。&lt;a href=&quot;https://github.com/apache/arrow/graphs/contributors&quot;&gt;&lt;strong&gt;23人のコントリビューター&lt;/strong&gt;&lt;/a&gt;が&lt;a href=&quot;https://issues.apache.org/jira/issues/?jql=project%20%3D%20ARROW%20AND%20status%20in%20(Resolved%2C%20Closed)%20AND%20fixVersion%20%3D%200.3.0&quot;&gt;&lt;strong&gt;306個のJIRAのissueを解決&lt;/strong&gt;&lt;/a&gt;しました。&lt;/p&gt;
-
-&lt;p&gt;複数のArrowの実装にたくさんの新しい機能を追加しています。2017年、特に注力して開発するのは、インメモリー用のフォーマット、型のメタデータ、メッセージング用のプロトコルです。これは、ビッグデータアプリケーションに&lt;strong&gt;安定していてプロダクションで使える基盤&lt;/strong&gt;を提供するためです。高性能IOとインメモリーデータ処理にArrowを活用するために、&lt;a href=&quot;http://spark.apache.org&quot;&gt;Apache Spark&lt;/a&gt;・&lt;a href=&quot;http://www.geomesa.org/&quot;&gt;GeoMesa&lt;/a&gt;コミュニティーと協力していてとてもエキサイティングです。&lt;/p&gt;
-
-&lt;p&gt;それぞれのプラットフォームでArrowを使う方法は&lt;a href=&quot;http://arrow.apache.org/install&quot;&gt;インストールページ&lt;/a&gt;を見てください。&lt;/p&gt;
-
-&lt;p&gt;Arrowでビッグデータシステムを高速化するケースを増やすために、近いうちにApache Arrowのロードマップを公開する予定です。&lt;/p&gt;
-
-&lt;p&gt;Arrowの開発に参加するコントリビューターを募集しています。すでにArrowの開発に参加しているコミュニティーからのコントリビューターもそうですし、まだ参加していないGo、R、Juliaといったコミュニティーからのコントリビューターも募集しています。&lt;/p&gt;
-
-&lt;h3 id=&quot;ファイルフォーマットとストリーミングフォーマットの強化&quot;&gt;ファイルフォーマットとストリーミングフォーマットの強化&lt;/h3&gt;
-
-&lt;p&gt;0.2.0では&lt;strong&gt;ランダムアクセス&lt;/strong&gt;用と&lt;strong&gt;ストリーミング&lt;/strong&gt;用のArrowのワイヤーフォーマットを導入しました。実装の詳細は&lt;a href=&quot;http://arrow.apache.org/docs/ipc.html&quot;&gt;IPC仕様&lt;/a&gt;を見てください。ユースケースは&lt;a href=&quot;http://wesmckinney.com/blog/arrow-streaming-columnar/&quot;&gt;使用例を紹介したブログ&lt;/a&gt;を見てください。これらのフォーマットを使うと低オーバーヘッド・コピーなしでArrowのレコードバッチのペイロードにアクセスできます。&lt;/p&gt;
-
-&lt;p&gt;0.3.0ではこのバイナリーフォマットの細かい詳細をたくさん固めました。Java、C++、Python間の連携のテストおよびそれぞれ言語での単体テストの整備も進めました。&lt;a href=&quot;http://github.com/google/flatbuffers&quot;&gt;Google Flatbuffers&lt;/a&gt;は、前方互換性を壊さずにメタデータに新しい機能を追加するのに非常に助かりました。&lt;/p&gt;
-
-&lt;p&gt;まだバイナリーフォーマットの前方互換性を必ず壊さないと約束できる状態ではありませんが（もしかしたら変更する必要があるなにかが見つかるかもしれない）、メジャーリリース間では不必要に互換性を壊さないように努力するつもりです。Apache ArrowのWebサイト、各コンポーネントのユーザー向けのドキュメントおよびAPIドキュメントへのコントリビューションを非常に歓迎します。&lt;/p&gt;
-
-&lt;h3 id=&quot;辞書エンコーディングのサポート&quot;&gt;辞書エンコーディングのサポート&lt;/h3&gt;
-
-&lt;p&gt;&lt;a href=&quot;http://www.geomesa.org/&quot;&gt;GeoMesa&lt;/a&gt;プロジェクトの&lt;a href=&quot;https://github.com/elahrvivaz&quot;&gt;Emilio Lahr-Vivaz&lt;/a&gt;はJavaのArrow実装に辞書エンコード対応ベクターをコントリビュートしました。これを受けて、C++とPythonでもサポートしました。（&lt;code class=&quot;highlighter-rouge&quot;&gt;pandas.Categorical&lt;/code&gt;とも連携できます。）辞書エンコーディング用のインテグレーションテスト（C++とJava間でこのデータを送受信するテスト）はまだ完成していませんが、0.4.0までには完成させたいです。&lt;/p&gt;
-
-&lt;p&gt;これはカテゴリーデータ用の一般的なデータ表現テクニックです。これを使うと、複数のレコードバッチで共通の「辞書」を共有し、各レコードバッチの値はこの辞書を参照する整数になります。このデータは統計的言語（statistical language）の分野では「カテゴリー（categorical）」や「因子（factor）」と呼ばれています。Apache Parquetのようなファイルフォーマットの分野ではデータ圧縮のためだけに使われています。&lt;/p&gt;
-
-&lt;h3 id=&quot;日付時刻固定長型の拡張&quot;&gt;日付、時刻、固定長型の拡張&lt;/h3&gt;
-
-&lt;p&gt;0.2.0では現実に使われている日付・時刻型をインテグレーションテスト付きで完全にサポートすることを諦めました。これらは&lt;a href=&quot;http://parquet.apache.org&quot;&gt;Apache Parquet&lt;/a&gt;とApache Sparkとの連携に必要な機能です。&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;strong&gt;日付&lt;/strong&gt;: 32-bit（日単位）と64-bit（ミリ秒単位）&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;時刻&lt;/strong&gt;: 単位付き64-bit整数（単位：秒、ミリ秒、マイクロ秒、ナノ秒）&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;タイムスタンプ（UNIXエポックからの経過時間）&lt;/strong&gt;: 単位付き64-bit整数のタイムゾーン付きとタイムゾーンなし&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;固定長バイナリー&lt;/strong&gt;: 決まったバイト数のプリミティブな値&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;固定長リスト&lt;/strong&gt;: 各要素が同じサイズのリスト（要素のベクターとは別にオフセットのベクターを持つ必要がない）&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;C++のArrow実装では、&lt;a href=&quot;https://github.com/boostorg/multiprecision&quot;&gt;Boost.Multiprecision&lt;/a&gt;を使ったexactな小数のサポートを実験的に追加しました。ただし、Java実装とC++実装間での小数のメモリーフォーマットはまだ固まっていません。&lt;/p&gt;
-
-&lt;h3 id=&quot;cとpythonのwindowsサポート&quot;&gt;C++とPythonのWindowsサポート&lt;/h3&gt;
-
-&lt;p&gt;一般的なC++とPythonでの開発用に、パッケージ周りの改良も多数入っています。0.3.0はVisual Studio（MSVC）2015と2017を使ってWindowsを完全にサポートした最初のバージョンです。AppveyorでMSVC用のCIを実行しています。Windows上でソースからビルドするためのガイドも書きました。&lt;a href=&quot;https://github.com/apache/arrow/blob/master/cpp/apidoc/Windows.md&quot;&gt;C++&lt;/a&gt;用と&lt;a href=&quot;https://github.com/apache/arrow/blob/master/python/doc/source/development.rst&quot;&gt;Python&lt;/a&gt;用。&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&quot;https://conda-forge.github.io&quot;&gt;conda-forge&lt;/a&gt;からWindows用のArrowのPythonライブラリーをインストールできます。&lt;/p&gt;
-
-&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;conda install pyarrow -c conda-forge
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;cglibバインディングとrubylua他のサポート&quot;&gt;C（GLib）バインディングとRuby・Lua・他のサポート&lt;/h3&gt;
-
-&lt;p&gt;&lt;a href=&quot;http://github.com/kou&quot;&gt;Kouhei Sutou&lt;/a&gt;は新しいApache Arrowのコントリビューターです。Linux用の（ArrowのC++実装の）GLibを使ったCバインディングをコントリビュートしました。&lt;a href=&quot;https://wiki.gnome.org/Projects/GObjectIntrospection&quot;&gt;GObject Introspection&lt;/a&gt;というCのミドルウェアを使うことでRuby、Lua、Goや&lt;a href=&quot;https://wiki.gnome.org/Projects/GObjectIntrospection/Users&quot;&gt;他にも様々なプログラミング言語&lt;/a&gt;でシームレスにバインディングを使うことができます。これらのバインディングがどのように動いているか、これらのバインディングをどのように使うかを説明するブログ記事が別途必要な気がします。&lt;/p&gt;
-
-&lt;h3 id=&quot;pysparkを使ったapache-sparkとの連携&quot;&gt;PySparkを使ったApache Sparkとの連携&lt;/h3&gt;
-
-&lt;p&gt;&lt;a href=&quot;https://issues.apache.org/jira/browse/SPARK-13534&quot;&gt;SPARK-13534&lt;/a&gt;でApache Sparkコミュニティーと協力しています。PySparkでの&lt;code class=&quot;highlighter-rouge&quot;&gt;DataFrame.toPandas&lt;/code&gt;をArrowを使って高速化しようとしています。効率的なデータのシリアライズにより&lt;a href=&quot;https://github.com/apache/spark/pull/15821#issuecomment-282175163&quot;&gt;&lt;strong&gt;40倍以上高速化&lt;/strong&gt;&lt;/a&gt;できるケースがあります。&lt;/p&gt;
-
-&lt;p&gt;PySparkでArrowを使うことでこれまでできなかったパフォーマンス最適化の道が開けました。特に、UDFの評価まわりでいろいろやれることがあるでしょう。（たとえば、Pythonのラムダ関数を使って&lt;code class=&quot;highlighter-rouge&quot;&gt;map&lt;/code&gt;・&lt;code class=&quot;highlighter-rouge&quot;&gt;filter&lt;/code&gt;を実行するケース。）&lt;/p&gt;
-
-&lt;h3 id=&quot;python実装での新しい機能メモリービューfeatherapache-parquetのサポート&quot;&gt;Python実装での新しい機能：メモリービュー、Feather、Apache Parquetのサポート&lt;/h3&gt;
-
-&lt;p&gt;ArrowのPythonライブラリーである&lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow&lt;/code&gt;は&lt;code class=&quot;highlighter-rouge&quot;&gt;libarrow&lt;/code&gt;と&lt;code class=&quot;highlighter-rouge&quot;&gt;libarrow_python&lt;/code&gt;というC++ライブラリーのCythonバインディングです。&lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow&lt;/code&gt;はNumPyと&lt;a href=&quot;http://pandas.pydata.org&quot;&gt;pandas&lt;/a&gt;とPythonの標準ライブラリー間のシームレスな連携を実現します。&lt;/p&gt;
-
-&lt;p&gt;ArrowのC++ライブラリーで最も重要なものは&lt;code class=&quot;highlighter-rouge&quot;&gt;arrow::Buffer&lt;/code&gt;オブジェクトです。これはメモリービューを管理します。コピーなしの読み込みとスライスをサポートしている点が重要です。&lt;a href=&quot;https://github.com/JeffKnupp&quot;&gt;Jeff Knupp&lt;/a&gt;はArrowのバッファーとPythonのバッファープロトコルとmemoryviewの連携処理をコントリビュートしました。これにより次のようなことができるようになりました。&lt;/p&gt;
-
-&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;In&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;pyarrow&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;pa&lt;/span&gt;
-
-&lt;span class=&quot;n&quot;&gt;In&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;buf&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pa&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frombuffer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'foobarbaz'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-
-&lt;span class=&quot;n&quot;&gt;In&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;buf&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;Out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pyarrow&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_io&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Buffer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;at&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x7f6c0a84b538&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;
-
-&lt;span class=&quot;n&quot;&gt;In&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;memoryview&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;buf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;Out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;9&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;memory&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;at&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x7f6c0a8c5e88&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;
-
-&lt;span class=&quot;n&quot;&gt;In&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;buf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_pybytes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;Out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'foobarbaz'&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;C++でのParquet実装である&lt;a href=&quot;https://github.com/apache/parquet-cpp&quot;&gt;parquet-cpp&lt;/a&gt;を使うことで大幅に&lt;a href=&quot;http://parquet.apache.org&quot;&gt;&lt;strong&gt;Apache Parquet&lt;/strong&gt;&lt;/a&gt;サポートを改良しました。たとえば、ディスク上にあるかHDFS上にあるか関係なく、パーティションされたデータセットをサポートしました。&lt;a href=&quot;https://github.com/dask/dask/commit/68f9e417924a985c1f2e2a587126833c70a2e9f4&quot;&gt;Daskプロジェクト&lt;/a&gt;はArrowを使ったParquetサポートを実装した最初のプロジェクトです。Dask開発者とはpandsデータを分散処理する文脈でさらに協力できることを楽しみにしています。&lt;/p&gt;
-
-&lt;p&gt;pandasを成熟させるためにArrowを改良することもあり、&lt;a href=&quot;https://github.com/wesm/feather&quot;&gt;&lt;strong&gt;Featherフォーマット&lt;/strong&gt;&lt;/a&gt;の実装をマージしたのもその1つです。Featherフォーマットは本質的にはArrowのランダムアクセスフォーマットの特別なケースの1つです。ArrowのコードベースでFeatherの開発を続けます。たとえば、今のFeatherはArrowのPythonバインディングのレイヤーを使うことでPythonのファイルオブジェクトを読み書きできるようになっています。&lt;/p&gt;
-
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;DatetimeTZ&lt;/code&gt;や&lt;code class=&quot;highlighter-rouge&quot;&gt;Categorical&lt;/code&gt;といったpandas固有のデータ型のちゃんとした（robust）サポートも実装しました。&lt;/p&gt;
-
-&lt;h3 id=&quot;cライブラリーでのテンソルサポート&quot;&gt;C++ライブラリーでのテンソルサポート&lt;/h3&gt;
-
-&lt;p&gt;Apache Arrowはコピーなしで共有メモリーを管理するツールという側面があります。機械学習アプリケーションの文脈でこの機能への関心が増えています。UCバークレー校の&lt;a href=&quot;https://rise.cs.berkeley.edu/&quot;&gt;RISELab&lt;/a&gt;の&lt;a href=&quot;https://github.com/ray-project/ray&quot;&gt;Rayプロジェクト&lt;/a&gt;が最初の例です。&lt;/p&gt;
-
-&lt;p&gt;機械学習ではは「テンソル」とも呼ばれる多次元配列というデータ構造を扱います。このようなデータ構造はArrowのカラムフォーマットがサポートしているデータ構造の範囲を超えています。今回のケースでは、&lt;a href=&quot;http://arrow.apache.org/docs/cpp/classarrow_1_1_tensor.html&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;arrow::Tensor&lt;/code&gt;&lt;/a&gt;というC++の型を追加で実装しました。これはArrowのコピーなしの共有メモリー機能を活用して実装しました。（メモリーの生存期間の管理に&lt;code class=&quot;highlighter-rouge&quot;&gt;arrow::Buffer&lt;/code&gt;を使いました。）C++実装では、これからも、共通のIO・メモリー管理ツールとしてArrowを活用できるようにするため、追加のデータ構造を提供するつもりです。&lt;/p&gt;
-
-&lt;h3 id=&quot;javascripttypescript実装の開始&quot;&gt;JavaScript（TypeScript）実装の開始&lt;/h3&gt;
-
-&lt;p&gt;&lt;a href=&quot;https://github.com/TheNeuralBit&quot;&gt;Brian Hulette&lt;/a&gt;はNodeJSとWebブラウザー上で動くアプリケーションで使うために&lt;a href=&quot;https://github.com/apache/arrow/tree/master/js&quot;&gt;TypeScript&lt;/a&gt;でのArrowの実装を始めました。FlatBuffersがJavaScriptをファーストクラスでサポートしているので実装が捗ります。&lt;/p&gt;
-
-&lt;h3 id=&quot;webサイトと開発者用ドキュメントの改良&quot;&gt;Webサイトと開発者用ドキュメントの改良&lt;/h3&gt;
-
-&lt;p&gt;0.2.0をリリースしてからドキュメントとブログを公開するためにWebサイトのシステムを&lt;a href=&quot;https://jekyllrb.com&quot;&gt;Jekyll&lt;/a&gt;ベースで作りました。Kouhei Sutouは&lt;a href=&quot;https://github.com/red-data-tools/jekyll-jupyter-notebook&quot;&gt;Jekyll Jupyter Notebookプラグイン&lt;/a&gt;を作りました。これによりArrowのWebサイトのコンテンツを作るためにJupyterを使うことができます。&lt;/p&gt;
-
-&lt;p&gt;WebサイトにはC、C++、Java、PythonのAPIドキュメントを公開しました。これらの中にArrowを使い始めるための有益な情報を見つけられるでしょう。&lt;/p&gt;
-
-&lt;h3 id=&quot;コントリビューター&quot;&gt;コントリビューター&lt;/h3&gt;
-
-&lt;p&gt;このリリースにパッチをコントリビュートしたみなさんに感謝します。&lt;/p&gt;
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;$ git shortlog -sn apache-arrow-0.2.0..apache-arrow-0.3.0
     119 Wes McKinney

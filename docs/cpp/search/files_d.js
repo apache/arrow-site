@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['pandas_5fto_5farrow_2eh',['pandas_to_arrow.h',['../pandas__to__arrow_8h.html',1,'']]],
   ['parallel_2eh',['parallel.h',['../parallel_8h.html',1,'']]],
   ['plasma_2eh',['plasma.h',['../plasma_8h.html',1,'']]],
   ['plasma_2emd',['plasma.md',['../plasma_8md.html',1,'']]],

@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['pandasobjectstoarrow',['PandasObjectsToArrow',['../namespacearrow_1_1py.html#aab89ccbd0e890b97cb76fd01ad424de7',1,'arrow::py']]],
-  ['pandastoarrow',['PandasToArrow',['../namespacearrow_1_1py.html#a83cc9cff9288b930ebc842e5d4795f09',1,'arrow::py']]],
   ['parallelfor',['ParallelFor',['../namespacearrow.html#a0cc7c6eac204bd82e3d25d6467779611',1,'arrow']]],
   ['parent',['parent',['../classarrow_1_1_buffer.html#ac58d818fa0d8a5db215ca858c5e6aece',1,'arrow::Buffer']]],
   ['passpyerror',['PassPyError',['../namespacearrow_1_1py.html#a420f8c193475027edf8f2fb07cb6274f',1,'arrow::py']]],
@@ -32,6 +30,5 @@ var searchData=
   ['pyobjectstringify',['PyObjectStringify',['../structarrow_1_1py_1_1_py_object_stringify.html#ae463580d34db2330fafa6d0651769948',1,'arrow::py::PyObjectStringify']]],
   ['pyoutputstream',['PyOutputStream',['../classarrow_1_1py_1_1_py_output_stream.html#ae0470dd349fd770f342192ac42f25769',1,'arrow::py::PyOutputStream']]],
   ['pyreadablefile',['PyReadableFile',['../classarrow_1_1py_1_1_py_readable_file.html#a3d88f40dbe406ef234e5b848ad4778a1',1,'arrow::py::PyReadableFile']]],
-  ['pythondecimaltostring',['PythonDecimalToString',['../namespacearrow_1_1py.html#af3466f6420ace71354ac21e2f225b264',1,'arrow::py']]],
   ['pythonfile',['PythonFile',['../classarrow_1_1py_1_1_python_file.html#a0cb9a2ab2b4c147bcf4cc61d10d2dfce',1,'arrow::py::PythonFile']]]
 ];

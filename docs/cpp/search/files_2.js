@@ -4,6 +4,7 @@ var searchData=
   ['client_2eh',['client.h',['../client_8h.html',1,'']]],
   ['common_2eh',['common.h',['../arrow_2python_2common_8h.html',1,'(Global Namespace)'],['../plasma_2common_8h.html',1,'(Global Namespace)']]],
   ['compare_2eh',['compare.h',['../compare_8h.html',1,'']]],
+  ['compat_2eh',['compat.h',['../compat_8h.html',1,'']]],
   ['compiler_2dutil_2eh',['compiler-util.h',['../compiler-util_8h.html',1,'']]],
   ['compression_2eh',['compression.h',['../compression_8h.html',1,'']]],
   ['compression_5fbrotli_2eh',['compression_brotli.h',['../compression__brotli_8h.html',1,'']]],
@@ -18,6 +19,5 @@ var searchData=
   ['cuda_5farrow_5fipc_2eh',['cuda_arrow_ipc.h',['../cuda__arrow__ipc_8h.html',1,'']]],
   ['cuda_5fcommon_2eh',['cuda_common.h',['../cuda__common_8h.html',1,'']]],
   ['cuda_5fcontext_2eh',['cuda_context.h',['../cuda__context_8h.html',1,'']]],
-  ['cuda_5fmemory_2eh',['cuda_memory.h',['../cuda__memory_8h.html',1,'']]],
-  ['cuda_5fversion_2eh',['cuda_version.h',['../cuda__version_8h.html',1,'']]]
+  ['cuda_5fmemory_2eh',['cuda_memory.h',['../cuda__memory_8h.html',1,'']]]
 ];

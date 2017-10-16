@@ -47,6 +47,7 @@ var searchData=
   ['_7epyoutputstream',['~PyOutputStream',['../classarrow_1_1py_1_1_py_output_stream.html#a75096d6508882140d79037104c9a3c6f',1,'arrow::py::PyOutputStream']]],
   ['_7epyreadablefile',['~PyReadableFile',['../classarrow_1_1py_1_1_py_readable_file.html#a1a11db910428f51ccb9dd5977716c287',1,'arrow::py::PyReadableFile']]],
   ['_7epythonfile',['~PythonFile',['../classarrow_1_1py_1_1_python_file.html#a652b7b15a6e0aa57413feea1222503fd',1,'arrow::py::PythonFile']]],
+  ['_7ereadable',['~Readable',['../classarrow_1_1io_1_1_readable.html#a96a411d4494a9872d7eef4f8bb6396b4',1,'arrow::io::Readable']]],
   ['_7ereadablefile',['~ReadableFile',['../classarrow_1_1io_1_1_readable_file.html#ad16167595034d6aba891533c14caf8b8',1,'arrow::io::ReadableFile']]],
   ['_7erecordbatchfilereader',['~RecordBatchFileReader',['../classarrow_1_1ipc_1_1_record_batch_file_reader.html#a3300bc02cf6b8a98cddba3fee224809b',1,'arrow::ipc::RecordBatchFileReader']]],
   ['_7erecordbatchfilewriter',['~RecordBatchFileWriter',['../classarrow_1_1ipc_1_1_record_batch_file_writer.html#acdcab22c935251c3ec14fb0472264c52',1,'arrow::ipc::RecordBatchFileWriter']]],
@@ -56,6 +57,7 @@ var searchData=
   ['_7erecordbatchwriter',['~RecordBatchWriter',['../classarrow_1_1ipc_1_1_record_batch_writer.html#ac1eab409618a90045b1bba229d401f28',1,'arrow::ipc::RecordBatchWriter']]],
   ['_7eschema',['~Schema',['../classarrow_1_1_schema.html#aa488124e46c0a0d73a5f53dbcc45fd99',1,'arrow::Schema']]],
   ['_7escopedref',['~ScopedRef',['../classarrow_1_1py_1_1_scoped_ref.html#aea96d358836d5e3b56a9695bde378b2a',1,'arrow::py::ScopedRef']]],
+  ['_7eseekable',['~Seekable',['../classarrow_1_1io_1_1_seekable.html#a7642c30d2f852e0f79fec036a94ca093',1,'arrow::io::Seekable']]],
   ['_7estatus',['~Status',['../classarrow_1_1_status.html#ac3e26a49af0974afa560b1a37094642f',1,'arrow::Status']]],
   ['_7estdinstream',['~StdinStream',['../classarrow_1_1io_1_1_stdin_stream.html#a4d87ec27649098830a25625bd8376eee',1,'arrow::io::StdinStream']]],
   ['_7estdoutstream',['~StdoutStream',['../classarrow_1_1io_1_1_stdout_stream.html#a5283ed0c16b0deee69d7d9d808d775d3',1,'arrow::io::StdoutStream']]],
@@ -66,5 +68,6 @@ var searchData=
   ['_7etablereader',['~TableReader',['../classarrow_1_1ipc_1_1feather_1_1_table_reader.html#a2db56428c818a24c3d4bcd7ddbb1c1e5',1,'arrow::ipc::feather::TableReader']]],
   ['_7etablewriter',['~TableWriter',['../classarrow_1_1ipc_1_1feather_1_1_table_writer.html#a74a5bf44ad12ce3c8468af6ceb87235f',1,'arrow::ipc::feather::TableWriter']]],
   ['_7etensor',['~Tensor',['../classarrow_1_1_tensor.html#a90486db9727a9fa84746f4132311b16f',1,'arrow::Tensor']]],
-  ['_7etypevisitor',['~TypeVisitor',['../classarrow_1_1_type_visitor.html#a2806c10b0d7d76452254b70a397a05fc',1,'arrow::TypeVisitor']]]
+  ['_7etypevisitor',['~TypeVisitor',['../classarrow_1_1_type_visitor.html#a2806c10b0d7d76452254b70a397a05fc',1,'arrow::TypeVisitor']]],
+  ['_7ewriteable',['~Writeable',['../classarrow_1_1io_1_1_writeable.html#a09ad8f3eb044bb81835101c3d96144c0',1,'arrow::io::Writeable']]]
 ];

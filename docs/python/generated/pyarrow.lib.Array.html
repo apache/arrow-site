@@ -155,14 +155,14 @@
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#pyarrow.lib.Array.cast" title="pyarrow.lib.Array.cast"><code class="xref py py-obj docutils literal"><span class="pre">cast</span></code></a>(self,&nbsp;DataType&nbsp;target_type[,&nbsp;safe])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pyarrow.lib.Array.cast" title="pyarrow.lib.Array.cast"><code class="xref py py-obj docutils literal"><span class="pre">cast</span></code></a>(self,&nbsp;target_type[,&nbsp;safe])</td>
 <td>Cast array values to another data type</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pyarrow.lib.Array.equals" title="pyarrow.lib.Array.equals"><code class="xref py py-obj docutils literal"><span class="pre">equals</span></code></a>(self,&nbsp;Array&nbsp;other)</td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pyarrow.lib.Array.from_pandas" title="pyarrow.lib.Array.from_pandas"><code class="xref py py-obj docutils literal"><span class="pre">from_pandas</span></code></a>(obj[,&nbsp;mask,&nbsp;timestamps_to_ms])</td>
-<td>Convert pandas.Series to an Arrow Array.</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pyarrow.lib.Array.from_pandas" title="pyarrow.lib.Array.from_pandas"><code class="xref py py-obj docutils literal"><span class="pre">from_pandas</span></code></a>(obj[,&nbsp;mask,&nbsp;type])</td>
+<td>Convert pandas.Series to an Arrow Array, using pandas’s semantics about what values indicate nulls.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pyarrow.lib.Array.isnull" title="pyarrow.lib.Array.isnull"><code class="xref py py-obj docutils literal"><span class="pre">isnull</span></code></a>(self)</td>
 <td></td>
@@ -183,7 +183,7 @@
 </table>
 <dl class="method">
 <dt id="pyarrow.lib.Array.cast">
-<code class="descname">cast</code><span class="sig-paren">(</span><em>self</em>, <em>DataType target_type</em>, <em>safe=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.lib.Array.cast" title="Permalink to this definition">¶</a></dt>
+<code class="descname">cast</code><span class="sig-paren">(</span><em>self</em>, <em>target_type</em>, <em>safe=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.lib.Array.cast" title="Permalink to this definition">¶</a></dt>
 <dd><p>Cast array values to another data type</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -209,24 +209,21 @@
 
 <dl class="staticmethod">
 <dt id="pyarrow.lib.Array.from_pandas">
-<em class="property">static </em><code class="descname">from_pandas</code><span class="sig-paren">(</span><em>obj</em>, <em>mask=None</em>, <em>DataType type=None</em>, <em>timestamps_to_ms=False</em>, <em>MemoryPool memory_pool=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.lib.Array.from_pandas" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convert pandas.Series to an Arrow Array.</p>
+<em class="property">static </em><code class="descname">from_pandas</code><span class="sig-paren">(</span><em>obj</em>, <em>mask=None</em>, <em>type=None</em>, <em>MemoryPool memory_pool=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.lib.Array.from_pandas" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert pandas.Series to an Arrow Array, using pandas’s semantics about
+what values indicate nulls. See pyarrow.array for more general
+conversion from arrays or sequences to Arrow arrays</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>series</strong> (<em>pandas.Series</em><em> or </em><em>numpy.ndarray</em>) – </li>
-<li><strong>mask</strong> (<em>pandas.Series</em><em> or </em><em>numpy.ndarray</em><em>, </em><em>optional</em>) – boolean mask if the object is null (True) or valid (False)</li>
-<li><strong>type</strong> (<em>pyarrow.DataType</em>) – Explicit type to attempt to coerce to</li>
-<li><strong>timestamps_to_ms</strong> (<em>bool</em><em>, </em><em>optional</em>) – <p>Convert datetime columns to ms resolution. This is needed for
-compatibility with other functionality like Parquet I/O which
-only supports milliseconds.</p>
-<div class="deprecated">
-<p><span class="versionmodified">Deprecated since version 0.7.0.</span></p>
-</div>
-</li>
-<li><strong>memory_pool</strong> (<a class="reference internal" href="pyarrow.MemoryPool.html#pyarrow.MemoryPool" title="pyarrow.MemoryPool"><em>MemoryPool</em></a><em>, </em><em>optional</em>) – Specific memory pool to use to allocate the resulting Arrow array.</li>
+<li><strong>sequence</strong> (<em>ndarray</em><em>, </em><em>Inded Series</em>) – </li>
+<li><strong>mask</strong> (<em>array</em><em> (</em><em>boolean</em><em>)</em><em>, </em><em>optional</em>) – Indicate which values are null (True) or not null (False)</li>
+<li><strong>type</strong> (<em>pyarrow.DataType</em>) – Explicit type to attempt to coerce to, otherwise will be inferred
+from the data</li>
+<li><strong>memory_pool</strong> (<a class="reference internal" href="pyarrow.MemoryPool.html#pyarrow.MemoryPool" title="pyarrow.MemoryPool"><em>pyarrow.MemoryPool</em></a><em>, </em><em>optional</em>) – If not passed, will allocate memory from the currently-set default
+memory pool</li>
 </ul>
 </td>
 </tr>
@@ -236,34 +233,13 @@ only supports milliseconds.</p>
 <p>Localized timestamps will currently be returned as UTC (pandas’s native
 representation).  Timezone-naive data will be implicitly interpreted as
 UTC.</p>
-<p class="rubric">Examples</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">Array</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
-<span class="go">&lt;pyarrow.array.Int64Array object at 0x7f674e4c0e10&gt;</span>
-<span class="go">[</span>
-<span class="go">  1,</span>
-<span class="go">  2</span>
-<span class="go">]</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">Array</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
-<span class="gp">... </span><span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">))</span>
-<span class="go">&lt;pyarrow.array.Int64Array object at 0x7f9019e11208&gt;</span>
-<span class="go">[</span>
-<span class="go">  1,</span>
-<span class="go">  NA</span>
-<span class="go">]</span>
-</pre></div>
-</div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
 <li><strong>array</strong> (<em>pyarrow.Array or pyarrow.ChunkedArray (if object data</em>)</li>
-<li><em>overflowed binary storage)</em></li>
+<li><em>overflows binary buffer)</em></li>
 </ul>
 </td>
 </tr>
@@ -365,7 +341,7 @@ not validate</p>
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.4.<br/>
     </p>
   </div>
 </footer>
