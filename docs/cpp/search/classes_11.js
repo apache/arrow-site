@@ -13,6 +13,7 @@ var searchData=
   ['stringbuilder',['StringBuilder',['../classarrow_1_1_string_builder.html',1,'arrow']]],
   ['stringdictionarybuilder',['StringDictionaryBuilder',['../classarrow_1_1_string_dictionary_builder.html',1,'arrow']]],
   ['stringtype',['StringType',['../classarrow_1_1_string_type.html',1,'arrow']]],
+  ['stringuniquebuilder',['StringUniqueBuilder',['../classarrow_1_1_string_unique_builder.html',1,'arrow']]],
   ['structarray',['StructArray',['../classarrow_1_1_struct_array.html',1,'arrow']]],
   ['structbuilder',['StructBuilder',['../classarrow_1_1_struct_builder.html',1,'arrow']]],
   ['structtype',['StructType',['../classarrow_1_1_struct_type.html',1,'arrow']]]

@@ -7,6 +7,7 @@ var searchData=
   ['readwritefileinterface',['ReadWriteFileInterface',['../classarrow_1_1io_1_1_read_write_file_interface.html',1,'arrow::io']]],
   ['rebind',['rebind',['../structarrow_1_1stl__allocator_1_1rebind.html',1,'arrow::stl_allocator']]],
   ['recordbatch',['RecordBatch',['../classarrow_1_1_record_batch.html',1,'arrow']]],
+  ['recordbatchbuilder',['RecordBatchBuilder',['../classarrow_1_1_record_batch_builder.html',1,'arrow']]],
   ['recordbatchfilereader',['RecordBatchFileReader',['../classarrow_1_1ipc_1_1_record_batch_file_reader.html',1,'arrow::ipc']]],
   ['recordbatchfilewriter',['RecordBatchFileWriter',['../classarrow_1_1ipc_1_1_record_batch_file_writer.html',1,'arrow::ipc']]],
   ['recordbatchreader',['RecordBatchReader',['../classarrow_1_1_record_batch_reader.html',1,'arrow']]],

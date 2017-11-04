@@ -11,6 +11,8 @@ var searchData=
   ['isfloatingpoint',['IsFloatingPoint',['../structarrow_1_1_is_floating_point.html',1,'arrow']]],
   ['isinteger',['IsInteger',['../structarrow_1_1_is_integer.html',1,'arrow']]],
   ['isnumeric',['IsNumeric',['../structarrow_1_1_is_numeric.html',1,'arrow']]],
+  ['isoneof',['IsOneOf',['../structarrow_1_1_is_one_of.html',1,'arrow']]],
+  ['isoneof_3c_20t_2c_20u_2c_20args_2e_2e_2e_20_3e',['IsOneOf&lt; T, U, Args... &gt;',['../structarrow_1_1_is_one_of_3_01_t_00_01_u_00_01_args_8_8_8_01_4.html',1,'arrow']]],
   ['issignedint',['IsSignedInt',['../structarrow_1_1_is_signed_int.html',1,'arrow']]],
   ['isunsignedint',['IsUnsignedInt',['../structarrow_1_1_is_unsigned_int.html',1,'arrow']]]
 ];

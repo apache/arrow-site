@@ -1,6 +1,7 @@
 var searchData=
 [
   ['enablefeature',['EnableFeature',['../classarrow_1_1_cpu_info.html#a3e5caf3fc5c953265c2581e780f67e0b',1,'arrow::CpuInfo']]],
+  ['enableifisoneof',['EnableIfIsOneOf',['../namespacearrow.html#a8c8be13ade35c784cd113594f08f1927',1,'arrow']]],
   ['encodearraytodictionary',['EncodeArrayToDictionary',['../namespacearrow.html#a32f4d7db3314ca9d2d024851db237806',1,'arrow']]],
   ['encodecolumntodictionary',['EncodeColumnToDictionary',['../namespacearrow.html#af783666310a30109bcff08e0c5f6b20e',1,'arrow']]],
   ['end_5fobject_5faccess',['end_object_access',['../classplasma_1_1_eviction_policy.html#ac25986dd3602eb86aad783d58d19f39e',1,'plasma::EvictionPolicy']]],

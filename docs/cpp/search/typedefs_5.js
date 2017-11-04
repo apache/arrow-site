@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['halffloatbuilder',['HalfFloatBuilder',['../namespacearrow.html#ae87957f6c01fb918bb573f04c5188ca4',1,'arrow']]],
-  ['hash_5fslot_5ft',['hash_slot_t',['../namespacearrow.html#a592d972786bd5b53276d4bf5e0fadd1f',1,'arrow']]],
-  ['hdfsclient',['HdfsClient',['../namespacearrow_1_1io.html#ab8845e19ab4181612b07ef599763ae98',1,'arrow::io']]]
+  ['fbb',['FBB',['../namespacearrow_1_1ipc_1_1feather.html#ae925e8930c1f14b693a618b01200c05a',1,'arrow::ipc::feather']]],
+  ['fbstring',['FBString',['../namespacearrow_1_1ipc_1_1feather.html#a9af35bf051d2d94ba2a1628bb1278d45',1,'arrow::ipc::feather']]],
+  ['filecallback',['FileCallback',['../classplasma_1_1_event_loop.html#afb1f64d30a1d3bb9de511f8126583aae',1,'plasma::EventLoop']]],
+  ['floatbuilder',['FloatBuilder',['../namespacearrow.html#afc7f8a9698e4a5b6e8c3884c2cf3aedb',1,'arrow']]]
 ];

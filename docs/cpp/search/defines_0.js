@@ -27,6 +27,7 @@ var searchData=
   ['arrow_5ffatal',['ARROW_FATAL',['../logging_8h.html#a12f356b9b859fe60b5fcc906ba71b718',1,'logging.h']]],
   ['arrow_5fignore_5fexpr',['ARROW_IGNORE_EXPR',['../logging_8h.html#a479d6d97ef10313772bde465cbc73926',1,'logging.h']]],
   ['arrow_5finfo',['ARROW_INFO',['../logging_8h.html#a0670d4558bbb40d053bf4d0698f0a1ea',1,'logging.h']]],
+  ['arrow_5flittle_5fendian',['ARROW_LITTLE_ENDIAN',['../bit-util_8h.html#a71d55e8a4b05576ac5c3ad1bd97e77b7',1,'bit-util.h']]],
   ['arrow_5flog',['ARROW_LOG',['../logging_8h.html#a6297ec7b42990f6318ea902765172cf0',1,'logging.h']]],
   ['arrow_5flog_5finternal',['ARROW_LOG_INTERNAL',['../logging_8h.html#a89c958b59b86ed5881d703b5cd5866fd',1,'logging.h']]],
   ['arrow_5fmemory_5fpool_5fdefault',['ARROW_MEMORY_POOL_DEFAULT',['../memory__pool_8h.html#a45892ac769df8063a376c306735ff637',1,'memory_pool.h']]],

@@ -3,7 +3,6 @@ var searchData=
   ['rapidjson_5fhas_5fcxx11_5frange_5ffor',['RAPIDJSON_HAS_CXX11_RANGE_FOR',['../json-internal_8h.html#ac97a11d35aeeb029a9d2fd8abf6d1d62',1,'json-internal.h']]],
   ['rapidjson_5fhas_5fcxx11_5frvalue_5frefs',['RAPIDJSON_HAS_CXX11_RVALUE_REFS',['../json-internal_8h.html#a356664a09b7815ce103d3cb519293e22',1,'json-internal.h']]],
   ['rapidjson_5fhas_5fstdstring',['RAPIDJSON_HAS_STDSTRING',['../json-internal_8h.html#a2f2eef0ee4477f3fe5874703a66e997f',1,'json-internal.h']]],
-  ['read_5fnext_5fbitset',['READ_NEXT_BITSET',['../bit-util_8h.html#abd53b6fe5d0ee60b928d2813f89422cf',1,'bit-util.h']]],
   ['return_5fif_5ferror',['RETURN_IF_ERROR',['../context_8h.html#a7808a044fcba7e0e5ee269a242d5b351',1,'context.h']]],
   ['return_5fif_5fpyerror',['RETURN_IF_PYERROR',['../arrow_2python_2common_8h.html#ad99052ac0ced9d8a858bd49d5bfd2ebd',1,'common.h']]],
   ['return_5fnot_5farray',['RETURN_NOT_ARRAY',['../json-internal_8h.html#afcc19e881e037dfe90578983bfde7db3',1,'json-internal.h']]],

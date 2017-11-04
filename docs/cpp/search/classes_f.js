@@ -1,6 +1,7 @@
 var searchData=
 [
   ['pandasoptions',['PandasOptions',['../structarrow_1_1py_1_1_pandas_options.html',1,'arrow::py']]],
+  ['parametrictype',['ParametricType',['../classarrow_1_1_parametric_type.html',1,'arrow']]],
   ['plasmaclient',['PlasmaClient',['../classplasma_1_1_plasma_client.html',1,'plasma']]],
   ['plasmaclientconfig',['PlasmaClientConfig',['../structplasma_1_1_plasma_client_config.html',1,'plasma']]],
   ['plasmaobject',['PlasmaObject',['../structplasma_1_1_plasma_object.html',1,'plasma']]],
@@ -17,6 +18,5 @@ var searchData=
   ['pybytesreader',['PyBytesReader',['../classarrow_1_1py_1_1_py_bytes_reader.html',1,'arrow::py']]],
   ['pyobjectstringify',['PyObjectStringify',['../structarrow_1_1py_1_1_py_object_stringify.html',1,'arrow::py']]],
   ['pyoutputstream',['PyOutputStream',['../classarrow_1_1py_1_1_py_output_stream.html',1,'arrow::py']]],
-  ['pyreadablefile',['PyReadableFile',['../classarrow_1_1py_1_1_py_readable_file.html',1,'arrow::py']]],
-  ['pythonfile',['PythonFile',['../classarrow_1_1py_1_1_python_file.html',1,'arrow::py']]]
+  ['pyreadablefile',['PyReadableFile',['../classarrow_1_1py_1_1_py_readable_file.html',1,'arrow::py']]]
 ];

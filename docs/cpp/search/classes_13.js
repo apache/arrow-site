@@ -7,6 +7,9 @@ var searchData=
   ['unarykernel',['UnaryKernel',['../classarrow_1_1compute_1_1_unary_kernel.html',1,'arrow::compute']]],
   ['unionarray',['UnionArray',['../classarrow_1_1_union_array.html',1,'arrow']]],
   ['uniontype',['UnionType',['../classarrow_1_1_union_type.html',1,'arrow']]],
+  ['uniquebuilder',['UniqueBuilder',['../classarrow_1_1_unique_builder.html',1,'arrow']]],
+  ['uniquebuilder_3c_20binarytype_20_3e',['UniqueBuilder&lt; BinaryType &gt;',['../classarrow_1_1_unique_builder.html',1,'arrow']]],
+  ['uniquebuilder_3c_20stringtype_20_3e',['UniqueBuilder&lt; StringType &gt;',['../classarrow_1_1_unique_builder.html',1,'arrow']]],
   ['uniqueid',['UniqueID',['../classplasma_1_1_unique_i_d.html',1,'plasma']]],
   ['uniqueidhasher',['UniqueIDHasher',['../structplasma_1_1_unique_i_d_hasher.html',1,'plasma']]]
 ];

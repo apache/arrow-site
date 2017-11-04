@@ -1,8 +1,6 @@
 var searchData=
 [
   ['field',['Field',['../classarrow_1_1_field.html',1,'arrow']]],
-  ['fieldmetadata',['FieldMetadata',['../structarrow_1_1ipc_1_1_field_metadata.html',1,'arrow::ipc']]],
-  ['fileblock',['FileBlock',['../structarrow_1_1ipc_1_1_file_block.html',1,'arrow::ipc']]],
   ['fileinterface',['FileInterface',['../classarrow_1_1io_1_1_file_interface.html',1,'arrow::io']]],
   ['filemode',['FileMode',['../structarrow_1_1io_1_1_file_mode.html',1,'arrow::io']]],
   ['fileoutputstream',['FileOutputStream',['../classarrow_1_1io_1_1_file_output_stream.html',1,'arrow::io']]],

@@ -2,7 +2,7 @@ var searchData=
 [
   ['id',['id',['../structae_time_event.html#a24ed4bf76ef40a2c735e9f9cccb45de4',1,'aeTimeEvent']]],
   ['id_5f',['id_',['../classarrow_1_1_data_type.html#aa2704f1cfc50018d02e109b32f67e422',1,'arrow::DataType']]],
-  ['impl_5f',['impl_',['../classarrow_1_1ipc_1_1_record_batch_stream_writer.html#ad1e199bbd642f0a914639e0a44bc7c4c',1,'arrow::ipc::RecordBatchStreamWriter']]],
+  ['impl_5f',['impl_',['../classarrow_1_1io_1_1_fixed_size_buffer_writer.html#a03fe73b61469276c535aa3fef56db5c3',1,'arrow::io::FixedSizeBufferWriter::impl_()'],['../classarrow_1_1ipc_1_1_record_batch_stream_writer.html#ad1e199bbd642f0a914639e0a44bc7c4c',1,'arrow::ipc::RecordBatchStreamWriter::impl_()']]],
   ['indent',['indent',['../structarrow_1_1_pretty_print_options.html#a974e5687d8e630eff8ae79ecc2d8848a',1,'arrow::PrettyPrintOptions']]],
   ['info',['info',['../structplasma_1_1_object_table_entry.html#aaa57d2e583e6e3d9f71f8f4c32ecbaf1',1,'plasma::ObjectTableEntry']]],
   ['is_5fipc_5f',['is_ipc_',['../classarrow_1_1gpu_1_1_cuda_buffer.html#af769e83a8ee8fb3581e4a77cb3d35b90',1,'arrow::gpu::CudaBuffer']]],
