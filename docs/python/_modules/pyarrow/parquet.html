@@ -71,6 +71,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../plasma.html">The Plasma In-Memory Object Store</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pandas.html">Using PyArrow with pandas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parquet.html">Reading and Writing the Apache Parquet Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../extending.html">Building C++ and Cython Extensions using pyarrow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../getting_involved.html">Getting Involved</a></li>
 </ul>
@@ -324,17 +325,47 @@
         <span class="k">return</span> <span class="n">table</span>
 
 
-<span class="k">class</span> <span class="nc">ParquetWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="n">_parquet_writer_arg_docs</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;version : {&quot;1.0&quot;, &quot;2.0&quot;}, default &quot;1.0&quot;</span>
+<span class="s2">    The Parquet format version, defaults to 1.0</span>
+<span class="s2">use_dictionary : bool or list</span>
+<span class="s2">    Specify if we should use dictionary encoding in general or only for</span>
+<span class="s2">    some columns.</span>
+<span class="s2">use_deprecated_int96_timestamps : boolean, default None</span>
+<span class="s2">    Write nanosecond resolution timestamps to INT96 Parquet</span>
+<span class="s2">    format. Defaults to False unless enabled by flavor argument</span>
+<span class="s2">coerce_timestamps : string, default None</span>
+<span class="s2">    Cast timestamps a particular resolution.</span>
+<span class="s2">    Valid values: {None, &#39;ms&#39;, &#39;us&#39;}</span>
+<span class="s2">compression : str or dict</span>
+<span class="s2">    Specify the compression codec, either on a general basis or per-column.</span>
+<span class="s2">flavor : {&#39;spark&#39;}, default None</span>
+<span class="s2">    Sanitize schema or set other compatibility options for compatibility&quot;&quot;&quot;</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    where</span>
-<span class="sd">    schema</span>
-<span class="sd">    flavor : {&#39;spark&#39;, ...}</span>
-<span class="sd">        Set options for compatibility with a particular reader</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">flavor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ParquetWriter"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetWriter.html#pyarrow.parquet.ParquetWriter">[docs]</a><span class="k">class</span> <span class="nc">ParquetWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Class for incrementally building a Parquet file for Arrow tables</span>
+
+<span class="s2">Parameters</span>
+<span class="s2">----------</span>
+<span class="s2">where : path or file-like object</span>
+<span class="s2">schema : arrow Schema</span>
+<span class="si">{0}</span><span class="s2"></span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_parquet_writer_arg_docs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ParquetWriter.__init__"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetWriter.html#pyarrow.parquet.ParquetWriter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">flavor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">version</span><span class="o">=</span><span class="s1">&#39;1.0&#39;</span><span class="p">,</span>
+                 <span class="n">use_dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;snappy&#39;</span><span class="p">,</span>
+                 <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">use_deprecated_int96_timestamps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Use int96 timestamps for Spark</span>
+            <span class="k">if</span> <span class="n">flavor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s1">&#39;spark&#39;</span> <span class="ow">in</span> <span class="n">flavor</span><span class="p">:</span>
+                <span class="n">use_deprecated_int96_timestamps</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">use_deprecated_int96_timestamps</span> <span class="o">=</span> <span class="kc">False</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">flavor</span> <span class="o">=</span> <span class="n">flavor</span>
         <span class="k">if</span> <span class="n">flavor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_changed</span> <span class="o">=</span> <span class="n">_sanitize_schema</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">flavor</span><span class="p">)</span>
@@ -342,15 +373,29 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">schema_changed</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="n">schema</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="o">=</span> <span class="n">_parquet</span><span class="o">.</span><span class="n">ParquetWriter</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="o">=</span> <span class="n">_parquet</span><span class="o">.</span><span class="n">ParquetWriter</span><span class="p">(</span>
+            <span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+            <span class="n">use_dictionary</span><span class="o">=</span><span class="n">use_dictionary</span><span class="p">,</span>
+            <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="n">use_deprecated_int96_timestamps</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_open</span> <span class="o">=</span> <span class="kc">True</span></div>
 
-    <span class="k">def</span> <span class="nf">write_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;is_open&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ParquetWriter.write_table"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetWriter.html#pyarrow.parquet.ParquetWriter.write_table">[docs]</a>    <span class="k">def</span> <span class="nf">write_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_changed</span><span class="p">:</span>
             <span class="n">table</span> <span class="o">=</span> <span class="n">_sanitize_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flavor</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_open</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<div class="viewcode-block" id="ParquetWriter.close"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetWriter.html#pyarrow.parquet.ParquetWriter.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_open</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">is_open</span> <span class="o">=</span> <span class="kc">False</span></div></div>
 
 
 <span class="k">def</span> <span class="nf">_get_pandas_index_columns</span><span class="p">(</span><span class="n">keyvalues</span><span class="p">):</span>
@@ -651,7 +696,7 @@
         <span class="n">filtered_files</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
         <span class="n">filtered_directories</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
 
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_directories</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_directories</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Found files in an intermediate &#39;</span>
                              <span class="s1">&#39;directory: </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base_path</span><span class="p">))</span>
         <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_directories</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -979,54 +1024,21 @@
                 <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">coerce_timestamps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">flavor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Write a Table to Parquet format</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    table : pyarrow.Table</span>
-<span class="sd">    where: string or pyarrow.io.NativeFile</span>
-<span class="sd">    row_group_size : int, default None</span>
-<span class="sd">        The maximum number of rows in each Parquet RowGroup. As a default,</span>
-<span class="sd">        we will write a single RowGroup per file.</span>
-<span class="sd">    version : {&quot;1.0&quot;, &quot;2.0&quot;}, default &quot;1.0&quot;</span>
-<span class="sd">        The Parquet format version, defaults to 1.0</span>
-<span class="sd">    use_dictionary : bool or list</span>
-<span class="sd">        Specify if we should use dictionary encoding in general or only for</span>
-<span class="sd">        some columns.</span>
-<span class="sd">    use_deprecated_int96_timestamps : boolean, default None</span>
-<span class="sd">        Write nanosecond resolution timestamps to INT96 Parquet</span>
-<span class="sd">        format. Defaults to False unless enabled by flavor argument</span>
-<span class="sd">    coerce_timestamps : string, default None</span>
-<span class="sd">        Cast timestamps a particular resolution.</span>
-<span class="sd">        Valid values: {None, &#39;ms&#39;, &#39;us&#39;}</span>
-<span class="sd">    compression : str or dict</span>
-<span class="sd">        Specify the compression codec, either on a general basis or per-column.</span>
-<span class="sd">    flavor : {&#39;spark&#39;}, default None</span>
-<span class="sd">        Sanitize schema or set other compatibility options for compatibility</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">row_group_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;chunk_size&#39;</span><span class="p">,</span> <span class="n">row_group_size</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">use_deprecated_int96_timestamps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1"># Use int96 timestamps for Spark</span>
-        <span class="k">if</span> <span class="n">flavor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s1">&#39;spark&#39;</span> <span class="ow">in</span> <span class="n">flavor</span><span class="p">:</span>
-            <span class="n">use_deprecated_int96_timestamps</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">use_deprecated_int96_timestamps</span> <span class="o">=</span> <span class="kc">False</span>
-
-    <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-        <span class="n">use_dictionary</span><span class="o">=</span><span class="n">use_dictionary</span><span class="p">,</span>
-        <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
-        <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
-        <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="n">use_deprecated_int96_timestamps</span><span class="p">,</span>
-        <span class="n">coerce_timestamps</span><span class="o">=</span><span class="n">coerce_timestamps</span><span class="p">)</span>
+    <span class="n">row_group_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;chunk_size&#39;</span><span class="p">,</span> <span class="n">row_group_size</span><span class="p">)</span>
 
     <span class="n">writer</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span> <span class="n">flavor</span><span class="o">=</span><span class="n">flavor</span><span class="p">,</span>
-                               <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span>
+            <span class="n">where</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+            <span class="n">flavor</span><span class="o">=</span><span class="n">flavor</span><span class="p">,</span>
+            <span class="n">use_dictionary</span><span class="o">=</span><span class="n">use_dictionary</span><span class="p">,</span>
+            <span class="n">coerce_timestamps</span><span class="o">=</span><span class="n">coerce_timestamps</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+            <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="n">use_deprecated_int96_timestamps</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span>
-    <span class="k">except</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">writer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">):</span>
@@ -1037,6 +1049,17 @@
         <span class="k">raise</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="n">write_table</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Write a Table to Parquet format</span>
+
+<span class="s2">Parameters</span>
+<span class="s2">----------</span>
+<span class="s2">table : pyarrow.Table</span>
+<span class="s2">where: string or pyarrow.io.NativeFile</span>
+<span class="si">{0}</span><span class="s2"></span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_parquet_writer_arg_docs</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">write_to_dataset</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">root_path</span><span class="p">,</span> <span class="n">partition_cols</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -1085,7 +1108,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">fs</span> <span class="o">=</span> <span class="n">_ensure_filesystem</span><span class="p">(</span><span class="n">filesystem</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">root_path</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">_isfilestore</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">root_path</span><span class="p">):</span>
         <span class="n">fs</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">root_path</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">partition_cols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_cols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -1104,7 +1127,7 @@
             <span class="n">subtable</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">subgroup</span><span class="p">,</span>
                                          <span class="n">preserve_index</span><span class="o">=</span><span class="n">preserve_index</span><span class="p">)</span>
             <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">root_path</span><span class="p">,</span> <span class="n">subdir</span><span class="p">])</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">_isfilestore</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span>
                 <span class="n">fs</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span>
             <span class="n">outfile</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">guid</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;.parquet&quot;</span>
             <span class="n">full_path</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span> <span class="n">outfile</span><span class="p">])</span>
@@ -1135,12 +1158,10 @@
 <span class="sd">        Cast timestamps a particular resolution.</span>
 <span class="sd">        Valid values: {None, &#39;ms&#39;, &#39;us&#39;}</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-        <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span>
+        <span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
         <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="n">use_deprecated_int96_timestamps</span><span class="p">,</span>
-        <span class="n">coerce_timestamps</span><span class="o">=</span><span class="n">coerce_timestamps</span>
-    <span class="p">)</span>
-    <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="n">coerce_timestamps</span><span class="o">=</span><span class="n">coerce_timestamps</span><span class="p">)</span>
     <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
 
@@ -1186,7 +1207,7 @@
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.4.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.5.<br/>
     </p>
   </div>
 </footer>

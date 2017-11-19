@@ -71,6 +71,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../plasma.html">The Plasma In-Memory Object Store</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pandas.html">Using PyArrow with pandas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parquet.html">Reading and Writing the Apache Parquet Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../extending.html">Building C++ and Cython Extensions using pyarrow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../getting_involved.html">Getting Involved</a></li>
 </ul>
@@ -145,7 +146,7 @@
 
 <span class="kn">from</span> <span class="nn">pyarrow.compat</span> <span class="k">import</span> <span class="n">pdapi</span>
 <span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">FeatherError</span>  <span class="c1"># noqa</span>
-<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">Table</span>
+<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">RecordBatch</span><span class="p">,</span> <span class="n">Table</span>
 <span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">ext</span>
 
 <span class="k">try</span><span class="p">:</span>
@@ -197,30 +198,12 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cannot serialize duplicate column names&quot;</span><span class="p">)</span>
 
-        <span class="c1"># TODO(wesm): pipeline conversion to Arrow memory layout</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
-            <span class="n">col</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span>
-
-            <span class="k">if</span> <span class="n">pdapi</span><span class="o">.</span><span class="n">is_object_dtype</span><span class="p">(</span><span class="n">col</span><span class="p">):</span>
-                <span class="n">inferred_type</span> <span class="o">=</span> <span class="n">infer_dtype</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
-                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;cannot serialize column </span><span class="si">{n}</span><span class="s2"> &quot;</span>
-                       <span class="s2">&quot;named </span><span class="si">{name}</span><span class="s2"> with dtype </span><span class="si">{dtype}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                           <span class="n">n</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">inferred_type</span><span class="p">))</span>
-
-                <span class="k">if</span> <span class="n">inferred_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;mixed&#39;</span><span class="p">]:</span>
-
-                    <span class="c1"># allow columns with nulls + an inferable type</span>
-                    <span class="n">inferred_type</span> <span class="o">=</span> <span class="n">infer_dtype</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="n">col</span><span class="o">.</span><span class="n">notnull</span><span class="p">()])</span>
-                    <span class="k">if</span> <span class="n">inferred_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;mixed&#39;</span><span class="p">]:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-
-                <span class="k">elif</span> <span class="n">inferred_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;unicode&#39;</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">]:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">):</span>
-                <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">write_array</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+        <span class="c1"># TODO(wesm): Remove this length check, see ARROW-1732</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="n">RecordBatch</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">batch</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="p">):</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">write_array</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
@@ -238,7 +221,7 @@
     <span class="n">writer</span> <span class="o">=</span> <span class="n">FeatherWriter</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-    <span class="k">except</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="c1"># Try to make sure the resource is closed</span>
         <span class="kn">import</span> <span class="nn">gc</span>
         <span class="n">writer</span> <span class="o">=</span> <span class="kc">None</span>
@@ -284,7 +267,7 @@
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.4.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.5.<br/>
     </p>
   </div>
 </footer>
