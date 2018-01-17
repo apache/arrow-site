@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['half',['HALF',['../classarrow_1_1_floating_point.html#aa585c0815b471db6d35d916d9e887b7aa61cc7b904f0be3a30b4289eb5b3f9e82',1,'arrow::FloatingPoint']]],
-  ['half_5ffloat',['HALF_FLOAT',['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44af6ebd198668f2a6c2d79c549f599e896',1,'arrow::Type']]]
+  ['gzip',['GZIP',['../structarrow_1_1_compression.html#a8abcec0357242c077a2905d645f2163faebf20f6095f26f9b44ec4a3311adc993',1,'arrow::Compression::GZIP()'],['../classarrow_1_1_g_zip_codec.html#a61e80e6eb225c4f17a5d6e9cd4ce1621ac1bfd1339393d6ef8b43a58e7b521879',1,'arrow::GZipCodec::GZIP()']]]
 ];

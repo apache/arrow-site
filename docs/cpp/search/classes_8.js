@@ -1,7 +1,6 @@
 var searchData=
 [
   ['inputstream',['InputStream',['../classarrow_1_1io_1_1_input_stream.html',1,'arrow::io']]],
-  ['inputstreammessagereader',['InputStreamMessageReader',['../classarrow_1_1ipc_1_1_input_stream_message_reader.html',1,'arrow::ipc']]],
   ['int16type',['Int16Type',['../classarrow_1_1_int16_type.html',1,'arrow']]],
   ['int32type',['Int32Type',['../classarrow_1_1_int32_type.html',1,'arrow']]],
   ['int64type',['Int64Type',['../classarrow_1_1_int64_type.html',1,'arrow']]],

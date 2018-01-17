@@ -1,7 +1,7 @@
 var searchData=
 [
   ['plasma',['plasma',['../md_tutorials_plasma.html',1,'']]],
-  ['pandasoptions',['PandasOptions',['../structarrow_1_1py_1_1_pandas_options.html',1,'arrow::py']]],
+  ['pandasoptions',['PandasOptions',['../structarrow_1_1py_1_1_pandas_options.html',1,'arrow::py::PandasOptions'],['../structarrow_1_1py_1_1_pandas_options.html#a7d138793326541a93ca485de042794d6',1,'arrow::py::PandasOptions::PandasOptions()']]],
   ['parallel_2eh',['parallel.h',['../parallel_8h.html',1,'']]],
   ['parallelfor',['ParallelFor',['../namespacearrow.html#a0cc7c6eac204bd82e3d25d6467779611',1,'arrow']]],
   ['parametrictype',['ParametricType',['../classarrow_1_1_parametric_type.html',1,'arrow']]],
@@ -37,7 +37,8 @@ var searchData=
   ['popcnt',['POPCNT',['../classarrow_1_1_cpu_info.html#ae342a62dfe1a66ddf9dfd8c2b5374a39',1,'arrow::CpuInfo']]],
   ['port',['port',['../structarrow_1_1io_1_1_hdfs_connection_config.html#ade93c1d9226f3725e225db43d7f24f14',1,'arrow::io::HdfsConnectionConfig']]],
   ['position_5f',['position_',['../classarrow_1_1io_1_1_buffer_reader.html#a38c69e817deb97bbaf521824f46e2961',1,'arrow::io::BufferReader']]],
-  ['precision',['precision',['../classarrow_1_1_floating_point.html#a67f553b35dc7785eb73f5bca234e8f94',1,'arrow::FloatingPoint::precision()'],['../classarrow_1_1_half_float_type.html#af010458efaa2722ff5be0fbf53ee1687',1,'arrow::HalfFloatType::precision()'],['../classarrow_1_1_float_type.html#aea3b5ae1965b539336586053bf53a24e',1,'arrow::FloatType::precision()'],['../classarrow_1_1_double_type.html#afbb204026f565bd5b2496b7823ab502e',1,'arrow::DoubleType::precision()'],['../classarrow_1_1_decimal_type.html#ae0614854692c96eb26115585d83448b8',1,'arrow::DecimalType::precision()'],['../classarrow_1_1_floating_point.html#aa585c0815b471db6d35d916d9e887b7a',1,'arrow::FloatingPoint::Precision()']]],
+  ['precision',['Precision',['../classarrow_1_1_floating_point.html#aa585c0815b471db6d35d916d9e887b7a',1,'arrow::FloatingPoint::Precision()'],['../classarrow_1_1_floating_point.html#a67f553b35dc7785eb73f5bca234e8f94',1,'arrow::FloatingPoint::precision() const =0'],['../classarrow_1_1_half_float_type.html#af010458efaa2722ff5be0fbf53ee1687',1,'arrow::HalfFloatType::precision()'],['../classarrow_1_1_float_type.html#aea3b5ae1965b539336586053bf53a24e',1,'arrow::FloatType::precision()'],['../classarrow_1_1_double_type.html#afbb204026f565bd5b2496b7823ab502e',1,'arrow::DoubleType::precision()'],['../classarrow_1_1_decimal_type.html#ae0614854692c96eb26115585d83448b8',1,'arrow::DecimalType::precision()']]],
+  ['precision_5f',['precision_',['../classarrow_1_1_decimal_type.html#a09ebc67c090d23e5c0851da68b0a9745',1,'arrow::DecimalType']]],
   ['pretty_5fprint_2eh',['pretty_print.h',['../pretty__print_8h.html',1,'']]],
   ['prettyprint',['PrettyPrint',['../namespacearrow.html#a737bc52e404537e2dbb14e110e78daaa',1,'arrow::PrettyPrint(const RecordBatch &amp;batch, int indent, std::ostream *sink)'],['../namespacearrow.html#a5e646aac1cf6c89685b5d161377a236b',1,'arrow::PrettyPrint(const Array &amp;arr, int indent, std::ostream *sink)'],['../namespacearrow.html#a9706f4e03928551a9e24db5c205e5521',1,'arrow::PrettyPrint(const Schema &amp;schema, const PrettyPrintOptions &amp;options, std::ostream *sink)'],['../namespacearrow.html#a4dc6b3a8c2c471161f3b4c6c61e86aad',1,'arrow::PrettyPrint(const Schema &amp;schema, const PrettyPrintOptions &amp;options, std::string *result)']]],
   ['prettyprintoptions',['PrettyPrintOptions',['../structarrow_1_1_pretty_print_options.html',1,'arrow']]],

@@ -8,5 +8,6 @@ var searchData=
   ['popcnt',['POPCNT',['../classarrow_1_1_cpu_info.html#ae342a62dfe1a66ddf9dfd8c2b5374a39',1,'arrow::CpuInfo']]],
   ['port',['port',['../structarrow_1_1io_1_1_hdfs_connection_config.html#ade93c1d9226f3725e225db43d7f24f14',1,'arrow::io::HdfsConnectionConfig']]],
   ['position_5f',['position_',['../classarrow_1_1io_1_1_buffer_reader.html#a38c69e817deb97bbaf521824f46e2961',1,'arrow::io::BufferReader']]],
+  ['precision_5f',['precision_',['../classarrow_1_1_decimal_type.html#a09ebc67c090d23e5c0851da68b0a9745',1,'arrow::DecimalType']]],
   ['pythonfile',['PythonFile',['../namespacearrow_1_1py.html#ae397fd327253f5ed91ba845863abb948',1,'arrow::py']]]
 ];

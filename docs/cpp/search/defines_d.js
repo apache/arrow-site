@@ -1,8 +1,8 @@
 var searchData=
 [
-  ['xxh_5fpublic_5fapi',['XXH_PUBLIC_API',['../xxhash_8h.html#a5832897ed49938aefa629a76034b36b1',1,'xxhash.h']]],
-  ['xxh_5fversion_5fmajor',['XXH_VERSION_MAJOR',['../xxhash_8h.html#a8a2b7aee9a2ac8bfad126165c4369fab',1,'xxhash.h']]],
-  ['xxh_5fversion_5fminor',['XXH_VERSION_MINOR',['../xxhash_8h.html#a0087600ba3cbfdbb78b83e13d54a1849',1,'xxhash.h']]],
-  ['xxh_5fversion_5fnumber',['XXH_VERSION_NUMBER',['../xxhash_8h.html#acc66393fff091acefc0e2a00ec5462c4',1,'xxhash.h']]],
-  ['xxh_5fversion_5frelease',['XXH_VERSION_RELEASE',['../xxhash_8h.html#a67fe7f51710d15efa3aeeefbb446f434',1,'xxhash.h']]]
+  ['variant_5finline',['VARIANT_INLINE',['../variant_8h.html#a8b001647ad9f2ed156302fd33d21a5a2',1,'variant.h']]],
+  ['variant_5fmajor_5fversion',['VARIANT_MAJOR_VERSION',['../variant_8h.html#ac6f44655f22b0ba7877b51ec4f078017',1,'variant.h']]],
+  ['variant_5fminor_5fversion',['VARIANT_MINOR_VERSION',['../variant_8h.html#aca1892f1d8ad8094d7f01b5b0ab93d26',1,'variant.h']]],
+  ['variant_5fpatch_5fversion',['VARIANT_PATCH_VERSION',['../variant_8h.html#a01d0a301a230e2db7751d104ee2a603b',1,'variant.h']]],
+  ['variant_5fversion',['VARIANT_VERSION',['../variant_8h.html#a6288731b3c721d8e7be1957e5803b4a8',1,'variant.h']]]
 ];

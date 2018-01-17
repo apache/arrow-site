@@ -40,5 +40,6 @@ var searchData=
   ['arrow_5freturn_5fnot_5fok',['ARROW_RETURN_NOT_OK',['../status_8h.html#a3d2fb237e60e56c4ce9e342e219219ee',1,'status.h']]],
   ['arrow_5ftemplate_5fexport',['ARROW_TEMPLATE_EXPORT',['../visibility_8h.html#a67d64a47a1a32ebf44966c9505009982',1,'visibility.h']]],
   ['arrow_5funused',['ARROW_UNUSED',['../macros_8h.html#aa696459b563e15751224cec3dabc50bc',1,'macros.h']]],
+  ['arrow_5fvariant_5fdeprecated',['ARROW_VARIANT_DEPRECATED',['../variant_8h.html#ace7b7fc87909cbbef268d50af748e03b',1,'variant.h']]],
   ['arrow_5fwarning',['ARROW_WARNING',['../logging_8h.html#a4f604f658bd8290bc50f1f06119076c3',1,'logging.h']]]
 ];

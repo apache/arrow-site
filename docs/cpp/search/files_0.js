@@ -1,5 +1,6 @@
 var searchData=
 [
+  ['adapter_2eh',['adapter.h',['../adapter_8h.html',1,'']]],
   ['ae_2eh',['ae.h',['../ae_8h.html',1,'']]],
   ['allocator_2eh',['allocator.h',['../allocator_8h.html',1,'']]],
   ['api_2eh',['api.h',['../api_8h.html',1,'(Global Namespace)'],['../compute_2api_8h.html',1,'(Global Namespace)'],['../io_2api_8h.html',1,'(Global Namespace)'],['../ipc_2api_8h.html',1,'(Global Namespace)'],['../python_2api_8h.html',1,'(Global Namespace)']]],

@@ -138,6 +138,7 @@
 <span class="c1"># specific language governing permissions and limitations</span>
 <span class="c1"># under the License.</span>
 
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">json</span>
@@ -176,7 +177,25 @@
 <div class="viewcode-block" id="ParquetFile.__init__"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">common_metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reader</span> <span class="o">=</span> <span class="n">ParquetReader</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata</span> <span class="o">=</span> <span class="n">common_metadata</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata</span> <span class="o">=</span> <span class="n">common_metadata</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nested_paths_by_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_nested_paths</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_build_nested_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">column_paths</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_visit_piece</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">rest</span><span class="p">):</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">nested_key</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">key</span><span class="p">,</span> <span class="n">rest</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                <span class="n">_visit_piece</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">nested_key</span><span class="p">,</span> <span class="n">rest</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">paths</span><span class="p">):</span>
+            <span class="n">_visit_piece</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="k">return</span> <span class="n">result</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -198,7 +217,9 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        columns: list</span>
-<span class="sd">            If not None, only these columns will be read from the row group.</span>
+<span class="sd">            If not None, only these columns will be read from the row group. A</span>
+<span class="sd">            column name may be a prefix of a nested field, e.g. &#39;a&#39; will select</span>
+<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;</span>
 <span class="sd">        nthreads : int, default 1</span>
 <span class="sd">            Number of columns to read in parallel. If &gt; 1, requires that the</span>
 <span class="sd">            underlying file source is threadsafe</span>
@@ -223,7 +244,9 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        columns: list</span>
-<span class="sd">            If not None, only these columns will be read from the file.</span>
+<span class="sd">            If not None, only these columns will be read from the file. A</span>
+<span class="sd">            column name may be a prefix of a nested field, e.g. &#39;a&#39; will select</span>
+<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;</span>
 <span class="sd">        nthreads : int, default 1</span>
 <span class="sd">            Number of columns to read in parallel. If &gt; 1, requires that the</span>
 <span class="sd">            underlying file source is threadsafe</span>
@@ -266,7 +289,11 @@
         <span class="k">if</span> <span class="n">column_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
 
-        <span class="n">indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">column_name_idx</span><span class="p">,</span> <span class="n">column_names</span><span class="p">))</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">column_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nested_paths_by_prefix</span><span class="p">:</span>
+                <span class="n">indices</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nested_paths_by_prefix</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="n">use_pandas_metadata</span><span class="p">:</span>
             <span class="n">file_keyvalues</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">metadata</span>
@@ -544,10 +571,6 @@
         <span class="k">return</span> <span class="n">table</span>
 
 
-<span class="k">def</span> <span class="nf">_is_parquet_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;parq&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;parquet&#39;</span><span class="p">)</span>
-
-
 <span class="k">class</span> <span class="nc">PartitionSet</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;A data structure for cataloguing the observed Parquet partitions at a</span>
 <span class="sd">    particular level. So if we have</span>
@@ -679,14 +702,14 @@
         <span class="n">filtered_files</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
             <span class="n">full_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathsep</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">base_path</span><span class="p">,</span> <span class="n">path</span><span class="p">))</span>
-            <span class="k">if</span> <span class="n">_is_parquet_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-                <span class="n">filtered_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_path</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_common_metadata&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_common_metadata&#39;</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span> <span class="o">=</span> <span class="n">full_path</span>
             <span class="k">elif</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_metadata&#39;</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span> <span class="o">=</span> <span class="n">full_path</span>
-            <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_should_silently_exclude</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_should_silently_exclude</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
                 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ignoring path: </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">full_path</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">filtered_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_path</span><span class="p">)</span>
 
         <span class="c1"># ARROW-1079: Filter out &quot;private&quot; directories starting with underscore</span>
         <span class="n">filtered_directories</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pathsep</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">base_path</span><span class="p">,</span> <span class="n">x</span><span class="p">))</span>
@@ -964,7 +987,9 @@
 <span class="sd">        name or directory name. For passing Python file objects or byte</span>
 <span class="sd">        buffers, see pyarrow.io.PythonFileInterface or pyarrow.io.BufferReader.</span>
 <span class="sd">    columns: list</span>
-<span class="sd">        If not None, only these columns will be read from the file.</span>
+<span class="sd">        If not None, only these columns will be read from the file. A column</span>
+<span class="sd">        name may be a prefix of a nested field, e.g. &#39;a&#39; will select &#39;a.b&#39;,</span>
+<span class="sd">        &#39;a.c&#39;, and &#39;a.d.e&#39;</span>
 <span class="sd">    nthreads : int, default 1</span>
 <span class="sd">        Number of columns to read in parallel. Requires that the underlying</span>
 <span class="sd">        file source is threadsafe</span>
@@ -1002,7 +1027,9 @@
 <span class="sd">        name. For passing Python file objects or byte buffers,</span>
 <span class="sd">        see pyarrow.io.PythonFileInterface or pyarrow.io.BufferReader.</span>
 <span class="sd">    columns: list</span>
-<span class="sd">        If not None, only these columns will be read from the file.</span>
+<span class="sd">        If not None, only these columns will be read from the file. A column</span>
+<span class="sd">        name may be a prefix of a nested field, e.g. &#39;a&#39; will select &#39;a.b&#39;,</span>
+<span class="sd">        &#39;a.c&#39;, and &#39;a.d.e&#39;</span>
 <span class="sd">    nthreads : int, default 1</span>
 <span class="sd">        Number of columns to read in parallel. Requires that the underlying</span>
 <span class="sd">        file source is threadsafe</span>
@@ -1062,6 +1089,14 @@
 <span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_parquet_writer_arg_docs</span><span class="p">)</span>
 
 
+<span class="k">def</span> <span class="nf">_mkdir_if_not_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">_isfilestore</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">fs</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">fs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+
 <span class="k">def</span> <span class="nf">write_to_dataset</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">root_path</span><span class="p">,</span> <span class="n">partition_cols</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                      <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -1108,8 +1143,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">fs</span> <span class="o">=</span> <span class="n">_ensure_filesystem</span><span class="p">(</span><span class="n">filesystem</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">_isfilestore</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">root_path</span><span class="p">):</span>
-        <span class="n">fs</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">root_path</span><span class="p">)</span>
+    <span class="n">_mkdir_if_not_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">root_path</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">partition_cols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_cols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
@@ -1127,8 +1161,7 @@
             <span class="n">subtable</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">subgroup</span><span class="p">,</span>
                                          <span class="n">preserve_index</span><span class="o">=</span><span class="n">preserve_index</span><span class="p">)</span>
             <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">root_path</span><span class="p">,</span> <span class="n">subdir</span><span class="p">])</span>
-            <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">_isfilestore</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">prefix</span><span class="p">):</span>
-                <span class="n">fs</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span>
+            <span class="n">_mkdir_if_not_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">prefix</span><span class="p">)</span>
             <span class="n">outfile</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">guid</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;.parquet&quot;</span>
             <span class="n">full_path</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span> <span class="n">outfile</span><span class="p">])</span>
             <span class="k">with</span> <span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">full_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -1207,7 +1240,7 @@
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.5.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.6.<br/>
     </p>
   </div>
 </footer>

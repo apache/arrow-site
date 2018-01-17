@@ -1,5 +1,6 @@
 var searchData=
 [
+  ['pandasoptions',['PandasOptions',['../structarrow_1_1py_1_1_pandas_options.html#a7d138793326541a93ca485de042794d6',1,'arrow::py::PandasOptions']]],
   ['parallelfor',['ParallelFor',['../namespacearrow.html#a0cc7c6eac204bd82e3d25d6467779611',1,'arrow']]],
   ['parent',['parent',['../classarrow_1_1_buffer.html#ac58d818fa0d8a5db215ca858c5e6aece',1,'arrow::Buffer']]],
   ['passpyerror',['PassPyError',['../namespacearrow_1_1py.html#a420f8c193475027edf8f2fb07cb6274f',1,'arrow::py']]],

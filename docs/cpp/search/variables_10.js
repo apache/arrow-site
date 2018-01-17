@@ -1,5 +1,7 @@
 var searchData=
 [
+  ['scale_5f',['scale_',['../classarrow_1_1_decimal_type.html#a8cdef6e38e4f984e614f4c81baaa8d1c',1,'arrow::DecimalType']]],
+  ['schema_5f',['schema_',['../classarrow_1_1_record_batch.html#a7ca77d78199001da4f3fd99ffd035922',1,'arrow::RecordBatch::schema_()'],['../classarrow_1_1_table.html#a40375f7767ae6caea748d87e53aacb45',1,'arrow::Table::schema_()']]],
   ['setsize',['setsize',['../structae_event_loop.html#a319d48af757c6f6144fa4066994f6541',1,'aeEventLoop']]],
   ['shape_5f',['shape_',['../classarrow_1_1_tensor.html#adfbc5876ce2f4c71d5503554a1cba2f2',1,'arrow::Tensor']]],
   ['size',['size',['../structarrow_1_1io_1_1_hdfs_path_info.html#ace8b31928fa6af87401eabf072380af7',1,'arrow::io::HdfsPathInfo::size()'],['../structarrow_1_1io_1_1_file_statistics.html#a97bf450abd7b721e3e95030a44eeb99e',1,'arrow::io::FileStatistics::size()'],['../structarrow_1_1py_1_1_py_object_stringify.html#a93307dd10ea2e5725a0c9e6a93b5dd48',1,'arrow::py::PyObjectStringify::size()']]],

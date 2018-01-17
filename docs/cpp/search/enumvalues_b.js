@@ -1,8 +1,7 @@
 var searchData=
 [
-  ['object_5ffound',['OBJECT_FOUND',['../namespaceplasma.html#ab0498a778ef73ba70e2865dd2d4e9c8ea8d77ab62b1fadb69d4e9830e70a82a64',1,'plasma']]],
-  ['object_5fnot_5ffound',['OBJECT_NOT_FOUND',['../namespaceplasma.html#ab0498a778ef73ba70e2865dd2d4e9c8ea7b268f74adc8d8d5f5509f4ff4064379',1,'plasma']]],
-  ['offset',['OFFSET',['../namespacearrow.html#af37e6996db0efe38caab9271161bcc33a1b8a8605d2ff5670a215e55c6645e0d9',1,'arrow']]],
-  ['ok',['OK',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fae0aa021e21dddbd6d8cecec71e9cf564',1,'arrow']]],
-  ['outofmemory',['OutOfMemory',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fab498327feeb51430af73e07deac268fd',1,'arrow']]]
+  ['na',['NA',['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44af46d8600b17dd993097e0875a46e0b15',1,'arrow::Type']]],
+  ['nano',['NANO',['../structarrow_1_1_time_unit.html#a561ef51c3755bd873f8f86f5bc4ec1ffa88a677627c74df18d59f1aa6cd1c88d5',1,'arrow::TimeUnit']]],
+  ['none',['NONE',['../structarrow_1_1compute_1_1_datum.html#ae1164fc67b6c27e5f39a7064fafd2ee6a93a8e6ae66bd39e6f66623732190c7ad',1,'arrow::compute::Datum::NONE()'],['../classarrow_1_1ipc_1_1_message.html#a6d6973b3b03de50d7be9dbab4db910dba421c980d162a5a5cd8c11586af54ecb0',1,'arrow::ipc::Message::NONE()']]],
+  ['notimplemented',['NotImplemented',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fa997ca4ce119685f40f03a9a8a6c5346e',1,'arrow']]]
 ];

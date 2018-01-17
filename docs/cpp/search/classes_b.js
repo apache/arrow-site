@@ -1,9 +1,9 @@
 var searchData=
 [
-  ['listarray',['ListArray',['../classarrow_1_1_list_array.html',1,'arrow']]],
-  ['listbuilder',['ListBuilder',['../classarrow_1_1_list_builder.html',1,'arrow']]],
-  ['listtype',['ListType',['../classarrow_1_1_list_type.html',1,'arrow']]],
-  ['loggingmemorypool',['LoggingMemoryPool',['../classarrow_1_1_logging_memory_pool.html',1,'arrow']]],
-  ['lrucache',['LRUCache',['../classplasma_1_1_l_r_u_cache.html',1,'plasma']]],
-  ['lz4codec',['Lz4Codec',['../classarrow_1_1_lz4_codec.html',1,'arrow']]]
+  ['memorymappedfile',['MemoryMappedFile',['../classarrow_1_1io_1_1_memory_mapped_file.html',1,'arrow::io']]],
+  ['memorypool',['MemoryPool',['../classarrow_1_1_memory_pool.html',1,'arrow']]],
+  ['message',['Message',['../classarrow_1_1ipc_1_1_message.html',1,'arrow::ipc']]],
+  ['messagereader',['MessageReader',['../classarrow_1_1ipc_1_1_message_reader.html',1,'arrow::ipc']]],
+  ['mockoutputstream',['MockOutputStream',['../classarrow_1_1io_1_1_mock_output_stream.html',1,'arrow::io']]],
+  ['mutablebuffer',['MutableBuffer',['../classarrow_1_1_mutable_buffer.html',1,'arrow']]]
 ];

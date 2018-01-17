@@ -6,6 +6,7 @@ var searchData=
   ['null_5fbitmap_5fdata_5f',['null_bitmap_data_',['../classarrow_1_1_array.html#aed59d9e8608229ff3808983cdc908ccd',1,'arrow::Array::null_bitmap_data_()'],['../classarrow_1_1_array_builder.html#a03476f9edb6a8fb48854ba7ecc785fa7',1,'arrow::ArrayBuilder::null_bitmap_data_()']]],
   ['null_5fcount',['null_count',['../structarrow_1_1_array_data.html#a4e0a4e307974a3c2753934e675fa08a7',1,'arrow::ArrayData::null_count()'],['../structarrow_1_1ipc_1_1feather_1_1_array_metadata.html#a24a49027812adcbe1eb8c424ed112e0e',1,'arrow::ipc::feather::ArrayMetadata::null_count()']]],
   ['null_5fcount_5f',['null_count_',['../classarrow_1_1_array_builder.html#a9ea96ba4121857ab23241b6b408051b9',1,'arrow::ArrayBuilder::null_count_()'],['../classarrow_1_1_chunked_array.html#a45ef30e6a7823f1666b0f50ecde903a7',1,'arrow::ChunkedArray::null_count_()']]],
+  ['num_5frows_5f',['num_rows_',['../classarrow_1_1_record_batch.html#aa62597221dab95400905423cc0155611',1,'arrow::RecordBatch::num_rows_()'],['../classarrow_1_1_table.html#a7b7b895c038e468dac1be8d27722ffa6',1,'arrow::Table::num_rows_()']]],
   ['numericarray_3c_20date32type_20_3e',['NumericArray&lt; Date32Type &gt;',['../namespacearrow.html#aad22ff8253d2e22d1e00e9fc5de517b9',1,'arrow']]],
   ['numericarray_3c_20date64type_20_3e',['NumericArray&lt; Date64Type &gt;',['../namespacearrow.html#aab85fbce4714e0aacdb346e2d983ee85',1,'arrow']]],
   ['numericarray_3c_20doubletype_20_3e',['NumericArray&lt; DoubleType &gt;',['../namespacearrow.html#aed7ed46237befdd4c2d8f6607822ecba',1,'arrow']]],

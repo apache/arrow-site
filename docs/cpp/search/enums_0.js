@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['buffertype',['BufferType',['../namespacearrow.html#af37e6996db0efe38caab9271161bcc33',1,'arrow']]]
+  ['cachelevel',['CacheLevel',['../classarrow_1_1_cpu_info.html#a890f4f69f78663820be8bfd591b69a8b',1,'arrow::CpuInfo']]]
 ];
