@@ -145,7 +145,7 @@
 
 <ul>
   <li>A length prefix indicating the metadata size</li>
-  <li>The message metadata as a <a href="https://github.com/google]/flatbuffers">Flatbuffer</a></li>
+  <li>The message metadata as a <a href="https://github.com/google/flatbuffers">Flatbuffer</a></li>
   <li>Padding bytes to an 8-byte boundary</li>
   <li>The message body, which must be a multiple of 8 bytes</li>
 </ul>
@@ -190,13 +190,19 @@ flatbuffer union), and the size of the message body:</p>
 of encapsulated messages, each of which follows the format above. The schema
 comes first in the stream, and it is the same for all of the record batches
 that follow. If any fields in the schema are dictionary-encoded, one or more
-<code class="highlighter-rouge">DictionaryBatch</code> messages will follow the schema.</p>
+<code class="highlighter-rouge">DictionaryBatch</code> messages will be included. <code class="highlighter-rouge">DictionaryBatch</code> and
+<code class="highlighter-rouge">RecordBatch</code> messages may be interleaved, but before any dictionary key is used
+in a <code class="highlighter-rouge">RecordBatch</code> it should be defined in a <code class="highlighter-rouge">DictionaryBatch</code>.</p>
 
 <div class="highlighter-rouge"><pre class="highlight"><code>&lt;SCHEMA&gt;
 &lt;DICTIONARY 0&gt;
 ...
 &lt;DICTIONARY k - 1&gt;
 &lt;RECORD BATCH 0&gt;
+...
+&lt;DICTIONARY x DELTA&gt;
+...
+&lt;DICTIONARY y DELTA&gt;
 ...
 &lt;RECORD BATCH n - 1&gt;
 &lt;EOS [optional]: int32&gt;
@@ -231,6 +237,10 @@ footer.</p>
 &lt;magic number "ARROW1"&gt;
 </code></pre>
 </div>
+
+<p>In the file format, there is no requirement that dictionary keys should be
+defined in a <code class="highlighter-rouge">DictionaryBatch</code> before they are used in a <code class="highlighter-rouge">RecordBatch</code>, as long
+as the keys are defined somewhere in the file.</p>
 
 <h3 id="recordbatch-body-structure">RecordBatch body structure</h3>
 
@@ -305,6 +315,7 @@ the dictionaries can be properly interpreted.</p>
 <div class="highlighter-rouge"><pre class="highlight"><code>table DictionaryBatch {
   id: long;
   data: RecordBatch;
+  isDelta: boolean = false;
 }
 </code></pre>
 </div>
@@ -313,6 +324,38 @@ the dictionaries can be properly interpreted.</p>
 in the schema, so that dictionaries can even be used for multiple fields. See
 the <a href="https://github.com/apache/arrow/blob/master/format/Layout.md">Physical Layout</a> document for more about the semantics of
 dictionary-encoded data.</p>
+
+<p>The dictionary <code class="highlighter-rouge">isDelta</code> flag allows dictionary batches to be modified
+mid-stream.  A dictionary batch with <code class="highlighter-rouge">isDelta</code> set indicates that its vector
+should be concatenated with those of any previous batches with the same <code class="highlighter-rouge">id</code>. A
+stream which encodes one column, the list of strings
+<code class="highlighter-rouge">["A", "B", "C", "B", "D", "C", "E", "A"]</code>, with a delta dictionary batch could
+take the form:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>&lt;SCHEMA&gt;
+&lt;DICTIONARY 0&gt;
+(0) "A"
+(1) "B"
+(2) "C"
+
+&lt;RECORD BATCH 0&gt;
+0
+1
+2
+1
+
+&lt;DICTIONARY 0 DELTA&gt;
+(3) "D"
+(4) "E"
+
+&lt;RECORD BATCH 1&gt;
+3
+2
+4
+0
+EOS
+</code></pre>
+</div>
 
 <h3 id="tensor-multi-dimensional-array-message-format">Tensor (Multi-dimensional Array) Message Format</h3>
 
