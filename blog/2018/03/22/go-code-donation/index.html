@@ -116,8 +116,8 @@
 
 
     <h2>
-      Improvements to Java Vector API in Apache Arrow 0.8.0
-      <a href="/blog/2017/12/19/java-vector-improvements/" class="permalink" title="Permalink">∞</a>
+      A Native Go Library for Apache Arrow
+      <a href="/blog/2018/03/22/go-code-donation/" class="permalink" title="Permalink">∞</a>
     </h2>
 
     
@@ -128,12 +128,12 @@
           <span class="label label-default">Published</span>
           <span class="published">
             <i class="fa fa-calendar"></i>
-            18 Dec 2017
+            22 Mar 2018
           </span>
         </div>
         <div>
           <span class="label label-default">By</span>
-          <a href="http://people.apache.org/~Siddharth Teotia"><i class="fa fa-user"></i>  (Siddharth Teotia)</a>
+          <a href="http://github.com/pmc"><i class="fa fa-user"></i> The Apache Arrow PMC (pmc)</a>
         </div>
       </div>
     </div>
@@ -142,84 +142,49 @@
 
 -->
 
-<p>This post gives insight into the major improvements in the Java implementation
-of vectors. We undertook this work over the last 10 weeks since the last Arrow
-release.</p>
+<p>Since launching in early 2016, Apache Arrow has been growing fast. We have made
+nine major releases through the efforts of over 120 distinct contributors. The
+project’s scope has also expanded. We began by focusing on the development of
+the standardized in-memory columnar data format, which now serves as a pillar
+of the project. Since then, we have been growing into a more general
+cross-language platform for in-memory data analysis through new additions to
+the project like the <a href="http://arrow.apache.org/blog/2017/08/16/0.6.0-release/">Plasma shared memory object store</a>. A primary goal of
+the project is to enable data system developers to process and move data fast.</p>
 
-<h2 id="design-goals">Design Goals</h2>
+<p>So far, we officially have developed native Arrow implementations in C++, Java,
+and JavaScript. We have created binding layers for the C++ libraries in C
+(using the GLib libraries) and Python. We have also seen efforts to develop
+interfaces to the Arrow C++ libraries in Go, Lua, Ruby, and Rust. While binding
+layers serve many purposes, there can be benefits to native implementations,
+and so we’ve been keen to see future work on native implementations in growing
+systems languages like Go and Rust.</p>
 
-<ol>
-  <li>Improved maintainability and extensibility</li>
-  <li>Improved heap memory usage</li>
-  <li>No performance overhead on hot code paths</li>
-</ol>
+<p>This past October, engineers <a href="https://github.com/stuartcarnie">Stuart Carnie</a>, <a href="https://github.com/nathanielc">Nathaniel Cook</a>, and
+<a href="https://github.com/goller">Chris Goller</a>, employees of <a href="https://influxdata.com">InfluxData</a>, began developing a native [Go
+language implementation of the <a href="https://github.com/influxdata/arrow">Apache Arrow</a> in-memory columnar format for
+use in Go-based database systems like InfluxDB. We are excited to announce that
+InfluxData has donated this native Go implementation to the Apache Arrow
+project, where it will continue to be developed. This work features low-level
+integration with the Go runtime and native support for SIMD instruction
+sets. We are looking forward to working more closely with the Go community on
+solving in-memory analytics and data interoperability problems.</p>
 
-<h2 id="background">Background</h2>
+<div align="center">
+<img src="/img/native_go_implementation.png" alt="Apache Arrow implementations and bindings" width="60%" class="img-responsive" />
+</div>
 
-<h3 id="improved-maintainability-and-extensibility">Improved maintainability and extensibility</h3>
+<p>One of the mantras in <a href="https://www.apache.org">The Apache Software Foundation</a> is “Community over
+Code”. By building an open and collaborative development community across many
+programming language ecosystems, we will be able to development better and
+longer-lived solutions to the systems problems faced by data developers.</p>
 
-<p>We use templates in several places for compile time Java code generation for
-different vector classes, readers, writers etc. Templates are helpful as the
-developers don’t have to write a lot of duplicate code.</p>
-
-<p>However, we realized that over a period of time some specific Java
-templates became extremely complex with giant if-else blocks, poor code indentation
-and documentation. All this impacted the ability to easily extend these templates
-for adding new functionality or improving the existing infrastructure.</p>
-
-<p>So we evaluated the usage of templates for compile time code generation and
-decided not to use complex templates in some places by writing small amount of
-duplicate code which is elegant, well documented and extensible.</p>
-
-<h3 id="improved-heap-usage">Improved heap usage</h3>
-
-<p>We did extensive memory analysis downstream in <a href="https://www.dremio.com/">Dremio</a> where Arrow is used
-heavily for in-memory query execution on columnar data. The general conclusion
-was that Arrow’s Java vector classes have non-negligible heap overhead and
-volume of objects was too high. There were places in code where we were
-creating objects unnecessarily and using structures that could be substituted
-with better alternatives.</p>
-
-<h3 id="no-performance-overhead-on-hot-code-paths">No performance overhead on hot code paths</h3>
-
-<p>Java vectors used delegation and abstraction heavily throughout the object
-hierarchy. The performance critical get/set methods of vectors went through a
-chain of function calls back and forth between different objects before doing
-meaningful work. We also evaluated the usage of branches in vector APIs and
-reimplemented some of them by avoiding branches completely.</p>
-
-<p>We took inspiration from how the Java memory code in <code class="highlighter-rouge">ArrowBuf</code> works. For all
-the performance critical methods, <code class="highlighter-rouge">ArrowBuf</code> bypasses all the netty object
-hierarchy, grabs the target virtual address and directly interacts with the
-memory.</p>
-
-<p>There were cases where branches could be avoided all together.</p>
-
-<p>In case of nullable vectors, we were doing multiple checks to confirm if
-the value at a given position in the vector is null or not.</p>
-
-<h2 id="our-implementation-approach">Our implementation approach</h2>
-
-<ul>
-  <li>For scalars, the inheritance tree was simplified by writing different
-abstract base classes for fixed and variable width scalars.</li>
-  <li>The base classes contained all the common functionality across different
-types.</li>
-  <li>The individual subclasses implemented type specific APIs for fixed and
-variable width scalar vectors.</li>
-  <li>For the performance critical methods, all the work is done either in
-the vector class or corresponding ArrowBuf. There is no delegation to any
-internal object.</li>
-  <li>The mutator and accessor based access to vector APIs is removed. These
-objects led to unnecessary heap overhead and complicated the use of APIs.</li>
-  <li>Both scalar and complex vectors directly interact with underlying buffers
-that manage the offsets, data and validity. Earlier we were creating different
-inner vectors for each vector and delegating all the functionality to inner
-vectors. This introduced a lot of bugs in memory management, excessive heap
-overhead and performance penalty due to chain of delegations.</li>
-  <li>We reduced the number of vector classes by removing non-nullable vectors.
-In the new implementation, all vectors in Java are nullable in nature.</li>
-</ul>
+<p>We are excited for what the future holds for the Apache Arrow project. Adding
+first-class support for a popular systems programming language like Go is an
+important step along the way. We welcome others from the Go community to get
+involved in the project. We also welcome others who wish to explore building
+Arrow support for other programming languages not yet represented. Learn more
+at <a href="https://arrow.apache.org">https://arrow.apache.org</a> and join the mailing list
+<a href="https://lists.apache.org/list.html?dev@arrow.apache.org">dev@arrow.apache.org</a>.</p>
 
 
 
