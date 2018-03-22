@@ -8,7 +8,6 @@ var searchData=
   ['metadata',['metadata',['../structplasma_1_1_object_buffer.html#aa02e9306fe2ccd501d2b2d8a0c69a39b',1,'plasma::ObjectBuffer']]],
   ['metadata_5foffset',['metadata_offset',['../structplasma_1_1_plasma_object.html#ad12648a15f841885eb9543b200382352',1,'plasma::PlasmaObject']]],
   ['metadata_5fsize',['metadata_size',['../structplasma_1_1_object_buffer.html#a4abaffd262b9ebd5fc6721fd55cc59b3',1,'plasma::ObjectBuffer::metadata_size()'],['../structplasma_1_1_plasma_object.html#a82a59120f6c86f8cf5121c6a100718fb',1,'plasma::PlasmaObject::metadata_size()']]],
-  ['mmap_5fsize',['mmap_size',['../structplasma_1_1object__handle.html#a6cbc7351c0d1c6fd641730b0b2a19874',1,'plasma::object_handle']]],
   ['mod_5fbitmask_5f',['mod_bitmask_',['../classarrow_1_1_dictionary_builder.html#a436702327223154d14f8f7781e05cf39',1,'arrow::DictionaryBuilder']]],
   ['mode_5f',['mode_',['../classarrow_1_1io_1_1_file_interface.html#a504d0410eb6066316365a4549d000ee0',1,'arrow::io::FileInterface']]],
   ['murmur_5fprime',['MURMUR_PRIME',['../classarrow_1_1_hash_util.html#a23d3063447bbbc10f5116250e35cffe2',1,'arrow::HashUtil']]],

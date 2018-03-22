@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['object_5fhandle',['object_handle',['../structplasma_1_1object__handle.html',1,'plasma']]],
   ['objectbuffer',['ObjectBuffer',['../structplasma_1_1_object_buffer.html',1,'plasma']]],
   ['objectrequest',['ObjectRequest',['../structplasma_1_1_object_request.html',1,'plasma']]],
   ['objecttableentry',['ObjectTableEntry',['../structplasma_1_1_object_table_entry.html',1,'plasma']]],
@@ -9,5 +8,6 @@ var searchData=
   ['optional',['optional',['../classarrow_1_1util_1_1optional.html',1,'arrow::util']]],
   ['orcfilereader',['ORCFileReader',['../classarrow_1_1adapters_1_1orc_1_1_o_r_c_file_reader.html',1,'arrow::adapters::orc']]],
   ['outputstream',['OutputStream',['../classarrow_1_1io_1_1_output_stream.html',1,'arrow::io']]],
-  ['ownedref',['OwnedRef',['../classarrow_1_1py_1_1_owned_ref.html',1,'arrow::py']]]
+  ['ownedref',['OwnedRef',['../classarrow_1_1py_1_1_owned_ref.html',1,'arrow::py']]],
+  ['ownedrefnogil',['OwnedRefNoGIL',['../classarrow_1_1py_1_1_owned_ref_no_g_i_l.html',1,'arrow::py']]]
 ];

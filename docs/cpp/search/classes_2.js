@@ -10,6 +10,8 @@ var searchData=
   ['columnbuilder',['ColumnBuilder',['../classarrow_1_1ipc_1_1feather_1_1_column_builder.html',1,'arrow::ipc::feather']]],
   ['columntype',['ColumnType',['../structarrow_1_1ipc_1_1feather_1_1_column_type.html',1,'arrow::ipc::feather']]],
   ['compression',['Compression',['../structarrow_1_1_compression.html',1,'arrow']]],
+  ['conversiontraits',['ConversionTraits',['../structarrow_1_1stl_1_1_conversion_traits.html',1,'arrow::stl']]],
+  ['conversiontraits_3c_20std_3a_3avector_3c_20value_5fc_5ftype_20_3e_20_3e',['ConversionTraits&lt; std::vector&lt; value_c_type &gt; &gt;',['../structarrow_1_1stl_1_1_conversion_traits_3_01std_1_1vector_3_01value__c__type_01_4_01_4.html',1,'arrow::stl']]],
   ['cpuinfo',['CpuInfo',['../classarrow_1_1_cpu_info.html',1,'arrow']]],
   ['cudabuffer',['CudaBuffer',['../classarrow_1_1gpu_1_1_cuda_buffer.html',1,'arrow::gpu']]],
   ['cudabufferreader',['CudaBufferReader',['../classarrow_1_1gpu_1_1_cuda_buffer_reader.html',1,'arrow::gpu']]],

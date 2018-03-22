@@ -7,6 +7,7 @@ var searchData=
   ['dcheck_5fle',['DCHECK_LE',['../logging_8h.html#a4395e95bab44e222cb2e77251017a0e2',1,'logging.h']]],
   ['dcheck_5flt',['DCHECK_LT',['../logging_8h.html#ab62f5ed8f2d48e29802be0cbbcd1359a',1,'logging.h']]],
   ['dcheck_5fne',['DCHECK_NE',['../logging_8h.html#a46e69120fbd3b36e6960e096d23b66f0',1,'logging.h']]],
+  ['dcheck_5fok',['DCHECK_OK',['../logging_8h.html#a37db8fd97314328985c927abacd4ffd3',1,'logging.h']]],
   ['disconnect_5fclient',['DISCONNECT_CLIENT',['../plasma_2io_8h.html#a106d24a9bf85a25f10749f82c03aa11c',1,'io.h']]],
   ['double_5ftable_5fsize',['DOUBLE_TABLE_SIZE',['../util_2hash_8h.html#a50c20144147e3ec459ad35b56d8242ac',1,'hash.h']]]
 ];

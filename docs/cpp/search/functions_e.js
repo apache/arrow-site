@@ -26,8 +26,6 @@ var searchData=
   ['putvlqint',['PutVlqInt',['../classarrow_1_1_bit_writer.html#a028f9d7d77697df651ef82d2df52f53d',1,'arrow::BitWriter']]],
   ['putzigzagvlqint',['PutZigZagVlqInt',['../classarrow_1_1_bit_writer.html#a2e764de1162c33a6aa41caad00322156',1,'arrow::BitWriter']]],
   ['pyacquiregil',['PyAcquireGIL',['../classarrow_1_1py_1_1_py_acquire_g_i_l.html#a176ad0a1d753c1e1297a8c8c8e24edfc',1,'arrow::py::PyAcquireGIL']]],
-  ['pybuffer',['PyBuffer',['../classarrow_1_1py_1_1_py_buffer.html#a3cc8616d2102cb6e7ae276316db835da',1,'arrow::py::PyBuffer']]],
-  ['pybytesreader',['PyBytesReader',['../classarrow_1_1py_1_1_py_bytes_reader.html#aff2bcef1cc751f2a14e495014c820d5b',1,'arrow::py::PyBytesReader']]],
   ['pyobjectstringify',['PyObjectStringify',['../structarrow_1_1py_1_1_py_object_stringify.html#ae463580d34db2330fafa6d0651769948',1,'arrow::py::PyObjectStringify']]],
   ['pyoutputstream',['PyOutputStream',['../classarrow_1_1py_1_1_py_output_stream.html#ae0470dd349fd770f342192ac42f25769',1,'arrow::py::PyOutputStream']]],
   ['pyreadablefile',['PyReadableFile',['../classarrow_1_1py_1_1_py_readable_file.html#a3d88f40dbe406ef234e5b848ad4778a1',1,'arrow::py::PyReadableFile']]]

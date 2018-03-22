@@ -15,7 +15,7 @@ var searchData=
   ['primitivectype',['PrimitiveCType',['../classarrow_1_1_primitive_c_type.html',1,'arrow']]],
   ['pyacquiregil',['PyAcquireGIL',['../classarrow_1_1py_1_1_py_acquire_g_i_l.html',1,'arrow::py']]],
   ['pybuffer',['PyBuffer',['../classarrow_1_1py_1_1_py_buffer.html',1,'arrow::py']]],
-  ['pybytesreader',['PyBytesReader',['../classarrow_1_1py_1_1_py_bytes_reader.html',1,'arrow::py']]],
+  ['pyforeignbuffer',['PyForeignBuffer',['../classarrow_1_1py_1_1_py_foreign_buffer.html',1,'arrow::py']]],
   ['pyobjectstringify',['PyObjectStringify',['../structarrow_1_1py_1_1_py_object_stringify.html',1,'arrow::py']]],
   ['pyoutputstream',['PyOutputStream',['../classarrow_1_1py_1_1_py_output_stream.html',1,'arrow::py']]],
   ['pyreadablefile',['PyReadableFile',['../classarrow_1_1py_1_1_py_readable_file.html',1,'arrow::py']]]

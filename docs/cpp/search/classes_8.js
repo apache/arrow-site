@@ -7,6 +7,7 @@ var searchData=
   ['int8type',['Int8Type',['../classarrow_1_1_int8_type.html',1,'arrow']]],
   ['integer',['Integer',['../classarrow_1_1_integer.html',1,'arrow']]],
   ['intervaltype',['IntervalType',['../classarrow_1_1_interval_type.html',1,'arrow']]],
+  ['is_5f8bit_5fint',['is_8bit_int',['../structarrow_1_1compute_1_1is__8bit__int.html',1,'arrow::compute']]],
   ['isfloatingpoint',['IsFloatingPoint',['../structarrow_1_1_is_floating_point.html',1,'arrow']]],
   ['isinteger',['IsInteger',['../structarrow_1_1_is_integer.html',1,'arrow']]],
   ['isnumeric',['IsNumeric',['../structarrow_1_1_is_numeric.html',1,'arrow']]],

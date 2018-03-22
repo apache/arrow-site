@@ -38,6 +38,7 @@ var searchData=
   ['arrow_5fpredict_5ftrue',['ARROW_PREDICT_TRUE',['../macros_8h.html#a1f418a9edc46d53e62732e7ccd06f329',1,'macros.h']]],
   ['arrow_5fprefetch',['ARROW_PREFETCH',['../macros_8h.html#a76175559bb2c4934d6084eafc14968ed',1,'macros.h']]],
   ['arrow_5freturn_5fnot_5fok',['ARROW_RETURN_NOT_OK',['../status_8h.html#a3d2fb237e60e56c4ce9e342e219219ee',1,'status.h']]],
+  ['arrow_5fstl_5fconversion',['ARROW_STL_CONVERSION',['../stl_8h.html#a825d51f8d49df8164ce5ddc620f29153',1,'stl.h']]],
   ['arrow_5ftemplate_5fexport',['ARROW_TEMPLATE_EXPORT',['../visibility_8h.html#a67d64a47a1a32ebf44966c9505009982',1,'visibility.h']]],
   ['arrow_5funused',['ARROW_UNUSED',['../macros_8h.html#aa696459b563e15751224cec3dabc50bc',1,'macros.h']]],
   ['arrow_5fvariant_5fdeprecated',['ARROW_VARIANT_DEPRECATED',['../variant_8h.html#ace7b7fc87909cbbef268d50af748e03b',1,'variant.h']]],

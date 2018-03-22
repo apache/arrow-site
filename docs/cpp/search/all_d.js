@@ -20,6 +20,8 @@ var searchData=
   ['npy_5farray_5fnotswapped',['NPY_ARRAY_NOTSWAPPED',['../numpy__interop_8h.html#ac8a802bab03d4971c4d59b840579808e',1,'numpy_interop.h']]],
   ['npy_5farray_5fupdateifcopy',['NPY_ARRAY_UPDATEIFCOPY',['../numpy__interop_8h.html#a118a68a7b8d21e9cbf1c2ac3d61542ef',1,'numpy_interop.h']]],
   ['npy_5farray_5fwriteable',['NPY_ARRAY_WRITEABLE',['../numpy__interop_8h.html#a685e97c65cc63ab8073772796cbcbcfd',1,'numpy_interop.h']]],
+  ['npy_5fint32_5fis_5fint',['NPY_INT32_IS_INT',['../numpy__interop_8h.html#ad3b1ac3466f0db89a488f10e19ebe33b',1,'numpy_interop.h']]],
+  ['npy_5fint64_5fis_5flong_5flong',['NPY_INT64_IS_LONG_LONG',['../numpy__interop_8h.html#a035731736e66cf6787fa800cf3817246',1,'numpy_interop.h']]],
   ['npy_5fint_5fdecl',['NPY_INT_DECL',['../python_2type__traits_8h.html#a46d295fdbaad623f3dfaa80f7f7fe720',1,'type_traits.h']]],
   ['null',['null',['../namespacearrow.html#af642d53dac1a6b6b686fb5984d33bc9a',1,'arrow']]],
   ['null_5fbitmap',['null_bitmap',['../classarrow_1_1_array.html#a76c4756ac85b29f9135064d68d2ef908',1,'arrow::Array::null_bitmap()'],['../classarrow_1_1_array_builder.html#a1ebef9199b1e209d1e27debff6068e2f',1,'arrow::ArrayBuilder::null_bitmap()']]],
@@ -28,7 +30,7 @@ var searchData=
   ['null_5fbitmap_5fdata_5f',['null_bitmap_data_',['../classarrow_1_1_array.html#aed59d9e8608229ff3808983cdc908ccd',1,'arrow::Array::null_bitmap_data_()'],['../classarrow_1_1_array_builder.html#a03476f9edb6a8fb48854ba7ecc785fa7',1,'arrow::ArrayBuilder::null_bitmap_data_()']]],
   ['null_5fcount',['null_count',['../structarrow_1_1_array_data.html#a4e0a4e307974a3c2753934e675fa08a7',1,'arrow::ArrayData::null_count()'],['../structarrow_1_1ipc_1_1feather_1_1_array_metadata.html#a24a49027812adcbe1eb8c424ed112e0e',1,'arrow::ipc::feather::ArrayMetadata::null_count()'],['../classarrow_1_1_array.html#a0537d3b69a889b951e88be2fe9f3d96a',1,'arrow::Array::null_count()'],['../classarrow_1_1_array_builder.html#aad098f61890072a4576867a7cf4fb9ee',1,'arrow::ArrayBuilder::null_count()'],['../classarrow_1_1_chunked_array.html#a962541b044ac5a7a6a87499cef7957bb',1,'arrow::ChunkedArray::null_count()'],['../classarrow_1_1_column.html#ab8d98c9a76cae4bc7ac69085b3841d38',1,'arrow::Column::null_count()']]],
   ['null_5fcount_5f',['null_count_',['../classarrow_1_1_array_builder.html#a9ea96ba4121857ab23241b6b408051b9',1,'arrow::ArrayBuilder::null_count_()'],['../classarrow_1_1_chunked_array.html#a45ef30e6a7823f1666b0f50ecde903a7',1,'arrow::ChunkedArray::null_count_()']]],
-  ['nullable',['nullable',['../classarrow_1_1_field.html#aba2045f76a42fe34fd785190af139c25',1,'arrow::Field']]],
+  ['nullable',['nullable',['../structarrow_1_1stl_1_1_conversion_traits_3_01std_1_1vector_3_01value__c__type_01_4_01_4.html#aeeb1f7f7d90ffe72bf4217a6ab677bfc',1,'arrow::stl::ConversionTraits&lt; std::vector&lt; value_c_type &gt; &gt;::nullable()'],['../classarrow_1_1_field.html#aba2045f76a42fe34fd785190af139c25',1,'arrow::Field::nullable()']]],
   ['nullarray',['NullArray',['../classarrow_1_1_null_array.html',1,'arrow::NullArray'],['../classarrow_1_1_null_array.html#a4f567b5203d750e74765349fcb0d0f73',1,'arrow::NullArray::NullArray(const std::shared_ptr&lt; ArrayData &gt; &amp;data)'],['../classarrow_1_1_null_array.html#afad1ca6bc644cf3ba907d71b06017125',1,'arrow::NullArray::NullArray(int64_t length)']]],
   ['nullbuilder',['NullBuilder',['../classarrow_1_1_null_builder.html',1,'arrow::NullBuilder'],['../classarrow_1_1_null_builder.html#a277266829ee9ce0a6e9a56dde874faad',1,'arrow::NullBuilder::NullBuilder()']]],
   ['nullptr',['NULLPTR',['../macros_8h.html#a3ef7eab8cd0e570b6586628cc9d5ccab',1,'macros.h']]],
@@ -71,5 +73,5 @@ var searchData=
   ['numpy_5fnan',['numpy_nan',['../namespacearrow_1_1py.html#a905ccbfe5b6e03ea7df61d104fe4e4ef',1,'arrow::py']]],
   ['numpy_5fto_5farrow_2eh',['numpy_to_arrow.h',['../numpy__to__arrow_8h.html',1,'']]],
   ['numpybuffer',['NumPyBuffer',['../classarrow_1_1py_1_1_num_py_buffer.html',1,'arrow::py::NumPyBuffer'],['../classarrow_1_1py_1_1_num_py_buffer.html#a52f54d711226ec7209369927b9b4e693',1,'arrow::py::NumPyBuffer::NumPyBuffer()']]],
-  ['numpydtypetoarrow',['NumPyDtypeToArrow',['../namespacearrow_1_1py.html#a9d0ba3df1922f37090d3de6db967aa72',1,'arrow::py']]]
+  ['numpydtypetoarrow',['NumPyDtypeToArrow',['../namespacearrow_1_1py.html#a9d0ba3df1922f37090d3de6db967aa72',1,'arrow::py::NumPyDtypeToArrow(PyObject *dtype, std::shared_ptr&lt; DataType &gt; *out)'],['../namespacearrow_1_1py.html#afd4c5e3640cbc20223d1e97a6bd74d05',1,'arrow::py::NumPyDtypeToArrow(PyArray_Descr *descr, std::shared_ptr&lt; DataType &gt; *out)']]]
 ];

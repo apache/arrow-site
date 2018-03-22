@@ -55,9 +55,10 @@ var searchData=
   ['freehost',['FreeHost',['../classarrow_1_1gpu_1_1_cuda_device_manager.html#a11cbb54e6cec48448ff1db388ea3e2f6',1,'arrow::gpu::CudaDeviceManager']]],
   ['from_5fbinary',['from_binary',['../classplasma_1_1_unique_i_d.html#a35bce29897b79eb6215fbd1b9ebe99bb',1,'plasma::UniqueID']]],
   ['from_5frandom',['from_random',['../classplasma_1_1_unique_i_d.html#a7d3bc62995bf1d84fc7f359f55ed3406',1,'plasma::UniqueID']]],
-  ['fromarrays',['FromArrays',['../classarrow_1_1_list_array.html#a62dff3a3932441aeeaa0d768adec91ca',1,'arrow::ListArray']]],
-  ['frombuffer',['FromBuffer',['../classarrow_1_1gpu_1_1_cuda_ipc_mem_handle.html#ad91f2ec2a4ddbd1b7c8fff80def8d3e2',1,'arrow::gpu::CudaIpcMemHandle']]],
-  ['fromrecordbatches',['FromRecordBatches',['../classarrow_1_1_table.html#aec5f16e5671977e0d948d0e0865935fe',1,'arrow::Table']]],
-  ['fromstring',['FromString',['../classarrow_1_1_decimal128.html#a49c97a5085b396ab44182b1dc4037ddc',1,'arrow::Decimal128']]],
+  ['fromarrays',['FromArrays',['../classarrow_1_1_list_array.html#a62dff3a3932441aeeaa0d768adec91ca',1,'arrow::ListArray::FromArrays()'],['../classarrow_1_1_dictionary_array.html#a7d280025b617d4aa1db5624509cd3c4e',1,'arrow::DictionaryArray::FromArrays()']]],
+  ['frombuffer',['FromBuffer',['../classarrow_1_1gpu_1_1_cuda_ipc_mem_handle.html#aa357d2e9bfe127bb169700848c08323a',1,'arrow::gpu::CudaIpcMemHandle']]],
+  ['frompyobject',['FromPyObject',['../classarrow_1_1py_1_1_py_buffer.html#a4b19099796311936d1c1f56bfd53103f',1,'arrow::py::PyBuffer']]],
+  ['fromrecordbatches',['FromRecordBatches',['../classarrow_1_1_table.html#aec5f16e5671977e0d948d0e0865935fe',1,'arrow::Table::FromRecordBatches(const std::vector&lt; std::shared_ptr&lt; RecordBatch &gt;&gt; &amp;batches, std::shared_ptr&lt; Table &gt; *table)'],['../classarrow_1_1_table.html#a58cb404c3656b0f4f91911c1cc2c3e5f',1,'arrow::Table::FromRecordBatches(const std::shared_ptr&lt; Schema &gt; &amp;schema, const std::vector&lt; std::shared_ptr&lt; RecordBatch &gt;&gt; &amp;batches, std::shared_ptr&lt; Table &gt; *table)']]],
+  ['fromstring',['FromString',['../classarrow_1_1_buffer.html#adeea70eb65ff53f3ec94d3a7b754c7c0',1,'arrow::Buffer::FromString(const std::string &amp;data, MemoryPool *pool, std::shared_ptr&lt; Buffer &gt; *out)'],['../classarrow_1_1_buffer.html#a65e1ae0e908b997d371fc80ff1cb8f43',1,'arrow::Buffer::FromString(const std::string &amp;data, std::shared_ptr&lt; Buffer &gt; *out)'],['../classarrow_1_1_decimal128.html#ac21945a7921b98e76d13a478a718a065',1,'arrow::Decimal128::FromString()']]],
   ['functioncontext',['FunctionContext',['../classarrow_1_1compute_1_1_function_context.html',1,'arrow::compute::FunctionContext'],['../classarrow_1_1compute_1_1_function_context.html#a02cce8aff2d51bccddfad538273339e1',1,'arrow::compute::FunctionContext::FunctionContext()']]]
 ];

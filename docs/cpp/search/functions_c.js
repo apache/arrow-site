@@ -29,5 +29,5 @@ var searchData=
   ['numericarray',['NumericArray',['../classarrow_1_1_numeric_array.html#a4a1cd5a63614aa223c5c5d2090fbcd46',1,'arrow::NumericArray::NumericArray(const std::shared_ptr&lt; ArrayData &gt; &amp;data)'],['../classarrow_1_1_numeric_array.html#a168d0af6ff637a6c0e45594d05340123',1,'arrow::NumericArray::NumericArray(typename std::enable_if&lt; TypeTraits&lt; T1 &gt;::is_parameter_free, int64_t &gt;::type length, const std::shared_ptr&lt; Buffer &gt; &amp;data, const std::shared_ptr&lt; Buffer &gt; &amp;null_bitmap=NULLPTR, int64_t null_count=0, int64_t offset=0)']]],
   ['numericbuilder',['NumericBuilder',['../classarrow_1_1_numeric_builder.html#a257b3f61591502836b7a333da562dad6',1,'arrow::NumericBuilder']]],
   ['numpybuffer',['NumPyBuffer',['../classarrow_1_1py_1_1_num_py_buffer.html#a52f54d711226ec7209369927b9b4e693',1,'arrow::py::NumPyBuffer']]],
-  ['numpydtypetoarrow',['NumPyDtypeToArrow',['../namespacearrow_1_1py.html#a9d0ba3df1922f37090d3de6db967aa72',1,'arrow::py']]]
+  ['numpydtypetoarrow',['NumPyDtypeToArrow',['../namespacearrow_1_1py.html#a9d0ba3df1922f37090d3de6db967aa72',1,'arrow::py::NumPyDtypeToArrow(PyObject *dtype, std::shared_ptr&lt; DataType &gt; *out)'],['../namespacearrow_1_1py.html#afd4c5e3640cbc20223d1e97a6bd74d05',1,'arrow::py::NumPyDtypeToArrow(PyArray_Descr *descr, std::shared_ptr&lt; DataType &gt; *out)']]]
 ];

@@ -12,7 +12,7 @@ var searchData=
   ['state',['state',['../structplasma_1_1_object_table_entry.html#aec98fc3472884f486cf37d4ae2728bc0',1,'plasma::ObjectTableEntry']]],
   ['status',['status',['../structplasma_1_1_object_request.html#a3672e0c6a1496a33066b33df03f57d93',1,'plasma::ObjectRequest']]],
   ['stop',['stop',['../structae_event_loop.html#a79b39021b2e805b8a547915d22279168',1,'aeEventLoop']]],
-  ['store_5ffd',['store_fd',['../structplasma_1_1object__handle.html#ac5d58e5da71631e60d72ba8fc5e5dc51',1,'plasma::object_handle']]],
+  ['store_5ffd',['store_fd',['../structplasma_1_1_plasma_object.html#a5dc6549d0495eeca800dcb15a070b228',1,'plasma::PlasmaObject']]],
   ['strides_5f',['strides_',['../classarrow_1_1_tensor.html#a5224d67e07ebb71c1c9f83e07bec303f',1,'arrow::Tensor']]],
   ['strings_5fto_5fcategorical',['strings_to_categorical',['../structarrow_1_1py_1_1_pandas_options.html#aea24810361b67d93f00c68f41c5e7565',1,'arrow::py::PandasOptions']]]
 ];
