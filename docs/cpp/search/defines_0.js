@@ -17,9 +17,10 @@ var searchData=
   ['arrow_5fbyte_5fswap32',['ARROW_BYTE_SWAP32',['../bit-util_8h.html#a4fabecc746b1f8c287ca27cebdfb3eee',1,'bit-util.h']]],
   ['arrow_5fbyte_5fswap64',['ARROW_BYTE_SWAP64',['../bit-util_8h.html#a582fbf29e9f0fbf6dd39031af11a8894',1,'bit-util.h']]],
   ['arrow_5fcheck',['ARROW_CHECK',['../logging_8h.html#a389e6c69f3ba2e62c5a9e0372059f1a4',1,'logging.h']]],
-  ['arrow_5fcheck_5fok',['ARROW_CHECK_OK',['../status_8h.html#ab1dca026b4840fea1e82df4c176de6b3',1,'status.h']]],
-  ['arrow_5fcheck_5fok_5fprepend',['ARROW_CHECK_OK_PREPEND',['../status_8h.html#a6c575c821b11b43863bf895d390e04f9',1,'status.h']]],
+  ['arrow_5fcheck_5fok',['ARROW_CHECK_OK',['../logging_8h.html#ab1dca026b4840fea1e82df4c176de6b3',1,'logging.h']]],
+  ['arrow_5fcheck_5fok_5fprepend',['ARROW_CHECK_OK_PREPEND',['../logging_8h.html#a6c575c821b11b43863bf895d390e04f9',1,'logging.h']]],
   ['arrow_5fdebug',['ARROW_DEBUG',['../logging_8h.html#a3057840b0de9d217fdcedddc615295ad',1,'logging.h']]],
+  ['arrow_5fdeprecated',['ARROW_DEPRECATED',['../macros_8h.html#aa2ec0a506575823661e32d0be213b070',1,'macros.h']]],
   ['arrow_5fdfatal',['ARROW_DFATAL',['../logging_8h.html#ad85fba57e0e48e503ae521494e6b361c',1,'logging.h']]],
   ['arrow_5fdisallow_5fcopy_5fand_5fassign',['ARROW_DISALLOW_COPY_AND_ASSIGN',['../macros_8h.html#a40d72e185b1488b5659b761f0b6115bb',1,'macros.h']]],
   ['arrow_5ferror',['ARROW_ERROR',['../logging_8h.html#a8049c0e4c54326ace670750e2b8716d0',1,'logging.h']]],
@@ -41,6 +42,5 @@ var searchData=
   ['arrow_5fstl_5fconversion',['ARROW_STL_CONVERSION',['../stl_8h.html#a825d51f8d49df8164ce5ddc620f29153',1,'stl.h']]],
   ['arrow_5ftemplate_5fexport',['ARROW_TEMPLATE_EXPORT',['../visibility_8h.html#a67d64a47a1a32ebf44966c9505009982',1,'visibility.h']]],
   ['arrow_5funused',['ARROW_UNUSED',['../macros_8h.html#aa696459b563e15751224cec3dabc50bc',1,'macros.h']]],
-  ['arrow_5fvariant_5fdeprecated',['ARROW_VARIANT_DEPRECATED',['../variant_8h.html#ace7b7fc87909cbbef268d50af748e03b',1,'variant.h']]],
   ['arrow_5fwarning',['ARROW_WARNING',['../logging_8h.html#a4f604f658bd8290bc50f1f06119076c3',1,'logging.h']]]
 ];

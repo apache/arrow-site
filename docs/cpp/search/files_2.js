@@ -1,6 +1,7 @@
 var searchData=
 [
   ['cast_2eh',['cast.h',['../cast_8h.html',1,'']]],
+  ['checked_5fcast_2eh',['checked_cast.h',['../checked__cast_8h.html',1,'']]],
   ['client_2eh',['client.h',['../client_8h.html',1,'']]],
   ['common_2eh',['common.h',['../arrow_2python_2common_8h.html',1,'(Global Namespace)'],['../plasma_2common_8h.html',1,'(Global Namespace)']]],
   ['compare_2eh',['compare.h',['../compare_8h.html',1,'']]],

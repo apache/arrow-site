@@ -134,10 +134,11 @@
 
 <span class="kn">import</span> <span class="nn">six</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 
 <span class="kn">from</span> <span class="nn">pyarrow.compat</span> <span class="k">import</span> <span class="n">pdapi</span>
 <span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">FeatherError</span>  <span class="c1"># noqa</span>
-<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">RecordBatch</span><span class="p">,</span> <span class="n">Table</span>
+<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">RecordBatch</span><span class="p">,</span> <span class="n">Table</span><span class="p">,</span> <span class="n">concat_tables</span>
 <span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">ext</span>
 
 <span class="k">try</span><span class="p">:</span>
@@ -156,7 +157,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">source</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;read has been deprecated. Use read_pandas instead.&quot;</span><span class="p">,</span>
+                      <span class="ne">DeprecationWarning</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_pandas</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">column_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -172,7 +178,10 @@
                 <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 
         <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="n">names</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">table</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">table</span>
+
+    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
 
 
 <span class="k">class</span> <span class="nc">FeatherWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -199,6 +208,72 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
 
+<span class="k">class</span> <span class="nc">FeatherDataset</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Encapsulates details of reading a list of Feather files.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path_or_paths : List[str]</span>
+<span class="sd">        A list of file names</span>
+<span class="sd">    validate_schema : boolean, default True</span>
+<span class="sd">        Check that individual file schemas are all the same / compatible</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">paths</span> <span class="o">=</span> <span class="n">path_or_paths</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_schema</span> <span class="o">=</span> <span class="n">validate_schema</span>
+
+    <span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read multiple feather files as a single pyarrow.Table</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : List[str]</span>
+<span class="sd">            Names of columns to read from the file</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pyarrow.Table</span>
+<span class="sd">            Content of the file as a table (of columns)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_fil</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tables</span> <span class="o">=</span> <span class="p">[</span><span class="n">_fil</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="n">_fil</span><span class="o">.</span><span class="n">schema</span>
+
+        <span class="k">for</span> <span class="n">fil</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">fil_table</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="n">fil</span><span class="p">)</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_schema</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">validate_schemas</span><span class="p">(</span><span class="n">fil</span><span class="p">,</span> <span class="n">fil_table</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fil_table</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">concat_tables</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tables</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate_schemas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">piece</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Schema in </span><span class="si">{0!s}</span><span class="s1"> was different. </span><span class="se">\n</span><span class="s1">&#39;</span>
+                             <span class="s1">&#39;</span><span class="si">{1!s}</span><span class="se">\n\n</span><span class="s1">vs</span><span class="se">\n\n</span><span class="si">{2!s}</span><span class="s1">&#39;</span>
+                             <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+                                     <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read multiple Parquet files as a single pandas DataFrame</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : List[str]</span>
+<span class="sd">            Names of columns to read from the file</span>
+<span class="sd">        nthreads : int, default 1</span>
+<span class="sd">            Number of columns to read in parallel.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            Content of the file as a pandas DataFrame (of columns)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="write_feather"><a class="viewcode-back" href="../../generated/pyarrow.feather.write_feather.html#pyarrow.feather.write_feather">[docs]</a><span class="k">def</span> <span class="nf">write_feather</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">dest</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Write a pandas.DataFrame to Feather format</span>
@@ -221,8 +296,8 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">os</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
-                <span class="k">pass</span></div>
-        <span class="k">raise</span>
+                <span class="k">pass</span>
+        <span class="k">raise</span></div>
 
 
 <div class="viewcode-block" id="read_feather"><a class="viewcode-back" href="../../generated/pyarrow.feather.read_feather.html#pyarrow.feather.read_feather">[docs]</a><span class="k">def</span> <span class="nf">read_feather</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
@@ -242,8 +317,27 @@
 <span class="sd">    -------</span>
 <span class="sd">    df : pandas.DataFrame</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">reader</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="n">source</span><span class="p">)</span></div>
-    <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_pandas</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read a pyarrow.Table from Feather format</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : string file path, or file-like object</span>
+<span class="sd">    columns : sequence, optional</span>
+<span class="sd">        Only read a specific set of columns. If not provided, all columns are</span>
+<span class="sd">        read</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    table : pyarrow.Table</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -258,7 +352,7 @@
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.1.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.<br/>
     </p>
   </div>
 </footer>

@@ -1,14 +1,12 @@
 var searchData=
 [
-  ['map_5fanon',['MAP_ANON',['../mman_8h.html#a298ddbffafbe6cf941b92092edfb86a5',1,'mman.h']]],
-  ['map_5fanonymous',['MAP_ANONYMOUS',['../mman_8h.html#ae4f86bff73414c5fc08c058f957212f0',1,'mman.h']]],
-  ['map_5ffailed',['MAP_FAILED',['../mman_8h.html#a8523dcf952f6ff059a3bed717e4f1296',1,'mman.h']]],
-  ['map_5ffile',['MAP_FILE',['../mman_8h.html#a238feed3512d8b21b3854d082dcae6f4',1,'mman.h']]],
-  ['map_5ffixed',['MAP_FIXED',['../mman_8h.html#a387ec707b30c5e78cf20a14517a63b96',1,'mman.h']]],
-  ['map_5fprivate',['MAP_PRIVATE',['../mman_8h.html#a398ef47a991a44389aa9818c98a28d24',1,'mman.h']]],
-  ['map_5fshared',['MAP_SHARED',['../mman_8h.html#a57028962c2a7c0c802ca6613492f2ef3',1,'mman.h']]],
-  ['map_5ftype',['MAP_TYPE',['../mman_8h.html#aa016f26675334cfc166d97dc9ec7d318',1,'mman.h']]],
-  ['ms_5fasync',['MS_ASYNC',['../mman_8h.html#a98930d8c4137a6cf3f9e21b2b7c84c24',1,'mman.h']]],
-  ['ms_5finvalidate',['MS_INVALIDATE',['../mman_8h.html#ad094236c94cb5fcfd6a663b646782bc8',1,'mman.h']]],
-  ['ms_5fsync',['MS_SYNC',['../mman_8h.html#aee74e153705852ce48dca911f1b94d72',1,'mman.h']]]
+  ['no_5fimport_5farray',['NO_IMPORT_ARRAY',['../numpy__interop_8h.html#ad2cd12e09a08db7cbcae2e74f723d6c4',1,'numpy_interop.h']]],
+  ['npy_5farray_5faligned',['NPY_ARRAY_ALIGNED',['../numpy__interop_8h.html#ae60e185ff8ade7341b0c53ca1e80255f',1,'numpy_interop.h']]],
+  ['npy_5farray_5fnotswapped',['NPY_ARRAY_NOTSWAPPED',['../numpy__interop_8h.html#ac8a802bab03d4971c4d59b840579808e',1,'numpy_interop.h']]],
+  ['npy_5farray_5fupdateifcopy',['NPY_ARRAY_UPDATEIFCOPY',['../numpy__interop_8h.html#a118a68a7b8d21e9cbf1c2ac3d61542ef',1,'numpy_interop.h']]],
+  ['npy_5farray_5fwriteable',['NPY_ARRAY_WRITEABLE',['../numpy__interop_8h.html#a685e97c65cc63ab8073772796cbcbcfd',1,'numpy_interop.h']]],
+  ['npy_5fint32_5fis_5fint',['NPY_INT32_IS_INT',['../numpy__interop_8h.html#ad3b1ac3466f0db89a488f10e19ebe33b',1,'numpy_interop.h']]],
+  ['npy_5fint64_5fis_5flong_5flong',['NPY_INT64_IS_LONG_LONG',['../numpy__interop_8h.html#a035731736e66cf6787fa800cf3817246',1,'numpy_interop.h']]],
+  ['npy_5fint_5fdecl',['NPY_INT_DECL',['../python_2type__traits_8h.html#a46d295fdbaad623f3dfaa80f7f7fe720',1,'type_traits.h']]],
+  ['nullptr',['NULLPTR',['../macros_8h.html#a3ef7eab8cd0e570b6586628cc9d5ccab',1,'macros.h']]]
 ];

@@ -66,6 +66,7 @@ var searchData=
   ['is_5fstrided',['is_strided',['../classarrow_1_1py_1_1_ndarray1_d_indexer.html#a7163a1a2a2e4ce2ac7eeda40c08f4cfb',1,'arrow::py::Ndarray1DIndexer']]],
   ['is_5ftable',['is_table',['../namespacearrow_1_1py.html#a815ff8bedbb76bc0b3f08191a4b33978',1,'arrow::py']]],
   ['is_5ftensor',['is_tensor',['../namespacearrow_1_1py.html#a5e46150d908d261cf9921bb06b073c62',1,'arrow::py']]],
+  ['iscapacityerror',['IsCapacityError',['../classarrow_1_1_status.html#ae8ee3e230331723c3d9d554ca68c4f9f',1,'arrow::Status']]],
   ['isfloatingpoint',['IsFloatingPoint',['../structarrow_1_1_is_floating_point.html',1,'arrow']]],
   ['isinteger',['IsInteger',['../structarrow_1_1_is_integer.html',1,'arrow']]],
   ['isinvalid',['IsInvalid',['../classarrow_1_1_status.html#a1473b7bf14ad50feab36b514b5af6484',1,'arrow::Status']]],
@@ -77,6 +78,7 @@ var searchData=
   ['isoneof',['IsOneOf',['../structarrow_1_1_is_one_of.html',1,'arrow']]],
   ['isoneof_3c_20t_2c_20u_2c_20args_2e_2e_2e_20_3e',['IsOneOf&lt; T, U, Args... &gt;',['../structarrow_1_1_is_one_of_3_01_t_00_01_u_00_01_args_8_8_8_01_4.html',1,'arrow']]],
   ['isoutofmemory',['IsOutOfMemory',['../classarrow_1_1_status.html#aa68adbba5eb1af6a3bbea812e932202e',1,'arrow::Status']]],
+  ['isplasmaobjectalreadysealed',['IsPlasmaObjectAlreadySealed',['../classarrow_1_1_status.html#a5d7860582571a1fbf6b14515ff0184a9',1,'arrow::Status']]],
   ['isplasmaobjectexists',['IsPlasmaObjectExists',['../classarrow_1_1_status.html#a836c49e470898d24c854894dab8349c0',1,'arrow::Status']]],
   ['isplasmaobjectnonexistent',['IsPlasmaObjectNonexistent',['../classarrow_1_1_status.html#aa044a455a43c720b38daf3977cfef40f',1,'arrow::Status']]],
   ['isplasmastorefull',['IsPlasmaStoreFull',['../classarrow_1_1_status.html#ab326eeae329f62cf80208cac2f49d8e4',1,'arrow::Status']]],
@@ -87,5 +89,6 @@ var searchData=
   ['istypeerror',['IsTypeError',['../classarrow_1_1_status.html#aa508d180a205b08be3438f0b13209df5',1,'arrow::Status']]],
   ['isunknownerror',['IsUnknownError',['../classarrow_1_1_status.html#a712fe45f53af49719298b6a69ca69fdd',1,'arrow::Status']]],
   ['isunsignedint',['IsUnsignedInt',['../structarrow_1_1_is_unsigned_int.html',1,'arrow']]],
-  ['isvalid',['IsValid',['../classarrow_1_1_array.html#ae554bfb313cd6b161f63fb2966dbd662',1,'arrow::Array']]]
+  ['isvalid',['IsValid',['../classarrow_1_1_array.html#ae554bfb313cd6b161f63fb2966dbd662',1,'arrow::Array']]],
+  ['iterators_2eh',['iterators.h',['../iterators_8h.html',1,'']]]
 ];

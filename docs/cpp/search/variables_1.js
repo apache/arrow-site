@@ -10,5 +10,5 @@ var searchData=
   ['buffers',['buffers',['../structarrow_1_1_array_data.html#a11920b2e9bc4cb04cdb5970a45c5d3b0',1,'arrow::ArrayData::buffers()'],['../structarrow_1_1py_1_1_serialized_py_object.html#a609cd686849c57dff6746607e928fe40',1,'arrow::py::SerializedPyObject::buffers()']]],
   ['byte_5fbuilder_5f',['byte_builder_',['../classarrow_1_1_fixed_size_binary_builder.html#a6654f531fb3815787771d127094a5006',1,'arrow::FixedSizeBinaryBuilder']]],
   ['byte_5fwidth_5f',['byte_width_',['../classarrow_1_1_fixed_size_binary_array.html#a8c7c1b088c14fd0804418c5272689600',1,'arrow::FixedSizeBinaryArray::byte_width_()'],['../classarrow_1_1_fixed_size_binary_builder.html#a2ca6f2ee6431aa975c45e39e3fc96de8',1,'arrow::FixedSizeBinaryBuilder::byte_width_()'],['../classarrow_1_1_dictionary_builder.html#a4aa1e581bc7979c3369f0932f77f2301',1,'arrow::DictionaryBuilder::byte_width_()'],['../classarrow_1_1_fixed_size_binary_type.html#a2dfa5ac6ba9a94d355533f5b23a7b1bc',1,'arrow::FixedSizeBinaryType::byte_width_()']]],
-  ['bytes',['bytes',['../structarrow_1_1py_1_1_py_object_stringify.html#a4affd96a0f23d719cadb443eb179f98d',1,'arrow::py::PyObjectStringify']]]
+  ['bytes',['bytes',['../structarrow_1_1py_1_1_py_bytes_view.html#a6dcfada3d934979b6ebac34ccd8f3336',1,'arrow::py::PyBytesView']]]
 ];

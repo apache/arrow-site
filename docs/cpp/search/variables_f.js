@@ -5,7 +5,8 @@ var searchData=
   ['raw_5fvalue_5foffsets_5f',['raw_value_offsets_',['../classarrow_1_1_list_array.html#aa7d3ae828afbf931dac9157dc75fe8d6',1,'arrow::ListArray::raw_value_offsets_()'],['../classarrow_1_1_binary_array.html#a1b738a6a695d28e790ed4d7fe78cb18e',1,'arrow::BinaryArray::raw_value_offsets_()'],['../classarrow_1_1_union_array.html#a2cd1c82dec5b8dcedc94c05fe9dbe872',1,'arrow::UnionArray::raw_value_offsets_()']]],
   ['raw_5fvalues_5f',['raw_values_',['../classarrow_1_1_primitive_array.html#ab45d78650d5214bf6c3d0706693c448b',1,'arrow::PrimitiveArray']]],
   ['recordbatchstreamwriterimpl',['RecordBatchStreamWriterImpl',['../classarrow_1_1ipc_1_1_record_batch_stream_writer.html#a38780b171958b6ac66d851990c37eed2',1,'arrow::ipc::RecordBatchStreamWriter']]],
-  ['release_5fdelay',['release_delay',['../structplasma_1_1_plasma_client_config.html#ad14b9fc059c1c72f8fec04619dc75582',1,'plasma::PlasmaClientConfig']]],
+  ['ref',['ref',['../structarrow_1_1py_1_1_py_bytes_view.html#a766c1f311246f552e6d90884dd0804d2',1,'arrow::py::PyBytesView']]],
+  ['ref_5fcount',['ref_count',['../structplasma_1_1_object_table_entry.html#a58a99155925ac7ebaf67e2b9db4d4ecf',1,'plasma::ObjectTableEntry']]],
   ['repeat_5fcount_5f',['repeat_count_',['../classarrow_1_1_rle_decoder.html#a3322b6e9e41a478d05c0a771142d61d7',1,'arrow::RleDecoder']]],
   ['replication',['replication',['../structarrow_1_1io_1_1_hdfs_path_info.html#a3b2fcdb2a344f54080c9b67de4bda71c',1,'arrow::io::HdfsPathInfo']]],
   ['rfileproc',['rfileProc',['../structae_file_event.html#ae39bf42ed5c4cac998ee5c9fc4ee0069',1,'aeFileEvent']]]

@@ -1,7 +1,8 @@
 var searchData=
 [
   ['object_5fid',['object_id',['../structplasma_1_1_object_request.html#a0b090ab0f96576bcd70493154a3583ab',1,'plasma::ObjectRequest::object_id()'],['../structplasma_1_1_object_table_entry.html#a9b35a72da1a4ca1f0b9970b9f7e53072',1,'plasma::ObjectTableEntry::object_id()']]],
-  ['object_5fnotifications',['object_notifications',['../structplasma_1_1_notification_queue.html#a7c1f4fbe746eb74e19e2e00237833c14',1,'plasma::NotificationQueue']]],
+  ['object_5fids',['object_ids',['../structplasma_1_1_client.html#afd2cc1c35e7eda7be014122638ed4885',1,'plasma::Client']]],
+  ['object_5fnotifications',['object_notifications',['../structplasma_1_1_notification_queue.html#a6e05900f8addf51596a35ce11c0b065d',1,'plasma::NotificationQueue']]],
   ['objects',['objects',['../structplasma_1_1_plasma_store_info.html#a1972fc2e24de109bae2293746a7ad990',1,'plasma::PlasmaStoreInfo']]],
   ['objectstatuslocal',['ObjectStatusLocal',['../namespaceplasma.html#a3eb1f03a21e0d30051f71ea0dffb60b6',1,'plasma']]],
   ['objectstatusremote',['ObjectStatusRemote',['../namespaceplasma.html#adad270e3180efe944d7e720ff0e02973',1,'plasma']]],

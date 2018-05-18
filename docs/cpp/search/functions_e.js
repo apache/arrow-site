@@ -6,6 +6,7 @@ var searchData=
   ['passpyerror',['PassPyError',['../namespacearrow_1_1py.html#a420f8c193475027edf8f2fb07cb6274f',1,'arrow::py']]],
   ['plasma_5ferror_5fstatus',['plasma_error_status',['../namespaceplasma.html#ad35158aba7ee89d76433affdb9a820ef',1,'plasma']]],
   ['plasmaclient',['PlasmaClient',['../classplasma_1_1_plasma_client.html#a51918848e664ec7958a91fb0044bf5a2',1,'plasma::PlasmaClient']]],
+  ['plasmaobjectalreadysealed',['PlasmaObjectAlreadySealed',['../classarrow_1_1_status.html#a958c0250dc92acd48e7ae52103e7a8f7',1,'arrow::Status']]],
   ['plasmaobjectexists',['PlasmaObjectExists',['../classarrow_1_1_status.html#abcd3fd976ccbe8e2f2208de63a97b388',1,'arrow::Status']]],
   ['plasmaobjectnonexistent',['PlasmaObjectNonexistent',['../classarrow_1_1_status.html#a39e513f6eb1ce7ebebbc81293af74d14',1,'arrow::Status']]],
   ['plasmareceive',['PlasmaReceive',['../namespaceplasma.html#a80d88b1ca6fbdda17705f6e8fa53140e',1,'plasma']]],
@@ -26,7 +27,9 @@ var searchData=
   ['putvlqint',['PutVlqInt',['../classarrow_1_1_bit_writer.html#a028f9d7d77697df651ef82d2df52f53d',1,'arrow::BitWriter']]],
   ['putzigzagvlqint',['PutZigZagVlqInt',['../classarrow_1_1_bit_writer.html#a2e764de1162c33a6aa41caad00322156',1,'arrow::BitWriter']]],
   ['pyacquiregil',['PyAcquireGIL',['../classarrow_1_1py_1_1_py_acquire_g_i_l.html#a176ad0a1d753c1e1297a8c8c8e24edfc',1,'arrow::py::PyAcquireGIL']]],
-  ['pyobjectstringify',['PyObjectStringify',['../structarrow_1_1py_1_1_py_object_stringify.html#ae463580d34db2330fafa6d0651769948',1,'arrow::py::PyObjectStringify']]],
+  ['pybytesview',['PyBytesView',['../structarrow_1_1py_1_1_py_bytes_view.html#a9a0bd5cc89fabd0a2ac819411db7847f',1,'arrow::py::PyBytesView::PyBytesView()'],['../structarrow_1_1py_1_1_py_bytes_view.html#a3fa63cb973a7202d54b9030686c3fd41',1,'arrow::py::PyBytesView::PyBytesView(const char *b, Py_ssize_t s, PyObject *obj=nullptr)']]],
+  ['pyfloat_5fashalf',['PyFloat_AsHalf',['../namespacearrow_1_1py.html#a52122657a994c78624f7e83ccaae30af',1,'arrow::py']]],
+  ['pyhalf_5ffromhalf',['PyHalf_FromHalf',['../namespacearrow_1_1py.html#a60d1f752dfe2f3bbfa942c834ee607e0',1,'arrow::py']]],
   ['pyoutputstream',['PyOutputStream',['../classarrow_1_1py_1_1_py_output_stream.html#ae0470dd349fd770f342192ac42f25769',1,'arrow::py::PyOutputStream']]],
   ['pyreadablefile',['PyReadableFile',['../classarrow_1_1py_1_1_py_readable_file.html#a3d88f40dbe406ef234e5b848ad4778a1',1,'arrow::py::PyReadableFile']]]
 ];

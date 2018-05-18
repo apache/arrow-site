@@ -13,6 +13,7 @@ var searchData=
   ['brotlicodec',['BrotliCodec',['../classarrow_1_1_brotli_codec.html',1,'arrow']]],
   ['buffer',['Buffer',['../classarrow_1_1_buffer.html',1,'arrow']]],
   ['bufferbuilder',['BufferBuilder',['../classarrow_1_1_buffer_builder.html',1,'arrow']]],
+  ['bufferedoutputstream',['BufferedOutputStream',['../classarrow_1_1io_1_1_buffered_output_stream.html',1,'arrow::io']]],
   ['bufferoutputstream',['BufferOutputStream',['../classarrow_1_1io_1_1_buffer_output_stream.html',1,'arrow::io']]],
   ['bufferreader',['BufferReader',['../classarrow_1_1io_1_1_buffer_reader.html',1,'arrow::io']]]
 ];
