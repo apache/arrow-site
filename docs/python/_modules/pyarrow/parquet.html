@@ -7,7 +7,7 @@
     <title>pyarrow.parquet &#8212; pyarrow  documentation</title>
     <link rel="stylesheet" href="../../_static/bootstrap-sphinx.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
@@ -60,6 +60,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../filesystems.html">File System Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../plasma.html">The Plasma In-Memory Object Store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../numpy.html">Using PyArrow with NumPy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pandas.html">Using PyArrow with pandas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parquet.html">Reading and Writing the Apache Parquet Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../extending.html">Using pyarrow from C++ and Cython Code</a></li>
@@ -130,6 +131,7 @@
 <span class="c1"># under the License.</span>
 
 <span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">concurrent</span> <span class="k">import</span> <span class="n">futures</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">json</span>
@@ -146,9 +148,11 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">pyarrow.filesystem</span> <span class="k">import</span> <span class="n">FileSystem</span><span class="p">,</span> <span class="n">LocalFileSystem</span><span class="p">,</span> <span class="n">S3FSWrapper</span>
-<span class="kn">from</span> <span class="nn">pyarrow._parquet</span> <span class="k">import</span> <span class="p">(</span><span class="n">ParquetReader</span><span class="p">,</span> <span class="n">FileMetaData</span><span class="p">,</span>  <span class="c1"># noqa</span>
-                              <span class="n">RowGroupMetaData</span><span class="p">,</span> <span class="n">ParquetSchema</span><span class="p">)</span>
-<span class="kn">import</span> <span class="nn">pyarrow._parquet</span> <span class="k">as</span> <span class="nn">_parquet</span>  <span class="c1"># noqa</span>
+<span class="kn">from</span> <span class="nn">pyarrow._parquet</span> <span class="k">import</span> <span class="p">(</span><span class="n">ParquetReader</span><span class="p">,</span> <span class="n">RowGroupStatistics</span><span class="p">,</span>  <span class="c1"># noqa</span>
+                              <span class="n">FileMetaData</span><span class="p">,</span> <span class="n">RowGroupMetaData</span><span class="p">,</span>
+                              <span class="n">ColumnChunkMetaData</span><span class="p">,</span>
+                              <span class="n">ParquetSchema</span><span class="p">,</span> <span class="n">ColumnSchema</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">pyarrow._parquet</span> <span class="k">as</span> <span class="nn">_parquet</span>
 <span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">lib</span>
 <span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
 
@@ -365,6 +369,7 @@
 <span class="s2">    Valid values: {None, &#39;ms&#39;, &#39;us&#39;}</span>
 <span class="s2">compression : str or dict</span>
 <span class="s2">    Specify the compression codec, either on a general basis or per-column.</span>
+<span class="s2">    Valid values: {&#39;NONE&#39;, &#39;SNAPPY&#39;, &#39;GZIP&#39;, &#39;LZO&#39;, &#39;BROTLI&#39;, &#39;LZ4&#39;, &#39;ZSTD&#39;}</span>
 <span class="s2">flavor : {&#39;spark&#39;}, default None</span>
 <span class="s2">    Sanitize schema or set other compatibility options for compatibility&quot;&quot;&quot;</span>
 
@@ -437,6 +442,13 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema_changed</span><span class="p">:</span>
             <span class="n">table</span> <span class="o">=</span> <span class="n">_sanitize_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flavor</span><span class="p">)</span>
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_open</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;Table schema does not match schema used to create file: &#39;</span>
+                   <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">table:</span><span class="se">\n</span><span class="si">{0!s}</span><span class="s1"> vs. </span><span class="se">\n</span><span class="s1">file:</span><span class="se">\n</span><span class="si">{1!s}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+                                                               <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ParquetWriter.close"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetWriter.html#pyarrow.parquet.ParquetWriter.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -693,6 +705,49 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level</span><span class="p">]</span><span class="o">.</span><span class="n">get_index</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">filter_accepts_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">part_key</span><span class="p">,</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
+        <span class="n">p_column</span><span class="p">,</span> <span class="n">p_value_index</span> <span class="o">=</span> <span class="n">part_key</span>
+        <span class="n">f_column</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">f_value</span> <span class="o">=</span> <span class="nb">filter</span>
+        <span class="k">if</span> <span class="n">p_column</span> <span class="o">!=</span> <span class="n">f_column</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="n">f_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">f_value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f_value</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">f_value</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot use empty set as filter value&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">op</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;in&#39;</span><span class="p">,</span> <span class="s1">&#39;not in&#39;</span><span class="p">}:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Op &#39;</span><span class="si">%s</span><span class="s2">&#39; not supported with set value&quot;</span><span class="p">,</span>
+                                 <span class="n">op</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">f_value</span><span class="p">]))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All elements of set &#39;</span><span class="si">%s</span><span class="s2">&#39; must be of&quot;</span>
+                                 <span class="s2">&quot; same type&quot;</span><span class="p">,</span> <span class="n">f_value</span><span class="p">)</span>
+            <span class="n">f_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">f_value</span><span class="p">)))</span>
+
+        <span class="n">p_value</span> <span class="o">=</span> <span class="n">f_type</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level</span><span class="p">]</span>
+                          <span class="o">.</span><span class="n">dictionary</span><span class="p">[</span><span class="n">p_value_index</span><span class="p">]</span>
+                          <span class="o">.</span><span class="n">as_py</span><span class="p">()))</span>
+
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;=&quot;</span> <span class="ow">or</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;==&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">p_value</span> <span class="o">==</span> <span class="n">f_value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;!=&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">p_value</span> <span class="o">!=</span> <span class="n">f_value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&lt;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="n">f_value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&gt;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">p_value</span> <span class="o">&gt;</span> <span class="n">f_value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&lt;=&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">p_value</span> <span class="o">&lt;=</span> <span class="n">f_value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&gt;=&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">p_value</span> <span class="o">&gt;=</span> <span class="n">f_value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;in&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">p_value</span> <span class="ow">in</span> <span class="n">f_value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;not in&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">p_value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f_value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39; is not a valid operator in predicates.&quot;</span><span class="p">,</span>
+                             <span class="nb">filter</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
 
 <span class="k">def</span> <span class="nf">is_path</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">)</span>
@@ -704,22 +759,31 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pathsep</span><span class="o">=</span><span class="s1">&#39;/&#39;</span><span class="p">,</span>
-                 <span class="n">partition_scheme</span><span class="o">=</span><span class="s1">&#39;hive&#39;</span><span class="p">):</span>
+                 <span class="n">partition_scheme</span><span class="o">=</span><span class="s1">&#39;hive&#39;</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">filesystem</span> <span class="o">=</span> <span class="n">filesystem</span> <span class="ow">or</span> <span class="n">_get_fs_from_path</span><span class="p">(</span><span class="n">dirpath</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pathsep</span> <span class="o">=</span> <span class="n">pathsep</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dirpath</span> <span class="o">=</span> <span class="n">dirpath</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">partition_scheme</span> <span class="o">=</span> <span class="n">partition_scheme</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">partitions</span> <span class="o">=</span> <span class="n">ParquetPartitions</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_nthreads</span> <span class="o">=</span> <span class="n">metadata_nthreads</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_thread_pool</span> <span class="o">=</span> <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span>
+            <span class="n">max_workers</span><span class="o">=</span><span class="n">metadata_nthreads</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_visit_level</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dirpath</span><span class="p">,</span> <span class="p">[])</span>
 
+        <span class="c1"># Due to concurrency, pieces will potentially by out of order if the</span>
+        <span class="c1"># dataset is partitioned so we sort them to yield stable results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">piece</span><span class="p">:</span> <span class="n">piece</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># _common_metadata is a subset of _metadata</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_thread_pool</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_visit_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">):</span>
         <span class="n">fs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filesystem</span>
@@ -755,17 +819,30 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_push_pieces</span><span class="p">(</span><span class="n">filtered_files</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_should_silently_exclude</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">file_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.crc&#39;</span><span class="p">)</span> <span class="ow">or</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">file_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.crc&#39;</span><span class="p">)</span> <span class="ow">or</span>  <span class="c1"># Checksums</span>
+                <span class="n">file_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="ow">or</span>  <span class="c1"># Hidden files</span>
                 <span class="n">file_name</span> <span class="ow">in</span> <span class="n">EXCLUDED_PARQUET_PATHS</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_visit_directories</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">directories</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">):</span>
+        <span class="n">futures_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">directories</span><span class="p">:</span>
             <span class="n">head</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">_path_split</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pathsep</span><span class="p">)</span>
             <span class="n">name</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="n">_parse_hive_partition</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span>
 
             <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partitions</span><span class="o">.</span><span class="n">get_index</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
             <span class="n">dir_part_keys</span> <span class="o">=</span> <span class="n">part_keys</span> <span class="o">+</span> <span class="p">[(</span><span class="n">name</span><span class="p">,</span> <span class="n">index</span><span class="p">)]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_visit_level</span><span class="p">(</span><span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">dir_part_keys</span><span class="p">)</span>
+            <span class="c1"># If you have less threads than levels, the wait call will block</span>
+            <span class="c1"># indefinitely due to multiple waits within a thread.</span>
+            <span class="k">if</span> <span class="n">level</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_nthreads</span><span class="p">:</span>
+                <span class="n">future</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_thread_pool</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_visit_level</span><span class="p">,</span>
+                                                  <span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                                  <span class="n">path</span><span class="p">,</span>
+                                                  <span class="n">dir_part_keys</span><span class="p">)</span>
+                <span class="n">futures_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_visit_level</span><span class="p">(</span><span class="n">level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">dir_part_keys</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">futures_list</span><span class="p">:</span>
+            <span class="n">futures</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">futures_list</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_parse_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_scheme</span> <span class="o">==</span> <span class="s1">&#39;hive&#39;</span><span class="p">:</span>
@@ -828,10 +905,14 @@
 <span class="sd">        List of filters to apply, like ``[(&#39;x&#39;, &#39;=&#39;, 0), ...]``. This</span>
 <span class="sd">        implements partition-level (hive) filtering only, i.e., to prevent the</span>
 <span class="sd">        loading of some files of the dataset.</span>
+<span class="sd">    metadata_nthreads: int, default 1</span>
+<span class="sd">        How many threads to allow the thread pool which is used to read the</span>
+<span class="sd">        dataset metadata. Increasing this is helpful to read partitioned</span>
+<span class="sd">        datasets.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="ParquetDataset.__init__"><a class="viewcode-back" href="../../generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">split_row_groups</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                 <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                 <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">a_path</span> <span class="o">=</span> <span class="n">path_or_paths</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a_path</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
@@ -842,8 +923,11 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">paths</span> <span class="o">=</span> <span class="n">path_or_paths</span>
 
-        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">partitions</span><span class="p">,</span>
-         <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span><span class="p">)</span> <span class="o">=</span> <span class="n">_make_manifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">,</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">partitions</span><span class="p">,</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span><span class="p">,</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span><span class="p">)</span> <span class="o">=</span> <span class="n">_make_manifest</span><span class="p">(</span>
+            <span class="n">path_or_paths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="n">metadata_nthreads</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -851,7 +935,12 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+        <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">metadata</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="n">schema</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">split_row_groups</span> <span class="o">=</span> <span class="n">split_row_groups</span>
@@ -869,8 +958,8 @@
         <span class="n">open_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_open_file_func</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="n">open_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">common_metadata_path</span><span class="p">)</span><span class="o">.</span><span class="n">schema</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata</span><span class="o">.</span><span class="n">schema</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">open_file</span><span class="p">)</span><span class="o">.</span><span class="n">schema</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -889,7 +978,7 @@
         <span class="k">for</span> <span class="n">piece</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">:</span>
             <span class="n">file_metadata</span> <span class="o">=</span> <span class="n">piece</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">(</span><span class="n">open_file</span><span class="p">)</span>
             <span class="n">file_schema</span> <span class="o">=</span> <span class="n">file_metadata</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">to_arrow_schema</span><span class="p">()</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">dataset_schema</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">file_schema</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">dataset_schema</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">file_schema</span><span class="p">,</span> <span class="n">check_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Schema in </span><span class="si">{0!s}</span><span class="s1"> was different. </span><span class="se">\n</span><span class="s1">&#39;</span>
                                  <span class="s1">&#39;</span><span class="si">{1!s}</span><span class="se">\n\n</span><span class="s1">vs</span><span class="se">\n\n</span><span class="si">{2!s}</span><span class="s1">&#39;</span>
                                  <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="n">file_schema</span><span class="p">,</span>
@@ -971,37 +1060,10 @@
         <span class="k">return</span> <span class="n">open_file</span>
 
     <span class="k">def</span> <span class="nf">_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="p">):</span>
-        <span class="k">def</span> <span class="nf">filter_accepts_partition</span><span class="p">(</span><span class="n">part_key</span><span class="p">,</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">level</span><span class="p">):</span>
-
-            <span class="n">p_column</span><span class="p">,</span> <span class="n">p_value_index</span> <span class="o">=</span> <span class="n">part_key</span>
-            <span class="n">f_column</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">f_value</span> <span class="o">=</span> <span class="nb">filter</span>
-            <span class="k">if</span> <span class="n">p_column</span> <span class="o">!=</span> <span class="n">f_column</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">True</span>
-
-            <span class="n">f_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">f_value</span><span class="p">)</span>
-            <span class="n">p_value</span> <span class="o">=</span> <span class="n">f_type</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">partitions</span>
-                                  <span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level</span><span class="p">]</span>
-                                  <span class="o">.</span><span class="n">dictionary</span><span class="p">[</span><span class="n">p_value_index</span><span class="p">]</span>
-                                  <span class="o">.</span><span class="n">as_py</span><span class="p">()))</span>
-
-            <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;=&quot;</span> <span class="ow">or</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;==&quot;</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">p_value</span> <span class="o">==</span> <span class="n">f_value</span>
-            <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;!=&quot;</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">p_value</span> <span class="o">!=</span> <span class="n">f_value</span>
-            <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&lt;&#39;</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="n">f_value</span>
-            <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&gt;&#39;</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">p_value</span> <span class="o">&gt;</span> <span class="n">f_value</span>
-            <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&lt;=&#39;</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">p_value</span> <span class="o">&lt;=</span> <span class="n">f_value</span>
-            <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&gt;=&#39;</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">p_value</span> <span class="o">&gt;=</span> <span class="n">f_value</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39; is not a valid operator in predicates.&quot;</span><span class="p">,</span>
-                                 <span class="nb">filter</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">accepts_filter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partitions</span><span class="o">.</span><span class="n">filter_accepts_partition</span>
 
         <span class="k">def</span> <span class="nf">one_filter_accepts</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="nb">filter</span><span class="p">):</span>
-            <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">filter_accepts_partition</span><span class="p">(</span><span class="n">part_key</span><span class="p">,</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">accepts_filter</span><span class="p">(</span><span class="n">part_key</span><span class="p">,</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span>
                        <span class="k">for</span> <span class="n">level</span><span class="p">,</span> <span class="n">part_key</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">piece</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">))</span>
 
         <span class="k">def</span> <span class="nf">all_filters_accept</span><span class="p">(</span><span class="n">piece</span><span class="p">):</span>
@@ -1029,18 +1091,21 @@
         <span class="k">return</span> <span class="n">fs</span>
 
 
-<span class="k">def</span> <span class="nf">_make_manifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">fs</span><span class="p">,</span> <span class="n">pathsep</span><span class="o">=</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_make_manifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">fs</span><span class="p">,</span> <span class="n">pathsep</span><span class="o">=</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
     <span class="n">partitions</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">common_metadata_path</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">metadata_path</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="c1"># Dask passes a directory as a list of length 1</span>
         <span class="n">path_or_paths</span> <span class="o">=</span> <span class="n">path_or_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="n">is_path</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="ow">and</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
         <span class="n">manifest</span> <span class="o">=</span> <span class="n">ParquetManifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span>
-                                   <span class="n">pathsep</span><span class="o">=</span><span class="n">fs</span><span class="o">.</span><span class="n">pathsep</span><span class="p">)</span>
+                                   <span class="n">pathsep</span><span class="o">=</span><span class="n">fs</span><span class="o">.</span><span class="n">pathsep</span><span class="p">,</span>
+                                   <span class="n">metadata_nthreads</span><span class="o">=</span><span class="n">metadata_nthreads</span><span class="p">)</span>
         <span class="n">common_metadata_path</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">common_metadata_path</span>
+        <span class="n">metadata_path</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">metadata_path</span>
         <span class="n">pieces</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">pieces</span>
         <span class="n">partitions</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">partitions</span>
     <span class="k">else</span><span class="p">:</span>
@@ -1059,7 +1124,7 @@
             <span class="n">piece</span> <span class="o">=</span> <span class="n">ParquetDatasetPiece</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
             <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">piece</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">pieces</span><span class="p">,</span> <span class="n">partitions</span><span class="p">,</span> <span class="n">common_metadata_path</span>
+    <span class="k">return</span> <span class="n">pieces</span><span class="p">,</span> <span class="n">partitions</span><span class="p">,</span> <span class="n">common_metadata_path</span><span class="p">,</span> <span class="n">metadata_path</span>
 
 
 <span class="n">_read_table_docstring</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
@@ -1092,9 +1157,8 @@
                <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">is_path</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
         <span class="n">fs</span> <span class="o">=</span> <span class="n">_get_fs_from_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">fs</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">fs</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+                               <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="n">use_pandas_metadata</span><span class="p">)</span>
 
     <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">pf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">,</span>
@@ -1225,6 +1289,12 @@
         <span class="n">data_cols</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">partition_cols</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_cols</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No data left to save outside partition columns&quot;</span><span class="p">)</span>
+        <span class="n">subschema</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span>
+        <span class="c1"># ARROW-2891: Ensure the output_schema is preserved when writing a</span>
+        <span class="c1"># partitioned dataset</span>
+        <span class="k">for</span> <span class="n">partition_col</span> <span class="ow">in</span> <span class="n">partition_cols</span><span class="p">:</span>
+            <span class="n">subschema</span> <span class="o">=</span> <span class="n">subschema</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span>
+                <span class="n">subschema</span><span class="o">.</span><span class="n">get_field_index</span><span class="p">(</span><span class="n">partition_col</span><span class="p">))</span>
         <span class="k">for</span> <span class="n">keys</span><span class="p">,</span> <span class="n">subgroup</span> <span class="ow">in</span> <span class="n">data_df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">partition_keys</span><span class="p">):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
                 <span class="n">keys</span> <span class="o">=</span> <span class="p">(</span><span class="n">keys</span><span class="p">,)</span>
@@ -1232,7 +1302,8 @@
                 <span class="p">[</span><span class="s2">&quot;</span><span class="si">{colname}</span><span class="s2">=</span><span class="si">{value}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">colname</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">val</span><span class="p">)</span>
                  <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">partition_cols</span><span class="p">,</span> <span class="n">keys</span><span class="p">)])</span>
             <span class="n">subtable</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">subgroup</span><span class="p">,</span>
-                                         <span class="n">preserve_index</span><span class="o">=</span><span class="n">preserve_index</span><span class="p">)</span>
+                                         <span class="n">preserve_index</span><span class="o">=</span><span class="n">preserve_index</span><span class="p">,</span>
+                                         <span class="n">schema</span><span class="o">=</span><span class="n">subschema</span><span class="p">)</span>
             <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">root_path</span><span class="p">,</span> <span class="n">subdir</span><span class="p">])</span>
             <span class="n">_mkdir_if_not_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">prefix</span><span class="p">)</span>
             <span class="n">outfile</span> <span class="o">=</span> <span class="n">compat</span><span class="o">.</span><span class="n">guid</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;.parquet&quot;</span>
@@ -1304,20 +1375,6 @@
     <span class="k">return</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">where</span><span class="p">)</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">to_arrow_schema</span><span class="p">()</span></div>
 
 
-<span class="k">def</span> <span class="nf">_ensure_file</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">is_path</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
-        <span class="n">fs</span> <span class="o">=</span> <span class="n">_get_fs_from_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">IOError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">lib</span><span class="o">.</span><span class="n">ArrowIOError</span><span class="p">(</span><span class="s2">&quot;failed to open file </span><span class="si">{}</span><span class="s2">, </span><span class="si">{}</span><span class="s2">&quot;</span>
-                                   <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
-    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;seek&#39;</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Source does not appear file-like&#39;</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">source</span>
-
-
 <span class="k">def</span> <span class="nf">_get_fs_from_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    return filesystem from path which could be an HDFS URI</span>
@@ -1353,7 +1410,7 @@
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.<br/>
     </p>
   </div>
 </footer>

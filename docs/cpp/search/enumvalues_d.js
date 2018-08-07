@@ -1,9 +1,9 @@
 var searchData=
 [
-  ['plasma_5fcreated',['PLASMA_CREATED',['../namespaceplasma.html#ae5b518ae619aa1389d8848ae462c04cfabe7a1421a04eaf44e5e8700e22d342f8',1,'plasma']]],
-  ['plasma_5fquery_5fanywhere',['PLASMA_QUERY_ANYWHERE',['../namespaceplasma.html#acb5999d17ead6b41e62eae12ed28429fa02b5600336a1adacf2fbf6cd65c5da35',1,'plasma']]],
-  ['plasma_5fquery_5flocal',['PLASMA_QUERY_LOCAL',['../namespaceplasma.html#acb5999d17ead6b41e62eae12ed28429fa7a4970a3eac1b40279bf14b35792a5e3',1,'plasma']]],
-  ['plasma_5fsealed',['PLASMA_SEALED',['../namespaceplasma.html#ae5b518ae619aa1389d8848ae462c04cfa9e6dce5e138ee0102cf05d9fe389ee36',1,'plasma']]],
+  ['plasma_5fcreated',['PLASMA_CREATED',['../namespaceplasma.html#a6a1816422abb257eda0498d6df72cfdca719df393e8a50579639ab2278715b788',1,'plasma']]],
+  ['plasma_5fquery_5fanywhere',['PLASMA_QUERY_ANYWHERE',['../namespaceplasma.html#aed4153277efefc07bc456aa3864646c1a12ef8e5a527914c11ce7d80d340eed26',1,'plasma']]],
+  ['plasma_5fquery_5flocal',['PLASMA_QUERY_LOCAL',['../namespaceplasma.html#aed4153277efefc07bc456aa3864646c1a25ef5eeb35bcc3c3ef8fc6927849e451',1,'plasma']]],
+  ['plasma_5fsealed',['PLASMA_SEALED',['../namespaceplasma.html#a6a1816422abb257eda0498d6df72cfdca8b8234a4599538aa87ac9abc6562efbd',1,'plasma']]],
   ['plasmaobjectalreadysealed',['PlasmaObjectAlreadySealed',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fa1c1a82ff5b211dfbed2bfd5bdd245356',1,'arrow']]],
   ['plasmaobjectexists',['PlasmaObjectExists',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188faa28166d3ea8fe93848f8e63f233c21f9',1,'arrow']]],
   ['plasmaobjectnonexistent',['PlasmaObjectNonexistent',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fae78e9831b75460c98fd3a033a466ae72',1,'arrow']]],

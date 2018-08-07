@@ -7,7 +7,7 @@
     <title>pyarrow.ipc &#8212; pyarrow  documentation</title>
     <link rel="stylesheet" href="../../_static/bootstrap-sphinx.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
@@ -60,6 +60,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../filesystems.html">File System Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../plasma.html">The Plasma In-Memory Object Store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../numpy.html">Using PyArrow with NumPy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pandas.html">Using PyArrow with pandas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parquet.html">Reading and Writing the Apache Parquet Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../extending.html">Using pyarrow from C++ and Cython Code</a></li>
@@ -138,6 +139,7 @@
                          <span class="n">read_tensor</span><span class="p">,</span> <span class="n">write_tensor</span><span class="p">,</span>
                          <span class="n">get_record_batch_size</span><span class="p">,</span> <span class="n">get_tensor_size</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">lib</span>
+<span class="kn">from</span> <span class="nn">.util</span> <span class="k">import</span> <span class="n">_deprecate_nthreads</span>
 
 
 <span class="k">class</span> <span class="nc">_ReadPandasOption</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -165,8 +167,8 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    source : str, pyarrow.NativeFile, or file-like Python object</span>
-<span class="sd">        Either a file path, or a readable file object</span>
+<span class="sd">    source : bytes/buffer-like, pyarrow.NativeFile, or file-like Python object</span>
+<span class="sd">        Either an in-memory buffer, or a readable file object</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="RecordBatchStreamReader.__init__"><a class="viewcode-back" href="../../generated/pyarrow.RecordBatchStreamReader.html#pyarrow.RecordBatchStreamReader.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_open</span><span class="p">(</span><span class="n">source</span><span class="p">)</span></div></div>
@@ -193,8 +195,8 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    source : str, pyarrow.NativeFile, or file-like Python object</span>
-<span class="sd">        Either a file path, or a readable file object</span>
+<span class="sd">    source : bytes/buffer-like, pyarrow.NativeFile, or file-like Python object</span>
+<span class="sd">        Either an in-memory buffer, or a readable file object</span>
 <span class="sd">    footer_offset : int, default None</span>
 <span class="sd">        If the file is embedded in some larger file, this is the byte offset to</span>
 <span class="sd">        the very end of the file data</span>
@@ -224,8 +226,8 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    source : str, pyarrow.NativeFile, or file-like Python object</span>
-<span class="sd">        Either a file path, or a readable file object</span>
+<span class="sd">    source : bytes/buffer-like, pyarrow.NativeFile, or file-like Python object</span>
+<span class="sd">        Either an in-memory buffer, or a readable file object</span>
 <span class="sd">    footer_offset : int, default None</span>
 <span class="sd">        If the file is embedded in some larger file, this is the byte offset to</span>
 <span class="sd">        the very end of the file data</span>
@@ -243,8 +245,8 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    source : str, pyarrow.NativeFile, or file-like Python object</span>
-<span class="sd">        Either a file path, or a readable file object</span>
+<span class="sd">    source : bytes/buffer-like, pyarrow.NativeFile, or file-like Python object</span>
+<span class="sd">        Either an in-memory buffer, or a readable file object</span>
 <span class="sd">    footer_offset : int, default None</span>
 <span class="sd">        If the file is embedded in some larger file, this is the byte offset to</span>
 <span class="sd">        the very end of the file data</span>
@@ -282,25 +284,26 @@
     <span class="k">return</span> <span class="n">sink</span><span class="o">.</span><span class="n">get_result</span><span class="p">()</span>
 
 
-<span class="k">def</span> <span class="nf">deserialize_pandas</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">deserialize_pandas</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Deserialize a buffer protocol compatible object into a pandas DataFrame.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    buf : buffer</span>
 <span class="sd">        An object compatible with the buffer protocol</span>
-<span class="sd">    nthreads : int, defualt None</span>
-<span class="sd">        The number of threads to use to convert the buffer to a DataFrame,</span>
-<span class="sd">        default all CPUs</span>
+<span class="sd">    use_threads: boolean, default False</span>
+<span class="sd">        Whether to parallelize the conversion using multiple threads</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    df : pandas.DataFrame</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">use_threads</span> <span class="o">=</span> <span class="n">_deprecate_nthreads</span><span class="p">(</span><span class="n">use_threads</span><span class="p">,</span> <span class="n">nthreads</span><span class="p">)</span>
+
     <span class="n">buffer_reader</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">BufferReader</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
     <span class="n">reader</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">RecordBatchStreamReader</span><span class="p">(</span><span class="n">buffer_reader</span><span class="p">)</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_all</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">table</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">table</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -315,7 +318,7 @@
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.<br/>
     </p>
   </div>
 </footer>

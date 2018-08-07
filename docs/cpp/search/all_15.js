@@ -2,11 +2,12 @@ var searchData=
 [
   ['windows',['Windows',['../md__windows.html',1,'']]],
   ['wait',['Wait',['../classplasma_1_1_plasma_client.html#ae5d3ea03d4085573e41ee70b3ba74856',1,'plasma::PlasmaClient']]],
-  ['warn_5fif_5fsigpipe',['warn_if_sigpipe',['../namespaceplasma.html#aa41db5d96cf06cc5d0a65df353d3e4f3',1,'plasma']]],
+  ['warnifsigpipe',['WarnIfSigpipe',['../namespaceplasma.html#a34ce316d4c9054366305963c1b3b7d4a',1,'plasma']]],
   ['wfileproc',['wfileProc',['../structae_file_event.html#a48ede39c4bcd4c41f2687efac2a05152',1,'aeFileEvent']]],
   ['when_5fms',['when_ms',['../structae_time_event.html#aa1c543dc2cfc4d17cf3153c78f373635',1,'aeTimeEvent']]],
   ['when_5fsec',['when_sec',['../structae_time_event.html#a8b8006c68e6af8e1565eda7cbe0ed222',1,'aeTimeEvent']]],
   ['which',['which',['../classarrow_1_1util_1_1variant.html#a7550bfbfb498bc1e0657dc91961f5c34',1,'arrow::util::variant::which() const noexcept'],['../classarrow_1_1util_1_1variant.html#a7ba0431975f9da0c5905b97e7b3d80ce',1,'arrow::util::variant::which() noexcept']]],
+  ['window',['window',['../structarrow_1_1_pretty_print_options.html#a642ddaaedb83abf6be66f2a47c9ac387',1,'arrow::PrettyPrintOptions']]],
   ['windows_2emd',['Windows.md',['../_windows_8md.html',1,'']]],
   ['windows_5fcompatibility_2eh',['windows_compatibility.h',['../windows__compatibility_8h.html',1,'']]],
   ['wrap_5farray',['wrap_array',['../namespacearrow_1_1py.html#a45f479c16a88c236e9f070f0c4786ebf',1,'arrow::py']]],
@@ -23,11 +24,12 @@ var searchData=
   ['writeablefile',['WriteableFile',['../classarrow_1_1io_1_1_writeable_file.html',1,'arrow::io::WriteableFile'],['../classarrow_1_1io_1_1_writeable_file.html#a0e73c948283c76d1802b14dfadc986a5',1,'arrow::io::WriteableFile::WriteableFile()']]],
   ['writeat',['WriteAt',['../classarrow_1_1gpu_1_1_cuda_buffer_writer.html#aae65c9c19cfffbef3ae58f8a4b445218',1,'arrow::gpu::CudaBufferWriter::WriteAt()'],['../classarrow_1_1io_1_1_memory_mapped_file.html#afae233e4bc2f99f985a0b44f07f92f2f',1,'arrow::io::MemoryMappedFile::WriteAt()'],['../classarrow_1_1io_1_1_writeable_file.html#a53a612e8eb8a5935ba4d6bd0ae91202d',1,'arrow::io::WriteableFile::WriteAt()'],['../classarrow_1_1io_1_1_fixed_size_buffer_writer.html#ae08b6a647c15e5b6f1a1dd9b250623b5',1,'arrow::io::FixedSizeBufferWriter::WriteAt()']]],
   ['writebytes',['WriteBytes',['../namespaceplasma.html#aacbe7037e6ebb567ec3ce7080979250b',1,'plasma']]],
-  ['writemessage',['WriteMessage',['../namespaceplasma.html#aba411eeda1919505149496cce94faad3',1,'plasma']]],
+  ['writemessage',['WriteMessage',['../namespaceplasma.html#a68bd3a6932b98b7f12de980b2f008d83',1,'plasma']]],
   ['writer_2eh',['writer.h',['../writer_8h.html',1,'']]],
   ['writerecordbatch',['WriteRecordBatch',['../classarrow_1_1ipc_1_1_record_batch_writer.html#a38857a9cb6cd1b79adad0d809b6d2b6a',1,'arrow::ipc::RecordBatchWriter::WriteRecordBatch()'],['../classarrow_1_1ipc_1_1_record_batch_stream_writer.html#af4fc0edc6dfa00ff2e70f09b916ca8d8',1,'arrow::ipc::RecordBatchStreamWriter::WriteRecordBatch()'],['../classarrow_1_1ipc_1_1_record_batch_file_writer.html#a53c4797daa7d7afb8221c1c2807e149b',1,'arrow::ipc::RecordBatchFileWriter::WriteRecordBatch()'],['../namespacearrow_1_1ipc.html#a88fc025cbc22af0f537c96e96eb24435',1,'arrow::ipc::WriteRecordBatch()']]],
   ['writerecordbatchstream',['WriteRecordBatchStream',['../namespacearrow_1_1ipc.html#ace91da34babf6685e5a71dcb0bb70eb5',1,'arrow::ipc']]],
   ['writetable',['WriteTable',['../classarrow_1_1ipc_1_1_record_batch_writer.html#ad1d588a01d6e03df40baa283d207d00c',1,'arrow::ipc::RecordBatchWriter::WriteTable(const Table &amp;table)'],['../classarrow_1_1ipc_1_1_record_batch_writer.html#af1d2049d61c5d3e18ccdd3001d104982',1,'arrow::ipc::RecordBatchWriter::WriteTable(const Table &amp;table, int64_t max_chunksize)']]],
   ['writetensor',['WriteTensor',['../namespacearrow_1_1ipc.html#aab7e08532aec7267dac70e923df75e52',1,'arrow::ipc']]],
+  ['writetensorheader',['WriteTensorHeader',['../namespacearrow_1_1py.html#a71a3dcb4e1babbb947b7bb9306899a34',1,'arrow::py']]],
   ['writeto',['WriteTo',['../structarrow_1_1py_1_1_serialized_py_object.html#a289b1a8956fd83e425655d3769f1cbac',1,'arrow::py::SerializedPyObject']]]
 ];

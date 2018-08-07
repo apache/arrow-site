@@ -1,5 +1,9 @@
 var searchData=
 [
-  ['scalar',['Scalar',['../classarrow_1_1_dictionary_builder.html#a83fef1f2730059a868a1ca8cec45481c',1,'arrow::DictionaryBuilder']]],
-  ['size_5ftype',['size_type',['../classarrow_1_1stl__allocator.html#aa8a67276663a6f604bc1c34d7602e9df',1,'arrow::stl_allocator::size_type()'],['../classarrow_1_1py_1_1_ndarray1_d_indexer.html#a1292bfad93b4aa33d53af65828842a0e',1,'arrow::py::Ndarray1DIndexer::size_type()']]]
+  ['readablefileinterface',['ReadableFileInterface',['../namespacearrow_1_1io.html#a04cc6eea7cb1879fb483991b692fd363',1,'arrow::io']]],
+  ['recordbatchreader',['RecordBatchReader',['../namespacearrow_1_1ipc.html#a6eae3918b2e6c0c4e1f56e083187a339',1,'arrow::ipc']]],
+  ['reference',['reference',['../classarrow_1_1stl__allocator.html#a3044d12cb8624ecd5478b07c47d9d588',1,'arrow::stl_allocator']]],
+  ['rjarray',['RjArray',['../json-internal_8h.html#a91dbab91b93ab584c10bb095524fc63d',1,'json-internal.h']]],
+  ['rjobject',['RjObject',['../json-internal_8h.html#aa196fe0a0797c31d6e229fe15dca9e9d',1,'json-internal.h']]],
+  ['rjwriter',['RjWriter',['../json-internal_8h.html#ad06466e3878bb7a0eed1ff7f7f47a5a1',1,'json-internal.h']]]
 ];

@@ -7,7 +7,7 @@
     <title>In-Memory Data Model &#8212; pyarrow  documentation</title>
     <link rel="stylesheet" href="_static/bootstrap-sphinx.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
@@ -62,6 +62,7 @@
 <li class="toctree-l1"><a class="reference internal" href="ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="filesystems.html">File System Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plasma.html">The Plasma In-Memory Object Store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="numpy.html">Using PyArrow with NumPy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="pandas.html">Using PyArrow with pandas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parquet.html">Reading and Writing the Apache Parquet Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="extending.html">Using pyarrow from C++ and Cython Code</a></li>
@@ -84,6 +85,7 @@
 <li><a class="reference internal" href="#type-metadata">Type Metadata</a></li>
 <li><a class="reference internal" href="#schemas">Schemas</a></li>
 <li><a class="reference internal" href="#arrays">Arrays</a><ul>
+<li><a class="reference internal" href="#none-values-and-nan-handling">None values and NAN handling</a></li>
 <li><a class="reference internal" href="#list-arrays">List arrays</a></li>
 <li><a class="reference internal" href="#struct-arrays">Struct arrays</a></li>
 <li><a class="reference internal" href="#union-arrays">Union arrays</a></li>
@@ -207,7 +209,7 @@ same for one or more types. For example, <code class="docutils literal notransla
 <p>These objects are <cite>metadata</cite>; they are used for describing the data in arrays,
 schemas, and record batches. In Python, they can be used in functions where the
 input data (e.g. Python objects) may be coerced to more than one Arrow type.</p>
-<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">Field</span></code> type is a type plus a name and optional
+<p>The <a class="reference internal" href="generated/pyarrow.Field.html#pyarrow.Field" title="pyarrow.Field"><code class="xref py py-class docutils literal notranslate"><span class="pre">Field</span></code></a> type is a type plus a name and optional
 user-defined metadata:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [11]: </span><span class="n">f0</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s1">&#39;int32_field&#39;</span><span class="p">,</span> <span class="n">t1</span><span class="p">)</span>
 
@@ -250,7 +252,7 @@ functions.</p>
 </div>
 <div class="section" id="schemas">
 <span id="data-schema"></span><h2>Schemas<a class="headerlink" href="#schemas" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">Schema</span></code> type is similar to the <code class="docutils literal notranslate"><span class="pre">struct</span></code> array type; it
+<p>The <a class="reference internal" href="generated/pyarrow.Schema.html#pyarrow.Schema" title="pyarrow.Schema"><code class="xref py py-class docutils literal notranslate"><span class="pre">Schema</span></code></a> type is similar to the <code class="docutils literal notranslate"><span class="pre">struct</span></code> array type; it
 defines the column names and types in a record batch or table data
 structure. The <code class="docutils literal notranslate"><span class="pre">pyarrow.schema</span></code> factory function makes new Schema objects in
 Python:</p>
@@ -290,11 +292,11 @@ for you:</p>
 
 <span class="gp">In [24]: </span><span class="n">arr</span>
 <span class="gh">Out[24]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7f8cd7804868&gt;</span>
+<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7fe39e3f86d8&gt;</span>
 <span class="go">[</span>
 <span class="go">  1,</span>
 <span class="go">  2,</span>
-<span class="go">  NA,</span>
+<span class="go">  null,</span>
 <span class="go">  3</span>
 <span class="go">]</span>
 </pre></div>
@@ -302,7 +304,7 @@ for you:</p>
 <p>But you may also pass a specific data type to override type inference:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [25]: </span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="n">pa</span><span class="o">.</span><span class="n">uint16</span><span class="p">())</span>
 <span class="gh">Out[25]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow.lib.UInt16Array object at 0x7f8cd780b728&gt;</span>
+<span class="go">&lt;pyarrow.lib.UInt16Array object at 0x7fe39e3f8908&gt;</span>
 <span class="go">[</span>
 <span class="go">  1,</span>
 <span class="go">  2</span>
@@ -330,19 +332,32 @@ nulls:</p>
 <span class="gh">Out[29]: </span><span class="go">1</span>
 
 <span class="gp">In [30]: </span><span class="n">arr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-<span class="go">           Out[30]: NA</span>
+<span class="go">           Out[30]: NULL</span>
 </pre></div>
 </div>
 <p>Arrow data is immutable, so values can be selected but not assigned.</p>
 <p>Arrays can be sliced without copying:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [31]: </span><span class="n">arr</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
 <span class="gh">Out[31]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7f8cd7826458&gt;</span>
+<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7fe39e397a48&gt;</span>
 <span class="go">[</span>
 <span class="go">  2,</span>
-<span class="go">  NA</span>
+<span class="go">  null</span>
 <span class="go">]</span>
 </pre></div>
+</div>
+<div class="section" id="none-values-and-nan-handling">
+<h3>None values and NAN handling<a class="headerlink" href="#none-values-and-nan-handling" title="Permalink to this headline">¶</a></h3>
+<p>As mentioned in the above section, the Python object <code class="docutils literal notranslate"><span class="pre">None</span></code> is always
+converted to an Arrow null element on the conversion to <code class="docutils literal notranslate"><span class="pre">pyarrow.Array</span></code>. For
+the float NaN value which is either represented by the Python object
+<code class="docutils literal notranslate"><span class="pre">float('nan')</span></code> or <code class="docutils literal notranslate"><span class="pre">numpy.nan</span></code> we normally convert it to a <em>valid</em> float
+value during the conversion. If an integer input is supplied to
+<code class="docutils literal notranslate"><span class="pre">pyarrow.array</span></code> that contains <code class="docutils literal notranslate"><span class="pre">np.nan</span></code>, <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> is raised.</p>
+<p>To handle better compability with Pandas, we support interpreting NaN values as
+null elements. This is enabled automatically on all <code class="docutils literal notranslate"><span class="pre">from_pandas</span></code> function and
+can be enable on the other conversion functions by passing <code class="docutils literal notranslate"><span class="pre">from_pandas=True</span></code>
+as a function parameter.</p>
 </div>
 <div class="section" id="list-arrays">
 <h3>List arrays<a class="headerlink" href="#list-arrays" title="Permalink to this headline">¶</a></h3>
@@ -368,19 +383,33 @@ sequence of Python dicts or tuples:</p>
 
 <span class="gp">In [35]: </span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="bp">False</span><span class="p">}],</span> <span class="nb">type</span><span class="o">=</span><span class="n">ty</span><span class="p">)</span>
 <span class="gh">Out[35]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow.lib.StructArray object at 0x7f8cd782a098&gt;</span>
-<span class="go">[</span>
-<span class="go">  {&#39;x&#39;: 1, &#39;y&#39;: True},</span>
-<span class="go">  {&#39;x&#39;: 2, &#39;y&#39;: False}</span>
-<span class="go">]</span>
+<span class="go">&lt;pyarrow.lib.StructArray object at 0x7fe39e3ac188&gt;</span>
+<span class="go">-- is_valid: all not null</span>
+<span class="go">-- child 0 type: int8</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2</span>
+<span class="go">  ]</span>
+<span class="go">-- child 1 type: bool</span>
+<span class="go">  [</span>
+<span class="go">    true,</span>
+<span class="go">    false</span>
+<span class="go">  ]</span>
 
 <span class="gp">In [36]: </span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="mi">3</span><span class="p">,</span> <span class="bp">True</span><span class="p">),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="bp">False</span><span class="p">)],</span> <span class="nb">type</span><span class="o">=</span><span class="n">ty</span><span class="p">)</span>
-<span class="go">                                                                                                               Out[36]: </span>
-<span class="go">&lt;pyarrow.lib.StructArray object at 0x7f8cd782a0e8&gt;</span>
-<span class="go">[</span>
-<span class="go">  {&#39;x&#39;: 3, &#39;y&#39;: True},</span>
-<span class="go">  {&#39;x&#39;: 4, &#39;y&#39;: False}</span>
-<span class="go">]</span>
+<span class="go">                                                                                                                                                                                    Out[36]: </span>
+<span class="go">&lt;pyarrow.lib.StructArray object at 0x7fe39e3ac458&gt;</span>
+<span class="go">-- is_valid: all not null</span>
+<span class="go">-- child 0 type: int8</span>
+<span class="go">  [</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ]</span>
+<span class="go">-- child 1 type: bool</span>
+<span class="go">  [</span>
+<span class="go">    true,</span>
+<span class="go">    false</span>
+<span class="go">  ]</span>
 </pre></div>
 </div>
 <p>When initializing a struct array, nulls are allowed both at the struct
@@ -388,12 +417,25 @@ level and at the individual field level.  If initializing from a sequence
 of Python dicts, a missing dict key is handled as a null value:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [37]: </span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span> <span class="bp">None</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="bp">None</span><span class="p">}],</span> <span class="nb">type</span><span class="o">=</span><span class="n">ty</span><span class="p">)</span>
 <span class="gh">Out[37]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow.lib.StructArray object at 0x7f8cd782a2c8&gt;</span>
-<span class="go">[</span>
-<span class="go">  {&#39;x&#39;: 1, &#39;y&#39;: None},</span>
-<span class="go">  NA,</span>
-<span class="go">  {&#39;x&#39;: None, &#39;y&#39;: None}</span>
-<span class="go">]</span>
+<span class="go">&lt;pyarrow.lib.StructArray object at 0x7fe39e3a0bd8&gt;</span>
+<span class="go">-- is_valid:</span>
+<span class="go">  [</span>
+<span class="go">    true,</span>
+<span class="go">    false,</span>
+<span class="go">    true</span>
+<span class="go">  ]</span>
+<span class="go">-- child 0 type: int8</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    null,</span>
+<span class="go">    null</span>
+<span class="go">  ]</span>
+<span class="go">-- child 1 type: bool</span>
+<span class="go">  [</span>
+<span class="go">    null,</span>
+<span class="go">    null,</span>
+<span class="go">    null</span>
+<span class="go">  ]</span>
 </pre></div>
 </div>
 <p>You can also construct a struct array from existing arrays for each of the
@@ -410,12 +452,20 @@ individual arrays, and no copy is involved:</p>
 
 <span class="gp">In [42]: </span><span class="n">arr</span>
 <span class="go">                                               Out[42]: </span>
-<span class="go">&lt;pyarrow.lib.StructArray object at 0x7f8cd77be3b8&gt;</span>
-<span class="go">[</span>
-<span class="go">  {&#39;x&#39;: 5, &#39;y&#39;: False},</span>
-<span class="go">  {&#39;x&#39;: 6, &#39;y&#39;: True},</span>
-<span class="go">  {&#39;x&#39;: 7, &#39;y&#39;: True}</span>
-<span class="go">]</span>
+<span class="go">&lt;pyarrow.lib.StructArray object at 0x7fe39e3acdb8&gt;</span>
+<span class="go">-- is_valid: all not null</span>
+<span class="go">-- child 0 type: int16</span>
+<span class="go">  [</span>
+<span class="go">    5,</span>
+<span class="go">    6,</span>
+<span class="go">    7</span>
+<span class="go">  ]</span>
+<span class="go">-- child 1 type: bool</span>
+<span class="go">  [</span>
+<span class="go">    false,</span>
+<span class="go">    true,</span>
+<span class="go">    true</span>
+<span class="go">  ]</span>
 </pre></div>
 </div>
 </div>
@@ -441,12 +491,25 @@ selected:</p>
 
 <span class="gp">In [48]: </span><span class="n">union_arr</span>
 <span class="go">                                                         Out[48]: </span>
-<span class="go">&lt;pyarrow.lib.UnionArray object at 0x7f8cd77be5e8&gt;</span>
-<span class="go">[</span>
-<span class="go">  5,</span>
-<span class="go">  False,</span>
-<span class="go">  True</span>
-<span class="go">]</span>
+<span class="go">&lt;pyarrow.lib.UnionArray object at 0x7fe39e3b7c28&gt;</span>
+<span class="go">-- is_valid: all not null</span>
+<span class="go">-- type_ids:   [</span>
+<span class="go">    0,</span>
+<span class="go">    1,</span>
+<span class="go">    1</span>
+<span class="go">  ]</span>
+<span class="go">-- child 0 type: int64</span>
+<span class="go">  [</span>
+<span class="go">    5,</span>
+<span class="go">    6,</span>
+<span class="go">    7</span>
+<span class="go">  ]</span>
+<span class="go">-- child 1 type: bool</span>
+<span class="go">  [</span>
+<span class="go">    false,</span>
+<span class="go">    false,</span>
+<span class="go">    true</span>
+<span class="go">  ]</span>
 </pre></div>
 </div>
 <p>In a dense union array, you also pass, in addition to the <code class="docutils literal notranslate"><span class="pre">int8</span></code> “types”
@@ -467,14 +530,33 @@ each offset in the selected child array it can be found:</p>
 
 <span class="gp">In [55]: </span><span class="n">union_arr</span>
 <span class="go">                                                        Out[55]: </span>
-<span class="go">&lt;pyarrow.lib.UnionArray object at 0x7f8cd77ce228&gt;</span>
-<span class="go">[</span>
-<span class="go">  5,</span>
-<span class="go">  False,</span>
-<span class="go">  True,</span>
-<span class="go">  6,</span>
-<span class="go">  7</span>
-<span class="go">]</span>
+<span class="go">&lt;pyarrow.lib.UnionArray object at 0x7fe39e3c4228&gt;</span>
+<span class="go">-- is_valid: all not null</span>
+<span class="go">-- type_ids:   [</span>
+<span class="go">    0,</span>
+<span class="go">    1,</span>
+<span class="go">    1,</span>
+<span class="go">    0,</span>
+<span class="go">    0</span>
+<span class="go">  ]</span>
+<span class="go">-- value_offsets:   [</span>
+<span class="go">    0,</span>
+<span class="go">    0,</span>
+<span class="go">    1,</span>
+<span class="go">    1,</span>
+<span class="go">    2</span>
+<span class="go">  ]</span>
+<span class="go">-- child 0 type: int64</span>
+<span class="go">  [</span>
+<span class="go">    5,</span>
+<span class="go">    6,</span>
+<span class="go">    7</span>
+<span class="go">  ]</span>
+<span class="go">-- child 1 type: bool</span>
+<span class="go">  [</span>
+<span class="go">    false,</span>
+<span class="go">    true</span>
+<span class="go">  ]</span>
 </pre></div>
 </div>
 </div>
@@ -487,7 +569,7 @@ in a file or stream to transmit integer <em>indices</em> referencing a shared
 particularly often used with strings to save memory and improve performance.</p>
 <p>The way that dictionaries are handled in the Apache Arrow format and the way
 they appear in C++ and Python is slightly different. We define a special
-<a class="reference internal" href="generated/pyarrow.lib.DictionaryArray.html#pyarrow.lib.DictionaryArray" title="pyarrow.lib.DictionaryArray"><code class="xref py py-class docutils literal notranslate"><span class="pre">DictionaryArray</span></code></a> type with a corresponding dictionary type. Let’s
+<a class="reference internal" href="generated/pyarrow.DictionaryArray.html#pyarrow.DictionaryArray" title="pyarrow.DictionaryArray"><code class="xref py py-class docutils literal notranslate"><span class="pre">DictionaryArray</span></code></a> type with a corresponding dictionary type. Let’s
 consider an example:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [56]: </span><span class="n">indices</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
 
@@ -497,17 +579,25 @@ consider an example:</p>
 
 <span class="gp">In [59]: </span><span class="n">dict_array</span>
 <span class="gh">Out[59]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow.lib.DictionaryArray object at 0x7f8cd77b2b88&gt;</span>
-<span class="go">[</span>
-<span class="go">  &#39;foo&#39;,</span>
-<span class="go">  &#39;bar&#39;,</span>
-<span class="go">  &#39;foo&#39;,</span>
-<span class="go">  &#39;bar&#39;,</span>
-<span class="go">  &#39;baz&#39;,</span>
-<span class="go">  &#39;foo&#39;,</span>
-<span class="go">  NA,</span>
-<span class="go">  &#39;baz&#39;</span>
-<span class="go">]</span>
+<span class="go">&lt;pyarrow.lib.DictionaryArray object at 0x7fe39e3abd68&gt;</span>
+
+<span class="go">-- dictionary:</span>
+<span class="go">  [</span>
+<span class="go">    &quot;foo&quot;,</span>
+<span class="go">    &quot;bar&quot;,</span>
+<span class="go">    &quot;baz&quot;</span>
+<span class="go">  ]</span>
+<span class="go">-- indices:</span>
+<span class="go">  [</span>
+<span class="go">    0,</span>
+<span class="go">    1,</span>
+<span class="go">    0,</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    0,</span>
+<span class="go">    null,</span>
+<span class="go">    2</span>
+<span class="go">  ]</span>
 </pre></div>
 </div>
 <p>Here we have:</p>
@@ -516,7 +606,7 @@ consider an example:</p>
 
 <span class="gp">In [61]: </span><span class="n">dict_array</span><span class="o">.</span><span class="n">indices</span>
 <span class="go">                                                    Out[61]: </span>
-<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7f8cd77dc728&gt;</span>
+<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7fe39e3c4e08&gt;</span>
 <span class="go">[</span>
 <span class="go">  0,</span>
 <span class="go">  1,</span>
@@ -524,21 +614,21 @@ consider an example:</p>
 <span class="go">  1,</span>
 <span class="go">  2,</span>
 <span class="go">  0,</span>
-<span class="go">  NA,</span>
+<span class="go">  null,</span>
 <span class="go">  2</span>
 <span class="go">]</span>
 
 <span class="gp">In [62]: </span><span class="n">dict_array</span><span class="o">.</span><span class="n">dictionary</span>
-<span class="go">                                                                                                                                                            Out[62]: </span>
-<span class="go">&lt;pyarrow.lib.StringArray object at 0x7f8cd77dc958&gt;</span>
+<span class="go">                                                                                                                                                              Out[62]: </span>
+<span class="go">&lt;pyarrow.lib.StringArray object at 0x7fe39e3c4cc8&gt;</span>
 <span class="go">[</span>
-<span class="go">  &#39;foo&#39;,</span>
-<span class="go">  &#39;bar&#39;,</span>
-<span class="go">  &#39;baz&#39;</span>
+<span class="go">  &quot;foo&quot;,</span>
+<span class="go">  &quot;bar&quot;,</span>
+<span class="go">  &quot;baz&quot;</span>
 <span class="go">]</span>
 </pre></div>
 </div>
-<p>When using <a class="reference internal" href="generated/pyarrow.lib.DictionaryArray.html#pyarrow.lib.DictionaryArray" title="pyarrow.lib.DictionaryArray"><code class="xref py py-class docutils literal notranslate"><span class="pre">DictionaryArray</span></code></a> with pandas, the analogue is
+<p>When using <a class="reference internal" href="generated/pyarrow.DictionaryArray.html#pyarrow.DictionaryArray" title="pyarrow.DictionaryArray"><code class="xref py py-class docutils literal notranslate"><span class="pre">DictionaryArray</span></code></a> with pandas, the analogue is
 <code class="docutils literal notranslate"><span class="pre">pandas.Categorical</span></code> (more on this later):</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [63]: </span><span class="n">dict_array</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
 <span class="gh">Out[63]: </span><span class="go"></span>
@@ -578,12 +668,12 @@ instances. Let’s consider a collection of arrays:</p>
 
 <span class="gp">In [69]: </span><span class="n">batch</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 <span class="go">                                                              Out[69]: </span>
-<span class="go">&lt;pyarrow.lib.StringArray object at 0x7f8cd77702c8&gt;</span>
+<span class="go">&lt;pyarrow.lib.StringArray object at 0x7fe39e365458&gt;</span>
 <span class="go">[</span>
-<span class="go">  &#39;foo&#39;,</span>
-<span class="go">  &#39;bar&#39;,</span>
-<span class="go">  &#39;baz&#39;,</span>
-<span class="go">  NA</span>
+<span class="go">  &quot;foo&quot;,</span>
+<span class="go">  &quot;bar&quot;,</span>
+<span class="go">  &quot;baz&quot;,</span>
+<span class="go">  null</span>
 <span class="go">]</span>
 </pre></div>
 </div>
@@ -592,11 +682,11 @@ instances. Let’s consider a collection of arrays:</p>
 
 <span class="gp">In [71]: </span><span class="n">batch2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 <span class="gh">Out[71]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow.lib.StringArray object at 0x7f8cd7780138&gt;</span>
+<span class="go">&lt;pyarrow.lib.StringArray object at 0x7fe39e3812c8&gt;</span>
 <span class="go">[</span>
-<span class="go">  &#39;bar&#39;,</span>
-<span class="go">  &#39;baz&#39;,</span>
-<span class="go">  NA</span>
+<span class="go">  &quot;bar&quot;,</span>
+<span class="go">  &quot;baz&quot;,</span>
+<span class="go">  null</span>
 <span class="go">]</span>
 </pre></div>
 </div>
@@ -633,51 +723,81 @@ for one or more arrays of the same type.</p>
 <span class="gp">In [77]: </span><span class="n">c</span>
 <span class="gh">Out[77]: </span><span class="go"></span>
 <span class="go">&lt;Column name=&#39;f0&#39; type=DataType(int64)&gt;</span>
-<span class="go">chunk 0: &lt;pyarrow.lib.Int64Array object at 0x7f8cd7780638&gt;</span>
 <span class="go">[</span>
-<span class="go">  1,</span>
-<span class="go">  2,</span>
-<span class="go">  3,</span>
-<span class="go">  4</span>
-<span class="go">]</span>
-<span class="go">chunk 1: &lt;pyarrow.lib.Int64Array object at 0x7f8cd7780548&gt;</span>
-<span class="go">[</span>
-<span class="go">  1,</span>
-<span class="go">  2,</span>
-<span class="go">  3,</span>
-<span class="go">  4</span>
-<span class="go">]</span>
-<span class="go">chunk 2: &lt;pyarrow.lib.Int64Array object at 0x7f8cd7780a48&gt;</span>
-<span class="go">[</span>
-<span class="go">  1,</span>
-<span class="go">  2,</span>
-<span class="go">  3,</span>
-<span class="go">  4</span>
-<span class="go">]</span>
-<span class="go">chunk 3: &lt;pyarrow.lib.Int64Array object at 0x7f8cd7780b38&gt;</span>
-<span class="go">[</span>
-<span class="go">  1,</span>
-<span class="go">  2,</span>
-<span class="go">  3,</span>
-<span class="go">  4</span>
-<span class="go">]</span>
-<span class="go">chunk 4: &lt;pyarrow.lib.Int64Array object at 0x7f8cd7780ae8&gt;</span>
-<span class="go">[</span>
-<span class="go">  1,</span>
-<span class="go">  2,</span>
-<span class="go">  3,</span>
-<span class="go">  4</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ]</span>
 <span class="go">]</span>
 
 <span class="gp">In [78]: </span><span class="n">c</span><span class="o">.</span><span class="n">data</span>
-<span class="go">                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Out[78]: &lt;pyarrow.lib.ChunkedArray at 0x7f8cd7a8da80&gt;</span>
+<span class="go">                                                                                                                                                                                                                                         Out[78]: </span>
+<span class="go">&lt;pyarrow.lib.ChunkedArray object at 0x7fe39e35d180&gt;</span>
+<span class="go">[</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ]</span>
+<span class="go">]</span>
 
 <span class="gp">In [79]: </span><span class="n">c</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">num_chunks</span>
-<span class="go">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Out[79]: 5</span>
+<span class="go">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Out[79]: 5</span>
 
 <span class="gp">In [80]: </span><span class="n">c</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="go">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             Out[80]: </span>
-<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7f8cd7780bd8&gt;</span>
+<span class="go">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Out[80]: </span>
+<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7fe39e381bd8&gt;</span>
 <span class="go">[</span>
 <span class="go">  1,</span>
 <span class="go">  2,</span>
@@ -686,8 +806,8 @@ for one or more arrays of the same type.</p>
 <span class="go">]</span>
 </pre></div>
 </div>
-<p>As you’ll see in the <a class="reference internal" href="pandas.html#pandas"><span class="std std-ref">pandas section</span></a>, we can convert these
-objects to contiguous NumPy arrays for use in pandas:</p>
+<p>As you’ll see in the <a class="reference internal" href="pandas.html#pandas-interop"><span class="std std-ref">pandas section</span></a>, we can convert
+these objects to contiguous NumPy arrays for use in pandas:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [81]: </span><span class="n">c</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
 <span class="gh">Out[81]: </span><span class="go"></span>
 <span class="go">0     1</span>
@@ -752,7 +872,7 @@ around, so if your data is already in table form, then use
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.<br/>
     </p>
   </div>
 </footer>

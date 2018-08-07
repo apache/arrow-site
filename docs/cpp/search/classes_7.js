@@ -2,7 +2,8 @@ var searchData=
 [
   ['hadoopfilesystem',['HadoopFileSystem',['../classarrow_1_1io_1_1_hadoop_file_system.html',1,'arrow::io']]],
   ['halffloattype',['HalfFloatType',['../classarrow_1_1_half_float_type.html',1,'arrow']]],
-  ['has_5fc_5ftype',['has_c_type',['../structarrow_1_1compute_1_1has__c__type.html',1,'arrow::compute']]],
+  ['has_5fc_5ftype',['has_c_type',['../structarrow_1_1has__c__type.html',1,'arrow']]],
+  ['hash_3c_3a_3aplasma_3a_3auniqueid_20_3e',['hash&lt;::plasma::UniqueID &gt;',['../structstd_1_1hash_3_1_1plasma_1_1_unique_i_d_01_4.html',1,'std']]],
   ['hashkernel',['HashKernel',['../classarrow_1_1compute_1_1_hash_kernel.html',1,'arrow::compute']]],
   ['hashutil',['HashUtil',['../classarrow_1_1_hash_util.html',1,'arrow']]],
   ['hdfsconnectionconfig',['HdfsConnectionConfig',['../structarrow_1_1io_1_1_hdfs_connection_config.html',1,'arrow::io']]],

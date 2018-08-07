@@ -10,6 +10,7 @@ var searchData=
   ['keventlooptimerdone',['kEventLoopTimerDone',['../namespaceplasma.html#aa25f7f9aa7f8808dd0d42553b16cf31b',1,'plasma']]],
   ['keventloopwrite',['kEventLoopWrite',['../namespaceplasma.html#aa384c4e46a42a377972561a3cbafb472',1,'plasma']]],
   ['key',['key',['../classarrow_1_1_key_value_metadata.html#ac44b301ba5ed211f38314db43253b305',1,'arrow::KeyValueMetadata']]],
+  ['key_5fvalue_5fmetadata',['key_value_metadata',['../namespacearrow.html#ae2b06732381cac7996882e17c245290a',1,'arrow']]],
   ['key_5fvalue_5fmetadata_2eh',['key_value_metadata.h',['../key__value__metadata_8h.html',1,'']]],
   ['keyerror',['KeyError',['../classarrow_1_1_status.html#a655dfbb4db41f38af13fb0703489ef05',1,'arrow::Status::KeyError()'],['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fac84999914a408f8c02b4122a49df6e00',1,'arrow::KeyError()']]],
   ['keyvaluemetadata',['KeyValueMetadata',['../classarrow_1_1_key_value_metadata.html',1,'arrow::KeyValueMetadata'],['../classarrow_1_1_key_value_metadata.html#a2c1cba9126ea75b53979f42558bd844f',1,'arrow::KeyValueMetadata::KeyValueMetadata()'],['../classarrow_1_1_key_value_metadata.html#a2ba3125441d179b06374ac6f140fb7cb',1,'arrow::KeyValueMetadata::KeyValueMetadata(const std::vector&lt; std::string &gt; &amp;keys, const std::vector&lt; std::string &gt; &amp;values)'],['../classarrow_1_1_key_value_metadata.html#ab51a4993bcc9302a430460e049f80c51',1,'arrow::KeyValueMetadata::KeyValueMetadata(const std::unordered_map&lt; std::string, std::string &gt; &amp;map)']]],

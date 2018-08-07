@@ -2,10 +2,12 @@ var searchData=
 [
   ['name',['name',['../structarrow_1_1io_1_1_hdfs_path_info.html#a07eb11cbce0126aa2d4f754bae91c8b3',1,'arrow::io::HdfsPathInfo']]],
   ['next',['next',['../structae_time_event.html#a9721fa6e2866701e2c38f0020beaac60',1,'aeTimeEvent']]],
-  ['null_5fbitmap_5f',['null_bitmap_',['../classarrow_1_1_array_builder.html#a030598b8cf748d469a1faed173237db1',1,'arrow::ArrayBuilder']]],
+  ['notification_5ffd',['notification_fd',['../structplasma_1_1_client.html#aa43ab98a6d2142b06dfca1518f113105',1,'plasma::Client']]],
+  ['null_5fbitmap_5f',['null_bitmap_',['../classarrow_1_1_array_builder.html#aba6e1d858e406b692c93182e4f5ba7be',1,'arrow::ArrayBuilder']]],
   ['null_5fbitmap_5fdata_5f',['null_bitmap_data_',['../classarrow_1_1_array.html#aed59d9e8608229ff3808983cdc908ccd',1,'arrow::Array::null_bitmap_data_()'],['../classarrow_1_1_array_builder.html#a03476f9edb6a8fb48854ba7ecc785fa7',1,'arrow::ArrayBuilder::null_bitmap_data_()']]],
   ['null_5fcount',['null_count',['../structarrow_1_1_array_data.html#a4e0a4e307974a3c2753934e675fa08a7',1,'arrow::ArrayData::null_count()'],['../structarrow_1_1ipc_1_1feather_1_1_array_metadata.html#a24a49027812adcbe1eb8c424ed112e0e',1,'arrow::ipc::feather::ArrayMetadata::null_count()']]],
   ['null_5fcount_5f',['null_count_',['../classarrow_1_1_array_builder.html#a9ea96ba4121857ab23241b6b408051b9',1,'arrow::ArrayBuilder::null_count_()'],['../classarrow_1_1_chunked_array.html#a45ef30e6a7823f1666b0f50ecde903a7',1,'arrow::ChunkedArray::null_count_()']]],
+  ['null_5frep',['null_rep',['../structarrow_1_1_pretty_print_options.html#a4d7231195a3183dfe6515dcb4ba95dbc',1,'arrow::PrettyPrintOptions']]],
   ['nullable',['nullable',['../structarrow_1_1stl_1_1_conversion_traits_3_01std_1_1vector_3_01value__c__type_01_4_01_4.html#aeeb1f7f7d90ffe72bf4217a6ab677bfc',1,'arrow::stl::ConversionTraits&lt; std::vector&lt; value_c_type &gt; &gt;']]],
   ['num_5frows_5f',['num_rows_',['../classarrow_1_1_record_batch.html#aa62597221dab95400905423cc0155611',1,'arrow::RecordBatch::num_rows_()'],['../classarrow_1_1_table.html#a7b7b895c038e468dac1be8d27722ffa6',1,'arrow::Table::num_rows_()']]],
   ['numericarray_3c_20date32type_20_3e',['NumericArray&lt; Date32Type &gt;',['../namespacearrow.html#aad22ff8253d2e22d1e00e9fc5de517b9',1,'arrow']]],

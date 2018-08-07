@@ -7,7 +7,7 @@
     <title>pyarrow.feather &#8212; pyarrow  documentation</title>
     <link rel="stylesheet" href="../../_static/bootstrap-sphinx.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
@@ -60,6 +60,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../filesystems.html">File System Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../plasma.html">The Plasma In-Memory Object Store</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../numpy.html">Using PyArrow with NumPy</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pandas.html">Using PyArrow with pandas</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../parquet.html">Reading and Writing the Apache Parquet Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../extending.html">Using pyarrow from C++ and Cython Code</a></li>
@@ -140,6 +141,8 @@
 <span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">FeatherError</span>  <span class="c1"># noqa</span>
 <span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">RecordBatch</span><span class="p">,</span> <span class="n">Table</span><span class="p">,</span> <span class="n">concat_tables</span>
 <span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">ext</span>
+<span class="kn">from</span> <span class="nn">.util</span> <span class="k">import</span> <span class="n">_deprecate_nthreads</span>
+
 
 <span class="k">try</span><span class="p">:</span>
     <span class="n">infer_dtype</span> <span class="o">=</span> <span class="n">pdapi</span><span class="o">.</span><span class="n">infer_dtype</span>
@@ -159,7 +162,7 @@
 
     <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;read has been deprecated. Use read_pandas instead.&quot;</span><span class="p">,</span>
-                      <span class="ne">DeprecationWarning</span><span class="p">)</span>
+                      <span class="ne">FutureWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_pandas</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -180,8 +183,10 @@
         <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="n">names</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">table</span>
 
-    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">use_threads</span> <span class="o">=</span> <span class="n">_deprecate_nthreads</span><span class="p">(</span><span class="n">use_threads</span><span class="p">,</span> <span class="n">nthreads</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span>
+            <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span>
 
 
 <span class="k">class</span> <span class="nc">FeatherWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -255,7 +260,7 @@
                              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
                                      <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Read multiple Parquet files as a single pandas DataFrame</span>
 
@@ -271,7 +276,9 @@
 <span class="sd">        pandas.DataFrame</span>
 <span class="sd">            Content of the file as a pandas DataFrame (of columns)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+        <span class="n">use_threads</span> <span class="o">=</span> <span class="n">_deprecate_nthreads</span><span class="p">(</span><span class="n">use_threads</span><span class="p">,</span> <span class="n">nthreads</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span>
+            <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="write_feather"><a class="viewcode-back" href="../../generated/pyarrow.feather.write_feather.html#pyarrow.feather.write_feather">[docs]</a><span class="k">def</span> <span class="nf">write_feather</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">dest</span><span class="p">):</span>
@@ -300,7 +307,7 @@
         <span class="k">raise</span></div>
 
 
-<div class="viewcode-block" id="read_feather"><a class="viewcode-back" href="../../generated/pyarrow.feather.read_feather.html#pyarrow.feather.read_feather">[docs]</a><span class="k">def</span> <span class="nf">read_feather</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="read_feather"><a class="viewcode-back" href="../../generated/pyarrow.feather.read_feather.html#pyarrow.feather.read_feather">[docs]</a><span class="k">def</span> <span class="nf">read_feather</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read a pandas.DataFrame from Feather format</span>
 
@@ -310,15 +317,16 @@
 <span class="sd">    columns : sequence, optional</span>
 <span class="sd">        Only read a specific set of columns. If not provided, all columns are</span>
 <span class="sd">        read</span>
-<span class="sd">    nthreads : int, default 1</span>
-<span class="sd">        Number of CPU threads to use when reading to pandas.DataFrame</span>
+<span class="sd">    use_threads: bool, default False</span>
+<span class="sd">        Whether to parallelize reading using multiple threads</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    df : pandas.DataFrame</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">use_threads</span> <span class="o">=</span> <span class="n">_deprecate_nthreads</span><span class="p">(</span><span class="n">use_threads</span><span class="p">,</span> <span class="n">nthreads</span><span class="p">)</span>
     <span class="n">reader</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_pandas</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_pandas</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span></div>
 
 
 <span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -352,7 +360,7 @@
     </p>
     <p>
         &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.<br/>
     </p>
   </div>
 </footer>
