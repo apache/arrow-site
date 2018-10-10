@@ -1,7 +1,10 @@
 var searchData=
 [
-  ['read',['READ',['../structarrow_1_1io_1_1_file_mode.html#a41b6fb9caec96f1e634fb8052c9a9310ab52e1a23224a7428723418a037a56374',1,'arrow::io::FileMode']]],
-  ['readwrite',['READWRITE',['../structarrow_1_1io_1_1_file_mode.html#a41b6fb9caec96f1e634fb8052c9a9310a117c7cc18774449e14f1a8a655939d30',1,'arrow::io::FileMode']]],
-  ['record_5fbatch',['RECORD_BATCH',['../structarrow_1_1compute_1_1_datum.html#ae1164fc67b6c27e5f39a7064fafd2ee6a30df8c66a1ba345b77d2c7014b5ca716',1,'arrow::compute::Datum::RECORD_BATCH()'],['../classarrow_1_1ipc_1_1_message.html#a6d6973b3b03de50d7be9dbab4db910dbafb3a9ffbfd87e8a292b54e424a23c358',1,'arrow::ipc::Message::RECORD_BATCH()']]],
-  ['remote',['Remote',['../namespaceplasma.html#a1c81245984dbccd8316cc42f98bacb45af8508f576cd3f742dfc268258dcdf0dd',1,'plasma']]]
+  ['object_5ffound',['OBJECT_FOUND',['../namespaceplasma.html#a730a54bdeef458d4c0e17ba9b349e884a6c48201d40a60b7390aee409913f8ab5',1,'plasma']]],
+  ['object_5fnot_5ffound',['OBJECT_NOT_FOUND',['../namespaceplasma.html#a730a54bdeef458d4c0e17ba9b349e884a76a2a975f3363fabb39417b4f6217c11',1,'plasma']]],
+  ['ok',['OK',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fae0aa021e21dddbd6d8cecec71e9cf564',1,'arrow::OK()'],['../namespacegandiva.html#a16219fa2a6ec335e31c5aef4285d435aae0aa021e21dddbd6d8cecec71e9cf564',1,'gandiva::OK()']]],
+  ['one_5flevel',['ONE_LEVEL',['../structparquet_1_1schema_1_1_list_encoding.html#a6d37a12d644af2d555ee52a544a916e7a54995bc58b7ad4d3e1defbc2e77c3994',1,'parquet::schema::ListEncoding']]],
+  ['optional',['OPTIONAL',['../structparquet_1_1_repetition.html#a7e942dfcd49240c465cdf3e1dc011af4a82534a669aeb93158b8340c9cff8e6a3',1,'parquet::Repetition']]],
+  ['or',['OR',['../classgandiva_1_1_boolean_node.html#a3464a51cbb7ae4a660ee6de4d9a9787baa7d73e9aab0627a1e884ead0f2c91982',1,'gandiva::BooleanNode']]],
+  ['outofmemory',['OutOfMemory',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fab498327feeb51430af73e07deac268fd',1,'arrow']]]
 ];

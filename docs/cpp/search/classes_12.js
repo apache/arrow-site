@@ -8,5 +8,6 @@ var searchData=
   ['unionarray',['UnionArray',['../classarrow_1_1_union_array.html',1,'arrow']]],
   ['unionmode',['UnionMode',['../structarrow_1_1_union_mode.html',1,'arrow']]],
   ['uniontype',['UnionType',['../classarrow_1_1_union_type.html',1,'arrow']]],
-  ['uniqueid',['UniqueID',['../classplasma_1_1_unique_i_d.html',1,'plasma']]]
+  ['uniqueid',['UniqueID',['../classplasma_1_1_unique_i_d.html',1,'plasma']]],
+  ['util',['Util',['../classarrow_1_1hiveserver2_1_1_util.html',1,'arrow::hiveserver2']]]
 ];

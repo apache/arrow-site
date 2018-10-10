@@ -1,13 +1,10 @@
 var searchData=
 [
-  ['plasma_5fcreated',['PLASMA_CREATED',['../namespaceplasma.html#a6a1816422abb257eda0498d6df72cfdca719df393e8a50579639ab2278715b788',1,'plasma']]],
-  ['plasma_5fquery_5fanywhere',['PLASMA_QUERY_ANYWHERE',['../namespaceplasma.html#aed4153277efefc07bc456aa3864646c1a12ef8e5a527914c11ce7d80d340eed26',1,'plasma']]],
-  ['plasma_5fquery_5flocal',['PLASMA_QUERY_LOCAL',['../namespaceplasma.html#aed4153277efefc07bc456aa3864646c1a25ef5eeb35bcc3c3ef8fc6927849e451',1,'plasma']]],
-  ['plasma_5fsealed',['PLASMA_SEALED',['../namespaceplasma.html#a6a1816422abb257eda0498d6df72cfdca8b8234a4599538aa87ac9abc6562efbd',1,'plasma']]],
-  ['plasmaobjectalreadysealed',['PlasmaObjectAlreadySealed',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fa1c1a82ff5b211dfbed2bfd5bdd245356',1,'arrow']]],
-  ['plasmaobjectexists',['PlasmaObjectExists',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188faa28166d3ea8fe93848f8e63f233c21f9',1,'arrow']]],
-  ['plasmaobjectnonexistent',['PlasmaObjectNonexistent',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fae78e9831b75460c98fd3a033a466ae72',1,'arrow']]],
-  ['plasmastorefull',['PlasmaStoreFull',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fa0eb600736e91ace6e9125aba8f0ebf98',1,'arrow']]],
-  ['primitive',['PRIMITIVE',['../structarrow_1_1ipc_1_1feather_1_1_column_type.html#ab87c3cfee4ce14205f19dfd9bf5a0424aa5a68bcc5a0ae3adeead419ffffd8130',1,'arrow::ipc::feather::ColumnType']]],
-  ['pythonerror',['PythonError',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fa498f7fdffefed0f8cf316838da257a83',1,'arrow']]]
+  ['na',['NA',['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44af46d8600b17dd993097e0875a46e0b15',1,'arrow::Type::NA()'],['../structparquet_1_1_logical_type.html#a7415ebf58f24fdc94cb15ada4e2ca04da8f9d87715607161f76e54d3906f88b81',1,'parquet::LogicalType::NA()']]],
+  ['nano',['NANO',['../structarrow_1_1_time_unit.html#a561ef51c3755bd873f8f86f5bc4ec1ffa88a677627c74df18d59f1aa6cd1c88d5',1,'arrow::TimeUnit']]],
+  ['next',['NEXT',['../namespacearrow_1_1hiveserver2.html#a30d6319415f0ca9b461a2dd5e2616c55a47559fb833ff58321570e5e877b467f6',1,'arrow::hiveserver2']]],
+  ['none',['NONE',['../structarrow_1_1compute_1_1_datum.html#ae1164fc67b6c27e5f39a7064fafd2ee6a93a8e6ae66bd39e6f66623732190c7ad',1,'arrow::compute::Datum::NONE()'],['../classarrow_1_1ipc_1_1_message.html#a6d6973b3b03de50d7be9dbab4db910dba421c980d162a5a5cd8c11586af54ecb0',1,'arrow::ipc::Message::NONE()'],['../structparquet_1_1_logical_type.html#a7415ebf58f24fdc94cb15ada4e2ca04dab64d92fac1eeaee8c7898ac984f53389',1,'parquet::LogicalType::NONE()']]],
+  ['nonexistent',['Nonexistent',['../namespaceplasma.html#a1c81245984dbccd8316cc42f98bacb45a4ae5e9809862b352a35922a5bcb1bdf3',1,'plasma']]],
+  ['notimplemented',['NotImplemented',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fa997ca4ce119685f40f03a9a8a6c5346e',1,'arrow']]],
+  ['null_5ftype',['NULL_TYPE',['../classarrow_1_1hiveserver2_1_1_column_type.html#abf5a04ecbc2fdaca1b6fb79695e59ad2abadc789d64efa09e2be666a687efeb5d',1,'arrow::hiveserver2::ColumnType']]]
 ];

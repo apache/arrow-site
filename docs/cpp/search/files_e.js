@@ -1,12 +1,7 @@
 var searchData=
 [
-  ['parallel_2eh',['parallel.h',['../parallel_8h.html',1,'']]],
-  ['plasma_2eh',['plasma.h',['../plasma_8h.html',1,'']]],
-  ['plasma_2emd',['plasma.md',['../plasma_8md.html',1,'']]],
-  ['platform_2eh',['platform.h',['../platform_8h.html',1,'']]],
-  ['pretty_5fprint_2eh',['pretty_print.h',['../pretty__print_8h.html',1,'']]],
-  ['protocol_2eh',['protocol.h',['../protocol_8h.html',1,'']]],
-  ['pyarrow_2eh',['pyarrow.h',['../pyarrow_8h.html',1,'']]],
-  ['pyarrow_5fapi_2eh',['pyarrow_api.h',['../pyarrow__api_8h.html',1,'']]],
-  ['python_5fto_5farrow_2eh',['python_to_arrow.h',['../python__to__arrow_8h.html',1,'']]]
+  ['operation_2eh',['operation.h',['../operation_8h.html',1,'']]],
+  ['optional_2eh',['optional.h',['../optional_8h.html',1,'']]],
+  ['options_2eh',['options.h',['../options_8h.html',1,'']]],
+  ['org_5fapache_5farrow_5fplasma_5fplasmaclientjni_2eh',['org_apache_arrow_plasma_PlasmaClientJNI.h',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html',1,'']]]
 ];

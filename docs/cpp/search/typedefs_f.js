@@ -1,6 +1,12 @@
 var searchData=
 [
-  ['value_5ftype',['value_type',['../classarrow_1_1stl__allocator.html#a116d180eeb40ae7a06fbc93dd59f71b6',1,'arrow::stl_allocator::value_type()'],['../classarrow_1_1_numeric_array.html#afd31bfd5f4362d391e159ffbea507e58',1,'arrow::NumericArray::value_type()'],['../classarrow_1_1_primitive_builder.html#a7232c92a1ba781092ee68d2a65196dcf',1,'arrow::PrimitiveBuilder::value_type()'],['../classarrow_1_1_boolean_builder.html#adafbb5c2669ffc31a0c47df21f72a4a8',1,'arrow::BooleanBuilder::value_type()']]],
-  ['valuetype',['ValueType',['../classarrow_1_1meta_1_1_list_type.html#ae34a27b2b1ad8b31e3314e5f7c48f2f3',1,'arrow::meta::ListType']]],
-  ['variant_5falternative_5ft',['variant_alternative_t',['../namespacearrow_1_1util.html#a8479f6f6acfeb24f22d7d922d31ab3e1',1,'arrow::util']]]
+  ['scalar',['Scalar',['../classarrow_1_1_dictionary_builder.html#a83fef1f2730059a868a1ca8cec45481c',1,'arrow::DictionaryBuilder']]],
+  ['schemaptr',['SchemaPtr',['../namespacegandiva.html#a650de9b918fc7348689854c307e50d56',1,'gandiva']]],
+  ['selectionvectorint16',['SelectionVectorInt16',['../namespacegandiva.html#a82f280ff4e0e4d7caccc82bf45d21b00',1,'gandiva']]],
+  ['selectionvectorint32',['SelectionVectorInt32',['../namespacegandiva.html#abb00aa769e735c4ac757dfb45d0a498f',1,'gandiva']]],
+  ['size_5ftype',['size_type',['../classarrow_1_1stl__allocator.html#aa8a67276663a6f604bc1c34d7602e9df',1,'arrow::stl_allocator::size_type()'],['../classarrow_1_1py_1_1_ndarray1_d_indexer.html#a1292bfad93b4aa33d53af65828842a0e',1,'arrow::py::Ndarray1DIndexer::size_type()']]],
+  ['stringcolumn',['StringColumn',['../namespacearrow_1_1hiveserver2.html#a76db95399ac519490da762752f29ffc3',1,'arrow::hiveserver2']]],
+  ['sys_5fdays',['sys_days',['../namespacedate.html#ae5b7953f5a7367396877454e5a88b809',1,'date']]],
+  ['sys_5fseconds',['sys_seconds',['../namespacedate.html#adcbf0401c4632c85be5cae32930ae631',1,'date']]],
+  ['sys_5ftime',['sys_time',['../namespacedate.html#a79aceba3594c9da2a7f09b0b992be3e2',1,'date']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['format',['Format',['../classarrow_1_1_g_zip_codec.html#a61e80e6eb225c4f17a5d6e9cd4ce1621',1,'arrow::GZipCodec']]]
+  ['exprtype',['ExprType',['../classgandiva_1_1_boolean_node.html#a3464a51cbb7ae4a660ee6de4d9a9787b',1,'gandiva::BooleanNode']]]
 ];

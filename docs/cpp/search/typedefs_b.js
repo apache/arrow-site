@@ -1,9 +1,6 @@
 var searchData=
 [
-  ['readablefileinterface',['ReadableFileInterface',['../namespacearrow_1_1io.html#a04cc6eea7cb1879fb483991b692fd363',1,'arrow::io']]],
-  ['recordbatchreader',['RecordBatchReader',['../namespacearrow_1_1ipc.html#a6eae3918b2e6c0c4e1f56e083187a339',1,'arrow::ipc']]],
-  ['reference',['reference',['../classarrow_1_1stl__allocator.html#a3044d12cb8624ecd5478b07c47d9d588',1,'arrow::stl_allocator']]],
-  ['rjarray',['RjArray',['../json-internal_8h.html#a91dbab91b93ab584c10bb095524fc63d',1,'json-internal.h']]],
-  ['rjobject',['RjObject',['../json-internal_8h.html#aa196fe0a0797c31d6e229fe15dca9e9d',1,'json-internal.h']]],
-  ['rjwriter',['RjWriter',['../json-internal_8h.html#ad06466e3878bb7a0eed1ff7f7f47a5a1',1,'json-internal.h']]]
+  ['nodeptr',['NodePtr',['../namespacegandiva.html#aaf741be1e0ab1897069ab26377793d63',1,'gandiva::NodePtr()'],['../namespaceparquet_1_1schema.html#a7fe5ee27b1dd5f12098ce3f3e6200b9e',1,'parquet::schema::NodePtr()']]],
+  ['nodevector',['NodeVector',['../namespacegandiva.html#ab396cd9ee14fd2c9a0ac0bffc034bd62',1,'gandiva::NodeVector()'],['../namespaceparquet_1_1schema.html#a8289c0ec21718b7fa853359974ffb298',1,'parquet::schema::NodeVector()']]],
+  ['notificationmap',['NotificationMap',['../classplasma_1_1_plasma_store.html#a6ee0dac1e2a98dd99b13a2f5643ae79d',1,'plasma::PlasmaStore']]]
 ];

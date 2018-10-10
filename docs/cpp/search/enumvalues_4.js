@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['file',['FILE',['../structarrow_1_1io_1_1_object_type.html#a1058f546342de12b2b2ade7410f4de7aa81af1cfcfc5aa3722be154e02b6193a7',1,'arrow::io::ObjectType']]],
-  ['fixed_5fsize_5fbinary',['FIXED_SIZE_BINARY',['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44a1b3f48148c5ff94c039d09ff689da179',1,'arrow::Type']]],
-  ['float',['FLOAT',['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44a57c54c2b9d1630bc8c99b5fec4c93e58',1,'arrow::Type']]]
+  ['enum',['ENUM',['../structparquet_1_1_logical_type.html#a7415ebf58f24fdc94cb15ada4e2ca04da75b45b570af367137a81b35687bf75fc',1,'parquet::LogicalType']]],
+  ['error',['ERROR',['../classarrow_1_1hiveserver2_1_1_operation.html#ad298b58eb192a6063cc2529cb30fc4ceabb1ca97ec761fc37101737ba0aa2e7c5',1,'arrow::hiveserver2::Operation']]],
+  ['expressionvalidationerror',['ExpressionValidationError',['../namespacegandiva.html#a16219fa2a6ec335e31c5aef4285d435aa70b5374da923fd3b982ac38c1fd20bc3',1,'gandiva']]]
 ];

@@ -10,5 +10,7 @@ var searchData=
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fhash',['Java_org_apache_arrow_plasma_PlasmaClientJNI_hash',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a2d2b6dc7ff438612984c61d989470305',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5frelease',['Java_org_apache_arrow_plasma_PlasmaClientJNI_release',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a88e6ab4b6788b4d85e52577113374690',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fseal',['Java_org_apache_arrow_plasma_PlasmaClientJNI_seal',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#abf8c1cbd960f194044187013a3f0b31e',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
-  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fwait',['Java_org_apache_arrow_plasma_PlasmaClientJNI_wait',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#aca2e788c291d39a0e44c6f86429f9974',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]]
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fwait',['Java_org_apache_arrow_plasma_PlasmaClientJNI_wait',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#aca2e788c291d39a0e44c6f86429f9974',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['jit_5ffunction',['jit_function',['../classgandiva_1_1_compiled_expr.html#a0618163f40e6e14995be9f263f518465',1,'gandiva::CompiledExpr']]],
+  ['jsonprint',['JSONPrint',['../classparquet_1_1_parquet_file_printer.html#a82369e2cc12b9af1d6e1e9b11388b7e4',1,'parquet::ParquetFilePrinter']]]
 ];

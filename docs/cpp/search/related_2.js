@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['plasmabuffer',['PlasmaBuffer',['../classplasma_1_1_plasma_client.html#a945695a7b7d9651d598860f906bc43a4',1,'plasma::PlasmaClient']]]
+  ['groupnode',['GroupNode',['../classparquet_1_1schema_1_1_node.html#ab65d0d081821369cf38f231ba1a5e013',1,'parquet::schema::Node']]]
 ];

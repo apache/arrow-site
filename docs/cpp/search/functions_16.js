@@ -1,5 +1,6 @@
 var searchData=
 [
+  ['xor',['Xor',['../namespacearrow_1_1compute.html#a4af0c55adb14f8e018227e4575e0aa38',1,'arrow::compute']]],
   ['xxh32',['XXH32',['../xxhash_8h.html#aa47a1811043509306fe9b8744ab5eee6',1,'xxhash.h']]],
   ['xxh32_5fcanonicalfromhash',['XXH32_canonicalFromHash',['../xxhash_8h.html#ade47204bc3908fdc401a68e9c295e233',1,'xxhash.h']]],
   ['xxh32_5fcopystate',['XXH32_copyState',['../xxhash_8h.html#a9354b1d57d79b128917ba28c1ca8230e',1,'xxhash.h']]],

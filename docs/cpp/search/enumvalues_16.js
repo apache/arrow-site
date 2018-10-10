@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['zlib',['ZLIB',['../classarrow_1_1_g_zip_codec.html#a61e80e6eb225c4f17a5d6e9cd4ce1621a384a14553b129930bb7850ab6f4c8ad7',1,'arrow::GZipCodec']]],
-  ['zstd',['ZSTD',['../structarrow_1_1_compression.html#a8abcec0357242c077a2905d645f2163fa869d6a9e3b4ea6e5cfa94dcc57a82094',1,'arrow::Compression']]]
+  ['xxh_5ferror',['XXH_ERROR',['../xxhash_8h.html#a5020905455674b8c83c1dbc73f0d3534a462a18276729783125c7116cf102667f',1,'xxhash.h']]],
+  ['xxh_5fok',['XXH_OK',['../xxhash_8h.html#a5020905455674b8c83c1dbc73f0d3534abd20b092d624344e301b0cadd29d5bd6',1,'xxhash.h']]]
 ];

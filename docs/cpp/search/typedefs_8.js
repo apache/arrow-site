@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['notificationmap',['NotificationMap',['../classplasma_1_1_plasma_store.html#a6ee0dac1e2a98dd99b13a2f5643ae79d',1,'plasma::PlasmaStore']]]
+  ['key_5ftype',['key_type',['../classgandiva_1_1_lru_cache.html#a9acc263cb8f4bcf956e08f046183c15d',1,'gandiva::LruCache']]],
+  ['keyvaluemetadata',['KeyValueMetadata',['../namespaceparquet.html#a4d90e7d201c4ddc81c98aa3c8f993c5b',1,'parquet']]]
 ];

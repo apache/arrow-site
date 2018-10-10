@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -11,7 +12,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript" src="_static/js/jquery-1.11.0.min.js"></script>
     <script type="text/javascript" src="_static/js/jquery-fix.js"></script>
     <script type="text/javascript" src="_static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
@@ -58,7 +59,7 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install PyArrow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="development.html">Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="memory.html">Memory and IO Interfaces</a></li>
-<li class="toctree-l1"><a class="reference internal" href="data.html">In-Memory Data Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Data Types and In-Memory Data Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="filesystems.html">File System Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plasma.html">The Plasma In-Memory Object Store</a></li>
@@ -88,6 +89,10 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#finer-grained-reading-and-writing">Finer-grained Reading and Writing</a></li>
+<li><a class="reference internal" href="#data-type-handling">Data Type Handling</a><ul>
+<li><a class="reference internal" href="#storing-timestamps">Storing timestamps</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#compression-encoding-and-file-compatibility">Compression, Encoding, and File Compatibility</a></li>
 <li><a class="reference internal" href="#partitioned-datasets-multiple-files">Partitioned Datasets (Multiple Files)</a></li>
 <li><a class="reference internal" href="#writing-to-partitioned-datasets">Writing to Partitioned Datasets</a></li>
@@ -164,9 +169,10 @@ support bundled:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span> <span class="nn">pyarrow.parquet</span> <span class="kn">as</span> <span class="nn">pq</span>
 </pre></div>
 </div>
-<p>If you are building <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> from source, you must also build <a class="reference external" href="http://github.com/apache/parquet-cpp">parquet-cpp</a> and enable the Parquet extensions when
-building <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code>. See the <a class="reference internal" href="development.html#development"><span class="std std-ref">Development</span></a> page for more
-details.</p>
+<p>If you are building <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> from source, you must use
+<code class="docutils literal notranslate"><span class="pre">-DARROW_PARQUET=ON</span></code> when compiling the C++ libraries and enable the Parquet
+extensions when building <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code>. See the <a class="reference internal" href="development.html#development"><span class="std std-ref">Development</span></a>
+page for more details.</p>
 </div>
 <div class="section" id="reading-and-writing-single-files">
 <h2>Reading and Writing Single Files<a class="headerlink" href="#reading-and-writing-single-files" title="Permalink to this headline">¶</a></h2>
@@ -293,8 +299,8 @@ you may choose to omit it by passing <code class="docutils literal notranslate">
 
 <span class="gp">In [20]: </span><span class="n">parquet_file</span><span class="o">.</span><span class="n">metadata</span>
 <span class="gh">Out[20]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow._parquet.FileMetaData object at 0x7fe37a31aea8&gt;</span>
-<span class="go">  created_by: parquet-cpp version 1.4.1-SNAPSHOT</span>
+<span class="go">&lt;pyarrow._parquet.FileMetaData object at 0x7fad18e33548&gt;</span>
+<span class="go">  created_by: parquet-cpp version 1.5.1-SNAPSHOT</span>
 <span class="go">  num_columns: 4</span>
 <span class="go">  num_rows: 3</span>
 <span class="go">  num_row_groups: 1</span>
@@ -303,7 +309,7 @@ you may choose to omit it by passing <code class="docutils literal notranslate">
 
 <span class="gp">In [21]: </span><span class="n">parquet_file</span><span class="o">.</span><span class="n">schema</span>
 <span class="go">                                                                                                                                                                                                                     Out[21]: </span>
-<span class="go">&lt;pyarrow._parquet.ParquetSchema object at 0x7fe37a329c88&gt;</span>
+<span class="go">&lt;pyarrow._parquet.ParquetSchema object at 0x7fad18f2ecc0&gt;</span>
 <span class="go">one: DOUBLE</span>
 <span class="go">two: BYTE_ARRAY UTF8</span>
 <span class="go">three: BOOLEAN</span>
@@ -360,7 +366,31 @@ concatenate them into a single table. You can read individual row groups with
 <span class="gp">   ....: </span>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
 <span class="gp">   ....: </span>        <span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
 <span class="gp">   ....: </span>
+<span class="gt">  File</span><span class="nn"> &quot;&lt;ipython-input-29-bb5d14f8babd&gt;&quot;</span><span class="gt">, line </span><span class="mi">1</span>
+<span class="nn">    with pq.ParquetWriter(&#39;example3.parquet&#39;, table.schema) as writer:    for i</span> in <span class="ni">range(3):        writer.write_table</span><span class="nt">(table)</span>
+                                                                            <span class="o">^</span>
+<span class="ne">SyntaxError</span>: invalid syntax
 </pre></div>
+</div>
+</div>
+<div class="section" id="data-type-handling">
+<h2>Data Type Handling<a class="headerlink" href="#data-type-handling" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="storing-timestamps">
+<h3>Storing timestamps<a class="headerlink" href="#storing-timestamps" title="Permalink to this headline">¶</a></h3>
+<p>Some Parquet readers may only support timestamps stored in millisecond
+(<code class="docutils literal notranslate"><span class="pre">'ms'</span></code>) or microsecond (<code class="docutils literal notranslate"><span class="pre">'us'</span></code>) resolution. Since pandas uses nanoseconds
+to represent timestamps, this can occasionally be a nuisance. We provide the
+<code class="docutils literal notranslate"><span class="pre">coerce_timestamps</span></code> option to allow you to select the desired resolution:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pq</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">coerce_timestamps</span><span class="o">=</span><span class="s1">&#39;ms&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If a cast to a lower resolution value may result in a loss of data, by default
+an exception will be raised. This can be suppressed by passing
+<code class="docutils literal notranslate"><span class="pre">allow_truncated_timestamps=True</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pq</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">coerce_timestamps</span><span class="o">=</span><span class="s1">&#39;ms&#39;</span><span class="p">,</span>
+               <span class="n">allow_truncated_timestamps</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
 </div>
 </div>
 <div class="section" id="compression-encoding-and-file-compatibility">
@@ -419,24 +449,30 @@ number of ways:</p>
 </div>
 <div class="section" id="writing-to-partitioned-datasets">
 <h2>Writing to Partitioned Datasets<a class="headerlink" href="#writing-to-partitioned-datasets" title="Permalink to this headline">¶</a></h2>
-<p>You can write a partitioned dataset for any <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> file system that is a file-store (e.g. local, HDFS, S3). The
-default behaviour when no filesystem is added is to use the local filesystem.</p>
+<p>You can write a partitioned dataset for any <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> file system that is a
+file-store (e.g. local, HDFS, S3). The default behaviour when no filesystem is
+added is to use the local filesystem.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Local dataset write</span>
-<span class="n">pq</span><span class="o">.</span><span class="n">write_to_dataset</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">root_path</span><span class="o">=</span><span class="s1">&#39;dataset_name&#39;</span><span class="p">,</span> <span class="n">partition_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="s1">&#39;two&#39;</span><span class="p">])</span>
+<span class="n">pq</span><span class="o">.</span><span class="n">write_to_dataset</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">root_path</span><span class="o">=</span><span class="s1">&#39;dataset_name&#39;</span><span class="p">,</span>
+                    <span class="n">partition_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="s1">&#39;two&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
-<p>The root path in this case specifies the parent directory to which data will be saved. The partition columns are the
-column names by which to partition the dataset. Columns are partitioned in the order they are given. The partition
+<p>The root path in this case specifies the parent directory to which data will be
+saved. The partition columns are the column names by which to partition the
+dataset. Columns are partitioned in the order they are given. The partition
 splits are determined by the unique values in the partition columns.</p>
-<p>To use another filesystem you only need to add the filesystem parameter, the individual table writes are wrapped
-using <code class="docutils literal notranslate"><span class="pre">with</span></code> statements so the <code class="docutils literal notranslate"><span class="pre">pq.write_to_dataset</span></code> function does not need to be.</p>
+<p>To use another filesystem you only need to add the filesystem parameter, the
+individual table writes are wrapped using <code class="docutils literal notranslate"><span class="pre">with</span></code> statements so the
+<code class="docutils literal notranslate"><span class="pre">pq.write_to_dataset</span></code> function does not need to be.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Remote file-system example</span>
 <span class="n">fs</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">hdfs</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">kerb_ticket</span><span class="o">=</span><span class="n">ticket_cache_path</span><span class="p">)</span>
-<span class="n">pq</span><span class="o">.</span><span class="n">write_to_dataset</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">root_path</span><span class="o">=</span><span class="s1">&#39;dataset_name&#39;</span><span class="p">,</span> <span class="n">partition_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="s1">&#39;two&#39;</span><span class="p">],</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
+<span class="n">pq</span><span class="o">.</span><span class="n">write_to_dataset</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">root_path</span><span class="o">=</span><span class="s1">&#39;dataset_name&#39;</span><span class="p">,</span>
+                    <span class="n">partition_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="s1">&#39;two&#39;</span><span class="p">],</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Compatibility Note: if using <code class="docutils literal notranslate"><span class="pre">pq.write_to_dataset</span></code> to create a table that will then be used by HIVE then partition
-column values must be compatible with the allowed character set of the HIVE version you are running.</p>
+<p>Compatibility Note: if using <code class="docutils literal notranslate"><span class="pre">pq.write_to_dataset</span></code> to create a table that
+will then be used by HIVE then partition column values must be compatible with
+the allowed character set of the HIVE version you are running.</p>
 </div>
 <div class="section" id="reading-from-partitioned-datasets">
 <h2>Reading from Partitioned Datasets<a class="headerlink" href="#reading-from-partitioned-datasets" title="Permalink to this headline">¶</a></h2>
@@ -447,15 +483,18 @@ such as those produced by Hive:</p>
 <span class="n">table</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>You can also use the convenience function <code class="docutils literal notranslate"><span class="pre">read_table</span></code> exposed by <code class="docutils literal notranslate"><span class="pre">pyarrow.parquet</span></code>
-that avoids the need for an additional Dataset object creation step.</p>
+<p>You can also use the convenience function <code class="docutils literal notranslate"><span class="pre">read_table</span></code> exposed by
+<code class="docutils literal notranslate"><span class="pre">pyarrow.parquet</span></code> that avoids the need for an additional Dataset object
+creation step.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">table</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="s1">&#39;dataset_name&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Note: the partition columns in the original table will have their types converted to Arrow dictionary types
-(pandas categorical) on load. Ordering of partition columns is not preserved through the save/load process. If reading
-from a remote filesystem into a pandas dataframe you may need to run <code class="docutils literal notranslate"><span class="pre">sort_index</span></code> to maintain row ordering
-(as long as the <code class="docutils literal notranslate"><span class="pre">preserve_index</span></code> option was enabled on write).</p>
+<p>Note: the partition columns in the original table will have their types
+converted to Arrow dictionary types (pandas categorical) on load. Ordering of
+partition columns is not preserved through the save/load process. If reading
+from a remote filesystem into a pandas dataframe you may need to run
+<code class="docutils literal notranslate"><span class="pre">sort_index</span></code> to maintain row ordering (as long as the <code class="docutils literal notranslate"><span class="pre">preserve_index</span></code>
+option was enabled on write).</p>
 </div>
 <div class="section" id="using-with-spark">
 <h2>Using with Spark<a class="headerlink" href="#using-with-spark" title="Permalink to this headline">¶</a></h2>
@@ -509,8 +548,10 @@ kernel.</p>
 </div>
 <p>Notes:</p>
 <ul class="simple">
-<li>The <code class="docutils literal notranslate"><span class="pre">account_key</span></code> can be found under <code class="docutils literal notranslate"><span class="pre">Settings</span> <span class="pre">-&gt;</span> <span class="pre">Access</span> <span class="pre">keys</span></code> in the Microsoft Azure portal for a given container</li>
-<li>The code above works for a container with private access, Lease State = Available, Lease Status = Unlocked</li>
+<li>The <code class="docutils literal notranslate"><span class="pre">account_key</span></code> can be found under <code class="docutils literal notranslate"><span class="pre">Settings</span> <span class="pre">-&gt;</span> <span class="pre">Access</span> <span class="pre">keys</span></code> in the
+Microsoft Azure portal for a given container</li>
+<li>The code above works for a container with private access, Lease State =
+Available, Lease Status = Unlocked</li>
 <li>The parquet file was Blob Type = Block blob</li>
 </ul>
 </div>
@@ -521,17 +562,14 @@ kernel.</p>
       
   </div>
 </div>
-<footer class="footer">
-  <div class="container">
-    <p class="pull-right">
-      <a href="#">Back to top</a>
-      
-    </p>
-    <p>
-        &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.<br/>
-    </p>
-  </div>
-</footer>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
   </body>
 </html>

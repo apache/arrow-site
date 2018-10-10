@@ -1,5 +1,7 @@
 var searchData=
 [
+  ['jan',['jan',['../namespacedate_1_1literals.html#af74ed14fd96db48ccc311bba2cd6b5ed',1,'date::literals']]],
+  ['january',['January',['../namespacedate.html#a681549e324f246a6d23bc1c97c696cda',1,'date']]],
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fconnect',['Java_org_apache_arrow_plasma_PlasmaClientJNI_connect',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a90795ce8a04474b1a9e21297a105551a',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fcontains',['Java_org_apache_arrow_plasma_PlasmaClientJNI_contains',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a5ec1f063cfcb6cde3a93bc45bcf3787d',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fcreate',['Java_org_apache_arrow_plasma_PlasmaClientJNI_create',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#ad2f2e4acac296576b39e471120b38038',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
@@ -11,6 +13,13 @@ var searchData=
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5frelease',['Java_org_apache_arrow_plasma_PlasmaClientJNI_release',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a88e6ab4b6788b4d85e52577113374690',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fseal',['Java_org_apache_arrow_plasma_PlasmaClientJNI_seal',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#abf8c1cbd960f194044187013a3f0b31e',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
   ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fwait',['Java_org_apache_arrow_plasma_PlasmaClientJNI_wait',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#aca2e788c291d39a0e44c6f86429f9974',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['jit_5ffunction',['jit_function',['../classgandiva_1_1_compiled_expr.html#a0618163f40e6e14995be9f263f518465',1,'gandiva::CompiledExpr']]],
+  ['json',['JSON',['../structparquet_1_1_logical_type.html#a7415ebf58f24fdc94cb15ada4e2ca04da628f6f060d792ffd65635364c382d2f9',1,'parquet::LogicalType']]],
   ['json_2dinternal_2eh',['json-internal.h',['../json-internal_8h.html',1,'']]],
-  ['json_2eh',['json.h',['../json_8h.html',1,'']]]
+  ['json_2eh',['json.h',['../json_8h.html',1,'']]],
+  ['jsonprint',['JSONPrint',['../classparquet_1_1_parquet_file_printer.html#a82369e2cc12b9af1d6e1e9b11388b7e4',1,'parquet::ParquetFilePrinter']]],
+  ['jul',['jul',['../namespacedate_1_1literals.html#a41acc8d7266b5c213d11ee09e516d84a',1,'date::literals']]],
+  ['july',['July',['../namespacedate.html#aa6a4b6623fc545ebd73de3c8b5e06d38',1,'date']]],
+  ['jun',['jun',['../namespacedate_1_1literals.html#a26b105ea66c9ec3936b0d855d066ccf6',1,'date::literals']]],
+  ['june',['June',['../namespacedate.html#af2b4a54e6bfed6c42f5d19d96042e1c2',1,'date']]]
 ];

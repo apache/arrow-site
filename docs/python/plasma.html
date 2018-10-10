@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -11,7 +12,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript" src="_static/js/jquery-1.11.0.min.js"></script>
     <script type="text/javascript" src="_static/js/jquery-fix.js"></script>
     <script type="text/javascript" src="_static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
@@ -58,7 +59,7 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install PyArrow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="development.html">Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="memory.html">Memory and IO Interfaces</a></li>
-<li class="toctree-l1"><a class="reference internal" href="data.html">In-Memory Data Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Data Types and In-Memory Data Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="filesystems.html">File System Interfaces</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">The Plasma In-Memory Object Store</a></li>
@@ -89,6 +90,7 @@
 <li><a class="reference internal" href="#putting-and-getting-python-objects">Putting and Getting Python Objects</a></li>
 <li><a class="reference internal" href="#creating-an-object-buffer">Creating an Object Buffer</a></li>
 <li><a class="reference internal" href="#getting-an-object-buffer">Getting an Object Buffer</a></li>
+<li><a class="reference internal" href="#listing-objects-in-the-store">Listing objects in the store</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#using-arrow-and-pandas-with-plasma">Using Arrow and Pandas with Plasma</a><ul>
@@ -161,16 +163,17 @@
 <li><a class="reference internal" href="#putting-and-getting-python-objects" id="id6">Putting and Getting Python Objects</a></li>
 <li><a class="reference internal" href="#creating-an-object-buffer" id="id7">Creating an Object Buffer</a></li>
 <li><a class="reference internal" href="#getting-an-object-buffer" id="id8">Getting an Object Buffer</a></li>
+<li><a class="reference internal" href="#listing-objects-in-the-store" id="id9">Listing objects in the store</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#using-arrow-and-pandas-with-plasma" id="id9">Using Arrow and Pandas with Plasma</a><ul>
-<li><a class="reference internal" href="#storing-arrow-objects-in-plasma" id="id10">Storing Arrow Objects in Plasma</a></li>
-<li><a class="reference internal" href="#getting-arrow-objects-from-plasma" id="id11">Getting Arrow Objects from Plasma</a></li>
-<li><a class="reference internal" href="#storing-pandas-dataframes-in-plasma" id="id12">Storing Pandas DataFrames in Plasma</a></li>
-<li><a class="reference internal" href="#getting-pandas-dataframes-from-plasma" id="id13">Getting Pandas DataFrames from Plasma</a></li>
+<li><a class="reference internal" href="#using-arrow-and-pandas-with-plasma" id="id10">Using Arrow and Pandas with Plasma</a><ul>
+<li><a class="reference internal" href="#storing-arrow-objects-in-plasma" id="id11">Storing Arrow Objects in Plasma</a></li>
+<li><a class="reference internal" href="#getting-arrow-objects-from-plasma" id="id12">Getting Arrow Objects from Plasma</a></li>
+<li><a class="reference internal" href="#storing-pandas-dataframes-in-plasma" id="id13">Storing Pandas DataFrames in Plasma</a></li>
+<li><a class="reference internal" href="#getting-pandas-dataframes-from-plasma" id="id14">Getting Pandas DataFrames from Plasma</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#using-plasma-with-huge-pages" id="id14">Using Plasma with Huge Pages</a></li>
+<li><a class="reference internal" href="#using-plasma-with-huge-pages" id="id15">Using Plasma with Huge Pages</a></li>
 </ul>
 </li>
 </ul>
@@ -328,11 +331,51 @@ b<span class="s1">&#39;\x01\x02\x03&#39;</span>
 </pre></div>
 </div>
 </div>
+<div class="section" id="listing-objects-in-the-store">
+<h3><a class="toc-backref" href="#id9">Listing objects in the store</a><a class="headerlink" href="#listing-objects-in-the-store" title="Permalink to this headline">¶</a></h3>
+<p>The objects in the store can be listed in the following way (note that
+this functionality is currently experimental and the concrete representation
+of the object info might change in the future):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyarrow.plasma</span> <span class="kn">as</span> <span class="nn">plasma</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">plasma</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;/tmp/plasma&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="n">client</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;hello, world&quot;</span><span class="p">)</span>
+<span class="c1"># Sleep a little so we get different creation times</span>
+<span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">client</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;another object&quot;</span><span class="p">)</span>
+<span class="c1"># Create an object that is not sealed yet</span>
+<span class="n">object_id</span> <span class="o">=</span> <span class="n">plasma</span><span class="o">.</span><span class="n">ObjectID</span><span class="o">.</span><span class="n">from_random</span><span class="p">()</span>
+<span class="n">client</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">object_id</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">list</span><span class="p">())</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="p">{</span><span class="n">ObjectID</span><span class="p">(</span><span class="mi">4</span><span class="n">cba8f80c54c6d265b46c2cdfcee6e32348b12be</span><span class="p">):</span> <span class="p">{</span><span class="s1">&#39;construct_duration&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;create_time&#39;</span><span class="p">:</span> <span class="mi">1535223642</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;data_size&#39;</span><span class="p">:</span> <span class="mi">460</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;metadata_size&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;ref_count&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;sealed&#39;</span><span class="p">},</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ObjectID</span><span class="p">(</span><span class="n">a7598230b0c26464c9d9c99ae14773ee81485428</span><span class="p">):</span> <span class="p">{</span><span class="s1">&#39;construct_duration&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;create_time&#39;</span><span class="p">:</span> <span class="mi">1535223644</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;data_size&#39;</span><span class="p">:</span> <span class="mi">460</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;metadata_size&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;ref_count&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;sealed&#39;</span><span class="p">},</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">ObjectID</span><span class="p">(</span><span class="n">e603ab0c92098ebf08f90bfcea33ff98f6476870</span><span class="p">):</span> <span class="p">{</span><span class="s1">&#39;construct_duration&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;create_time&#39;</span><span class="p">:</span> <span class="mi">1535223644</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;data_size&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;metadata_size&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;ref_count&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<span class="o">&gt;&gt;&gt;</span>  <span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;created&#39;</span><span class="p">}}</span>
+</pre></div>
+</div>
+</div>
 </div>
 <div class="section" id="using-arrow-and-pandas-with-plasma">
-<h2><a class="toc-backref" href="#id9">Using Arrow and Pandas with Plasma</a><a class="headerlink" href="#using-arrow-and-pandas-with-plasma" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id10">Using Arrow and Pandas with Plasma</a><a class="headerlink" href="#using-arrow-and-pandas-with-plasma" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="storing-arrow-objects-in-plasma">
-<h3><a class="toc-backref" href="#id10">Storing Arrow Objects in Plasma</a><a class="headerlink" href="#storing-arrow-objects-in-plasma" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id11">Storing Arrow Objects in Plasma</a><a class="headerlink" href="#storing-arrow-objects-in-plasma" title="Permalink to this headline">¶</a></h3>
 <p>To store an Arrow object in Plasma, we must first <strong>create</strong> the object and then
 <strong>seal</strong> it. However, Arrow objects such as <code class="docutils literal notranslate"><span class="pre">Tensors</span></code> may be more complicated
 to write than simple binary data.</p>
@@ -368,7 +411,7 @@ object. A <code class="docutils literal notranslate"><span class="pre">pyarrow.F
 </div>
 </div>
 <div class="section" id="getting-arrow-objects-from-plasma">
-<h3><a class="toc-backref" href="#id11">Getting Arrow Objects from Plasma</a><a class="headerlink" href="#getting-arrow-objects-from-plasma" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id12">Getting Arrow Objects from Plasma</a><a class="headerlink" href="#getting-arrow-objects-from-plasma" title="Permalink to this headline">¶</a></h3>
 <p>To read the object, first retrieve it as a <code class="docutils literal notranslate"><span class="pre">PlasmaBuffer</span></code> using its object ID.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get the arrow object by ObjectID.</span>
 <span class="p">[</span><span class="n">buf2</span><span class="p">]</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_buffers</span><span class="p">([</span><span class="n">object_id</span><span class="p">])</span>
@@ -390,7 +433,7 @@ back into numpy data:</p>
 </div>
 </div>
 <div class="section" id="storing-pandas-dataframes-in-plasma">
-<h3><a class="toc-backref" href="#id12">Storing Pandas DataFrames in Plasma</a><a class="headerlink" href="#storing-pandas-dataframes-in-plasma" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id13">Storing Pandas DataFrames in Plasma</a><a class="headerlink" href="#storing-pandas-dataframes-in-plasma" title="Permalink to this headline">¶</a></h3>
 <p>Storing a Pandas <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> still follows the <strong>create</strong> then <strong>seal</strong>
 process of storing an object in the Plasma store, however one cannot directly
 write the <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> to Plasma with Pandas alone. Plasma also needs to know
@@ -440,7 +483,7 @@ size of the Plasma object.</p>
 </div>
 </div>
 <div class="section" id="getting-pandas-dataframes-from-plasma">
-<h3><a class="toc-backref" href="#id13">Getting Pandas DataFrames from Plasma</a><a class="headerlink" href="#getting-pandas-dataframes-from-plasma" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id14">Getting Pandas DataFrames from Plasma</a><a class="headerlink" href="#getting-pandas-dataframes-from-plasma" title="Permalink to this headline">¶</a></h3>
 <p>Since we store the Pandas DataFrame as a PyArrow <code class="docutils literal notranslate"><span class="pre">RecordBatch</span></code> object,
 to get the object back from the Plasma store, we follow similar steps
 to those specified in <a class="reference internal" href="#getting-arrow-objects-from-plasma">Getting Arrow Objects from Plasma</a>.</p>
@@ -467,7 +510,7 @@ the original Pandas <code class="docutils literal notranslate"><span class="pre"
 </div>
 </div>
 <div class="section" id="using-plasma-with-huge-pages">
-<h2><a class="toc-backref" href="#id14">Using Plasma with Huge Pages</a><a class="headerlink" href="#using-plasma-with-huge-pages" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id15">Using Plasma with Huge Pages</a><a class="headerlink" href="#using-plasma-with-huge-pages" title="Permalink to this headline">¶</a></h2>
 <p>On Linux it is possible to use the Plasma store with huge pages for increased
 throughput. You first need to create a file system and activate huge pages with</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo mkdir -p /mnt/hugepages
@@ -514,17 +557,14 @@ which indicates that huge pages are activated:</p>
       
   </div>
 </div>
-<footer class="footer">
-  <div class="container">
-    <p class="pull-right">
-      <a href="#">Back to top</a>
-      
-    </p>
-    <p>
-        &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.<br/>
-    </p>
-  </div>
-</footer>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
   </body>
 </html>

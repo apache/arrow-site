@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -11,7 +12,7 @@
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript" src="../_static/js/jquery-1.11.0.min.js"></script>
     <script type="text/javascript" src="../_static/js/jquery-fix.js"></script>
     <script type="text/javascript" src="../_static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
@@ -58,7 +59,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../install.html">Install PyArrow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../development.html">Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../memory.html">Memory and IO Interfaces</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../data.html">In-Memory Data Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data.html">Data Types and In-Memory Data Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../filesystems.html">File System Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../plasma.html">The Plasma In-Memory Object Store</a></li>
@@ -150,9 +151,19 @@ filesystem</li>
 metadata parameter</li>
 <li><strong>split_row_groups</strong> (<em>boolean</em><em>, </em><em>default False</em>) – Divide files into pieces for each row group in the file</li>
 <li><strong>validate_schema</strong> (<em>boolean</em><em>, </em><em>default True</em>) – Check that individual file schemas are all the same / compatible</li>
-<li><strong>filters</strong> (<em>List</em><em>[</em><em>Tuple</em><em>] or </em><em>None</em><em> (</em><em>default</em><em>)</em>) – List of filters to apply, like <code class="docutils literal notranslate"><span class="pre">[('x',</span> <span class="pre">'=',</span> <span class="pre">0),</span> <span class="pre">...]</span></code>. This
+<li><strong>filters</strong> (<em>List</em><em>[</em><em>Tuple</em><em>] or </em><em>List</em><em>[</em><em>List</em><em>[</em><em>Tuple</em><em>]</em><em>] or </em><em>None</em><em> (</em><em>default</em><em>)</em>) – <p>List of filters to apply, like <code class="docutils literal notranslate"><span class="pre">[[('x',</span> <span class="pre">'=',</span> <span class="pre">0),</span> <span class="pre">...],</span> <span class="pre">...]</span></code>. This
 implements partition-level (hive) filtering only, i.e., to prevent the
-loading of some files of the dataset.</li>
+loading of some files of the dataset.</p>
+<p>Predicates are expressed in disjunctive normal form (DNF). This means
+that the innermost tuple describe a single column predicate. These
+inner predicate make are all combined with a conjunction (AND) into a
+larger predicate. The most outer list then combines all filters
+with a disjunction (OR). By this, we should be able to express all
+kinds of filters that are possible using boolean logic.</p>
+<p>This function also supports passing in as List[Tuple]. These predicates
+are evaluated as a conjunction. To express OR in predictates, one must
+use the (preferred) List[List[Tuple]] notation.</p>
+</li>
 <li><strong>metadata_nthreads</strong> (<em>int</em><em>, </em><em>default 1</em>) – How many threads to allow the thread pool which is used to read the
 dataset metadata. Increasing this is helpful to read partitioned
 datasets.</li>
@@ -177,7 +188,7 @@ datasets.</li>
 <tr class="row-odd"><td><a class="reference internal" href="#pyarrow.parquet.ParquetDataset.__init__" title="pyarrow.parquet.ParquetDataset.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(path_or_paths[,&nbsp;filesystem,&nbsp;…])</td>
 <td>Initialize self.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#pyarrow.parquet.ParquetDataset.read" title="pyarrow.parquet.ParquetDataset.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>([columns,&nbsp;nthreads,&nbsp;use_pandas_metadata])</td>
+<tr class="row-even"><td><a class="reference internal" href="#pyarrow.parquet.ParquetDataset.read" title="pyarrow.parquet.ParquetDataset.read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code></a>([columns,&nbsp;use_threads,&nbsp;use_pandas_metadata])</td>
 <td>Read multiple Parquet files as a single pyarrow.Table</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pyarrow.parquet.ParquetDataset.read_pandas" title="pyarrow.parquet.ParquetDataset.read_pandas"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_pandas</span></code></a>(**kwargs)</td>
@@ -190,7 +201,7 @@ datasets.</li>
 </table>
 <dl class="method">
 <dt id="pyarrow.parquet.ParquetDataset.read">
-<code class="descname">read</code><span class="sig-paren">(</span><em>columns=None</em>, <em>nthreads=1</em>, <em>use_pandas_metadata=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyarrow/parquet.html#ParquetDataset.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyarrow.parquet.ParquetDataset.read" title="Permalink to this definition">¶</a></dt>
+<code class="descname">read</code><span class="sig-paren">(</span><em>columns=None</em>, <em>use_threads=True</em>, <em>use_pandas_metadata=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyarrow/parquet.html#ParquetDataset.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyarrow.parquet.ParquetDataset.read" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read multiple Parquet files as a single pyarrow.Table</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -198,8 +209,7 @@ datasets.</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>columns</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – Names of columns to read from the file</li>
-<li><strong>nthreads</strong> (<em>int</em><em>, </em><em>default 1</em>) – Number of columns to read in parallel. Requires that the underlying
-file source is threadsafe</li>
+<li><strong>use_threads</strong> (<em>boolean</em><em>, </em><em>default True</em>) – Perform multi-threaded column reads</li>
 <li><strong>use_pandas_metadata</strong> (<em>bool</em><em>, </em><em>default False</em>) – Passed through to each dataset piece</li>
 </ul>
 </td>
@@ -240,17 +250,14 @@ through to ParquetDataset.read, see docstring for further details</p>
       
   </div>
 </div>
-<footer class="footer">
-  <div class="container">
-    <p class="pull-right">
-      <a href="#">Back to top</a>
-      
-    </p>
-    <p>
-        &copy; Copyright 2016-2017 Apache Software Foundation.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.<br/>
-    </p>
-  </div>
-</footer>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
   </body>
 </html>

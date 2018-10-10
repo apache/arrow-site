@@ -1,6 +1,9 @@
 var searchData=
 [
-  ['objectid',['ObjectID',['../namespaceplasma.html#adf1aa2f87f6f11e1993628f574e31e75',1,'plasma']]],
-  ['objectrequestmap',['ObjectRequestMap',['../namespaceplasma.html#a079a6bc7f0804e93afd533ae2d0b90d2',1,'plasma']]],
-  ['other',['other',['../structarrow_1_1stl__allocator_1_1rebind.html#a355b73f3f7a647016ddbc0dfd58f76bc',1,'arrow::stl_allocator::rebind']]]
+  ['list_5ftype',['list_type',['../classgandiva_1_1_lru_cache.html#a0fb4a26406ca004f0f6770e92427ac37',1,'gandiva::LruCache']]],
+  ['literalholder',['LiteralHolder',['../namespacegandiva.html#ab9c92a7913174cc7fe4dba46685ce66a',1,'gandiva']]],
+  ['local_5fdays',['local_days',['../namespacedate.html#a396e62efd18a8a3544e9f09d91ef7eb3',1,'date']]],
+  ['local_5fseconds',['local_seconds',['../namespacedate.html#a19108953dec934a2d04cdd8b8102bfba',1,'date']]],
+  ['local_5ftime',['local_time',['../namespacedate.html#adc9dd2e86274818079be9919f3ff0efd',1,'date']]],
+  ['lvalueptr',['LValuePtr',['../namespacegandiva.html#a5a0f2dcb376b5cc9f7b1120407b3f860',1,'gandiva']]]
 ];
