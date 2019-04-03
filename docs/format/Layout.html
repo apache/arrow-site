@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Physical memory layout &mdash; Apache Arrow v0.12.1.dev0+g8ca41384b.d20190120</title>
+  <title>Physical memory layout &mdash; Apache Arrow v0.13.0</title>
   
 
   
@@ -18,34 +18,36 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Metadata: Logical types, schemas, data headers" href="Metadata.html" />
     <link rel="prev" title="Implementation guidelines" href="Guidelines.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -59,7 +61,7 @@
             
             
               <div class="version">
-                0.12.1.dev0+g8ca41384b.d20190120
+                0.13.0
               </div>
             
           
@@ -83,7 +85,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">Memory Format</span></p>
+              <p class="caption"><span class="caption-text">Arrow Columnar Format</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="README.html">Arrow specification documents</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Guidelines.html">Implementation guidelines</a></li>
@@ -126,14 +128,18 @@
 <li class="toctree-l1"><a class="reference internal" href="Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="IPC.html">Interprocess messaging / communication (IPC)</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Languages</span></p>
+<p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../cpp/index.html">C++ Implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python bindings</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Other Topics</span></p>
+<p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../building.html">Building the Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/contributing.html">Contribution Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/documentation.html">Building the Documentation</a></li>
 </ul>
 
             
@@ -245,9 +251,11 @@ linearly in the nesting level</li>
 data</li>
 <li>It is required to have all the contiguous memory buffers in an IPC payload
 aligned at 8-byte boundaries. In other words, each buffer must start at
-an aligned 8-byte offset.</li>
-<li>The general recommendation is to align the buffers at 64-byte boundary, but
-this is not absolutely necessary.</li>
+an aligned 8-byte offset. Additionally, each buffer should be padded to a multiple
+of 8 bytes.</li>
+<li>For performance reasons it <strong>preferred/recommended</strong> to align buffers to a
+64-byte boundary and pad to a multiple of 64 bytes, but this is not absolutely
+necessary.  The rationale is discussed in more details below.</li>
 <li>Any relative type can have null slots</li>
 <li>Arrays are immutable once created. Implementations can provide APIs to mutate
 an array, but applying mutations will require a new array data structure to
@@ -304,14 +312,15 @@ practices for optimized memory access:</p>
 <ul class="simple">
 <li>Elements in numeric arrays will be guaranteed to be retrieved via aligned access.</li>
 <li>On some architectures alignment can help limit partially used cache lines.</li>
-<li>64 byte alignment is recommended by the <a class="reference external" href="https://software.intel.com/en-us/articles/practical-intel-avx-optimization-on-2nd-generation-intel-core-processors">Intel performance guide</a> for
-data-structures over 64 bytes (which will be a common case for Arrow Arrays).</li>
 </ul>
-<p>Recommending padding to a multiple of 64 bytes allows for using <a class="reference external" href="https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-introduction-to-the-simd-data-layout-templates">SIMD</a> instructions
+<p>The recommendation for 64 byte alignment comes from the <a class="reference external" href="https://software.intel.com/en-us/articles/practical-intel-avx-optimization-on-2nd-generation-intel-core-processors">Intel performance guide</a>
+that recommends alignment of memory to match SIMD register width.
+The specific padding length was chosen because it matches the largest known
+SIMD instruction registers available as of April 2016 (Intel AVX-512).</p>
+<p>The recommended padding of 64 bytes allows for using <a class="reference external" href="https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-introduction-to-the-simd-data-layout-templates">SIMD</a> instructions
 consistently in loops without additional conditional checks.
 This should allow for simpler, efficient and CPU cache-friendly code.
-The specific padding length was chosen because it matches the largest known
-SIMD instruction registers available as of April 2016 (Intel AVX-512). In other
+In other
 words, we can load the entire 64-byte buffer into a 512-bit wide SIMD register
 and get data-level parallelism on all the columnar values packed into the 64-byte
 buffer. Guaranteed padding can also allow certain compilers
@@ -339,9 +348,8 @@ length.</p>
 <h2>Null bitmaps<a class="headerlink" href="#null-bitmaps" title="Permalink to this headline">¶</a></h2>
 <p>Any relative type can have null value slots, whether primitive or nested type.</p>
 <p>An array with nulls must have a contiguous memory buffer, known as the null (or
-validity) bitmap, whose length is a multiple of 64 bytes (as discussed above)
-and large enough to have at least 1 bit for each array
-slot.</p>
+validity) bitmap, whose length is a multiple of 8 bytes (64 bytes recommended)
+and large enough to have at least 1 bit for each array slot.</p>
 <p>Whether any array slot is valid (non-null) is encoded in the respective bits of
 this bitmap. A 1 (set bit) for index <code class="docutils literal notranslate"><span class="pre">j</span></code> indicates that the value is not null,
 while a 0 (bit not set) indicates that it is null. Bitmaps are to be
@@ -485,7 +493,7 @@ logical type.</p>
 <div class="section" id="example-layout-list-list-byte">
 <h3>Example Layout: <code class="docutils literal notranslate"><span class="pre">List&lt;List&lt;byte&gt;&gt;</span></code><a class="headerlink" href="#example-layout-list-list-byte" title="Permalink to this headline">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">[[[1,</span> <span class="pre">2],</span> <span class="pre">[3,</span> <span class="pre">4]],</span> <span class="pre">[[5,</span> <span class="pre">6,</span> <span class="pre">7],</span> <span class="pre">null,</span> <span class="pre">[8]],</span> <span class="pre">[[9,</span> <span class="pre">10]]]</span></code></p>
-<p>will be be represented as follows:</p>
+<p>will be represented as follows:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>* Length 3
 * Nulls count: 0
 * Null bitmap buffer: Not required
@@ -518,6 +526,7 @@ logical type.</p>
       | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 | unspecified |
 </pre></div>
 </div>
+<p>Note that while the inner offsets buffer encodes the start position in the inner values array, the outer offsets buffer encodes the start position of corresponding outer element in the inner offsets buffer.</p>
 </div>
 </div>
 <div class="section" id="struct-type">
@@ -822,7 +831,7 @@ it must send at least one DictionaryBatch for this id.</p>
         <a href="Metadata.html" class="btn btn-neutral float-right" title="Metadata: Logical types, schemas, data headers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="Guidelines.html" class="btn btn-neutral" title="Implementation guidelines" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="Guidelines.html" class="btn btn-neutral float-left" title="Implementation guidelines" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -848,26 +857,16 @@ it must send at least one DictionaryBatch for this id.</p>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
   </script>
+
+  
+  
+    
+  
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
