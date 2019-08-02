@@ -106,8 +106,8 @@ mistake. This is a consequence of the support for zero-copy reads (the savings
 largely come from the lack of memory movement).
 
 <div align="center">
-<img src="{{ site.base-url }}/assets/fast_python_serialization_with_ray_and_arrow/speedups0.png" width="365" height="255">
-<img src="{{ site.base-url }}/assets/fast_python_serialization_with_ray_and_arrow/speedups1.png" width="365" height="255">
+<img src="{{ site.baseurl }}/assets/fast_python_serialization_with_ray_and_arrow/speedups0.png" width="365" height="255">
+<img src="{{ site.baseurl }}/assets/fast_python_serialization_with_ray_and_arrow/speedups1.png" width="365" height="255">
 </div>
 
 Note that the biggest wins are with deserialization. The speedups here are
@@ -123,8 +123,8 @@ deserialization the bottleneck.
 cannot take advantage of shared memory, the results are comparable to pickle.
 
 <div align="center">
-<img src="{{ site.base-url }}/assets/fast_python_serialization_with_ray_and_arrow/speedups2.png" width="365" height="255">
-<img src="{{ site.base-url }}/assets/fast_python_serialization_with_ray_and_arrow/speedups3.png" width="365" height="255">
+<img src="{{ site.baseurl }}/assets/fast_python_serialization_with_ray_and_arrow/speedups2.png" width="365" height="255">
+<img src="{{ site.baseurl }}/assets/fast_python_serialization_with_ray_and_arrow/speedups3.png" width="365" height="255">
 </div>
 
 These are just a few examples of interesting Python objects. The most important
@@ -194,7 +194,7 @@ and can be efficiently shared and accessed using shared memory.
 Note that the actual object would be laid out in memory as shown below.
 
 <div align="center">
-<img src="{{ site.base-url }}/assets/fast_python_serialization_with_ray_and_arrow/python_object.png" width="600">
+<img src="{{ site.baseurl }}/assets/fast_python_serialization_with_ray_and_arrow/python_object.png" width="600">
 </div>
 <div><i>The layout of a Python object in the heap. Each box is allocated in a
 different memory region, and arrows between boxes represent pointers.</i></div>
@@ -203,7 +203,7 @@ different memory region, and arrows between boxes represent pointers.</i></div>
 The Arrow serialized representation would be as follows.
 
 <div align="center">
-<img src="{{ site.base-url }}/assets/fast_python_serialization_with_ray_and_arrow/arrow_object.png" width="400">
+<img src="{{ site.baseurl }}/assets/fast_python_serialization_with_ray_and_arrow/arrow_object.png" width="400">
 </div>
 <div><i>The memory layout of the Arrow-serialized object.</i></div>
 <br />
