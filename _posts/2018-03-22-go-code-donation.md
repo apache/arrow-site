@@ -52,7 +52,7 @@ instruction sets. We are looking forward to working more closely with the Go
 community on solving in-memory analytics and data interoperability problems.
 
 <div align="center">
-<img src="{{ site.base-url }}/img/native_go_implementation.png"
+<img src="{{ site.baseurl }}/img/native_go_implementation.png"
      alt="Apache Arrow implementations and bindings"
      width="60%" class="img-responsive">
 </div>
