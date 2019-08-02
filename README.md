@@ -21,10 +21,7 @@
 
 ## Overview
 
-Site content is maintained in the main Arrow repository, mostly in markdown
-format. [Jekyll](https://jekyllrb.com/) is used to generate HTML files that can
-then be committed to the [arrow-site](https://github.com/apache/arrow-site)
-repository.
+[Jekyll](https://jekyllrb.com/) is used to generate HTML files from the markdown + templates in this repository. The built version of the site is kept on the `asf-site` branch, which gets deployed to https://arrow.apache.org.
 
 ## Adding Content
 
@@ -47,14 +44,6 @@ such cases the following configuration option may help:
 bundle config build.nokogiri --use-system-libraries
 ```
 
-If you are planning to publish the website, you must clone the arrow-site git
-repository. Run this command from the `site` directory so that `asf-site` is a
-subdirectory of `site`.
-
-```shell
-git clone --branch=asf-site https://github.com/apache/arrow-site.git asf-site
-```
-
 ## Previewing the site
 
 From the `site` directory, run the following to generate HTML files and run the
@@ -64,10 +53,26 @@ web site locally.
 bundle exec jekyll serve
 ```
 
+If you're working on a fork of `apache/arrow-site`, you can get a development version of the site built off of your `master` branch published using GitHub Pages and Travis-CI. There are a couple of quick steps to enable this:
+
+1. Create a `gh-pages` branch on your fork, based on the `asf-site` branch (`git checkout asf-site && git checkout -b gh-pages && git push origin gh-pages`)
+2. In the settings for your fork (https://github.com/$YOU/arrow-site/settings), turn on GitHub Pages and set it to the gh-pages branch
+3. Go to https://travis-ci.org/account/repositories and enable Travis builds on your fork
+4. Go to https://github.com/settings/tokens and create a GitHub personal access token with `public_repo` scope
+5. In the settings in Travis for your fork (https://travis-ci.org/$YOU/arrow-site/settings), add an environment variable called GITHUB_PAT, using the token you just created. To keep the token value secret, **do not toggle on "Display value in build log"** (i.e. the default is secret).
+
+After doing this, commits to the master branch of your fork will be automatically built and published to https://$YOU.github.io/arrow-site/. This can help Arrow committers preview your changes more easily before accepting patches. 
+
 ## Publishing
 
-After following the above instructions, run the following commands from the
-`site` directory:
+Publishing the site happens automatically on commits to the `master` branch on `apache/arrow-site`. Alternatively, to build and publish locally, clone the `arrow-site`
+repository again as a subdirectory:
+
+```shell
+git clone --branch=asf-site https://github.com/apache/arrow-site.git asf-site
+```
+
+To build and copy the contents of the built site to that second clone,
 
 ```shell
 JEKYLL_ENV=production bundle exec jekyll build
@@ -84,12 +89,12 @@ git push
 
 ### Updating Code Documentation
 
-To update the documentation, run the script `./dev/gen_apidocs.sh`. This script
+To update the documentation, you can run the script `./dev/gen_apidocs.sh` in the `apache/arrow` repository. This script
 will run the code documentation tools in a fixed environment.
 
 #### C (GLib)
 
-First, build Apache Arrow C++ and Apache Arrow GLib.
+First, build Apache Arrow C++ and Apache Arrow GLib. This assumes that you have checkouts your forks of `arrow` and `arrow-site` alongside each other in your file system.
 
 ```
 mkdir -p ../cpp/build
@@ -103,7 +108,7 @@ cd ../../c_glib
   --with-arrow-cpp-build-type=debug \
   --enable-gtk-doc
 LD_LIBRARY_PATH=$PWD/../cpp/build/debug make GTK_DOC_V_XREF=": "
-rsync -r doc/reference/html/ ../site/asf-site/docs/c_glib/
+rsync -r doc/reference/html/ ../../arrow-site/asf-site/docs/c_glib/
 ```
 
 #### Javascript
@@ -111,7 +116,7 @@ rsync -r doc/reference/html/ ../site/asf-site/docs/c_glib/
 ```
 cd ../js
 npm run doc
-rsync -r doc/ ../site/asf-site/docs/js
+rsync -r doc/ ../../arrow-site/asf-site/docs/js
 ```
 
-Then add/commit/push from the site/asf-site git checkout.
+Then add/commit/push from the `asf-site/` git checkout.
