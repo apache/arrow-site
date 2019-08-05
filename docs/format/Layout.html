@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Physical memory layout &mdash; Apache Arrow v0.13.0</title>
+  <title>Physical memory layout &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.13.0
+                0.14.2.dev0+g5f564424c.d20190805
               </div>
             
           
@@ -109,8 +109,16 @@
 <li class="toctree-l3"><a class="reference internal" href="#example-layout-list-list-byte">Example Layout: <code class="docutils literal notranslate"><span class="pre">List&lt;List&lt;byte&gt;&gt;</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#fixed-size-list-type">Fixed Size List type</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-layout-fixedsizelist-byte-4-array">Example Layout: <code class="docutils literal notranslate"><span class="pre">FixedSizeList&lt;byte&gt;[4]</span></code> Array</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#struct-type">Struct type</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#example-layout-struct-list-char-int32">Example Layout: <code class="docutils literal notranslate"><span class="pre">Struct&lt;List&lt;char&gt;,</span> <span class="pre">Int32&gt;</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#map-type">Map type</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-layout-map-k-i-array">Example Layout: <code class="docutils literal notranslate"><span class="pre">Map&lt;K,</span> <span class="pre">I&gt;</span></code> Array</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#dense-union-type">Dense union type</a><ul>
@@ -127,6 +135,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="IPC.html">Interprocess messaging / communication (IPC)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Flight.html">Arrow Flight RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
@@ -139,6 +148,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/documentation.html">Building the Documentation</a></li>
 </ul>
 
@@ -211,86 +221,86 @@
 <p>Since different projects have used different words to describe various
 concepts, here is a small glossary to help disambiguate.</p>
 <ul class="simple">
-<li>Array: a sequence of values with known length all having the same type.</li>
-<li>Slot or array slot: a single logical value in an array of some particular data type</li>
-<li>Contiguous memory region: a sequential virtual address space with a given
+<li><p>Array: a sequence of values with known length all having the same type.</p></li>
+<li><p>Slot or array slot: a single logical value in an array of some particular data type</p></li>
+<li><p>Contiguous memory region: a sequential virtual address space with a given
 length. Any byte can be reached via a single pointer offset less than the
-region’s length.</li>
-<li>Contiguous memory buffer: A contiguous memory region that stores
-a multi-value component of an Array.  Sometimes referred to as just “buffer”.</li>
-<li>Primitive type: a data type that occupies a fixed-size memory slot specified
-in bit width or byte width</li>
-<li>Nested or parametric type: a data type whose full structure depends on one or
+region’s length.</p></li>
+<li><p>Contiguous memory buffer: A contiguous memory region that stores
+a multi-value component of an Array.  Sometimes referred to as just “buffer”.</p></li>
+<li><p>Primitive type: a data type that occupies a fixed-size memory slot specified
+in bit width or byte width</p></li>
+<li><p>Nested or parametric type: a data type whose full structure depends on one or
 more other child relative types. Two fully-specified nested types are equal
 if and only if their child types are equal. For example, <code class="docutils literal notranslate"><span class="pre">List&lt;U&gt;</span></code> is distinct
-from <code class="docutils literal notranslate"><span class="pre">List&lt;V&gt;</span></code> iff U and V are different relative types.</li>
-<li>Relative type or simply type (unqualified): either a specific primitive type
+from <code class="docutils literal notranslate"><span class="pre">List&lt;V&gt;</span></code> iff U and V are different relative types.</p></li>
+<li><p>Relative type or simply type (unqualified): either a specific primitive type
 or a fully-specified nested type. When we say slot we mean a relative type
-value, not necessarily any physical storage region.</li>
-<li>Logical type: A data type that is implemented using some relative (physical)
+value, not necessarily any physical storage region.</p></li>
+<li><p>Logical type: A data type that is implemented using some relative (physical)
 type. For example, Decimal values are stored as 16 bytes in a fixed byte
-size array. Similarly, strings can be stored as <code class="docutils literal notranslate"><span class="pre">List&lt;1-byte&gt;</span></code>.</li>
-<li>Parent and child arrays: names to express relationships between physical
+size array. Similarly, strings can be stored as <code class="docutils literal notranslate"><span class="pre">List&lt;1-byte&gt;</span></code>.</p></li>
+<li><p>Parent and child arrays: names to express relationships between physical
 value arrays in a nested type structure. For example, a <code class="docutils literal notranslate"><span class="pre">List&lt;T&gt;</span></code>-type parent
-array has a T-type array as its child (see more on lists below).</li>
-<li>Leaf node or leaf: A primitive value array that may or may not be a child
-array of some array with a nested type.</li>
+array has a T-type array as its child (see more on lists below).</p></li>
+<li><p>Leaf node or leaf: A primitive value array that may or may not be a child
+array of some array with a nested type.</p></li>
 </ul>
 </div>
 <div class="section" id="requirements-goals-and-non-goals">
 <h2>Requirements, goals, and non-goals<a class="headerlink" href="#requirements-goals-and-non-goals" title="Permalink to this headline">¶</a></h2>
 <p>Base requirements</p>
 <ul class="simple">
-<li>A physical memory layout enabling zero-deserialization data interchange
+<li><p>A physical memory layout enabling zero-deserialization data interchange
 amongst a variety of systems handling flat and nested columnar data, including
 such systems as Spark, Drill, Impala, Kudu, Ibis, ODBC protocols, and
-proprietary systems that utilize the open source components.</li>
-<li>All array slots are accessible in constant time, with complexity growing
-linearly in the nesting level</li>
-<li>Capable of representing fully-materialized and decoded / decompressed <a class="reference external" href="https://parquet.apache.org/documentation/latest/">Parquet</a>
-data</li>
-<li>It is required to have all the contiguous memory buffers in an IPC payload
+proprietary systems that utilize the open source components.</p></li>
+<li><p>All array slots are accessible in constant time, with complexity growing
+linearly in the nesting level</p></li>
+<li><p>Capable of representing fully-materialized and decoded / decompressed <a class="reference external" href="https://parquet.apache.org/documentation/latest/">Parquet</a>
+data</p></li>
+<li><p>It is required to have all the contiguous memory buffers in an IPC payload
 aligned at 8-byte boundaries. In other words, each buffer must start at
 an aligned 8-byte offset. Additionally, each buffer should be padded to a multiple
-of 8 bytes.</li>
-<li>For performance reasons it <strong>preferred/recommended</strong> to align buffers to a
+of 8 bytes.</p></li>
+<li><p>For performance reasons it <strong>preferred/recommended</strong> to align buffers to a
 64-byte boundary and pad to a multiple of 64 bytes, but this is not absolutely
-necessary.  The rationale is discussed in more details below.</li>
-<li>Any relative type can have null slots</li>
-<li>Arrays are immutable once created. Implementations can provide APIs to mutate
+necessary.  The rationale is discussed in more details below.</p></li>
+<li><p>Any relative type can have null slots</p></li>
+<li><p>Arrays are immutable once created. Implementations can provide APIs to mutate
 an array, but applying mutations will require a new array data structure to
-be built.</li>
-<li>Arrays are relocatable (e.g. for RPC/transient storage) without pointer
+be built.</p></li>
+<li><p>Arrays are relocatable (e.g. for RPC/transient storage) without pointer
 swizzling. Another way of putting this is that contiguous memory regions can
 be migrated to a different address space (e.g. via a memcpy-type of
-operation) without altering their contents.</li>
+operation) without altering their contents.</p></li>
 </ul>
 </div>
 <div class="section" id="goals-for-this-document">
 <h2>Goals (for this document)<a class="headerlink" href="#goals-for-this-document" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>To describe relative types (physical value types and a preliminary set of
-nested types) sufficient for an unambiguous implementation</li>
-<li>Memory layout and random access patterns for each relative type</li>
-<li>Null value representation</li>
+<li><p>To describe relative types (physical value types and a preliminary set of
+nested types) sufficient for an unambiguous implementation</p></li>
+<li><p>Memory layout and random access patterns for each relative type</p></li>
+<li><p>Null value representation</p></li>
 </ul>
 </div>
 <div class="section" id="non-goals-for-this-document">
 <h2>Non-goals (for this document)<a class="headerlink" href="#non-goals-for-this-document" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>To enumerate or specify logical types that can be implemented as primitive
+<li><p>To enumerate or specify logical types that can be implemented as primitive
 (fixed-width) value types. For example: signed and unsigned integers,
 floating point numbers, boolean, exact decimals, date and time types,
-CHAR(K), VARCHAR(K), etc.</li>
-<li>To specify standardized metadata or a data layout for RPC or transient file
-storage.</li>
-<li>To define a selection or masking vector construct</li>
-<li>Implementation-specific details</li>
-<li>Details of a user or developer C/C++/Java API.</li>
-<li>Any “table” structure composed of named arrays each having their own type or
-any other structure that composes arrays.</li>
-<li>Any memory management or reference counting subsystem</li>
-<li>To enumerate or specify types of encodings or compression support</li>
+CHAR(K), VARCHAR(K), etc.</p></li>
+<li><p>To specify standardized metadata or a data layout for RPC or transient file
+storage.</p></li>
+<li><p>To define a selection or masking vector construct</p></li>
+<li><p>Implementation-specific details</p></li>
+<li><p>Details of a user or developer C/C++/Java API.</p></li>
+<li><p>Any “table” structure composed of named arrays each having their own type or
+any other structure that composes arrays.</p></li>
+<li><p>Any memory management or reference counting subsystem</p></li>
+<li><p>To enumerate or specify types of encodings or compression support</p></li>
 </ul>
 </div>
 <div class="section" id="byte-order-endianness">
@@ -310,8 +320,8 @@ via byte swapping.</p>
 to a length that is a multiple of 8 bytes.  The alignment requirement follows best
 practices for optimized memory access:</p>
 <ul class="simple">
-<li>Elements in numeric arrays will be guaranteed to be retrieved via aligned access.</li>
-<li>On some architectures alignment can help limit partially used cache lines.</li>
+<li><p>Elements in numeric arrays will be guaranteed to be retrieved via aligned access.</p></li>
+<li><p>On some architectures alignment can help limit partially used cache lines.</p></li>
 </ul>
 <p>The recommendation for 64 byte alignment comes from the <a class="reference external" href="https://software.intel.com/en-us/articles/practical-intel-avx-optimization-on-2nd-generation-intel-core-processors">Intel performance guide</a>
 that recommends alignment of memory to match SIMD register width.
@@ -443,10 +453,10 @@ achieved through unions, described later).</p>
 (primitive or nested).</p>
 <p>A list-array is represented by the combination of the following:</p>
 <ul class="simple">
-<li>A values array, a child array of type T. T may also be a nested type.</li>
-<li>An offsets buffer containing 32-bit signed integers with length equal to the
+<li><p>A values array, a child array of type T. T may also be a nested type.</p></li>
+<li><p>An offsets buffer containing 32-bit signed integers with length equal to the
 length of the top-level array plus one. Note that this limits the size of the
-values array to 2 <sup>31</sup> -1.</li>
+values array to 2 <sup>31</sup> -1.</p></li>
 </ul>
 <p>The offsets array encodes a start position in the values array, and the length
 of the value in each slot is computed using the first difference with the next
@@ -527,6 +537,44 @@ logical type.</p>
 </pre></div>
 </div>
 <p>Note that while the inner offsets buffer encodes the start position in the inner values array, the outer offsets buffer encodes the start position of corresponding outer element in the inner offsets buffer.</p>
+</div>
+</div>
+<div class="section" id="fixed-size-list-type">
+<h2>Fixed Size List type<a class="headerlink" href="#fixed-size-list-type" title="Permalink to this headline">¶</a></h2>
+<p>Fixed Size List is a nested type in which each array slot contains a fixed-size
+sequence of values all having the same relative type (heterogeneity can be
+achieved through unions, described later).</p>
+<p>A fixed size list type is specified like <code class="docutils literal notranslate"><span class="pre">FixedSizeList&lt;T&gt;[N]</span></code>, where <code class="docutils literal notranslate"><span class="pre">T</span></code> is
+any relative type (primitive or nested) and <code class="docutils literal notranslate"><span class="pre">N</span></code> is a 32-bit signed integer
+representing the length of the lists.</p>
+<p>A fixed size list array is represented by a values array, which is a child array of
+type T. T may also be a nested type. The value in slot <code class="docutils literal notranslate"><span class="pre">j</span></code> of a fixed size list
+array is stored in an <code class="docutils literal notranslate"><span class="pre">N</span></code>-long slice of the values array, starting at an offset of
+<code class="docutils literal notranslate"><span class="pre">j</span> <span class="pre">*</span> <span class="pre">N</span></code>.</p>
+<div class="section" id="example-layout-fixedsizelist-byte-4-array">
+<h3>Example Layout: <code class="docutils literal notranslate"><span class="pre">FixedSizeList&lt;byte&gt;[4]</span></code> Array<a class="headerlink" href="#example-layout-fixedsizelist-byte-4-array" title="Permalink to this headline">¶</a></h3>
+<p>Let’s consider an example, the type <code class="docutils literal notranslate"><span class="pre">FixedSizeList&lt;byte&gt;[4]</span></code>.</p>
+<p>For an array of length 4 with respective values:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[[</span><span class="mi">192</span><span class="p">,</span> <span class="mi">168</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">12</span><span class="p">],</span> <span class="n">null</span><span class="p">,</span> <span class="p">[</span><span class="mi">192</span><span class="p">,</span> <span class="mi">168</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">25</span><span class="p">],</span> <span class="p">[</span><span class="mi">192</span><span class="p">,</span> <span class="mi">168</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>will have the following representation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">Length</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="n">Null</span> <span class="n">count</span><span class="p">:</span> <span class="mi">1</span>
+<span class="o">*</span> <span class="n">Null</span> <span class="n">bitmap</span> <span class="n">buffer</span><span class="p">:</span>
+
+  <span class="o">|</span> <span class="n">Byte</span> <span class="mi">0</span> <span class="p">(</span><span class="n">validity</span> <span class="n">bitmap</span><span class="p">)</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">1</span><span class="o">-</span><span class="mi">63</span>            <span class="o">|</span>
+  <span class="o">|--------------------------|-----------------------|</span>
+  <span class="o">|</span> <span class="mi">00001101</span>                 <span class="o">|</span> <span class="mi">0</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span>           <span class="o">|</span>
+
+<span class="o">*</span> <span class="n">Values</span> <span class="n">array</span> <span class="p">(</span><span class="n">byte</span> <span class="n">array</span><span class="p">):</span>
+  <span class="o">*</span> <span class="n">Length</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span>  <span class="n">Null</span> <span class="n">count</span><span class="p">:</span> <span class="mi">0</span>
+  <span class="o">*</span> <span class="n">Null</span> <span class="n">bitmap</span> <span class="n">buffer</span><span class="p">:</span> <span class="n">Not</span> <span class="n">required</span>
+
+    <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span>       <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span>   <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">8</span><span class="o">-</span><span class="mi">15</span>                      <span class="o">|</span>
+    <span class="o">|-----------------|-------------|---------------------------------|</span>
+    <span class="o">|</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">168</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">12</span> <span class="o">|</span> <span class="n">unspecified</span> <span class="o">|</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">168</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">168</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span> <span class="o">|</span>
+</pre></div>
+</div>
 </div>
 </div>
 <div class="section" id="struct-type">
@@ -612,6 +660,85 @@ null bitmap.  However, when treated independently corresponding
 values of the children array will be non-null.</p>
 </div>
 </div>
+<div class="section" id="map-type">
+<h2>Map type<a class="headerlink" href="#map-type" title="Permalink to this headline">¶</a></h2>
+<p>Map is a nested type in which each array slot contains a variable size sequence
+of key-item pairs.</p>
+<p>A map type is specified like <code class="docutils literal notranslate"><span class="pre">Map&lt;K,</span> <span class="pre">I&gt;</span></code>, where <code class="docutils literal notranslate"><span class="pre">K</span></code> and <code class="docutils literal notranslate"><span class="pre">I</span></code> are
+any relative type (primitive or nested) and represent the key and item types
+respectively.</p>
+<p>A map array is represented by the combination of the following:</p>
+<ul class="simple">
+<li><p>A child array (of type <code class="docutils literal notranslate"><span class="pre">Struct&lt;K,</span> <span class="pre">I&gt;</span></code>) containing key item pairs. This has
+child arrays:
+* A keys array of type <code class="docutils literal notranslate"><span class="pre">K</span></code>. This array may not contain nulls.
+* An items array of type <code class="docutils literal notranslate"><span class="pre">I</span></code>.</p></li>
+<li><p>An offsets buffer containing 32-bit signed integers with length equal to the
+length of the top-level array plus one. Note that this limits the size of the
+child arrays to 2 <sup>31</sup> -1.</p></li>
+</ul>
+<p>The offsets array encodes a start position in the child arrays, and the length
+of the map in each slot is computed using the first difference with the next
+element in the offsets array. (Equivalent offsets layout to <code class="docutils literal notranslate"><span class="pre">List&lt;T&gt;</span></code>).
+Each slice of the child arrays delimited by the offsets array represent a set
+of key item pairs in the corresponding slot of the parent map array.</p>
+<div class="section" id="example-layout-map-k-i-array">
+<h3>Example Layout: <code class="docutils literal notranslate"><span class="pre">Map&lt;K,</span> <span class="pre">I&gt;</span></code> Array<a class="headerlink" href="#example-layout-map-k-i-array" title="Permalink to this headline">¶</a></h3>
+<p>Let’s consider an example, the type <code class="docutils literal notranslate"><span class="pre">Map&lt;String,</span> <span class="pre">Int32&gt;</span></code>.</p>
+<p>For an array of length 4 with respective values:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;joe&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span> <span class="n">null</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;mark&#39;</span><span class="p">:</span> <span class="n">null</span><span class="p">,</span> <span class="s1">&#39;cap&#39;</span><span class="p">:</span> <span class="mi">8</span><span class="p">},</span> <span class="p">{}]</span>
+</pre></div>
+</div>
+<p>will have the following representation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>* Length: 4, Null count: 1
+* Null bitmap buffer:
+
+  | Byte 0 (validity bitmap) | Bytes 1-63            |
+  |--------------------------|-----------------------|
+  | 00001101                 | 0 (padding)           |
+
+* Offsets buffer (int32):
+
+  | Bytes 0-19     |
+  |----------------|
+  | 0, 1, 1, 3, 3  |
+
+* &#39;pairs&#39; array (`Struct&lt;String, Int32&gt;`):
+  * Length: 3, Null count: 0
+  * Null bitmap buffer: Not required
+
+  * &#39;keys&#39; array (`String`):
+    * Length: 3, Null count: 0
+    * Null bitmap buffer: Not required
+    * Offsets buffer (int32):
+
+      | Bytes 0-15   |
+      |--------------|
+      | 0, 3, 7, 10  |
+
+     * Values buffer:
+
+      | Bytes 0-10     |
+      |----------------|
+      | joemarkcap     |
+
+  * &#39;items&#39; array (`Int32`):
+    * Length: 3, Null count: 1
+    * Null bitmap buffer:
+
+      | Byte 0 (validity bitmap) | Bytes 1-63            |
+      |--------------------------|-----------------------|
+      | 00000101                 | 0 (padding)           |
+
+    * Value Buffer (int32):
+
+      | Bytes 0-3   | Bytes 4-7   | Bytes 8-11  |
+      |-------------|-------------|-------------|
+      |  0          | unspecified |  8          |
+</pre></div>
+</div>
+</div>
+</div>
 <div class="section" id="dense-union-type">
 <h2>Dense union type<a class="headerlink" href="#dense-union-type" title="Permalink to this headline">¶</a></h2>
 <p>A dense union is semantically similar to a struct, and contains an ordered
@@ -623,13 +750,13 @@ metadata and will not affect the physical memory layout.</p>
 cases. This first, the dense union, represents a mixed-type array with 5 bytes
 of overhead for each value. Its physical layout is as follows:</p>
 <ul class="simple">
-<li>One child array for each relative type</li>
-<li>Types buffer: A buffer of 8-bit signed integers, enumerated from 0 corresponding
+<li><p>One child array for each relative type</p></li>
+<li><p>Types buffer: A buffer of 8-bit signed integers, enumerated from 0 corresponding
 to each type.  A union with more then 127 possible types can be modeled as a
-union of unions.</li>
-<li>Offsets buffer: A buffer of signed int32 values indicating the relative offset
+union of unions.</p></li>
+<li><p>Offsets buffer: A buffer of signed int32 values indicating the relative offset
 into the respective child array for the type in a given slot. The respective
-offsets for each child value array must be in order / increasing.</li>
+offsets for each child value array must be in order / increasing.</p></li>
 </ul>
 <p>Critically, the dense union allows for minimal overhead in the ubiquitous
 union-of-structs with non-overlapping-fields use case (<code class="docutils literal notranslate"><span class="pre">Union&lt;s1:</span> <span class="pre">Struct1,</span> <span class="pre">s2:</span>
@@ -690,8 +817,8 @@ the length of the union.</p>
 <p>While a sparse union may use significantly more space compared with a dense
 union, it has some advantages that may be desirable in certain use cases:</p>
 <ul class="simple">
-<li>A sparse union is more amenable to vectorized expression evaluation in some use cases.</li>
-<li>Equal-length arrays can be interpreted as a union by only defining the types array.</li>
+<li><p>A sparse union is more amenable to vectorized expression evaluation in some use cases.</p></li>
+<li><p>Equal-length arrays can be interpreted as a union by only defining the types array.</p></li>
 </ul>
 <div class="section" id="example-layout-sparseunion-u0-int32-u1-float-u2-list-char">
 <h3>Example layout: <code class="docutils literal notranslate"><span class="pre">SparseUnion&lt;u0:</span> <span class="pre">Int32,</span> <span class="pre">u1:</span> <span class="pre">Float,</span> <span class="pre">u2:</span> <span class="pre">List&lt;Char&gt;&gt;</span></code><a class="headerlink" href="#example-layout-sparseunion-u0-int32-u1-float-u2-list-char" title="Permalink to this headline">¶</a></h3>
@@ -757,7 +884,7 @@ union, it has some advantages that may be desirable in certain use cases:</p>
       * Length: 7,  Null count: 0
       * Null bitmap buffer: Not required
 
-        | Bytes 0-7  | Bytes 8-63            |
+        | Bytes 0-6  | Bytes 7-63            |
         |------------|-----------------------|
         | joemark    | unspecified (padding) |
 </pre></div>

@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.feather &mdash; Apache Arrow v0.13.0</title>
+  <title>pyarrow.feather &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
   
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.13.0
+                0.14.2.dev0+g5f564424c.d20190805
               </div>
             
           
@@ -90,6 +90,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical memory layout</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">Interprocess messaging / communication (IPC)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
@@ -102,6 +103,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../developers/cpp.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developers/documentation.html">Building the Documentation</a></li>
 </ul>
 
@@ -185,31 +187,27 @@
 <span class="c1"># specific language governing permissions and limitations</span>
 <span class="c1"># under the License.</span>
 
-<span class="kn">from</span> <span class="nn">distutils.version</span> <span class="k">import</span> <span class="n">LooseVersion</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+
 <span class="kn">import</span> <span class="nn">os</span>
 
 <span class="kn">import</span> <span class="nn">six</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 
-<span class="kn">from</span> <span class="nn">pyarrow.compat</span> <span class="k">import</span> <span class="n">pdapi</span>
+<span class="kn">from</span> <span class="nn">pyarrow.pandas_compat</span> <span class="k">import</span> <span class="n">_pandas_api</span>  <span class="c1"># noqa</span>
 <span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">FeatherError</span>  <span class="c1"># noqa</span>
 <span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">concat_tables</span>
 <span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">ext</span>
 
 
-<span class="k">try</span><span class="p">:</span>
-    <span class="n">infer_dtype</span> <span class="o">=</span> <span class="n">pdapi</span><span class="o">.</span><span class="n">infer_dtype</span>
-<span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
-    <span class="n">infer_dtype</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">infer_dtype</span>
-
-
-<span class="k">if</span> <span class="n">LooseVersion</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span> <span class="o">&lt;</span> <span class="s1">&#39;0.17.0&#39;</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;feather requires pandas &gt;= 0.17.0&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_check_pandas_version</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">_pandas_api</span><span class="o">.</span><span class="n">loose_version</span> <span class="o">&lt;</span> <span class="s1">&#39;0.17.0&#39;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;feather requires pandas &gt;= 0.17.0&quot;</span><span class="p">)</span>
 
 
 <span class="k">class</span> <span class="nc">FeatherReader</span><span class="p">(</span><span class="n">ext</span><span class="o">.</span><span class="n">FeatherReader</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
+        <span class="n">_check_pandas_version</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">source</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
 
@@ -250,12 +248,13 @@
 <span class="k">class</span> <span class="nc">FeatherWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dest</span><span class="p">):</span>
+        <span class="n">_check_pandas_version</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dest</span> <span class="o">=</span> <span class="n">dest</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="o">=</span> <span class="n">ext</span><span class="o">.</span><span class="n">FeatherWriter</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">SparseDataFrame</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">_pandas_api</span><span class="o">.</span><span class="n">pd</span><span class="o">.</span><span class="n">SparseDataFrame</span><span class="p">):</span>
             <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_dense</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
@@ -284,6 +283,7 @@
 <span class="sd">        Check that individual file schemas are all the same / compatible</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">_check_pandas_version</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">paths</span> <span class="o">=</span> <span class="n">path_or_paths</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">validate_schema</span> <span class="o">=</span> <span class="n">validate_schema</span>
 

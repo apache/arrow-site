@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Pandas Integration &mdash; Apache Arrow v0.13.0</title>
+  <title>Pandas Integration &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.13.0
+                0.14.2.dev0+g5f564424c.d20190805
               </div>
             
           
@@ -92,6 +92,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical memory layout</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">Interprocess messaging / communication (IPC)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Flight.html">Arrow Flight RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul class="current">
@@ -107,6 +108,7 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Pandas Integration</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#dataframes">DataFrames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#series">Series</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#handling-pandas-indexes">Handling pandas Indexes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#type-differences">Type differences</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#pandas-arrow-conversion">pandas -&gt; Arrow Conversion</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#arrow-pandas-conversion">Arrow -&gt; pandas Conversion</a></li>
@@ -120,6 +122,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="timestamps.html">Timestamps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="csv.html">Reading CSV files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="json.html">Reading JSON files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parquet.html">Reading and Writing the Apache Parquet Format</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cuda.html">CUDA Integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="extending.html">Using pyarrow from C++ and Cython Code</a></li>
@@ -135,6 +138,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/documentation.html">Building the Documentation</a></li>
 </ul>
 
@@ -208,8 +212,8 @@
 various conversion routines to consume pandas structures and convert back
 to them.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">While pandas uses NumPy as a backend, it has enough peculiarities
+<p class="admonition-title">Note</p>
+<p>While pandas uses NumPy as a backend, it has enough peculiarities
 (such as a different type system, and support for null values) that this
 is a separate topic from <a class="reference internal" href="numpy.html#numpy-interop"><span class="std std-ref">NumPy Integration</span></a>.</p>
 </div>
@@ -241,6 +245,9 @@ represent more data than a DataFrame, so a full conversion is not always possibl
 <span class="n">schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Schema</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>By default <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> tries to preserve and restore the <code class="docutils literal notranslate"><span class="pre">.index</span></code>
+data as accurately as possible. See the section below for more about
+this, and how to disable this logic.</p>
 </div>
 <div class="section" id="series">
 <h2>Series<a class="headerlink" href="#series" title="Permalink to this headline">¶</a></h2>
@@ -249,6 +256,27 @@ It is a vector that contains data of the same type as linear memory. You can
 convert a pandas Series to an Arrow Array using <a class="reference internal" href="generated/pyarrow.Array.html#pyarrow.Array.from_pandas" title="pyarrow.Array.from_pandas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pyarrow.Array.from_pandas()</span></code></a>.
 As Arrow Arrays are always nullable, you can supply an optional mask using
 the <code class="docutils literal notranslate"><span class="pre">mask</span></code> parameter to mark all null-entries.</p>
+</div>
+<div class="section" id="handling-pandas-indexes">
+<h2>Handling pandas Indexes<a class="headerlink" href="#handling-pandas-indexes" title="Permalink to this headline">¶</a></h2>
+<p>Methods like <a class="reference internal" href="generated/pyarrow.Table.html#pyarrow.Table.from_pandas" title="pyarrow.Table.from_pandas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pyarrow.Table.from_pandas()</span></code></a> have a
+<code class="docutils literal notranslate"><span class="pre">preserve_index</span></code> option which defines how to preserve (store) or not
+to preserve (to not store) the data in the <code class="docutils literal notranslate"><span class="pre">index</span></code> member of the
+corresponding pandas object. This data is tracked using schema-level
+metadata in the internal <code class="docutils literal notranslate"><span class="pre">arrow::Schema</span></code> object.</p>
+<p>The default of <code class="docutils literal notranslate"><span class="pre">preserve_index</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, which behaves as
+follows:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">RangeIndex</span></code> is stored as metadata-only, not requiring any extra
+storage.</p></li>
+<li><p>Other index types are stored as one or more physical data columns in
+the resulting <code class="xref py py-class docutils literal notranslate"><span class="pre">Table</span></code></p></li>
+</ul>
+<p>To not store the index at all pass <code class="docutils literal notranslate"><span class="pre">preserve_index=False</span></code>. Since
+storing a <code class="docutils literal notranslate"><span class="pre">RangeIndex</span></code> can cause issues in some limited scenarios
+(such as storing multiple DataFrame objects in a Parquet file), to
+force all index data to be serialized in the resulting table, pass
+<code class="docutils literal notranslate"><span class="pre">preserve_index=True</span></code>.</p>
 </div>
 <div class="section" id="type-differences">
 <h2>Type differences<a class="headerlink" href="#type-differences" title="Permalink to this headline">¶</a></h2>
@@ -259,86 +287,86 @@ fixed to nanosecond resolution. On the other side, Arrow might be still missing
 support for some types.</p>
 <div class="section" id="pandas-arrow-conversion">
 <h3>pandas -&gt; Arrow Conversion<a class="headerlink" href="#pandas-arrow-conversion" title="Permalink to this headline">¶</a></h3>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="48%" />
-<col width="52%" />
+<col style="width: 48%" />
+<col style="width: 52%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Source Type (pandas)</th>
-<th class="head">Destination Type (Arrow)</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Source Type (pandas)</p></th>
+<th class="head"><p>Destination Type (Arrow)</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">bool</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">BOOL</span></code></td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bool</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">BOOL</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">(u)int{8,16,32,64}</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">(U)INT{8,16,32,64}</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">(u)int{8,16,32,64}</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(U)INT{8,16,32,64}</span></code></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">float32</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">FLOAT</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">float32</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">FLOAT</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">float64</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">DOUBLE</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">float64</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DOUBLE</span></code></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">str</span></code> / <code class="docutils literal notranslate"><span class="pre">unicode</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">STRING</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">str</span></code> / <code class="docutils literal notranslate"><span class="pre">unicode</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">STRING</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pd.Categorical</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">DICTIONARY</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pd.Categorical</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DICTIONARY</span></code></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pd.Timestamp</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">TIMESTAMP(unit=ns)</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pd.Timestamp</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TIMESTAMP(unit=ns)</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">datetime.date</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">DATE</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">datetime.date</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DATE</span></code></p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section" id="arrow-pandas-conversion">
 <h3>Arrow -&gt; pandas Conversion<a class="headerlink" href="#arrow-pandas-conversion" title="Permalink to this headline">¶</a></h3>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="40%" />
-<col width="60%" />
+<col style="width: 40%" />
+<col style="width: 60%" />
 </colgroup>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Source Type (Arrow)</th>
-<th class="head">Destination Type (pandas)</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Source Type (Arrow)</p></th>
+<th class="head"><p>Destination Type (pandas)</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">BOOL</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">bool</span></code></td>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">BOOL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">BOOL</span></code> <em>with nulls</em></td>
-<td><code class="docutils literal notranslate"><span class="pre">object</span></code> (with values <code class="docutils literal notranslate"><span class="pre">True</span></code>, <code class="docutils literal notranslate"><span class="pre">False</span></code>, <code class="docutils literal notranslate"><span class="pre">None</span></code>)</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">BOOL</span></code> <em>with nulls</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">object</span></code> (with values <code class="docutils literal notranslate"><span class="pre">True</span></code>, <code class="docutils literal notranslate"><span class="pre">False</span></code>, <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">(U)INT{8,16,32,64}</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">(u)int{8,16,32,64}</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">(U)INT{8,16,32,64}</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(u)int{8,16,32,64}</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">(U)INT{8,16,32,64}</span></code> <em>with nulls</em></td>
-<td><code class="docutils literal notranslate"><span class="pre">float64</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">(U)INT{8,16,32,64}</span></code> <em>with nulls</em></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float64</span></code></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">FLOAT</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">float32</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FLOAT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float32</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">DOUBLE</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">float64</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DOUBLE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">float64</span></code></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">STRING</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">str</span></code></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">STRING</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">str</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">DICTIONARY</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">pd.Categorical</span></code></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DICTIONARY</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pd.Categorical</span></code></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">TIMESTAMP(unit=*)</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">pd.Timestamp</span></code> (<code class="docutils literal notranslate"><span class="pre">np.datetime64[ns]</span></code>)</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TIMESTAMP(unit=*)</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pd.Timestamp</span></code> (<code class="docutils literal notranslate"><span class="pre">np.datetime64[ns]</span></code>)</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">DATE</span></code></td>
-<td><code class="docutils literal notranslate"><span class="pre">object``(with</span> <span class="pre">``datetime.date</span></code> objects)</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DATE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">object``(with</span> <span class="pre">``datetime.date</span></code> objects)</p></td>
 </tr>
 </tbody>
 </table>
@@ -401,6 +429,12 @@ default:</p>
 <span class="gp">In [13]: </span><span class="n">s2</span><span class="o">.</span><span class="n">dtype</span>
 <span class="gh">Out[13]: </span><span class="go">dtype(&#39;&lt;M8[ns]&#39;)</span>
 </pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>As of Arrow <code class="docutils literal notranslate"><span class="pre">0.13</span></code> the parameter <code class="docutils literal notranslate"><span class="pre">date_as_object</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>
+by default. Older versions must pass <code class="docutils literal notranslate"><span class="pre">date_as_object=True</span></code> to
+obtain this behavior</p>
 </div>
 </div>
 <div class="section" id="time-types">
