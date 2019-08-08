@@ -132,22 +132,200 @@
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.14.0 Release
-      <a href="/blog/2019/07/02/0.14.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow R Package On CRAN
+  <a href="/blog/2019/08/08/r-package-on-cran/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        02 Jul 2019
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href=""> (apache)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    08 Aug 2019
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="http://github.com/nealrichardson">Neal Richardson (npr) </a>
+  
+</p>
+
+    <!--
+
+-->
+
+<p>We are very excited to announce that the <code class="highlighter-rouge">arrow</code> R package is now available on
+<a href="https://cran.r-project.org/">CRAN</a>.</p>
+
+<p><a href="https://arrow.apache.org/">Apache Arrow</a> is a cross-language development
+platform for in-memory data that specifies a standardized columnar memory
+format for flat and hierarchical data, organized for efficient analytic
+operations on modern hardware. The <code class="highlighter-rouge">arrow</code> package provides an R interface to
+the Arrow C++ library, including support for working with Parquet and Feather
+files, as well as lower-level access to Arrow memory and messages.</p>
+
+<p>You can install the package from CRAN with</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">install.packages</span><span class="p">(</span><span class="s2">"arrow"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>On macOS and Windows, installing a binary package from CRAN will generally
+handle Arrow’s C++ dependencies for you. However, the macOS CRAN binaries are
+unfortunately incomplete for this version, so to install 0.14.1, you’ll first
+need to use Homebrew to get the Arrow C++ library (<code class="highlighter-rouge">brew install
+apache-arrow</code>), and then from R you can <code class="highlighter-rouge">install.packages("arrow", type =
+"source")</code>.</p>
+
+<p>Windows binaries are not yet available on CRAN but should be published soon.</p>
+
+<p>On Linux, you’ll need to first install the C++ library. See the <a href="https://arrow.apache.org/install/">Arrow project
+installation page</a> to find pre-compiled
+binary packages for some common Linux distributions, including Debian, Ubuntu,
+and CentOS. You’ll need to install <code class="highlighter-rouge">libparquet-dev</code> on Debian and Ubuntu, or
+<code class="highlighter-rouge">parquet-devel</code> on CentOS. This will also automatically install the Arrow C++
+library as a dependency. Other Linux distributions must install the C++ library
+from source.</p>
+
+<p>If you install the <code class="highlighter-rouge">arrow</code> R package from source and the C++ library is not
+found, the R package functions will notify you that Arrow is not
+available. Call</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">arrow</span><span class="o">::</span><span class="n">install_arrow</span><span class="p">()</span><span class="w">
+</span></code></pre></div></div>
+
+<p>for version- and platform-specific guidance on installing the Arrow C++
+library.</p>
+
+<h2 id="parquet-files">Parquet files</h2>
+
+<p>This release introduces basic read and write support for the <a href="https://parquet.apache.org/">Apache
+Parquet</a> columnar data file format. Prior to this
+release, options for accessing Parquet data in R were limited; the most common
+recommendation was to use Apache Spark. The <code class="highlighter-rouge">arrow</code> package greatly simplifies
+this access and lets you go from a Parquet file to a <code class="highlighter-rouge">data.frame</code> and back
+easily, without having to set up a database.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">)</span><span class="w">
+</span><span class="n">df</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">"path/to/file.parquet"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>This function, along with the other readers in the package, takes an optional
+<code class="highlighter-rouge">col_select</code> argument, inspired by the
+<a href="https://vroom.r-lib.org/reference/vroom.html"><code class="highlighter-rouge">vroom</code></a> package. This argument
+lets you use the <a href="https://tidyselect.r-lib.org/reference/select_helpers.html">“tidyselect” helper
+functions</a>, as you
+can do in <code class="highlighter-rouge">dplyr::select()</code>, to specify that you only want to keep certain
+columns. By narrowing your selection at read time, you can load a <code class="highlighter-rouge">data.frame</code>
+with less memory overhead.</p>
+
+<p>For example, suppose you had written the <code class="highlighter-rouge">iris</code> dataset to Parquet. You could
+read a <code class="highlighter-rouge">data.frame</code> with only the columns <code class="highlighter-rouge">c("Sepal.Length", "Sepal.Width")</code> by
+doing</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">df</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">"iris.parquet"</span><span class="p">,</span><span class="w"> </span><span class="n">col_select</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">starts_with</span><span class="p">(</span><span class="s2">"Sepal"</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Just as you can read, you can write Parquet files:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">write_parquet</span><span class="p">(</span><span class="n">df</span><span class="p">,</span><span class="w"> </span><span class="s2">"path/to/different_file.parquet"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Note that this read and write support for Parquet files in R is in its early
+stages of development. The Python Arrow library
+(<a href="https://arrow.apache.org/docs/python/">pyarrow</a>) still has much richer
+support for Parquet files, including working with multi-file datasets. We
+intend to reach feature equivalency between the R and Python packages in the
+future.</p>
+
+<h2 id="feather-files">Feather files</h2>
+
+<p>This release also includes a faster and more robust implementation of the
+Feather file format, providing <code class="highlighter-rouge">read_feather()</code> and
+<code class="highlighter-rouge">write_feather()</code>. <a href="https://github.com/wesm/feather">Feather</a> was one of the
+initial applications of Apache Arrow for Python and R, providing an efficient,
+common file format language-agnostic data frame storage, along with
+implementations in R and Python.</p>
+
+<p>As Arrow progressed, development of Feather moved to the
+<a href="https://github.com/apache/arrow"><code class="highlighter-rouge">apache/arrow</code></a> project, and for the last two
+years, the Python implementation of Feather has just been a wrapper around
+<code class="highlighter-rouge">pyarrow</code>. This meant that as Arrow progressed and bugs were fixed, the Python
+version of Feather got the improvements but sadly R did not.</p>
+
+<p>With this release, the R implementation of Feather catches up and now depends
+on the same underlying C++ library as the Python version does. This should
+result in more reliable and consistent behavior across the two languages, as
+well as <a href="https://wesmckinney.com/blog/feather-arrow-future/">improved
+performance</a>.</p>
+
+<p>We encourage all R users of <code class="highlighter-rouge">feather</code> to switch to using
+<code class="highlighter-rouge">arrow::read_feather()</code> and <code class="highlighter-rouge">arrow::write_feather()</code>.</p>
+
+<p>Note that both Feather and Parquet are columnar data formats that allow sharing
+data frames across R, Pandas, and other tools. When should you use Feather and
+when should you use Parquet? Parquet balances space-efficiency with
+deserialization costs, making it an ideal choice for remote storage systems
+like HDFS or Amazon S3. Feather is designed for fast local reads, particularly
+with solid-state drives, and is not intended for use with remote storage
+systems. Feather files can be memory-mapped and accessed as Arrow columnar data
+in-memory without any deserialization while Parquet files always must be
+decompressed and decoded. See the <a href="https://arrow.apache.org/faq/">Arrow project
+FAQ</a> for more.</p>
+
+<h2 id="other-capabilities">Other capabilities</h2>
+
+<p>In addition to these readers and writers, the <code class="highlighter-rouge">arrow</code> package has wrappers for
+other readers in the C++ library; see <code class="highlighter-rouge">?read_csv_arrow</code> and
+<code class="highlighter-rouge">?read_json_arrow</code>. These readers are being developed to optimize for the
+memory layout of the Arrow columnar format and are not intended as a direct
+replacement for existing R CSV readers (<code class="highlighter-rouge">base::read.csv</code>, <code class="highlighter-rouge">readr::read_csv</code>,
+<code class="highlighter-rouge">data.table::fread</code>) that return an R <code class="highlighter-rouge">data.frame</code>.</p>
+
+<p>It also provides many lower-level bindings to the C++ library, which enable you
+to access and manipulate Arrow objects. You can use these to build connectors
+to other applications and services that use Arrow. One example is Spark: the
+<a href="https://spark.rstudio.com/"><code class="highlighter-rouge">sparklyr</code></a> package has support for using Arrow to
+move data to and from Spark, yielding <a href="http://arrow.apache.org/blog/2019/01/25/r-spark-improvements/">significant performance
+gains</a>.</p>
+
+<h2 id="acknowledgements">Acknowledgements</h2>
+
+<p>In addition to the work on wiring the R package up to the Arrow Parquet C++
+library, a lot of effort went into building and packaging Arrow for R users,
+ensuring its ease of installation across platforms. We’d like to thank the
+support of Jeroen Ooms, Javier Luraschi, JJ Allaire, Davis Vaughan, the CRAN
+team, and many others in the Apache Arrow community for helping us get to this
+point.</p>
+
+  </div>
+
+  
+
+  
+    
+  <div class="blog-post" style="margin-bottom: 4rem">
+    
+<h1>
+  Apache Arrow 0.14.0 Release
+  <a href="/blog/2019/07/02/0.14.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
+
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    02 Jul 2019
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://arrow.apache.org">The Apache Arrow PMC (pmc) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -439,22 +617,26 @@ needs</li>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.13.0 Release
-      <a href="/blog/2019/04/02/0.13.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.13.0 Release
+  <a href="/blog/2019/04/02/0.13.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        02 Apr 2019
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    02 Apr 2019
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -626,22 +808,26 @@ data messaging use cases</li>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Reducing Python String Memory Use in Apache Arrow 0.12
-      <a href="/blog/2019/02/05/python-string-memory-0.12/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Reducing Python String Memory Use in Apache Arrow 0.12
+  <a href="/blog/2019/02/05/python-string-memory-0.12/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        05 Feb 2019
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    05 Feb 2019
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -858,22 +1044,26 @@ popular libraries.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      DataFusion: A Rust-native Query Engine for Apache Arrow
-      <a href="/blog/2019/02/04/datafusion-donation/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  DataFusion: A Rust-native Query Engine for Apache Arrow
+  <a href="/blog/2019/02/04/datafusion-donation/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        04 Feb 2019
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="http://github.com/andygrove">Andy Grove (agrove)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    04 Feb 2019
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="http://github.com/andygrove">Andy Grove (agrove) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -979,22 +1169,26 @@ popular libraries.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Speeding up R and Apache Spark using Apache Arrow
-      <a href="/blog/2019/01/25/r-spark-improvements/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Speeding up R and Apache Spark using Apache Arrow
+  <a href="/blog/2019/01/25/r-spark-improvements/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        25 Jan 2019
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="http://github.com/andygrove">Andy Grove (javierluraschi)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    25 Jan 2019
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Javier Luraschi
+  
+</p>
+
     <!--
 
 -->
@@ -1154,22 +1348,26 @@ to the Spark, Arrow and R communities.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.12.0 Release
-      <a href="/blog/2019/01/21/0.12.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.12.0 Release
+  <a href="/blog/2019/01/21/0.12.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        21 Jan 2019
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    21 Jan 2019
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -1338,22 +1536,26 @@ the development community.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Gandiva: A LLVM-based Analytical Expression Compiler for Apache Arrow
-      <a href="/blog/2018/12/05/gandiva-donation/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Gandiva: A LLVM-based Analytical Expression Compiler for Apache Arrow
+  <a href="/blog/2018/12/05/gandiva-donation/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        05 Dec 2018
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="http://github.com/jacques-n">Jacques Nadeau (jacques)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    05 Dec 2018
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="http://github.com/jacques-n">Jacques Nadeau (jacques) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -1443,22 +1645,26 @@ following resources:</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.11.0 Release
-      <a href="/blog/2018/10/09/0.11.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.11.0 Release
+  <a href="/blog/2018/10/09/0.11.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        09 Oct 2018
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    09 Oct 2018
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -1552,22 +1758,26 @@ data access (e.g. CSV, Parquet files) in focus.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.10.0 Release
-      <a href="/blog/2018/08/07/0.10.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.10.0 Release
+  <a href="/blog/2018/08/07/0.10.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        07 Aug 2018
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    07 Aug 2018
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -1615,22 +1825,26 @@ languages.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Faster, scalable memory allocations in Apache Arrow with jemalloc
-      <a href="/blog/2018/07/20/jemalloc/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Faster, scalable memory allocations in Apache Arrow with jemalloc
+  <a href="/blog/2018/07/20/jemalloc/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        20 Jul 2018
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="http://github.com/xhochy">Uwe Korn (uwe)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    20 Jul 2018
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="http://github.com/xhochy">Uwe Korn (uwe) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -1750,22 +1964,26 @@ reallocation.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      A Native Go Library for Apache Arrow
-      <a href="/blog/2018/03/22/go-code-donation/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  A Native Go Library for Apache Arrow
+  <a href="/blog/2018/03/22/go-code-donation/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        22 Mar 2018
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="http://github.com/pmc">The Apache Arrow PMC (pmc)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    22 Mar 2018
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://arrow.apache.org">The Apache Arrow PMC (pmc) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -1822,22 +2040,26 @@ at <a href="https://arrow.apache.org">https://arrow.apache.org</a> and join the 
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.9.0 Release
-      <a href="/blog/2018/03/22/0.9.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.9.0 Release
+  <a href="/blog/2018/03/22/0.9.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        22 Mar 2018
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    22 Mar 2018
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -1917,22 +2139,26 @@ computational libraries within the project.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.8.0 Release
-      <a href="/blog/2017/12/18/0.8.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.8.0 Release
+  <a href="/blog/2017/12/18/0.8.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        18 Dec 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    18 Dec 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -2096,22 +2322,26 @@ implementations and bindings to more languages.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Improvements to Java Vector API in Apache Arrow 0.8.0
-      <a href="/blog/2017/12/18/java-vector-improvements/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Improvements to Java Vector API in Apache Arrow 0.8.0
+  <a href="/blog/2017/12/18/java-vector-improvements/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        18 Dec 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (Siddharth Teotia)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    18 Dec 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Siddharth Teotia
+  
+</p>
+
     <!--
 
 -->
@@ -2203,22 +2433,26 @@ In the new implementation, all vectors in Java are nullable in nature.</li>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Fast Python Serialization with Ray and Apache Arrow
-      <a href="/blog/2017/10/15/fast-python-serialization-with-ray-and-arrow/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Fast Python Serialization with Ray and Apache Arrow
+  <a href="/blog/2017/10/15/fast-python-serialization-with-ray-and-arrow/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        15 Oct 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (Philipp Moritz, Robert Nishihara)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    15 Oct 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Philipp Moritz, Robert Nishihara
+  
+</p>
+
     <!--
 
 -->
@@ -2501,22 +2735,26 @@ Benchmarking <code class="highlighter-rouge">ray.put</code> and <code class="hig
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.7.0 Release
-      <a href="/blog/2017/09/19/0.7.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.7.0 Release
+  <a href="/blog/2017/09/19/0.7.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        19 Sep 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    19 Sep 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -2683,22 +2921,26 @@ bindings to more languages.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.6.0 Release
-      <a href="/blog/2017/08/16/0.6.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.6.0 Release
+  <a href="/blog/2017/08/16/0.6.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        16 Aug 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    16 Aug 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -2789,22 +3031,26 @@ Java and C++. Please join the discussion there.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Plasma In-Memory Object Store
-      <a href="/blog/2017/08/08/plasma-in-memory-object-store/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Plasma In-Memory Object Store
+  <a href="/blog/2017/08/08/plasma-in-memory-object-store/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        08 Aug 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (Philipp Moritz and Robert Nishihara)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    08 Aug 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Philipp Moritz and Robert Nishihara
+  
+</p>
+
     <!--
 
 -->
@@ -2934,22 +3180,26 @@ if you are interested in getting involved with the project.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Speeding up PySpark with Apache Arrow
-      <a href="/blog/2017/07/26/spark-arrow/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Speeding up PySpark with Apache Arrow
+  <a href="/blog/2017/07/26/spark-arrow/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        26 Jul 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (BryanCutler)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    26 Jul 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    BryanCutler
+  
+</p>
+
     <!--
 
 -->
@@ -3078,22 +3328,26 @@ helped push this effort forwards.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.5.0 Release
-      <a href="/blog/2017/07/25/0.5.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.5.0 Release
+  <a href="/blog/2017/07/25/0.5.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        25 Jul 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    25 Jul 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -3185,22 +3439,26 @@ mailing list</a>. Please join the discussion there.</p>
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Connecting Relational Databases to the Apache Arrow World with turbodbc
-      <a href="/blog/2017/06/16/turbodbc-arrow/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Connecting Relational Databases to the Apache Arrow World with turbodbc
+  <a href="/blog/2017/06/16/turbodbc-arrow/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        16 Jun 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="http://github.com/MathMagique">Michael König (MathMagique)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    16 Jun 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="http://github.com/MathMagique">Michael König (MathMagique) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -3289,22 +3547,26 @@ nitty-gritty details, check out parts <a href="https://tech.blue-yonder.com/maki
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.4.1 Release
-      <a href="/blog/2017/06/14/0.4.1-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.4.1 Release
+  <a href="/blog/2017/06/14/0.4.1-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        14 Jun 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    14 Jun 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -3348,22 +3610,26 @@ conda install turbodbc -c conda-forge
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.4.0 Release
-      <a href="/blog/2017/05/23/0.4.0-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.4.0 Release
+  <a href="/blog/2017/05/23/0.4.0-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        23 May 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    23 May 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -3402,7 +3668,7 @@ defined an abstract stream reader interface, for which the current contiguous
 streaming format is one implementation:</p>
 
 <figure class="highlight"><pre><code class="language-cpp" data-lang="cpp"><span class="k">class</span> <span class="nc">RecordBatchReader</span> <span class="p">{</span>
- <span class="k">public</span><span class="o">:</span>
+ <span class="nl">public:</span>
   <span class="k">virtual</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">Schema</span><span class="o">&gt;</span> <span class="n">schema</span><span class="p">()</span> <span class="k">const</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="k">virtual</span> <span class="n">Status</span> <span class="n">GetNextRecordBatch</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">RecordBatch</span><span class="o">&gt;*</span> <span class="n">batch</span><span class="p">)</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">};</span></code></pre></figure>
@@ -3431,8 +3697,8 @@ Python wrapper objects to be constructed from C++ extension code:</p>
 
 <p>This API is intended to be usable from Cython code as well:</p>
 
-<figure class="highlight"><pre><code class="language-cython" data-lang="cython">cimport pyarrow
-pyarrow.import_pyarrow()</code></pre></figure>
+<figure class="highlight"><pre><code class="language-cython" data-lang="cython"><span class="kn">cimport</span> <span class="nn">pyarrow</span>
+<span class="n">pyarrow</span><span class="o">.</span><span class="nf">import_pyarrow</span><span class="p">()</span></code></pre></figure>
 
 <h3 id="python-wheel-installers-on-macos">Python Wheel Installers on macOS</h3>
 
@@ -3447,22 +3713,26 @@ Linux. We are working on providing binary wheel installers for Windows as well.<
   
     
   <div class="blog-post" style="margin-bottom: 4rem">
-    <h1>
-      Apache Arrow 0.3.0 Release
-      <a href="/blog/2017/05/08/0.3-release/" class="permalink" title="Permalink">∞</a>
-    </h1>
-
     
+<h1>
+  Apache Arrow 0.3.0 Release
+  <a href="/blog/2017/05/08/0.3-release/" class="permalink" title="Permalink">∞</a>
+</h1>
 
-    <p>
-      <span class="badge badge-secondary">Published</span>
-      <span class="published">
-        08 May 2017
-      </span>
-      <br />
-      <span class="badge badge-secondary">By</span>
-      <a href="https://wesmckinney.com">Wes McKinney (wesm)</a>
-    </p>
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    08 May 2017
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://wesmckinney.com">Wes McKinney (wesm) </a>
+  
+</p>
+
     <!--
 
 -->
@@ -3688,7 +3958,7 @@ instructions for getting started.</p>
 <footer class="footer">
   <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
   <p>&copy; 2016-2019 The Apache Software Foundation</p>
-  <script type="text/javascript" integrity="sha256-jSo1n9J6iIJG62OLNqTotorGW58RxIufrGAfoMmn15Y=" crossorigin="anonymous" src="/assets/main-8d2a359fd27a888246eb638b36a4e8b68ac65b9f11c48b9fac601fa0c9a7d796.js"></script>
+  <script type="text/javascript" src="/assets/main-8d2a359fd27a888246eb638b36a4e8b68ac65b9f11c48b9fac601fa0c9a7d796.js" integrity="sha256-jSo1n9J6iIJG62OLNqTotorGW58RxIufrGAfoMmn15Y=" crossorigin="anonymous"></script>
 </footer>
 
   </div>
