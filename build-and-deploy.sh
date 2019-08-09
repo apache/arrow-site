@@ -43,9 +43,10 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
     rsync -r build/ OUTPUT/
     cd OUTPUT
 
-    git add .
-    # Use `|| true` after these commands so that the build doesn't fail if
-    # there are no changes to the published site (e.g. when editing the README)
-    git commit -m "Updating built site (build ${TRAVIS_BUILD_NUMBER})" || true
-    git push origin ${TARGET_BRANCH} || true
+    if [ "$(git status --porcelain)" != "" ]; then
+        # There are changes to the built site
+        git add .
+        git commit -m "Updating built site (build ${TRAVIS_BUILD_NUMBER})"
+        git push origin ${TARGET_BRANCH}
+    fi
 fi
