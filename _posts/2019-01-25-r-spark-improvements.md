@@ -176,7 +176,7 @@ Unit: seconds
  ```
 
 <div align="center">
-<img src="{{ site.base-url }}/img/arrow-r-spark-transforming.png"
+<img src="{{ site.baseurl }}/img/arrow-r-spark-transforming.png"
      alt="Transforming data with R in Spark with and without Arrow"
      width="60%" class="img-responsive">
 </div>
