@@ -39,8 +39,7 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
         echo "Setting deploy key"
         eval $(ssh-agent -s)
         # Hack to make the key from the env var have real newlines
-        echo "${DEPLOY_KEY}" | sed -e 's/\\n/\
-/g' | ssh-add -
+        echo "${DEPLOY_KEY}" | sed -e 's/\\n/\n/g' | ssh-add -
         git clone -b ${TARGET_BRANCH} git@github.com:$TRAVIS_REPO_SLUG.git OUTPUT
     else
         echo "Using GitHub PAT"
