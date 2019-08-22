@@ -26,7 +26,7 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
         TARGET_BRANCH=gh-pages
         # You could supply an alternate BASE_URL, but that's not necessary
         # because we can infer it based on GitHub Pages conventions
-        if [ -z "${BASE_URL}" ]; then
+        if [ "${BASE_URL}" = "" ]; then
             BASE_URL=$(echo $TRAVIS_REPO_SLUG | sed -e 's@.*/@/@')
         fi
     fi
@@ -50,7 +50,7 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
         echo "Using GitHub PAT"
         git clone -b ${TARGET_BRANCH} https://${GITHUB_PAT}@github.com/$TRAVIS_REPO_SLUG.git OUTPUT
     fi
-    
+
     rsync -a --delete --exclude '/.git/' --exclude '/docs/' build/ OUTPUT/
     cd OUTPUT
 
