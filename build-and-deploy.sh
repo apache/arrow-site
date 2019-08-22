@@ -3,23 +3,11 @@ set -ev
 
 if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then
 
-    if [ -z "${GITHUB_PAT}" ] && [ -z "${DEPLOY_KEY}" ]; then
+    if [ "${GITHUB_PAT}" = "" ] && [ "${DEPLOY_KEY}" = "" ]; then
         # Don't build because we can't publish
         echo "To publish the site, you must set a GITHUB_PAT or DEPLOY_KEY at"
         echo "https://travis-ci.org/${TRAVIS_REPO_SLUG}/settings"
         exit 1
-    fi
-
-    if [ "${DEPLOY_KEY}" != "" ]; then
-        echo "Setting deploy key"
-        # Stick it in "scripts" because Jekyll ignores it
-        echo $DEPLOY_KEY > scripts/deploy_key
-        # Hack to make the key from the env var have real newlines
-        sed -i 's/\\n/\
-/g' scripts/deploy_key
-        chmod 600 scripts/deploy_key
-        eval $(ssh-agent -s)
-        ssh-add scripts/deploy_key
     fi
 
     # Set git config so that the author of the deployed site commit is the same
@@ -47,12 +35,22 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
     JEKYLL_ENV=production bundle exec jekyll build --baseurl="${BASE_URL}"
 
     # Publish
-    if [ -z "${GITHUB_PAT}" ]; then
-        echo "Cloning with deploy key"
+    if [ "${DEPLOY_KEY}" != "" ]; then
+        echo "Setting deploy key"
+        # Stick it in "scripts" because Jekyll ignores it
+        echo $DEPLOY_KEY > scripts/deploy_key
+        # Hack to make the key from the env var have real newlines
+        sed -i 's/\\n/\
+/g' scripts/deploy_key
+        chmod 600 scripts/deploy_key
+        eval $(ssh-agent -s)
+        ssh-add scripts/deploy_key
         git clone -b ${TARGET_BRANCH} git@github.com:$TRAVIS_REPO_SLUG.git OUTPUT
     else
+        echo "Using GitHub PAT"
         git clone -b ${TARGET_BRANCH} https://${GITHUB_PAT}@github.com/$TRAVIS_REPO_SLUG.git OUTPUT
     fi
+    
     rsync -a --delete --exclude '/.git/' --exclude '/docs/' build/ OUTPUT/
     cd OUTPUT
 
