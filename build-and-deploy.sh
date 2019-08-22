@@ -37,14 +37,10 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
     # Publish
     if [ "${DEPLOY_KEY}" != "" ]; then
         echo "Setting deploy key"
-        # Stick it in "scripts" because Jekyll ignores it
-        echo $DEPLOY_KEY > scripts/deploy_key
-        # Hack to make the key from the env var have real newlines
-        sed -i 's/\\n/\
-/g' scripts/deploy_key
-        chmod 600 scripts/deploy_key
         eval $(ssh-agent -s)
-        ssh-add scripts/deploy_key
+        # Hack to make the key from the env var have real newlines
+        echo "${DEPLOY_KEY}" | sed -e 's/\\n/\
+/g' | ssh-add -
         git clone -b ${TARGET_BRANCH} git@github.com:$TRAVIS_REPO_SLUG.git OUTPUT
     else
         echo "Using GitHub PAT"
