@@ -3,9 +3,9 @@ set -ev
 
 if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then
 
-    if [ -z "${GITHUB_PAT}" ]; then
+    if [ "${GITHUB_PAT}" = "" ] && [ "${DEPLOY_KEY}" = "" ]; then
         # Don't build because we can't publish
-        echo "To publish the site, you must set a GITHUB_PAT at"
+        echo "To publish the site, you must set a GITHUB_PAT or DEPLOY_KEY at"
         echo "https://travis-ci.org/${TRAVIS_REPO_SLUG}/settings"
         exit 1
     fi
@@ -26,7 +26,7 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
         TARGET_BRANCH=gh-pages
         # You could supply an alternate BASE_URL, but that's not necessary
         # because we can infer it based on GitHub Pages conventions
-        if [ -z "${BASE_URL}" ]; then
+        if [ "${BASE_URL}" = "" ]; then
             BASE_URL=$(echo $TRAVIS_REPO_SLUG | sed -e 's@.*/@/@')
         fi
     fi
@@ -35,7 +35,17 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
     JEKYLL_ENV=production bundle exec jekyll build --baseurl="${BASE_URL}"
 
     # Publish
-    git clone -b ${TARGET_BRANCH} https://${GITHUB_PAT}@github.com/$TRAVIS_REPO_SLUG.git OUTPUT
+    if [ "${DEPLOY_KEY}" != "" ]; then
+        echo "Setting deploy key"
+        eval $(ssh-agent -s)
+        # Hack to make the key from the env var have real newlines
+        echo "${DEPLOY_KEY}" | sed -e 's/\\n/\n/g' | ssh-add -
+        git clone -b ${TARGET_BRANCH} git@github.com:$TRAVIS_REPO_SLUG.git OUTPUT
+    else
+        echo "Using GitHub PAT"
+        git clone -b ${TARGET_BRANCH} https://${GITHUB_PAT}@github.com/$TRAVIS_REPO_SLUG.git OUTPUT
+    fi
+
     rsync -a --delete --exclude '/.git/' --exclude '/docs/' build/ OUTPUT/
     cd OUTPUT
 
