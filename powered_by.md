@@ -64,6 +64,9 @@ short description of your use case.
 * **[Dask][15]:** Python library for parallel and distributed execution of
   dynamic task graphs. Dask supports using pyarrow for accessing Parquet
   files
+* **[Data Preview][31]:** Data Preview is a Visual Studio Code extension 
+  for viewing text and binary data files. Data Preview uses Arrow JS API
+  for loading, transforming and saving Arrow data files and schemas.
 * **[Dremio][9]:** A self-service data platform. Dremio makes it easy for
   users to discover, curate, accelerate, and share data from any source.
   It includes a distributed SQL execution engine based on Apache Arrow.
@@ -174,3 +177,4 @@ short description of your use case.
 [28]: https://github.com/uber/petastorm
 [29]: https://www.inaccel.com/
 [30]: https://www.mathworks.com
+[31]: https://github.com/RandomFractals/vscode-data-preview
