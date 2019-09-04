@@ -1,7 +1,7 @@
 ---
 layout: post
-title: "Faster C++ Apache Parquet performance on string-heavy data coming in Apache Arrow 0.15"
-date: "2019-09-01 00:00:00 -0600"
+title: "Faster C++ Apache Parquet performance on dictionary-encoded string data coming in Apache Arrow 0.15"
+date: "2019-09-04 00:00:00 -0600"
 author: Wes McKinney
 categories: [application]
 ---
@@ -26,21 +26,15 @@ limitations under the License.
 
 We have been implementing a series of optimizations in the Apache Parquet C++
 internals to improve read and write efficiency (both performance and memory
-use) for Arrow columnar binary and string types, including native support for
+use) for Arrow columnar binary and string data, with new "native" support for
 Arrow's dictionary types. This should have a big impact on users of the C++,
 MATLAB, Python, R, and Ruby interfaces to Parquet files.
 
-We discuss the work that was done and show benchmarks comparing Arrow 0.11.0
-(released in October, 2018) with the current development version (to be
-released soon as Arrow 0.15.0).
+This post reviews work that was done and shows benchmarks comparing Arrow
+0.12.1 with the current development version (to be released soon as Arrow
+0.15.0).
 
 # Summary of work
-
-One of the challenges of developing the Parquet C++ library is that we
-maintain low-level read and write APIs that do not involve the Arrow columnar
-data structures. So we have had to take care to do Arrow-related optimizations
-without impacting non-Arrow Parquet users, which includes database systems like
-Clickhouse and Vertica.
 
 One of the largest and most complex optimizations involves encoding and
 decoding Parquet files' internal dictionary-encoded data streams to and from
@@ -62,6 +56,12 @@ Some of the particular JIRA issues related to this work include:
 - Supporting changing dictionaries ([ARROW-3144][6])
 - Internal IO optimizations and improved raw `BYTE_ARRAY` encoding performance
   ([ARROW-4398][7])
+
+One of the challenges of developing the Parquet C++ library is that we
+maintain low-level read and write APIs that do not involve the Arrow columnar
+data structures. So we have had to take care to do Arrow-related optimizations
+without impacting non-Arrow Parquet users, which includes database systems like
+Clickhouse and Vertica.
 
 # Background: how Parquet files do dictionary encoding
 
@@ -101,8 +101,8 @@ the indices would be encoded like
  bit-packed-run=[1]]
 ```
 
-The full details of the rle-bitpacking encoding are found in the Parquet
-specification.
+The full details of the rle-bitpacking encoding are found in the [Parquet
+specification][10].
 
 When writing a Parquet file, most implementations will use dictionary encoding
 to compress a column until the dictionary itself reaches a certain size
@@ -116,6 +116,8 @@ diagram:
      alt="Internal ColumnChunk structure"
      width="80%" class="img-responsive">
 </div>
+
+# Faster reading and writing of dictionary-encoded data
 
 When reading a Parquet file, the dictionary-encoded portions are usually
 materialized to their non-dictionary-encoded form, causing binary or string
@@ -144,8 +146,6 @@ We pursued several avenues to help with this:
 All of these things together have produced some excellent performance results
 that we will detail below.
 
-# Pushing Arrow columnar read and write lower in the Parquet stack
-
 The other class of optimizations we implemented was removing an abstraction
 layer between the low-level Parquet column data encoder and decoder classes and
 the Arrow columnar data structures. This involves:
@@ -160,7 +160,7 @@ dictionary-encoded data, they are still meaningful in real-world applications.
 
 # Performance Benchmarks
 
-We run some benchmarks comparing Arrow 0.11.1 with the current master
+We ran some benchmarks comparing Arrow 0.12.1 with the current master
 branch. We construct two kinds of Arrow tables with 10 columns each:
 
 * "Low cardinality" and "high cardinality" variants. The "low cardinality" case
@@ -168,7 +168,7 @@ branch. We construct two kinds of Arrow tables with 10 columns each:
   100,000 unique values
 * "Dense" (non-dictionary) and "Dictionary" variants
 
-[Click here is the full benchmark script.][11]
+[See the full benchmark script.][11]
 
 We show both single-threaded and multithreaded read performance. The test
 machine is an Intel i9-9960X using gcc 8.3.0 (on Ubuntu 18.04) with 16 physical
@@ -182,9 +182,9 @@ First, the writing benchmarks:
      width="80%" class="img-responsive">
 </div>
 
-Here we note that writing `arrow::DictionaryArray` is dramatically faster due
-to the optimizations described above. We have achieved a small improvement in
-writing dense (non-dictionary) binary arrays.
+Writing `arrow::DictionaryArray` is dramatically faster due to the
+optimizations described above. We have achieved a small improvement in writing
+dense (non-dictionary) binary arrays.
 
 Then, the reading benchmarks:
 
@@ -196,9 +196,9 @@ Then, the reading benchmarks:
 
 Here, similarly reading `DictionaryArray` directly is many times faster.
 
-In these benchmarks we note that reading the dense binary data is slower in
-master branch than in version 0.11.0, so we will need to do some profiling and
-see what we can do to bring read performance back inline. Optimizing the dense
+These benchmarks show that reading the dense binary data is slower in the
+master branch than in version 0.12.1, so we will need to do some profiling and
+see what we can do to bring read performance back in line. Optimizing the dense
 read path has not been too much of a priority relative to the dictionary read
 path in this work.
 
@@ -208,9 +208,13 @@ In addition to faster performance, reading columns as dictionary-encoded can
 yield significantly less memory use.
 
 In the `dict-random` case above, we found that the master branch uses 405 MB of
-RAM at peak while loading a 152 MB dataset. In v0.11.1, loading the same
+RAM at peak while loading a 152 MB dataset. In v0.12.1, loading the same
 Parquet file without the accelerated dictionary support uses 1.94 GB of peak
 memory while the resulting non-dictionary table occupies 1.01 GB.
+
+Note that we had a memory overuse bug in versions 0.14.0 and 0.14.1 fixed in
+ARROW-6060, so if you are hitting this bug you will want to upgrade to 0.15.0
+as soon as it comes out.
 
 # Conclusion
 
