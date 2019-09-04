@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Faster C++ Apache Parquet performance on dictionary-encoded string data coming in Apache Arrow 0.15"
-date: "2019-09-04 00:00:00 -0600"
+date: "2019-09-05 00:00:00 -0600"
 author: Wes McKinney
 categories: [application]
 ---
