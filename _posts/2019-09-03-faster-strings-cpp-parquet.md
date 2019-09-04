@@ -200,7 +200,7 @@ These benchmarks show that reading the dense binary data is slower in the
 master branch than in version 0.12.1, so we will need to do some profiling and
 see what we can do to bring read performance back in line. Optimizing the dense
 read path has not been too much of a priority relative to the dictionary read
-path in this work.
+path in this work. See [ARROW-6417][12] for some investigation and discussion.
 
 # Memory Use Improvements
 
@@ -235,3 +235,4 @@ mailing list dev@arrow.apache.org.
 [9]: https://stat.ethz.ch/R-manual/R-devel/library/base/html/factor.html
 [10]: https://github.com/apache/parquet-format/blob/master/Encodings.md
 [11]: https://gist.github.com/wesm/b4554e2d6028243a30eeed2c644a9066
+[12]: https://issues.apache.org/jira/browse/ARROW-6417
