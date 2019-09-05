@@ -46,31 +46,31 @@ detail about this below.
 Some of the particular JIRA issues related to this work include:
 
 - Vectorize comparators for computing statistics ([PARQUET-1523][1])
-- Read binary directly data directly into DictionaryBuilder<T>
+- Read binary directly data directly into dictionary builder
   ([ARROW-3769][2])
-- Writing Parquet's dictionary indices directly into DictionaryBuilder<T>
+- Writing Parquet's dictionary indices directly into dictionary builder
   ([ARROW-3772][3])
 - Write dense (non-dictionary) Arrow arrays directly into Parquet data encoders
   ([ARROW-6152][4])
-- Direct writing of arrow::DictionaryArray to Parquet column writers ([ARROW-3246][5])
+- Direct writing of `arrow::DictionaryArray` to Parquet column writers ([ARROW-3246][5])
 - Supporting changing dictionaries ([ARROW-3144][6])
 - Internal IO optimizations and improved raw `BYTE_ARRAY` encoding performance
   ([ARROW-4398][7])
 
-One of the challenges of developing the Parquet C++ library is that we
-maintain low-level read and write APIs that do not involve the Arrow columnar
-data structures. So we have had to take care to do Arrow-related optimizations
-without impacting non-Arrow Parquet users, which includes database systems like
-Clickhouse and Vertica.
+One of the challenges of developing the Parquet C++ library is that we maintain
+low-level read and write APIs that do not involve the Arrow columnar data
+structures. So we have had to take care to implement Arrow-related
+optimizations without impacting non-Arrow Parquet users, which includes
+database systems like Clickhouse and Vertica.
 
 # Background: how Parquet files do dictionary encoding
 
 Many direct and indirect users of Apache Arrow use dictionary encoding to
 improve performance and memory use on binary or string data types that include
-many repeated values. pandas users will know this as the [Categorical type][8]
-while in R such encoding is known as [`factor`][9]. In the Arrow C++ library
-and various bindings we have the `DictionaryArray` object for representing such
-data in memory.
+many repeated values. MATLAB or pandas users will know this as the Categorical
+type (see [MATLAB docs][13] or [pandas docs][8]) while in R such encoding is
+known as [`factor`][9]. In the Arrow C++ library and various bindings we have
+the `DictionaryArray` object for representing such data in memory.
 
 For example, an array such as
 
@@ -131,9 +131,8 @@ is to skip this "dense" materialization. There are several issues to deal with:
 
 We pursued several avenues to help with this:
 
-* Allowing each `arrow::DictionaryArray` to have a different dictionary
-  (before, the dictionary was part of the `DictionaryType`, which caused
-  problems)
+* Allowing each `DictionaryArray` to have a different dictionary (before, the
+  dictionary was part of the `DictionaryType`, which caused problems)
 * We enabled the Parquet dictionary indices to be directly written into an
   Arrow `DictionaryBuilder` without rehashing the data
 * When decoding a ColumnChunk, we first append the dictionary values and
@@ -141,7 +140,7 @@ We pursued several avenues to help with this:
   back" portion we use a hash table to convert those values to
   dictionary-encoded form
 * We override the "fall back" logic when writing a ColumnChunk from an
-  `arrow::DictionaryArray` so that reading such data back is more efficient
+  `DictionaryArray` so that reading such data back is more efficient
 
 All of these things together have produced some excellent performance results
 that we will detail below.
@@ -172,7 +171,8 @@ branch. We construct two kinds of Arrow tables with 10 columns each:
 
 We show both single-threaded and multithreaded read performance. The test
 machine is an Intel i9-9960X using gcc 8.3.0 (on Ubuntu 18.04) with 16 physical
-cores and 32 virtual cores.
+cores and 32 virtual cores. All time measurements are reported in seconds, but
+we are most interested in showing the relative performance.
 
 First, the writing benchmarks:
 
@@ -182,9 +182,9 @@ First, the writing benchmarks:
      width="80%" class="img-responsive">
 </div>
 
-Writing `arrow::DictionaryArray` is dramatically faster due to the
-optimizations described above. We have achieved a small improvement in writing
-dense (non-dictionary) binary arrays.
+Writing `DictionaryArray` is dramatically faster due to the optimizations
+described above. We have achieved a small improvement in writing dense
+(non-dictionary) binary arrays.
 
 Then, the reading benchmarks:
 
@@ -236,3 +236,4 @@ mailing list dev@arrow.apache.org.
 [10]: https://github.com/apache/parquet-format/blob/master/Encodings.md
 [11]: https://gist.github.com/wesm/b4554e2d6028243a30eeed2c644a9066
 [12]: https://issues.apache.org/jira/browse/ARROW-6417
+[13]: https://www.mathworks.com/help/matlab/categorical-arrays.html
