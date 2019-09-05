@@ -70,12 +70,12 @@ library.
 
 ## Parquet files
 
-This release introduces basic read and write support for the [Apache
-Parquet](https://parquet.apache.org/) columnar data file format. Prior to this
-release, options for accessing Parquet data in R were limited; the most common
-recommendation was to use Apache Spark. The `arrow` package greatly simplifies
-this access and lets you go from a Parquet file to a `data.frame` and back
-easily, without having to set up a database.
+This package introduces basic read and write support for the [Apache
+Parquet](https://parquet.apache.org/) columnar data file format. Prior to its
+availability, options for accessing Parquet data in R were limited; the most
+common recommendation was to use Apache Spark. The `arrow` package greatly
+simplifies this access and lets you go from a Parquet file to a `data.frame`
+and back easily, without having to set up a database.
 
 ```r
 library(arrow)
@@ -114,7 +114,7 @@ future.
 
 ## Feather files
 
-This release also includes a faster and more robust implementation of the
+This package also includes a faster and more robust implementation of the
 Feather file format, providing `read_feather()` and
 `write_feather()`. [Feather](https://github.com/wesm/feather) was one of the
 initial applications of Apache Arrow for Python and R, providing an efficient,
@@ -127,10 +127,10 @@ years, the Python implementation of Feather has just been a wrapper around
 `pyarrow`. This meant that as Arrow progressed and bugs were fixed, the Python
 version of Feather got the improvements but sadly R did not.
 
-With this release, the R implementation of Feather catches up and now depends
-on the same underlying C++ library as the Python version does. This should
-result in more reliable and consistent behavior across the two languages, as
-well as [improved
+With the `arrow` package, the R implementation of Feather catches up and now
+depends on the same underlying C++ library as the Python version does. This
+should result in more reliable and consistent behavior across the two
+languages, as well as [improved
 performance](https://wesmckinney.com/blog/feather-arrow-future/).
 
 We encourage all R users of `feather` to switch to using
