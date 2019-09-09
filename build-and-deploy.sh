@@ -20,6 +20,7 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
     AUTHOR_NAME=$(git log -1 --pretty=format:%an)
     git config --global user.email "${AUTHOR_EMAIL}"
     git config --global user.name "${AUTHOR_NAME}"
+    COMMIT_MESSAGE=$(git log -1 --pretty=format:%s)
 
     if [ "${TRAVIS_REPO_SLUG}" = "${UPSTREAM}" ]; then
         # Production
@@ -61,11 +62,11 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
     if [ "$(git status --porcelain)" != "" ]; then
         # There are changes to the built site
         git add .
-        git commit -m "Updating built site (build ${TRAVIS_BUILD_NUMBER})"
+        git commit -m "Build ${COMMIT_MESSAGE}"
         git push origin ${TARGET_BRANCH}
         if [ "${TRAVIS_REPO_SLUG}" = "${UPSTREAM}" ]; then
-            git remote add upstream https://github.com/${UPSTREAM}
-            hub pull-request -b upstream:asf-site --no-edit
+            UPSTREAM_ORG=$(echo $UPSTREAM | sed -e 's@/.*@@')
+            hub pull-request -b ${UPSTREAM_ORG}:asf-site -m "Publish ${COMMIT_MESSAGE}"
         fi
     else
         echo "No changes to the built site"
