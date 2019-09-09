@@ -135,6 +135,238 @@
   <div class="blog-post" style="margin-bottom: 4rem">
     
 <h1>
+  Faster C++ Apache Parquet performance on dictionary-encoded string data coming in Apache Arrow 0.15
+  <a href="/blog/2019/09/05/faster-strings-cpp-parquet/" class="permalink" title="Permalink">∞</a>
+</h1>
+
+
+
+<p>
+  <span class="badge badge-secondary">Published</span>
+  <span class="published">
+    05 Sep 2019
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Wes McKinney
+  
+</p>
+
+    <!--
+
+-->
+
+<p>We have been implementing a series of optimizations in the Apache Parquet C++
+internals to improve read and write efficiency (both performance and memory
+use) for Arrow columnar binary and string data, with new “native” support for
+Arrow’s dictionary types. This should have a big impact on users of the C++,
+MATLAB, Python, R, and Ruby interfaces to Parquet files.</p>
+
+<p>This post reviews work that was done and shows benchmarks comparing Arrow
+0.12.1 with the current development version (to be released soon as Arrow
+0.15.0).</p>
+
+<h1 id="summary-of-work">Summary of work</h1>
+
+<p>One of the largest and most complex optimizations involves encoding and
+decoding Parquet files’ internal dictionary-encoded data streams to and from
+Arrow’s in-memory dictionary-encoded <code class="highlighter-rouge">DictionaryArray</code>
+representation. Dictionary encoding is a compression strategy in Parquet, and
+there is no formal “dictionary” or “categorical” type. I will go into more
+detail about this below.</p>
+
+<p>Some of the particular JIRA issues related to this work include:</p>
+
+<ul>
+  <li>Vectorize comparators for computing statistics (<a href="https://issues.apache.org/jira/browse/PARQUET-1523">PARQUET-1523</a>)</li>
+  <li>Read binary directly data directly into dictionary builder
+(<a href="https://issues.apache.org/jira/browse/ARROW-3769">ARROW-3769</a>)</li>
+  <li>Writing Parquet’s dictionary indices directly into dictionary builder
+(<a href="https://issues.apache.org/jira/browse/ARROW-3772">ARROW-3772</a>)</li>
+  <li>Write dense (non-dictionary) Arrow arrays directly into Parquet data encoders
+(<a href="https://issues.apache.org/jira/browse/ARROW-6152">ARROW-6152</a>)</li>
+  <li>Direct writing of <code class="highlighter-rouge">arrow::DictionaryArray</code> to Parquet column writers (<a href="https://issues.apache.org/jira/browse/ARROW-3246">ARROW-3246</a>)</li>
+  <li>Supporting changing dictionaries (<a href="https://issues.apache.org/jira/browse/ARROW-3144">ARROW-3144</a>)</li>
+  <li>Internal IO optimizations and improved raw <code class="highlighter-rouge">BYTE_ARRAY</code> encoding performance
+(<a href="https://issues.apache.org/jira/browse/ARROW-4398">ARROW-4398</a>)</li>
+</ul>
+
+<p>One of the challenges of developing the Parquet C++ library is that we maintain
+low-level read and write APIs that do not involve the Arrow columnar data
+structures. So we have had to take care to implement Arrow-related
+optimizations without impacting non-Arrow Parquet users, which includes
+database systems like Clickhouse and Vertica.</p>
+
+<h1 id="background-how-parquet-files-do-dictionary-encoding">Background: how Parquet files do dictionary encoding</h1>
+
+<p>Many direct and indirect users of Apache Arrow use dictionary encoding to
+improve performance and memory use on binary or string data types that include
+many repeated values. MATLAB or pandas users will know this as the Categorical
+type (see <a href="https://www.mathworks.com/help/matlab/categorical-arrays.html">MATLAB docs</a> or <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html">pandas docs</a>) while in R such encoding is
+known as <a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/factor.html"><code class="highlighter-rouge">factor</code></a>. In the Arrow C++ library and various bindings we have
+the <code class="highlighter-rouge">DictionaryArray</code> object for representing such data in memory.</p>
+
+<p>For example, an array such as</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>['apple', 'orange', 'apple', NULL, 'orange', 'orange']
+</code></pre></div></div>
+
+<p>has dictionary-encoded form</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dictionary: ['apple', 'orange']
+indices: [0, 1, 0, NULL, 1, 1]
+</code></pre></div></div>
+
+<p>The <a href="https://github.com/apache/parquet-format/blob/master/Encodings.md">Parquet format uses dictionary encoding</a> to compress data, and it is
+used for all Parquet data types, not just binary or string data. Parquet
+further uses bit-packing and run-length encoding (RLE) to compress the
+dictionary indices, so if you had data like</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>['apple', 'apple', 'apple', 'apple', 'apple', 'apple', 'orange']
+</code></pre></div></div>
+
+<p>the indices would be encoded like</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[rle-run=(6, 0),
+ bit-packed-run=[1]]
+</code></pre></div></div>
+
+<p>The full details of the rle-bitpacking encoding are found in the <a href="https://github.com/apache/parquet-format/blob/master/Encodings.md">Parquet
+specification</a>.</p>
+
+<p>When writing a Parquet file, most implementations will use dictionary encoding
+to compress a column until the dictionary itself reaches a certain size
+threshold, usually around 1 megabyte. At this point, the column writer will
+“fall back” to <code class="highlighter-rouge">PLAIN</code> encoding where values are written end-to-end in “data
+pages” and then usually compressed with Snappy or Gzip. See the following rough
+diagram:</p>
+
+<div align="center">
+<img src="/img/20190903-parquet-dictionary-column-chunk.png" alt="Internal ColumnChunk structure" width="80%" class="img-responsive" />
+</div>
+
+<h1 id="faster-reading-and-writing-of-dictionary-encoded-data">Faster reading and writing of dictionary-encoded data</h1>
+
+<p>When reading a Parquet file, the dictionary-encoded portions are usually
+materialized to their non-dictionary-encoded form, causing binary or string
+values to be duplicated in memory. So an obvious (but not trivial) optimization
+is to skip this “dense” materialization. There are several issues to deal with:</p>
+
+<ul>
+  <li>A Parquet file often contains multiple ColumnChunks for each semantic column,
+and the dictionary values may be different in each ColumnChunk</li>
+  <li>We must gracefully handle the “fall back” portion which is not
+dictionary-encoded</li>
+</ul>
+
+<p>We pursued several avenues to help with this:</p>
+
+<ul>
+  <li>Allowing each <code class="highlighter-rouge">DictionaryArray</code> to have a different dictionary (before, the
+dictionary was part of the <code class="highlighter-rouge">DictionaryType</code>, which caused problems)</li>
+  <li>We enabled the Parquet dictionary indices to be directly written into an
+Arrow <code class="highlighter-rouge">DictionaryBuilder</code> without rehashing the data</li>
+  <li>When decoding a ColumnChunk, we first append the dictionary values and
+indices into an Arrow <code class="highlighter-rouge">DictionaryBuilder</code>, and when we encounter the “fall
+back” portion we use a hash table to convert those values to
+dictionary-encoded form</li>
+  <li>We override the “fall back” logic when writing a ColumnChunk from an
+<code class="highlighter-rouge">DictionaryArray</code> so that reading such data back is more efficient</li>
+</ul>
+
+<p>All of these things together have produced some excellent performance results
+that we will detail below.</p>
+
+<p>The other class of optimizations we implemented was removing an abstraction
+layer between the low-level Parquet column data encoder and decoder classes and
+the Arrow columnar data structures. This involves:</p>
+
+<ul>
+  <li>Adding <code class="highlighter-rouge">ColumnWriter::WriteArrow</code> and <code class="highlighter-rouge">Encoder::Put</code> methods that accept
+<code class="highlighter-rouge">arrow::Array</code> objects directly</li>
+  <li>Adding <code class="highlighter-rouge">ByteArrayDecoder::DecodeArrow</code> method to decode binary data directly
+into an <code class="highlighter-rouge">arrow::BinaryBuilder</code>.</li>
+</ul>
+
+<p>While the performance improvements from this work are less dramatic than for
+dictionary-encoded data, they are still meaningful in real-world applications.</p>
+
+<h1 id="performance-benchmarks">Performance Benchmarks</h1>
+
+<p>We ran some benchmarks comparing Arrow 0.12.1 with the current master
+branch. We construct two kinds of Arrow tables with 10 columns each:</p>
+
+<ul>
+  <li>“Low cardinality” and “high cardinality” variants. The “low cardinality” case
+has 1,000 unique string values of 32-bytes each. The “high cardinality” has
+100,000 unique values</li>
+  <li>“Dense” (non-dictionary) and “Dictionary” variants</li>
+</ul>
+
+<p><a href="https://gist.github.com/wesm/b4554e2d6028243a30eeed2c644a9066">See the full benchmark script.</a></p>
+
+<p>We show both single-threaded and multithreaded read performance. The test
+machine is an Intel i9-9960X using gcc 8.3.0 (on Ubuntu 18.04) with 16 physical
+cores and 32 virtual cores. All time measurements are reported in seconds, but
+we are most interested in showing the relative performance.</p>
+
+<p>First, the writing benchmarks:</p>
+
+<div align="center">
+<img src="/img/20190903_parquet_write_perf.png" alt="Parquet write benchmarks" width="80%" class="img-responsive" />
+</div>
+
+<p>Writing <code class="highlighter-rouge">DictionaryArray</code> is dramatically faster due to the optimizations
+described above. We have achieved a small improvement in writing dense
+(non-dictionary) binary arrays.</p>
+
+<p>Then, the reading benchmarks:</p>
+
+<div align="center">
+<img src="/img/20190903_parquet_read_perf.png" alt="Parquet read benchmarks" width="80%" class="img-responsive" />
+</div>
+
+<p>Here, similarly reading <code class="highlighter-rouge">DictionaryArray</code> directly is many times faster.</p>
+
+<p>These benchmarks show that parallel reads of dense binary data may be slightly
+slower though single-threaded reads are now faster. We may want to do some
+profiling and see what we can do to bring read performance back in
+line. Optimizing the dense read path has not been too much of a priority
+relative to the dictionary read path in this work.</p>
+
+<h1 id="memory-use-improvements">Memory Use Improvements</h1>
+
+<p>In addition to faster performance, reading columns as dictionary-encoded can
+yield significantly less memory use.</p>
+
+<p>In the <code class="highlighter-rouge">dict-random</code> case above, we found that the master branch uses 405 MB of
+RAM at peak while loading a 152 MB dataset. In v0.12.1, loading the same
+Parquet file without the accelerated dictionary support uses 1.94 GB of peak
+memory while the resulting non-dictionary table occupies 1.01 GB.</p>
+
+<p>Note that we had a memory overuse bug in versions 0.14.0 and 0.14.1 fixed in
+ARROW-6060, so if you are hitting this bug you will want to upgrade to 0.15.0
+as soon as it comes out.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>There are still many Parquet-related optimizations that we may pursue in the
+future, but the ones here can be very helpful to people working with
+string-heavy datasets, both in performance and memory use. If you’d like to
+discuss this development work, we’d be glad to hear from you on our developer
+mailing list dev@arrow.apache.org.</p>
+
+
+  </div>
+
+  
+
+  
+    
+  <div class="blog-post" style="margin-bottom: 4rem">
+    
+<h1>
   Apache Arrow R Package On CRAN
   <a href="/blog/2019/08/08/r-package-on-cran/" class="permalink" title="Permalink">∞</a>
 </h1>
@@ -201,12 +433,12 @@ library.</p>
 
 <h2 id="parquet-files">Parquet files</h2>
 
-<p>This release introduces basic read and write support for the <a href="https://parquet.apache.org/">Apache
-Parquet</a> columnar data file format. Prior to this
-release, options for accessing Parquet data in R were limited; the most common
-recommendation was to use Apache Spark. The <code class="highlighter-rouge">arrow</code> package greatly simplifies
-this access and lets you go from a Parquet file to a <code class="highlighter-rouge">data.frame</code> and back
-easily, without having to set up a database.</p>
+<p>This package introduces basic read and write support for the <a href="https://parquet.apache.org/">Apache
+Parquet</a> columnar data file format. Prior to its
+availability, options for accessing Parquet data in R were limited; the most
+common recommendation was to use Apache Spark. The <code class="highlighter-rouge">arrow</code> package greatly
+simplifies this access and lets you go from a Parquet file to a <code class="highlighter-rouge">data.frame</code>
+and back easily, without having to set up a database.</p>
 
 <div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">)</span><span class="w">
 </span><span class="n">df</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">"path/to/file.parquet"</span><span class="p">)</span><span class="w">
@@ -242,7 +474,7 @@ future.</p>
 
 <h2 id="feather-files">Feather files</h2>
 
-<p>This release also includes a faster and more robust implementation of the
+<p>This package also includes a faster and more robust implementation of the
 Feather file format, providing <code class="highlighter-rouge">read_feather()</code> and
 <code class="highlighter-rouge">write_feather()</code>. <a href="https://github.com/wesm/feather">Feather</a> was one of the
 initial applications of Apache Arrow for Python and R, providing an efficient,
@@ -255,10 +487,10 @@ years, the Python implementation of Feather has just been a wrapper around
 <code class="highlighter-rouge">pyarrow</code>. This meant that as Arrow progressed and bugs were fixed, the Python
 version of Feather got the improvements but sadly R did not.</p>
 
-<p>With this release, the R implementation of Feather catches up and now depends
-on the same underlying C++ library as the Python version does. This should
-result in more reliable and consistent behavior across the two languages, as
-well as <a href="https://wesmckinney.com/blog/feather-arrow-future/">improved
+<p>With the <code class="highlighter-rouge">arrow</code> package, the R implementation of Feather catches up and now
+depends on the same underlying C++ library as the Python version does. This
+should result in more reliable and consistent behavior across the two
+languages, as well as <a href="https://wesmckinney.com/blog/feather-arrow-future/">improved
 performance</a>.</p>
 
 <p>We encourage all R users of <code class="highlighter-rouge">feather</code> to switch to using

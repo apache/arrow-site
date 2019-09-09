@@ -1,4 +1,206 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2019-08-27T19:11:56-04:00</updated><id>/feed.xml</id><entry><title type="html">Apache Arrow R Package On CRAN</title><link href="/blog/2019/08/08/r-package-on-cran/" rel="alternate" type="text/html" title="Apache Arrow R Package On CRAN" /><published>2019-08-08T08:00:00-04:00</published><updated>2019-08-08T08:00:00-04:00</updated><id>/blog/2019/08/08/r-package-on-cran</id><content type="html" xml:base="/blog/2019/08/08/r-package-on-cran/">&lt;!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2019-09-09T11:48:28-04:00</updated><id>/feed.xml</id><entry><title type="html">Faster C++ Apache Parquet performance on dictionary-encoded string data coming in Apache Arrow 0.15</title><link href="/blog/2019/09/05/faster-strings-cpp-parquet/" rel="alternate" type="text/html" title="Faster C++ Apache Parquet performance on dictionary-encoded string data coming in Apache Arrow 0.15" /><published>2019-09-05T02:00:00-04:00</published><updated>2019-09-05T02:00:00-04:00</updated><id>/blog/2019/09/05/faster-strings-cpp-parquet</id><content type="html" xml:base="/blog/2019/09/05/faster-strings-cpp-parquet/">&lt;!--
+
+--&gt;
+
+&lt;p&gt;We have been implementing a series of optimizations in the Apache Parquet C++
+internals to improve read and write efficiency (both performance and memory
+use) for Arrow columnar binary and string data, with new “native” support for
+Arrow’s dictionary types. This should have a big impact on users of the C++,
+MATLAB, Python, R, and Ruby interfaces to Parquet files.&lt;/p&gt;
+
+&lt;p&gt;This post reviews work that was done and shows benchmarks comparing Arrow
+0.12.1 with the current development version (to be released soon as Arrow
+0.15.0).&lt;/p&gt;
+
+&lt;h1 id=&quot;summary-of-work&quot;&gt;Summary of work&lt;/h1&gt;
+
+&lt;p&gt;One of the largest and most complex optimizations involves encoding and
+decoding Parquet files’ internal dictionary-encoded data streams to and from
+Arrow’s in-memory dictionary-encoded &lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryArray&lt;/code&gt;
+representation. Dictionary encoding is a compression strategy in Parquet, and
+there is no formal “dictionary” or “categorical” type. I will go into more
+detail about this below.&lt;/p&gt;
+
+&lt;p&gt;Some of the particular JIRA issues related to this work include:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Vectorize comparators for computing statistics (&lt;a href=&quot;https://issues.apache.org/jira/browse/PARQUET-1523&quot;&gt;PARQUET-1523&lt;/a&gt;)&lt;/li&gt;
+  &lt;li&gt;Read binary directly data directly into dictionary builder
+(&lt;a href=&quot;https://issues.apache.org/jira/browse/ARROW-3769&quot;&gt;ARROW-3769&lt;/a&gt;)&lt;/li&gt;
+  &lt;li&gt;Writing Parquet’s dictionary indices directly into dictionary builder
+(&lt;a href=&quot;https://issues.apache.org/jira/browse/ARROW-3772&quot;&gt;ARROW-3772&lt;/a&gt;)&lt;/li&gt;
+  &lt;li&gt;Write dense (non-dictionary) Arrow arrays directly into Parquet data encoders
+(&lt;a href=&quot;https://issues.apache.org/jira/browse/ARROW-6152&quot;&gt;ARROW-6152&lt;/a&gt;)&lt;/li&gt;
+  &lt;li&gt;Direct writing of &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow::DictionaryArray&lt;/code&gt; to Parquet column writers (&lt;a href=&quot;https://issues.apache.org/jira/browse/ARROW-3246&quot;&gt;ARROW-3246&lt;/a&gt;)&lt;/li&gt;
+  &lt;li&gt;Supporting changing dictionaries (&lt;a href=&quot;https://issues.apache.org/jira/browse/ARROW-3144&quot;&gt;ARROW-3144&lt;/a&gt;)&lt;/li&gt;
+  &lt;li&gt;Internal IO optimizations and improved raw &lt;code class=&quot;highlighter-rouge&quot;&gt;BYTE_ARRAY&lt;/code&gt; encoding performance
+(&lt;a href=&quot;https://issues.apache.org/jira/browse/ARROW-4398&quot;&gt;ARROW-4398&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;One of the challenges of developing the Parquet C++ library is that we maintain
+low-level read and write APIs that do not involve the Arrow columnar data
+structures. So we have had to take care to implement Arrow-related
+optimizations without impacting non-Arrow Parquet users, which includes
+database systems like Clickhouse and Vertica.&lt;/p&gt;
+
+&lt;h1 id=&quot;background-how-parquet-files-do-dictionary-encoding&quot;&gt;Background: how Parquet files do dictionary encoding&lt;/h1&gt;
+
+&lt;p&gt;Many direct and indirect users of Apache Arrow use dictionary encoding to
+improve performance and memory use on binary or string data types that include
+many repeated values. MATLAB or pandas users will know this as the Categorical
+type (see &lt;a href=&quot;https://www.mathworks.com/help/matlab/categorical-arrays.html&quot;&gt;MATLAB docs&lt;/a&gt; or &lt;a href=&quot;https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html&quot;&gt;pandas docs&lt;/a&gt;) while in R such encoding is
+known as &lt;a href=&quot;https://stat.ethz.ch/R-manual/R-devel/library/base/html/factor.html&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;factor&lt;/code&gt;&lt;/a&gt;. In the Arrow C++ library and various bindings we have
+the &lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryArray&lt;/code&gt; object for representing such data in memory.&lt;/p&gt;
+
+&lt;p&gt;For example, an array such as&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;['apple', 'orange', 'apple', NULL, 'orange', 'orange']
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;has dictionary-encoded form&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;dictionary: ['apple', 'orange']
+indices: [0, 1, 0, NULL, 1, 1]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;a href=&quot;https://github.com/apache/parquet-format/blob/master/Encodings.md&quot;&gt;Parquet format uses dictionary encoding&lt;/a&gt; to compress data, and it is
+used for all Parquet data types, not just binary or string data. Parquet
+further uses bit-packing and run-length encoding (RLE) to compress the
+dictionary indices, so if you had data like&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;['apple', 'apple', 'apple', 'apple', 'apple', 'apple', 'orange']
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;the indices would be encoded like&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[rle-run=(6, 0),
+ bit-packed-run=[1]]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The full details of the rle-bitpacking encoding are found in the &lt;a href=&quot;https://github.com/apache/parquet-format/blob/master/Encodings.md&quot;&gt;Parquet
+specification&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;When writing a Parquet file, most implementations will use dictionary encoding
+to compress a column until the dictionary itself reaches a certain size
+threshold, usually around 1 megabyte. At this point, the column writer will
+“fall back” to &lt;code class=&quot;highlighter-rouge&quot;&gt;PLAIN&lt;/code&gt; encoding where values are written end-to-end in “data
+pages” and then usually compressed with Snappy or Gzip. See the following rough
+diagram:&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/img/20190903-parquet-dictionary-column-chunk.png&quot; alt=&quot;Internal ColumnChunk structure&quot; width=&quot;80%&quot; class=&quot;img-responsive&quot; /&gt;
+&lt;/div&gt;
+
+&lt;h1 id=&quot;faster-reading-and-writing-of-dictionary-encoded-data&quot;&gt;Faster reading and writing of dictionary-encoded data&lt;/h1&gt;
+
+&lt;p&gt;When reading a Parquet file, the dictionary-encoded portions are usually
+materialized to their non-dictionary-encoded form, causing binary or string
+values to be duplicated in memory. So an obvious (but not trivial) optimization
+is to skip this “dense” materialization. There are several issues to deal with:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;A Parquet file often contains multiple ColumnChunks for each semantic column,
+and the dictionary values may be different in each ColumnChunk&lt;/li&gt;
+  &lt;li&gt;We must gracefully handle the “fall back” portion which is not
+dictionary-encoded&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;We pursued several avenues to help with this:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Allowing each &lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryArray&lt;/code&gt; to have a different dictionary (before, the
+dictionary was part of the &lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryType&lt;/code&gt;, which caused problems)&lt;/li&gt;
+  &lt;li&gt;We enabled the Parquet dictionary indices to be directly written into an
+Arrow &lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryBuilder&lt;/code&gt; without rehashing the data&lt;/li&gt;
+  &lt;li&gt;When decoding a ColumnChunk, we first append the dictionary values and
+indices into an Arrow &lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryBuilder&lt;/code&gt;, and when we encounter the “fall
+back” portion we use a hash table to convert those values to
+dictionary-encoded form&lt;/li&gt;
+  &lt;li&gt;We override the “fall back” logic when writing a ColumnChunk from an
+&lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryArray&lt;/code&gt; so that reading such data back is more efficient&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;All of these things together have produced some excellent performance results
+that we will detail below.&lt;/p&gt;
+
+&lt;p&gt;The other class of optimizations we implemented was removing an abstraction
+layer between the low-level Parquet column data encoder and decoder classes and
+the Arrow columnar data structures. This involves:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Adding &lt;code class=&quot;highlighter-rouge&quot;&gt;ColumnWriter::WriteArrow&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;Encoder::Put&lt;/code&gt; methods that accept
+&lt;code class=&quot;highlighter-rouge&quot;&gt;arrow::Array&lt;/code&gt; objects directly&lt;/li&gt;
+  &lt;li&gt;Adding &lt;code class=&quot;highlighter-rouge&quot;&gt;ByteArrayDecoder::DecodeArrow&lt;/code&gt; method to decode binary data directly
+into an &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow::BinaryBuilder&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;While the performance improvements from this work are less dramatic than for
+dictionary-encoded data, they are still meaningful in real-world applications.&lt;/p&gt;
+
+&lt;h1 id=&quot;performance-benchmarks&quot;&gt;Performance Benchmarks&lt;/h1&gt;
+
+&lt;p&gt;We ran some benchmarks comparing Arrow 0.12.1 with the current master
+branch. We construct two kinds of Arrow tables with 10 columns each:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;“Low cardinality” and “high cardinality” variants. The “low cardinality” case
+has 1,000 unique string values of 32-bytes each. The “high cardinality” has
+100,000 unique values&lt;/li&gt;
+  &lt;li&gt;“Dense” (non-dictionary) and “Dictionary” variants&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://gist.github.com/wesm/b4554e2d6028243a30eeed2c644a9066&quot;&gt;See the full benchmark script.&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;We show both single-threaded and multithreaded read performance. The test
+machine is an Intel i9-9960X using gcc 8.3.0 (on Ubuntu 18.04) with 16 physical
+cores and 32 virtual cores. All time measurements are reported in seconds, but
+we are most interested in showing the relative performance.&lt;/p&gt;
+
+&lt;p&gt;First, the writing benchmarks:&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/img/20190903_parquet_write_perf.png&quot; alt=&quot;Parquet write benchmarks&quot; width=&quot;80%&quot; class=&quot;img-responsive&quot; /&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Writing &lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryArray&lt;/code&gt; is dramatically faster due to the optimizations
+described above. We have achieved a small improvement in writing dense
+(non-dictionary) binary arrays.&lt;/p&gt;
+
+&lt;p&gt;Then, the reading benchmarks:&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/img/20190903_parquet_read_perf.png&quot; alt=&quot;Parquet read benchmarks&quot; width=&quot;80%&quot; class=&quot;img-responsive&quot; /&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Here, similarly reading &lt;code class=&quot;highlighter-rouge&quot;&gt;DictionaryArray&lt;/code&gt; directly is many times faster.&lt;/p&gt;
+
+&lt;p&gt;These benchmarks show that parallel reads of dense binary data may be slightly
+slower though single-threaded reads are now faster. We may want to do some
+profiling and see what we can do to bring read performance back in
+line. Optimizing the dense read path has not been too much of a priority
+relative to the dictionary read path in this work.&lt;/p&gt;
+
+&lt;h1 id=&quot;memory-use-improvements&quot;&gt;Memory Use Improvements&lt;/h1&gt;
+
+&lt;p&gt;In addition to faster performance, reading columns as dictionary-encoded can
+yield significantly less memory use.&lt;/p&gt;
+
+&lt;p&gt;In the &lt;code class=&quot;highlighter-rouge&quot;&gt;dict-random&lt;/code&gt; case above, we found that the master branch uses 405 MB of
+RAM at peak while loading a 152 MB dataset. In v0.12.1, loading the same
+Parquet file without the accelerated dictionary support uses 1.94 GB of peak
+memory while the resulting non-dictionary table occupies 1.01 GB.&lt;/p&gt;
+
+&lt;p&gt;Note that we had a memory overuse bug in versions 0.14.0 and 0.14.1 fixed in
+ARROW-6060, so if you are hitting this bug you will want to upgrade to 0.15.0
+as soon as it comes out.&lt;/p&gt;
+
+&lt;h1 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h1&gt;
+
+&lt;p&gt;There are still many Parquet-related optimizations that we may pursue in the
+future, but the ones here can be very helpful to people working with
+string-heavy datasets, both in performance and memory use. If you’d like to
+discuss this development work, we’d be glad to hear from you on our developer
+mailing list dev@arrow.apache.org.&lt;/p&gt;</content><author><name>Wes McKinney</name></author></entry><entry><title type="html">Apache Arrow R Package On CRAN</title><link href="/blog/2019/08/08/r-package-on-cran/" rel="alternate" type="text/html" title="Apache Arrow R Package On CRAN" /><published>2019-08-08T08:00:00-04:00</published><updated>2019-08-08T08:00:00-04:00</updated><id>/blog/2019/08/08/r-package-on-cran</id><content type="html" xml:base="/blog/2019/08/08/r-package-on-cran/">&lt;!--
 
 --&gt;
 
@@ -46,12 +248,12 @@ library.&lt;/p&gt;
 
 &lt;h2 id=&quot;parquet-files&quot;&gt;Parquet files&lt;/h2&gt;
 
-&lt;p&gt;This release introduces basic read and write support for the &lt;a href=&quot;https://parquet.apache.org/&quot;&gt;Apache
-Parquet&lt;/a&gt; columnar data file format. Prior to this
-release, options for accessing Parquet data in R were limited; the most common
-recommendation was to use Apache Spark. The &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; package greatly simplifies
-this access and lets you go from a Parquet file to a &lt;code class=&quot;highlighter-rouge&quot;&gt;data.frame&lt;/code&gt; and back
-easily, without having to set up a database.&lt;/p&gt;
+&lt;p&gt;This package introduces basic read and write support for the &lt;a href=&quot;https://parquet.apache.org/&quot;&gt;Apache
+Parquet&lt;/a&gt; columnar data file format. Prior to its
+availability, options for accessing Parquet data in R were limited; the most
+common recommendation was to use Apache Spark. The &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; package greatly
+simplifies this access and lets you go from a Parquet file to a &lt;code class=&quot;highlighter-rouge&quot;&gt;data.frame&lt;/code&gt;
+and back easily, without having to set up a database.&lt;/p&gt;
 
 &lt;div class=&quot;language-r highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;library&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arrow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
 &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;df&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read_parquet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;path/to/file.parquet&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
@@ -87,7 +289,7 @@ future.&lt;/p&gt;
 
 &lt;h2 id=&quot;feather-files&quot;&gt;Feather files&lt;/h2&gt;
 
-&lt;p&gt;This release also includes a faster and more robust implementation of the
+&lt;p&gt;This package also includes a faster and more robust implementation of the
 Feather file format, providing &lt;code class=&quot;highlighter-rouge&quot;&gt;read_feather()&lt;/code&gt; and
 &lt;code class=&quot;highlighter-rouge&quot;&gt;write_feather()&lt;/code&gt;. &lt;a href=&quot;https://github.com/wesm/feather&quot;&gt;Feather&lt;/a&gt; was one of the
 initial applications of Apache Arrow for Python and R, providing an efficient,
@@ -100,10 +302,10 @@ years, the Python implementation of Feather has just been a wrapper around
 &lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow&lt;/code&gt;. This meant that as Arrow progressed and bugs were fixed, the Python
 version of Feather got the improvements but sadly R did not.&lt;/p&gt;
 
-&lt;p&gt;With this release, the R implementation of Feather catches up and now depends
-on the same underlying C++ library as the Python version does. This should
-result in more reliable and consistent behavior across the two languages, as
-well as &lt;a href=&quot;https://wesmckinney.com/blog/feather-arrow-future/&quot;&gt;improved
+&lt;p&gt;With the &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; package, the R implementation of Feather catches up and now
+depends on the same underlying C++ library as the Python version does. This
+should result in more reliable and consistent behavior across the two
+languages, as well as &lt;a href=&quot;https://wesmckinney.com/blog/feather-arrow-future/&quot;&gt;improved
 performance&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;We encourage all R users of &lt;code class=&quot;highlighter-rouge&quot;&gt;feather&lt;/code&gt; to switch to using
@@ -1355,41 +1557,4 @@ Open Analytics Initiative&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;In the coming months, we will continue to make progress on many fronts, with
 Gandiva packaging, expanded language support (especially in R), and improved
-data access (e.g. CSV, Parquet files) in focus.&lt;/p&gt;</content><author><name>wesm</name></author></entry><entry><title type="html">Apache Arrow 0.10.0 Release</title><link href="/blog/2018/08/07/0.10.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.10.0 Release" /><published>2018-08-07T00:00:00-04:00</published><updated>2018-08-07T00:00:00-04:00</updated><id>/blog/2018/08/07/0.10.0-release</id><content type="html" xml:base="/blog/2018/08/07/0.10.0-release/">&lt;!--
-
---&gt;
-
-&lt;p&gt;The Apache Arrow team is pleased to announce the 0.10.0 release. It is the
-product of over 4 months of development and includes &lt;a href=&quot;https://issues.apache.org/jira/issues/?jql=project%20%3D%20ARROW%20AND%20status%20in%20(Resolved%2C%20Closed)%20AND%20fixVersion%20%3D%200.10.0&quot;&gt;&lt;strong&gt;470 resolved
-issues&lt;/strong&gt;&lt;/a&gt;. It is the largest release so far in the project’s history. 90
-individuals contributed to this release.&lt;/p&gt;
-
-&lt;p&gt;See the &lt;a href=&quot;https://arrow.apache.org/install&quot;&gt;Install Page&lt;/a&gt; to learn how to get the libraries for your
-platform. The &lt;a href=&quot;https://arrow.apache.org/release/0.10.0.html&quot;&gt;complete changelog&lt;/a&gt; is also available.&lt;/p&gt;
-
-&lt;p&gt;We discuss some highlights from the release and other project news in this
-post.&lt;/p&gt;
-
-&lt;h2 id=&quot;offical-binary-packages-and-packaging-automation&quot;&gt;Offical Binary Packages and Packaging Automation&lt;/h2&gt;
-
-&lt;p&gt;One of the largest projects in this release cycle was automating our build and
-packaging tooling to be able to easily and reproducibly create a &lt;a href=&quot;https://www.apache.org/dyn/closer.cgi/arrow/arrow-0.10.0/binaries&quot;&gt;comprehensive
-set of binary artifacts&lt;/a&gt; which have been approved and released by the Arrow
-PMC. We developed a tool called &lt;strong&gt;Crossbow&lt;/strong&gt; which uses Appveyor and Travis CI
-to build each of the different supported packages on all 3 platforms (Linux,
-macOS, and Windows). As a result of our efforts, we should be able to make more
-frequent Arrow releases. This work was led by Phillip Cloud, Kouhei Sutou, and
-Krisztián Szűcs. Bravo!&lt;/p&gt;
-
-&lt;h2 id=&quot;new-programming-languages-go-ruby-rust&quot;&gt;New Programming Languages: Go, Ruby, Rust&lt;/h2&gt;
-
-&lt;p&gt;This release also adds 3 new programming languages to the project: Go, Ruby,
-and Rust. Together with C, C++, Java, JavaScript, and Python, &lt;strong&gt;we now have
-some level of support for 8 programming languages&lt;/strong&gt;.&lt;/p&gt;
-
-&lt;h2 id=&quot;upcoming-roadmap&quot;&gt;Upcoming Roadmap&lt;/h2&gt;
-
-&lt;p&gt;In the coming months, we will be working to move Apache Arrow closer to a 1.0.0
-release. We will continue to grow new features, improve performance and
-stability, and expand support for currently supported and new programming
-languages.&lt;/p&gt;</content><author><name>wesm</name></author></entry></feed>
+data access (e.g. CSV, Parquet files) in focus.&lt;/p&gt;</content><author><name>wesm</name></author></entry></feed>
