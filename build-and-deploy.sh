@@ -66,7 +66,8 @@ if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; 
         git push origin ${TARGET_BRANCH}
         if [ "${TRAVIS_REPO_SLUG}" = "${UPSTREAM}" ]; then
             UPSTREAM_ORG=$(echo $UPSTREAM | sed -e 's@/.*@@')
-            hub pull-request -b ${UPSTREAM_ORG}:asf-site -m "Publish ${COMMIT_MESSAGE}"
+            hub pull-request -b ${UPSTREAM_ORG}:asf-site -m "Publish ${COMMIT_MESSAGE}" || true
+            # `|| true` because the command errors if a PR already exists
         fi
     else
         echo "No changes to the built site"
