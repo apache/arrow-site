@@ -196,11 +196,11 @@ Then, the reading benchmarks:
 
 Here, similarly reading `DictionaryArray` directly is many times faster.
 
-These benchmarks show that reading the dense binary data is slower in the
-master branch than in version 0.12.1, so we will need to do some profiling and
-see what we can do to bring read performance back in line. Optimizing the dense
-read path has not been too much of a priority relative to the dictionary read
-path in this work. See [ARROW-6417][12] for some investigation and discussion.
+These benchmarks show that parallel reads of dense binary data may be slightly
+slower though single-threaded reads are now faster. We may want to do some
+profiling and see what we can do to bring read performance back in
+line. Optimizing the dense read path has not been too much of a priority
+relative to the dictionary read path in this work.
 
 # Memory Use Improvements
 
