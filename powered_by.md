@@ -1,5 +1,6 @@
 ---
 layout: default
+title: Powered by
 ---
 <!--
 {% comment %}
@@ -64,7 +65,7 @@ short description of your use case.
 * **[Dask][15]:** Python library for parallel and distributed execution of
   dynamic task graphs. Dask supports using pyarrow for accessing Parquet
   files
-* **[Data Preview][31]:** Data Preview is a Visual Studio Code extension 
+* **[Data Preview][31]:** Data Preview is a Visual Studio Code extension
   for viewing text and binary data files. Data Preview uses Arrow JS API
   for loading, transforming and saving Arrow data files and schemas.
 * **[Dremio][9]:** A self-service data platform. Dremio makes it easy for
@@ -73,10 +74,10 @@ short description of your use case.
   Dremio reads data from any source (RDBMS, HDFS, S3, NoSQL) into Arrow
   buffers, and provides fast SQL access via ODBC, JDBC, and REST for BI,
   Python, R, and more (all backed by Apache Arrow).
-* **[Fletcher][20]:** Fletcher is a framework that can integrate FPGA 
+* **[Fletcher][20]:** Fletcher is a framework that can integrate FPGA
   accelerators with tools and frameworks that use the Apache Arrow in-memory
-  format. From a set of Arrow Schemas, Fletcher generates highly optimized 
-  hardware structures that allow accelerator kernels to read and write 
+  format. From a set of Arrow Schemas, Fletcher generates highly optimized
+  hardware structures that allow accelerator kernels to read and write
   RecordBatches at system bandwidth through easy-to-use interfaces.
 * **[GeoMesa][8]:** A suite of tools that enables large-scale geospatial query
   and analytics on distributed computing systems. GeoMesa supports query
