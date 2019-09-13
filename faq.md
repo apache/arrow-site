@@ -1,6 +1,7 @@
 ---
 layout: default
 title: FAQ
+description: Frequently asked questions about the Apache Arrow project
 ---
 <!--
 {% comment %}

@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Installation
+description: Instructions for installing the latest release of Apache Arrow
 ---
 <!--
 {% comment %}

@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Powered by
+description: List of projects powered by Apache Arrow
 ---
 <!--
 {% comment %}

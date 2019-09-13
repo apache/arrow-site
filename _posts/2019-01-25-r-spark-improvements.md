@@ -1,6 +1,10 @@
 ---
 layout: post
 title: "Speeding up R and Apache Spark using Apache Arrow"
+description: "Support for Apache Arrow in Apache Spark with R is currently under active
+development in the sparklyr and SparkR projects. This post explores early, yet
+promising, performance improvements achieved when using R with Apache Spark,
+Arrow and sparklyr."
 date: "2019-01-25 00:00:00 -0600"
 author: Javier Luraschi
 categories: [application]
