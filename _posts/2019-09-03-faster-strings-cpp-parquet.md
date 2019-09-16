@@ -112,7 +112,7 @@ pages" and then usually compressed with Snappy or Gzip. See the following rough
 diagram:
 
 <div align="center">
-<img src="{{ site.base-url }}/img/20190903-parquet-dictionary-column-chunk.png"
+<img src="{{ site.baseurl }}/img/20190903-parquet-dictionary-column-chunk.png"
      alt="Internal ColumnChunk structure"
      width="80%" class="img-responsive">
 </div>
@@ -177,7 +177,7 @@ we are most interested in showing the relative performance.
 First, the writing benchmarks:
 
 <div align="center">
-<img src="{{ site.base-url }}/img/20190903_parquet_write_perf.png"
+<img src="{{ site.baseurl }}/img/20190903_parquet_write_perf.png"
      alt="Parquet write benchmarks"
      width="80%" class="img-responsive">
 </div>
@@ -189,7 +189,7 @@ described above. We have achieved a small improvement in writing dense
 Then, the reading benchmarks:
 
 <div align="center">
-<img src="{{ site.base-url }}/img/20190903_parquet_read_perf.png"
+<img src="{{ site.baseurl }}/img/20190903_parquet_read_perf.png"
      alt="Parquet read benchmarks"
      width="80%" class="img-responsive">
 </div>
