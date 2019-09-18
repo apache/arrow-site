@@ -33,15 +33,21 @@ jobs:
       - name: Install dependencies
         run: |
           bundle install
+      - name: Configure for production
+        run: |
+          echo "BASE_URL=" >> ../env.sh
+          echo "ORIGIN=$(jq .repository.full_name ${GITHUB_EVENT_PATH})" >> ../env.sh
+          echo "TARGET_BRANCH=asf-site" >> ../env.sh
+        if: github.event_name == 'push'
+      - name: Configure for GitHub Pages
+        run: |
+          echo "BASE_URL=$(jq .pull_request.head.repo.name ${GITHUB_EVENT_PATH})" >> ../env.sh
+          echo "ORIGIN=$(jq .pull_request.head.repo.full_name ${GITHUB_EVENT_PATH})" >> ../env.sh
+          echo "TARGET_BRANCH=gh-pages" >> ../env.sh
+        if: github.event_name == 'pull_request'
       - name: Build
         run: |
-          if [ "${GITHUB_REPOSITORY}" = "apache/arrow-site" ]; then
-            # Production
-            BASE_URL=
-          else
-            # On a fork, so we'll deploy to GitHub Pages
-            BASE_URL=$(echo ${GITHUB_REPOSITORY} | sed -e 's@.*/@/@')
-          fi
+          . ../env.sh
           JEKYLL_ENV=production \
             bundle exec \
               jekyll build \
@@ -49,17 +55,11 @@ jobs:
                 --destination=../build
       - name: Deploy
         run: |
-          if [ "${GITHUB_REPOSITORY}" = "apache/arrow-site" ]; then
-            # Production
-            TARGET_BRANCH=asf-site
-          else
-            # On a fork, so we'll deploy to GitHub Pages
-            TARGET_BRANCH=gh-pages
-          fi
+          . ../env.sh
           git config user.name "$(git log -1 --pretty=format:%an)"
           git config user.email "$(git log -1 --pretty=format:%ae)"
           git remote add deploy \
-            https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+            https://x-access-token:${GITHUB_TOKEN}@github.com/${ORIGIN}.git
           if ! git checkout ${TARGET_BRANCH}; then
             git checkout -b ${TARGET_BRANCH} remotes/origin/asf-site
           fi
