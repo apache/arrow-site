@@ -68,6 +68,10 @@ Run the following to generate HTML files and run the web site locally.
 bundle exec jekyll serve
 ```
 
+## Deployment
+
+On commits to the `master` branch of `apache/arrow-site`, the rendered static site will be published to the `asf-site` branch using GitHub Actions. On a fork, it will deploy to your `gh-pages` branch for deployment via GitHub Pages; this is useful for previewing changes you're proposing. To enable this deployment on your fork, you'll need to sign up for GitHub Actions [here](https://github.com/features/actions/signup).
+
 ## Updating Code Documentation
 
 To update the documentation, you can run the script `./dev/gen_apidocs.sh` in
