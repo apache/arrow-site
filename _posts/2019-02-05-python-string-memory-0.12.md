@@ -1,6 +1,11 @@
 ---
 layout: post
 title: "Reducing Python String Memory Use in Apache Arrow 0.12"
+description: "Python users who upgrade to recently released pyarrow 0.12 may find that
+their applications use significantly less memory when converting Arrow string
+data to pandas format. This article details some of what is going on under the
+hood, and why Python applications dealing with large amounts of strings are
+prone to memory use problems."
 date: "2019-02-05 07:00:00 -0600"
 author: wesm
 categories: [application]

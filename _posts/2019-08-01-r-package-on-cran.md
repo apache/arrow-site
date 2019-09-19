@@ -1,6 +1,8 @@
 ---
 layout: post
 title: "Apache Arrow R Package On CRAN"
+description: "We are very excited to announce that the arrow R package is now available on
+CRAN."
 date: "2019-08-08 06:00:00 -0600"
 author: npr
 categories: [application]

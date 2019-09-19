@@ -1,6 +1,7 @@
 ---
 layout: post
 title: "DataFusion: A Rust-native Query Engine for Apache Arrow"
+description: "We are excited to announce that DataFusion has been donated to the Apache Arrow project. DataFusion is an in-memory query engine for the Rust implementation of Apache Arrow."
 date: "2019-02-04 00:00:00 -0600"
 author: agrove
 categories: [application]
@@ -115,5 +116,3 @@ The roadmap for DataFusion will depend on interest from the Rust community, but 
 ## Contributors Welcome!
 
 If you are excited about being able to use Rust for data science and would like to contribute to this work then there are many ways to get involved. The simplest way to get started is to try out DataFusion against your own data sources and file bug reports for any issues that you find. You could also check out the current [list of issues](https://cwiki.apache.org/confluence/display/ARROW/Rust+JIRA+Dashboard) and have a go at fixing one. You can also join the [user mailing list](http://mail-archives.apache.org/mod_mbox/arrow-user/) to ask questions.
-
-

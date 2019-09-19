@@ -36,22 +36,31 @@ jobs:
       - name: Configure for production
         run: |
           echo "BASE_URL=" >> ../env.sh
-          echo "ORIGIN=$(jq .repository.full_name ${GITHUB_EVENT_PATH})" >> ../env.sh
+          echo "ORIGIN=$(jq --raw-output .repository.full_name ${GITHUB_EVENT_PATH})" >> ../env.sh
           echo "TARGET_BRANCH=asf-site" >> ../env.sh
+          echo >> _extra_config.yml
         if: |
           github.event_name == 'push' && github.repository == 'apache/arrow-site'
       - name: Configure for GitHub Pages on master
         run: |
-          echo "BASE_URL=$(jq .repository.name ${GITHUB_EVENT_PATH})" >> ../env.sh
-          echo "ORIGIN=$(jq .repository.full_name ${GITHUB_EVENT_PATH})" >> ../env.sh
+          owner=$(jq .repository.owner.login ${GITHUB_EVENT_PATH})
+          repository=$(jq .repository.name ${GITHUB_EVENT_PATH})
+          echo "BASE_URL=/${repository}" >> ../env.sh
+          echo "ORIGIN=${owner}/${repository}" >> ../env.sh
           echo "TARGET_BRANCH=gh-pages" >> ../env.sh
+          # "url:" is for the opengraph tags, and it can't be relative
+          echo "url: https://${owner}.github.io/${repository}" >> _extra_config.yml
         if: |
           github.event_name == 'push' && github.repository != 'apache/arrow-site'
       - name: Configure for GitHub Pages on pull request
         run: |
-          echo "BASE_URL=$(jq .pull_request.head.repo.name ${GITHUB_EVENT_PATH})" >> ../env.sh
-          echo "ORIGIN=$(jq .pull_request.head.repo.full_name ${GITHUB_EVENT_PATH})" >> ../env.sh
+          owner=$(jq --raw-output .pull_request.head.user.login ${GITHUB_EVENT_PATH})
+          repository=$(jq --raw-output .pull_request.head.repo.name ${GITHUB_EVENT_PATH})
+          echo "BASE_URL=/${repository}" >> ../env.sh
+          echo "ORIGIN=${owner}/${repository}" >> ../env.sh
           echo "TARGET_BRANCH=gh-pages" >> ../env.sh
+          # "url:" is for the opengraph tags, and it can't be relative
+          echo "url: https://${owner}.github.io/${repository}" >> _extra_config.yml
         if: |
           github.event_name == 'pull_request'
       - name: Build
@@ -61,6 +70,7 @@ jobs:
             bundle exec \
               jekyll build \
                 --baseurl="${BASE_URL}" \
+                --config=_config.yml,_extra_config.yml \
                 --destination=../build
       - name: Deploy
         run: |

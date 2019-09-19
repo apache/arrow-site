@@ -1,6 +1,11 @@
 ---
 layout: post
 title: "Faster C++ Apache Parquet performance on dictionary-encoded string data coming in Apache Arrow 0.15"
+description: "We have been implementing a series of optimizations in the Apache Parquet C++
+internals to improve read and write efficiency (both performance and memory
+use) for Arrow columnar binary and string data, with new native support for
+Arrow's dictionary types. This should have a big impact on users of the C++,
+MATLAB, Python, R, and Ruby interfaces to Parquet files."
 date: "2019-09-05 00:00:00 -0600"
 author: Wes McKinney
 categories: [application]
