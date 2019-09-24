@@ -7,7 +7,7 @@ use) for Arrow columnar binary and string data, with new native support for
 Arrow's dictionary types. This should have a big impact on users of the C++,
 MATLAB, Python, R, and Ruby interfaces to Parquet files."
 date: "2019-09-05 00:00:00 -0600"
-author: Wes McKinney
+author: wesm
 categories: [application]
 ---
 <!--
