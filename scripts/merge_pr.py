@@ -53,7 +53,7 @@ except ImportError:
     print("Exiting without trying to close the associated JIRA.")
     sys.exit(1)
 
-ARROW_HOME = os.path.abspath(os.path.dirname(__file__))
+ARROW_HOME = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 PROJECT_NAME = os.environ.get('PROJECT_NAME') or 'arrow-site'
 
 # Remote name which points to the GitHub site
