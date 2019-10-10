@@ -40,7 +40,8 @@ jobs:
           echo "TARGET_BRANCH=asf-site" >> ../env.sh
           echo >> _extra_config.yml
         if: |
-          github.event_name == 'push' && github.repository == 'apache/arrow-site'
+          github.event_name == 'push' &&
+            github.repository == 'apache/arrow-site'
       - name: Configure for GitHub Pages on master
         run: |
           owner=$(jq .repository.owner.login ${GITHUB_EVENT_PATH})
@@ -51,7 +52,8 @@ jobs:
           # "url:" is for the opengraph tags, and it can't be relative
           echo "url: https://${owner}.github.io/${repository}" >> _extra_config.yml
         if: |
-          github.event_name == 'push' && github.repository != 'apache/arrow-site'
+          github.event_name == 'push' &&
+            github.repository != 'apache/arrow-site'
       - name: Configure for GitHub Pages on pull request
         run: |
           owner=$(jq --raw-output .pull_request.head.user.login ${GITHUB_EVENT_PATH})
@@ -100,6 +102,10 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: |
+          github.event_name == 'push' ||
+            (github.event_name == 'pull_request' &&
+              github.repository == github.event.pull_request.head.repo.full_name)
       - name: Comment GitHub Pages URL
         uses: actions/github-script@0.2.0
         with:
@@ -107,14 +113,17 @@ jobs:
           script: |
             const payload = context.payload;
             const base_repo = payload.pull_request.base.repo;
-            const head_repo = payload.pull_request.head.repo;
+            const head = payload.pull_request.head;
+            const head_repo = head.repo;
             const github_pages_url =
               `https://${head_repo.owner.login}.github.io/${head_repo.name}/`;
-            const body = `${github_pages_url}\n${payload.after}`;
+            const body = `${github_pages_url}\n${head.sha}`;
             github.issues.createComment({
                                           "owner": base_repo.owner.login,
                                           "repo": base_repo.name,
                                           "issue_number": payload.number,
                                           "body": body
                                         });
-        if: github.event_name == 'pull_request'
+        if: |
+          github.event_name == 'pull_request' &&
+            github.repository == github.event.pull_request.head.repo.full_name
