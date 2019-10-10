@@ -19,9 +19,12 @@ ruby RUBY_VERSION
 gem "jekyll", "3.8.4"
 gem 'bootstrap', '~> 4.1.3'
 group :jekyll_plugins do
-   gem "jekyll-assets"
-   gem "jekyll-feed", "~> 0.6"
-   gem "jekyll-jupyter-notebook"
-   gem "jekyll-seo-tag"
+  gem "jekyll-assets"
+  # TODO: Remove this when https://github.com/envygeeks/jekyll-assets/pull/620
+  # is merged and a new jekyll-assets version is released.
+  gem "sprockets", "= 4.0.0.beta8"
+  gem "jekyll-feed", "~> 0.6"
+  gem "jekyll-jupyter-notebook"
+  gem "jekyll-seo-tag"
 end
 gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
