@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Arrow Flight RPC &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
+  <title>Arrow Flight RPC &mdash; Apache Arrow v0.15.0</title>
   
 
   
@@ -36,8 +36,8 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="C++ Implementation" href="../cpp/index.html" />
-    <link rel="prev" title="Interprocess messaging / communication (IPC)" href="IPC.html" /> 
+    <link rel="next" title="Integration Testing" href="Integration.html" />
+    <link rel="prev" title="Arrow Columnar Format" href="Columnar.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.14.2.dev0+g5f564424c.d20190805
+                0.15.0
               </div>
             
           
@@ -85,22 +85,26 @@
               
             
             
-              <p class="caption"><span class="caption-text">Arrow Columnar Format</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="README.html">Arrow specification documents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Guidelines.html">Implementation guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Layout.html">Physical memory layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="IPC.html">Interprocess messaging / communication (IPC)</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Arrow Flight RPC</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#rpc-methods">RPC Methods</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#authentication">Authentication</a></li>
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="Guidelines.html">Implementation Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Layout.html">Physical Memory Layout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="IPC.html">IPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Metadata.html">Format Metadata</a></li>
 </ul>
-</li>
+<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Versioning.html">Format Versioning and Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Columnar.html">Arrow Columnar Format</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Arrow Flight RPC</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#rpc-methods">RPC Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#authentication">Authentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#error-handling">Error Handling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#external-resources">External Resources</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#protocol-buffer-definitions">Protocol Buffer Definitions</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
@@ -113,6 +117,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/crossbow.html">Packaging and Testing with Crossbow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/documentation.html">Building the Documentation</a></li>
 </ul>
@@ -232,8 +237,9 @@ first message.</p></li>
 </ol>
 <p>See <a class="reference internal" href="#protocol-buffer-definitions">Protocol Buffer Definitions</a> for full details on the methods and
 messages involved.</p>
+</div>
 <div class="section" id="authentication">
-<h3>Authentication<a class="headerlink" href="#authentication" title="Permalink to this headline">¶</a></h3>
+<h2>Authentication<a class="headerlink" href="#authentication" title="Permalink to this headline">¶</a></h2>
 <p>Flight supports application-implemented authentication
 methods. Authentication, if enabled, has two phases: at connection
 time, the client and server can exchange any number of messages. Then,
@@ -245,6 +251,67 @@ call, or they may establish trust during the handshake and not
 validate a token for each call. (Note that the latter is not secure if
 you choose to deploy a layer 7 load balancer, as is common with gRPC.)</p>
 </div>
+<div class="section" id="error-handling">
+<h2>Error Handling<a class="headerlink" href="#error-handling" title="Permalink to this headline">¶</a></h2>
+<p>Arrow Flight defines its own set of error codes. The implementation
+differs between languages (e.g. in C++, Unimplemented is a general
+Arrow error status while it’s a Flight-specific exception in Java),
+but the following set is exposed:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 73%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Error Code</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>UNKNOWN</p></td>
+<td><p>An unknown error. The default if no other
+error applies.</p></td>
+</tr>
+<tr class="row-odd"><td><p>INTERNAL</p></td>
+<td><p>An error internal to the service
+implementation occurred.</p></td>
+</tr>
+<tr class="row-even"><td><p>INVALID_ARGUMENT</p></td>
+<td><p>The client passed an invalid argument to
+the RPC.</p></td>
+</tr>
+<tr class="row-odd"><td><p>TIMED_OUT</p></td>
+<td><p>The operation exceeded a timeout or
+deadline.</p></td>
+</tr>
+<tr class="row-even"><td><p>NOT_FOUND</p></td>
+<td><p>The requested resource (action, data
+stream) was not found.</p></td>
+</tr>
+<tr class="row-odd"><td><p>ALREADY_EXISTS</p></td>
+<td><p>The resource already exists.</p></td>
+</tr>
+<tr class="row-even"><td><p>CANCELLED</p></td>
+<td><p>The operation was cancelled (either by the
+client or the server).</p></td>
+</tr>
+<tr class="row-odd"><td><p>UNAUTHENTICATED</p></td>
+<td><p>The client is not authenticated.</p></td>
+</tr>
+<tr class="row-even"><td><p>UNAUTHORIZED</p></td>
+<td><p>The client is authenticated, but does not
+have permissions for the requested
+operation.</p></td>
+</tr>
+<tr class="row-odd"><td><p>UNIMPLEMENTED</p></td>
+<td><p>The RPC is not implemented.</p></td>
+</tr>
+<tr class="row-even"><td><p>UNAVAILABLE</p></td>
+<td><p>The server is not available. May be emitted
+by the client for connectivity reasons.</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="external-resources">
 <h2>External Resources<a class="headerlink" href="#external-resources" title="Permalink to this headline">¶</a></h2>
@@ -561,7 +628,23 @@ you choose to deploy a layer 7 load balancer, as is common with gRPC.)</p>
 304
 305
 306
-307</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="cm">/*</span>
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323</pre></div></td><td class="code"><div class="highlight"><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * Licensed to the Apache Software Foundation (ASF) under one</span>
 <span class="cm"> * or more contributor license agreements.  See the NOTICE file</span>
 <span class="cm"> * distributed with this work for additional information</span>
@@ -623,6 +706,14 @@ you choose to deploy a layer 7 load balancer, as is common with gRPC.)</p>
 <span class="cm">   * service.</span>
 <span class="cm">   */</span>
   <span class="k">rpc</span> <span class="n">GetFlightInfo</span><span class="p">(</span><span class="n">FlightDescriptor</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">FlightInfo</span><span class="p">)</span> <span class="p">{}</span>
+
+  <span class="cm">/*</span>
+<span class="cm">   * For a given FlightDescriptor, get the Schema as described in Schema.fbs::Schema</span>
+<span class="cm">   * This is used when a consumer needs the Schema of flight stream. Similar to</span>
+<span class="cm">   * GetFlightInfo this interface may generate a new flight that was not previously</span>
+<span class="cm">   * available in ListFlights.</span>
+<span class="cm">   */</span>
+   <span class="k">rpc</span> <span class="n">GetSchema</span><span class="p">(</span><span class="n">FlightDescriptor</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">SchemaResult</span><span class="p">)</span> <span class="p">{}</span>
 
   <span class="cm">/*</span>
 <span class="cm">   * Retrieve a single stream associated with a particular descriptor</span>
@@ -730,6 +821,14 @@ you choose to deploy a layer 7 load balancer, as is common with gRPC.)</p>
 <span class="cm"> */</span>
 <span class="kd">message</span> <span class="nc">Result</span> <span class="p">{</span>
   <span class="kt">bytes</span> <span class="na">body</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * Wrap the result of a getSchema call</span>
+<span class="cm"> */</span>
+<span class="kd">message</span> <span class="nc">SchemaResult</span> <span class="p">{</span>
+  <span class="c1">// schema of the dataset as described in Schema.fbs::Schema.</span>
+  <span class="kt">bytes</span> <span class="na">schema</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="cm">/*</span>
@@ -881,10 +980,10 @@ you choose to deploy a layer 7 load balancer, as is common with gRPC.)</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../cpp/index.html" class="btn btn-neutral float-right" title="C++ Implementation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="Integration.html" class="btn btn-neutral float-right" title="Integration Testing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="IPC.html" class="btn btn-neutral float-left" title="Interprocess messaging / communication (IPC)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="Columnar.html" class="btn btn-neutral float-left" title="Arrow Columnar Format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -893,7 +992,7 @@ you choose to deploy a layer 7 load balancer, as is common with gRPC.)</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016-2018 Apache Software Foundation
+        &copy; Copyright 2016-2019 Apache Software Foundation
 
     </p>
   </div>

@@ -18,9 +18,9 @@
 .. default-domain:: cpp
 .. highlight:: cpp
 
-========================
-Two-dimensional Datasets
-========================
+============
+Tabular Data
+============
 
 While arrays and chunked arrays represent a one-dimensional sequence of
 homogenous values, data often comes in the form of two-dimensional sets of
@@ -56,20 +56,13 @@ function overloads::
    field_b = arrow::field("B", arrow::utf8());
    schema = arrow::schema({field_a, field_b});
 
-Columns
-=======
-
-A :class:`arrow::Column` is a chunked array tied together with a field.
-The field describes the column's name (for lookup in a larger dataset)
-and its metadata.
-
 Tables
 ======
 
-A :class:`arrow::Table` is a two-dimensional dataset of a number of columns,
-together with a schema.  The columns' names and types must match the schema.
-Also, each column must have the same logical length in number of elements
-(although each column can be chunked in a different way).
+A :class:`arrow::Table` is a two-dimensional dataset with chunked arrays for
+columns, together with a schema providing field names.  Also, each chunked
+column must have the same logical length in number of elements (although each
+column can be chunked in a different way).
 
 Record Batches
 ==============
