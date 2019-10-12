@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Metadata: Logical types, schemas, data headers &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
+  <title>Format Metadata &mdash; Apache Arrow v0.15.0</title>
   
 
   
@@ -36,8 +36,8 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Interprocess messaging / communication (IPC)" href="IPC.html" />
-    <link rel="prev" title="Physical memory layout" href="Layout.html" /> 
+    <link rel="next" title="Format Versioning and Stability" href="Versioning.html" />
+    <link rel="prev" title="IPC" href="IPC.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.14.2.dev0+g5f564424c.d20190805
+                0.15.0
               </div>
             
           
@@ -85,27 +85,19 @@
               
             
             
-              <p class="caption"><span class="caption-text">Arrow Columnar Format</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="README.html">Arrow specification documents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Guidelines.html">Implementation guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Layout.html">Physical memory layout</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Metadata: Logical types, schemas, data headers</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#schemas">Schemas</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#record-batch-data-headers">Record Batch Data Headers</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#buffers">Buffers</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#field-metadata">Field metadata</a></li>
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Guidelines.html">Implementation Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Layout.html">Physical Memory Layout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="IPC.html">IPC</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Format Metadata</a></li>
 </ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#flattening-of-nested-data">Flattening of nested data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#logical-types">Logical types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#custom-application-metadata">Custom Application Metadata</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#extension-types">Extension Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#integration-testing">Integration Testing</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="IPC.html">Interprocess messaging / communication (IPC)</a></li>
+<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Versioning.html">Format Versioning and Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Flight.html">Arrow Flight RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
@@ -118,6 +110,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/crossbow.html">Packaging and Testing with Crossbow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/documentation.html">Building the Documentation</a></li>
 </ul>
@@ -165,7 +158,7 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-      <li>Metadata: Logical types, schemas, data headers</li>
+      <li>Format Metadata</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -184,307 +177,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="metadata-logical-types-schemas-data-headers">
-<h1>Metadata: Logical types, schemas, data headers<a class="headerlink" href="#metadata-logical-types-schemas-data-headers" title="Permalink to this headline">¶</a></h1>
-<p>This is documentation for the Arrow metadata specification, which enables
-systems to communicate the</p>
-<ul class="simple">
-<li><p>Logical array types (which are implemented using the physical memory layouts
-specified in <a class="reference internal" href="Layout.html"><span class="doc">Physical memory layout</span></a>)</p></li>
-<li><p>Schemas for table-like collections of Arrow data structures</p></li>
-<li><p>“Data headers” indicating the physical locations of memory buffers sufficient
-to reconstruct a Arrow data structures without copying memory.</p></li>
-</ul>
-<p>We are using <a class="reference external" href="http://github.com/google/flatbuffers">Flatbuffers</a> for low-overhead reading and writing of the Arrow
-metadata. See <code class="docutils literal notranslate"><span class="pre">Message.fbs</span></code>.</p>
-<div class="section" id="schemas">
-<h2>Schemas<a class="headerlink" href="#schemas" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">Schema</span></code> type describes a table-like structure consisting of any number of
-Arrow arrays, each of which can be interpreted as a column in the table. A
-schema by itself does not describe the physical structure of any particular set
-of data.</p>
-<p>A schema consists of a sequence of <strong>fields</strong>, which are metadata describing
-the columns. The Flatbuffers IDL for a field is:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">table</span> <span class="n">Field</span> <span class="p">{</span>
-  <span class="o">//</span> <span class="n">Name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">required</span><span class="p">,</span> <span class="ow">in</span> <span class="n">i</span><span class="o">.</span><span class="n">e</span><span class="o">.</span> <span class="n">a</span> <span class="n">List</span>
-  <span class="n">name</span><span class="p">:</span> <span class="n">string</span><span class="p">;</span>
-  <span class="n">nullable</span><span class="p">:</span> <span class="nb">bool</span><span class="p">;</span>
-  <span class="nb">type</span><span class="p">:</span> <span class="n">Type</span><span class="p">;</span>
-
-  <span class="o">//</span> <span class="n">Present</span> <span class="n">only</span> <span class="k">if</span> <span class="n">the</span> <span class="n">field</span> <span class="ow">is</span> <span class="n">dictionary</span> <span class="n">encoded</span>
-  <span class="n">dictionary</span><span class="p">:</span> <span class="n">DictionaryEncoding</span><span class="p">;</span>
-
-  <span class="o">//</span> <span class="n">children</span> <span class="n">apply</span> <span class="n">only</span> <span class="n">to</span> <span class="n">Nested</span> <span class="n">data</span> <span class="n">types</span> <span class="n">like</span> <span class="n">Struct</span><span class="p">,</span> <span class="n">List</span> <span class="ow">and</span> <span class="n">Union</span>
-  <span class="n">children</span><span class="p">:</span> <span class="p">[</span><span class="n">Field</span><span class="p">];</span>
-
-  <span class="o">//</span> <span class="n">User</span><span class="o">-</span><span class="n">defined</span> <span class="n">metadata</span>
-  <span class="n">custom_metadata</span><span class="p">:</span> <span class="p">[</span> <span class="n">KeyValue</span> <span class="p">];</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">type</span></code> is the logical type of the field. Nested types, such as List,
-Struct, and Union, have a sequence of child fields.</p>
-</div>
-<div class="section" id="record-batch-data-headers">
-<h2>Record Batch Data Headers<a class="headerlink" href="#record-batch-data-headers" title="Permalink to this headline">¶</a></h2>
-<p>A record batch is a collection of top-level named, equal length Arrow arrays
-(or vectors). If one of the arrays contains nested data, its child arrays are
-not required to be the same length as the top-level arrays.</p>
-<p>One can be thought of as a realization of a particular schema. The metadata
-describing a particular record batch is called a “data header”. Here is the
-Flatbuffers IDL for a record batch data header:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">table</span> <span class="n">RecordBatch</span> <span class="p">{</span>
-  <span class="n">length</span><span class="p">:</span> <span class="n">long</span><span class="p">;</span>
-  <span class="n">nodes</span><span class="p">:</span> <span class="p">[</span><span class="n">FieldNode</span><span class="p">];</span>
-  <span class="n">buffers</span><span class="p">:</span> <span class="p">[</span><span class="n">Buffer</span><span class="p">];</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">RecordBatch</span></code> metadata provides for record batches with length exceeding
-2 <sup>31</sup> - 1, but Arrow implementations are not required to implement support
-beyond this size.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">nodes</span></code> and <code class="docutils literal notranslate"><span class="pre">buffers</span></code> fields are produced by a depth-first traversal /
-flattening of a schema (possibly containing nested types) for a given in-memory
-data set.</p>
-<div class="section" id="buffers">
-<h3>Buffers<a class="headerlink" href="#buffers" title="Permalink to this headline">¶</a></h3>
-<p>A buffer is metadata describing a contiguous memory region relative to some
-virtual address space. This may include:</p>
-<ul class="simple">
-<li><p>Shared memory, e.g. a memory-mapped file</p></li>
-<li><p>An RPC message received in-memory</p></li>
-<li><p>Data in a file</p></li>
-</ul>
-<p>The key form of the Buffer type is:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">struct</span> <span class="n">Buffer</span> <span class="p">{</span>
-  <span class="n">offset</span><span class="p">:</span> <span class="n">long</span><span class="p">;</span>
-  <span class="n">length</span><span class="p">:</span> <span class="n">long</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>In the context of a record batch, each field has some number of buffers
-associated with it, which are derived from their physical memory layout.</p>
-<p>Each logical type (separate from its children, if it is a nested type) has a
-deterministic number of buffers associated with it. These will be specified in
-the logical types section.</p>
-</div>
-<div class="section" id="field-metadata">
-<h3>Field metadata<a class="headerlink" href="#field-metadata" title="Permalink to this headline">¶</a></h3>
-<p>The <code class="docutils literal notranslate"><span class="pre">FieldNode</span></code> values contain metadata about each level in a nested type
-hierarchy.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">struct</span> <span class="n">FieldNode</span> <span class="p">{</span>
-  <span class="o">///</span> <span class="n">The</span> <span class="n">number</span> <span class="n">of</span> <span class="n">value</span> <span class="n">slots</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">Arrow</span> <span class="n">array</span> <span class="n">at</span> <span class="n">this</span> <span class="n">level</span> <span class="n">of</span> <span class="n">a</span> <span class="n">nested</span>
-  <span class="o">///</span> <span class="n">tree</span>
-  <span class="n">length</span><span class="p">:</span> <span class="n">long</span><span class="p">;</span>
-
-  <span class="o">///</span> <span class="n">The</span> <span class="n">number</span> <span class="n">of</span> <span class="n">observed</span> <span class="n">nulls</span><span class="o">.</span>
-  <span class="n">null_count</span><span class="p">:</span> <span class="n">lohng</span><span class="p">;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">FieldNode</span></code> metadata provides for fields with length exceeding 2 <sup>31</sup> - 1,
-but Arrow implementations are not required to implement support for large
-arrays.</p>
-</div>
-</div>
-<div class="section" id="flattening-of-nested-data">
-<h2>Flattening of nested data<a class="headerlink" href="#flattening-of-nested-data" title="Permalink to this headline">¶</a></h2>
-<p>Nested types are flattened in the record batch in depth-first order. When
-visiting each field in the nested type tree, the metadata is appended to the
-top-level <code class="docutils literal notranslate"><span class="pre">fields</span></code> array and the buffers associated with that field (but not
-its children) are appended to the <code class="docutils literal notranslate"><span class="pre">buffers</span></code> array.</p>
-<p>For example, let’s consider the schema</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">col1</span><span class="p">:</span> <span class="n">Struct</span><span class="o">&lt;</span><span class="n">a</span><span class="p">:</span> <span class="n">Int32</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Int64</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="n">Float64</span><span class="o">&gt;</span>
-<span class="n">col2</span><span class="p">:</span> <span class="n">Utf8</span>
-</pre></div>
-</div>
-<p>The flattened version of this is:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">FieldNode</span> <span class="mi">0</span><span class="p">:</span> <span class="n">Struct</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;col1&#39;</span>
-<span class="n">FieldNode</span> <span class="mi">1</span><span class="p">:</span> <span class="n">Int32</span> <span class="n">name</span><span class="o">=</span><span class="n">a</span><span class="s1">&#39;</span>
-<span class="n">FieldNode</span> <span class="mi">2</span><span class="p">:</span> <span class="n">List</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;b&#39;</span>
-<span class="n">FieldNode</span> <span class="mi">3</span><span class="p">:</span> <span class="n">Int64</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;item&#39;</span>  <span class="c1"># arbitrary</span>
-<span class="n">FieldNode</span> <span class="mi">4</span><span class="p">:</span> <span class="n">Float64</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;c&#39;</span>
-<span class="n">FieldNode</span> <span class="mi">5</span><span class="p">:</span> <span class="n">Utf8</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;col2&#39;</span>
-</pre></div>
-</div>
-<p>For the buffers produced, we would have the following (as described in more
-detail for each type below):</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">buffer</span> <span class="mi">0</span><span class="p">:</span> <span class="n">field</span> <span class="mi">0</span> <span class="n">validity</span> <span class="n">bitmap</span>
-
-<span class="n">buffer</span> <span class="mi">1</span><span class="p">:</span> <span class="n">field</span> <span class="mi">1</span> <span class="n">validity</span> <span class="n">bitmap</span>
-<span class="n">buffer</span> <span class="mi">2</span><span class="p">:</span> <span class="n">field</span> <span class="mi">1</span> <span class="n">values</span> <span class="o">&lt;</span><span class="n">int32_t</span><span class="o">*&gt;</span>
-
-<span class="n">buffer</span> <span class="mi">3</span><span class="p">:</span> <span class="n">field</span> <span class="mi">2</span> <span class="n">validity</span> <span class="n">bitmap</span>
-<span class="n">buffer</span> <span class="mi">4</span><span class="p">:</span> <span class="n">field</span> <span class="mi">2</span> <span class="nb">list</span> <span class="n">offsets</span> <span class="o">&lt;</span><span class="n">int32_t</span><span class="o">*&gt;</span>
-
-<span class="n">buffer</span> <span class="mi">5</span><span class="p">:</span> <span class="n">field</span> <span class="mi">3</span> <span class="n">validity</span> <span class="n">bitmap</span>
-<span class="n">buffer</span> <span class="mi">6</span><span class="p">:</span> <span class="n">field</span> <span class="mi">3</span> <span class="n">values</span> <span class="o">&lt;</span><span class="n">int64_t</span><span class="o">*&gt;</span>
-
-<span class="n">buffer</span> <span class="mi">7</span><span class="p">:</span> <span class="n">field</span> <span class="mi">4</span> <span class="n">validity</span> <span class="n">bitmap</span>
-<span class="n">buffer</span> <span class="mi">8</span><span class="p">:</span> <span class="n">field</span> <span class="mi">4</span> <span class="n">values</span> <span class="o">&lt;</span><span class="n">double</span><span class="o">*&gt;</span>
-
-<span class="n">buffer</span> <span class="mi">9</span><span class="p">:</span> <span class="n">field</span> <span class="mi">5</span> <span class="n">validity</span> <span class="n">bitmap</span>
-<span class="n">buffer</span> <span class="mi">10</span><span class="p">:</span> <span class="n">field</span> <span class="mi">5</span> <span class="n">offsets</span> <span class="o">&lt;</span><span class="n">int32_t</span><span class="o">*&gt;</span>
-<span class="n">buffer</span> <span class="mi">11</span><span class="p">:</span> <span class="n">field</span> <span class="mi">5</span> <span class="n">data</span> <span class="o">&lt;</span><span class="n">uint8_t</span><span class="o">*&gt;</span>
-</pre></div>
-</div>
-</div>
-<div class="section" id="logical-types">
-<span id="spec-logical-types"></span><h2>Logical types<a class="headerlink" href="#logical-types" title="Permalink to this headline">¶</a></h2>
-<p>A logical type consists of a type name and metadata along with an explicit
-mapping to a physical memory representation. These may fall into some different
-categories:</p>
-<ul class="simple">
-<li><p>Types represented as fixed-width primitive arrays (for example: C-style
-integers and floating point numbers)</p></li>
-<li><p>Types having equivalent memory layout to a physical nested type (e.g. strings
-use the list representation, but logically are not nested types)</p></li>
-</ul>
-<p>Refer to <a class="reference external" href="https://github.com/apache/arrow/blob/master/format/Schema.fbs">Schema.fbs</a> for up-to-date descriptions of each built-in
-logical type.</p>
-</div>
-<div class="section" id="custom-application-metadata">
-<h2>Custom Application Metadata<a class="headerlink" href="#custom-application-metadata" title="Permalink to this headline">¶</a></h2>
-<p>We provide a <code class="docutils literal notranslate"><span class="pre">custom_metadata</span></code> field at three levels to provide a
-mechanism for developers to pass application-specific metadata in
-Arrow protocol messages. This includes <code class="docutils literal notranslate"><span class="pre">Field</span></code>, <code class="docutils literal notranslate"><span class="pre">Schema</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">Message</span></code>.</p>
-<p>The colon symbol <code class="docutils literal notranslate"><span class="pre">:</span></code> is to be used as a namespace separator. It can
-be used multiple times in a key.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">ARROW</span></code> pattern is a reserved namespace for internal Arrow use
-in the <code class="docutils literal notranslate"><span class="pre">custom_metadata</span></code> fields. For example,
-<code class="docutils literal notranslate"><span class="pre">ARROW:extension:name</span></code>.</p>
-</div>
-<div class="section" id="extension-types">
-<h2>Extension Types<a class="headerlink" href="#extension-types" title="Permalink to this headline">¶</a></h2>
-<p>User-defined “extension” types can be defined setting certain
-<code class="docutils literal notranslate"><span class="pre">KeyValue</span></code> pairs in <code class="docutils literal notranslate"><span class="pre">custom_metadata</span></code> in the <code class="docutils literal notranslate"><span class="pre">Field</span></code> metadata
-structure. These extension keys are:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">'ARROW:extension:name'</span></code> for the string name identifying the
-custom data type. We recommend that you use a “namespace”-style
-prefix for extension type names to minimize the possibility of
-conflicts with multiple Arrow readers and writers in the same
-application. For example, use <code class="docutils literal notranslate"><span class="pre">myorg.name_of_type</span></code> instead of
-simply <code class="docutils literal notranslate"><span class="pre">name_of_type</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">'ARROW:extension:metadata'</span></code> for a serialized representation
-of the <code class="docutils literal notranslate"><span class="pre">ExtensionType</span></code> necessary to reconstruct the custom type</p></li>
-</ul>
-<p>This extension metadata can annotate any of the built-in Arrow logical
-types. The intent is that an implementation that does not support an
-extension type can still handle the underlying data. For example a
-16-byte UUID value could be embedded in <code class="docutils literal notranslate"><span class="pre">FixedSizeBinary(16)</span></code>, and
-implementations that do not have this extension type can still work
-with the underlying binary values and pass along the
-<code class="docutils literal notranslate"><span class="pre">custom_metadata</span></code> in subsequent Arrow protocol messages.</p>
-<p>Extension types may or may not use the
-<code class="docutils literal notranslate"><span class="pre">'ARROW:extension:metadata'</span></code> field. Let’s consider some example
-extension types:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">uuid</span></code> represented as <code class="docutils literal notranslate"><span class="pre">FixedSizeBinary(16)</span></code> with empty metadata</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">latitude-longitude</span></code> represented as <code class="docutils literal notranslate"><span class="pre">struct&lt;latitude:</span> <span class="pre">double,</span>
-<span class="pre">longitude:</span> <span class="pre">double&gt;</span></code>, and empty metadata</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tensor</span></code> (multidimensional array) stored as <code class="docutils literal notranslate"><span class="pre">Binary</span></code> values and
-having serialized metadata indicating the data type and shape of
-each value. This could be JSON like <code class="docutils literal notranslate"><span class="pre">{'type':</span> <span class="pre">'int8',</span> <span class="pre">'shape':</span> <span class="pre">[4,</span>
-<span class="pre">5]}</span></code> for a 4x5 cell tensor.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">trading-time</span></code> represented as <code class="docutils literal notranslate"><span class="pre">Timestamp</span></code> with serialized
-metadata indicating the market trading calendar the data corresponds
-to</p></li>
-</ul>
-</div>
-<div class="section" id="integration-testing">
-<h2>Integration Testing<a class="headerlink" href="#integration-testing" title="Permalink to this headline">¶</a></h2>
-<p>A JSON representation of the schema is provided for cross-language
-integration testing purposes.</p>
-<p>Schema:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;fields&quot;</span> <span class="p">:</span> <span class="p">[</span>
-    <span class="o">/*</span> <span class="n">Field</span> <span class="o">*/</span>
-  <span class="p">]</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Field:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;name_of_the_field&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;nullable&quot;</span> <span class="p">:</span> <span class="n">false</span><span class="p">,</span>
-  <span class="s2">&quot;type&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">Type</span> <span class="o">*/</span><span class="p">,</span>
-  <span class="s2">&quot;children&quot;</span> <span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">Field</span> <span class="o">*/</span> <span class="p">],</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Type:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;null|struct|list|union|int|floatingpoint|utf8|binary|fixedsizebinary|bool|decimal|date|time|timestamp|interval&quot;</span>
-  <span class="o">//</span> <span class="n">fields</span> <span class="k">as</span> <span class="n">defined</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">Flatbuffer</span> <span class="n">depending</span> <span class="n">on</span> <span class="n">the</span> <span class="nb">type</span> <span class="n">name</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Union:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;union&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;mode&quot;</span> <span class="p">:</span> <span class="s2">&quot;Sparse|Dense&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;typeIds&quot;</span> <span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span> <span class="p">]</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">typeIds</span></code> field in the Union are the codes used to denote each type, which
-may be different from the index of the child array. This is so that the union
-type ids do not have to be enumerated from 0.</p>
-<p>Int:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;int&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;bitWidth&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span><span class="p">,</span>
-  <span class="s2">&quot;isSigned&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">boolean</span> <span class="o">*/</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>FloatingPoint:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;floatingpoint&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;precision&quot;</span> <span class="p">:</span> <span class="s2">&quot;HALF|SINGLE|DOUBLE&quot;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Decimal:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;decimal&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;precision&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span><span class="p">,</span>
-  <span class="s2">&quot;scale&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Timestamp:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;unit&quot;</span> <span class="p">:</span> <span class="s2">&quot;SECOND|MILLISECOND|MICROSECOND|NANOSECOND&quot;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Date:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;date&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;unit&quot;</span> <span class="p">:</span> <span class="s2">&quot;DAY|MILLISECOND&quot;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Time:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;time&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;unit&quot;</span> <span class="p">:</span> <span class="s2">&quot;SECOND|MILLISECOND|MICROSECOND|NANOSECOND&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;bitWidth&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">integer</span><span class="p">:</span> <span class="mi">32</span> <span class="ow">or</span> <span class="mi">64</span> <span class="o">*/</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Interval:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;interval&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;unit&quot;</span> <span class="p">:</span> <span class="s2">&quot;YEAR_MONTH|DAY_TIME&quot;</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</div>
+  <div class="section" id="format-metadata">
+<h1>Format Metadata<a class="headerlink" href="#format-metadata" title="Permalink to this headline">¶</a></h1>
+<p>The contents of this document have relocated to the main <a class="reference internal" href="Columnar.html#format-columnar"><span class="std std-ref">Columnar
+Specification</span></a> page.</p>
 </div>
 
 
@@ -495,10 +191,10 @@ type ids do not have to be enumerated from 0.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="IPC.html" class="btn btn-neutral float-right" title="Interprocess messaging / communication (IPC)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="Versioning.html" class="btn btn-neutral float-right" title="Format Versioning and Stability" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="Layout.html" class="btn btn-neutral float-left" title="Physical memory layout" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="IPC.html" class="btn btn-neutral float-left" title="IPC" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -507,7 +203,7 @@ type ids do not have to be enumerated from 0.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016-2018 Apache Software Foundation
+        &copy; Copyright 2016-2019 Apache Software Foundation
 
     </p>
   </div>

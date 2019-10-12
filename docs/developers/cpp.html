@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>C++ Development &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
+  <title>C++ Development &mdash; Apache Arrow v0.15.0</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.14.2.dev0+g5f564424c.d20190805
+                0.15.0
               </div>
             
           
@@ -85,14 +85,19 @@
               
             
             
-              <p class="caption"><span class="caption-text">Arrow Columnar Format</span></p>
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../format/Guidelines.html">Implementation Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical Memory Layout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">IPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Format Metadata</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../format/README.html">Arrow specification documents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Guidelines.html">Implementation guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical memory layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">Interprocess messaging / communication (IPC)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Versioning.html">Format Versioning and Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Flight.html">Arrow Flight RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
@@ -149,8 +154,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#apache-parquet-development">Apache Parquet Development</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#arrow-flight-rpc">Arrow Flight RPC</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#development-conventions">Development Conventions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#file-naming">File Naming</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#memory-pools">Memory Pools</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#header-files">Header files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#error-handling-and-exceptions">Error Handling and Exceptions</a></li>
 </ul>
 </li>
@@ -158,6 +163,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="crossbow.html">Packaging and Testing with Crossbow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="documentation.html">Building the Documentation</a></li>
 </ul>
@@ -244,27 +250,16 @@ invoke <code class="docutils literal notranslate"><span class="pre">cmake</span>
 <li><p>A C++11-enabled compiler. On Linux, gcc 4.8 and higher should be
 sufficient. For Windows, at least Visual Studio 2015 is required.</p></li>
 <li><p>CMake 3.2 or higher</p></li>
-<li><p>Boost 1.58 or higher, though some unit tests require 1.64 or
-newer.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">bison</span></code> and <code class="docutils literal notranslate"><span class="pre">flex</span></code> (for building Apache Thrift from source only, an
-Apache Parquet dependency.)</p></li>
-</ul>
-<p>Running the unit tests using <code class="docutils literal notranslate"><span class="pre">ctest</span></code> requires:</p>
-<ul class="simple">
-<li><p>python</p></li>
+<li><p>On Linux and macOS, either <code class="docutils literal notranslate"><span class="pre">make</span></code> or <code class="docutils literal notranslate"><span class="pre">ninja</span></code> build utilities</p></li>
+<li><p>Boost 1.58 or higher, though some unit tests require 1.64 or newer.</p></li>
 </ul>
 <p>On Ubuntu/Debian you can install the requirements with:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo apt-get install <span class="se">\</span>
-     autoconf <span class="se">\</span>
      build-essential <span class="se">\</span>
      cmake <span class="se">\</span>
-     libboost-dev <span class="se">\</span>
      libboost-filesystem-dev <span class="se">\</span>
      libboost-regex-dev <span class="se">\</span>
-     libboost-system-dev <span class="se">\</span>
-     python <span class="se">\</span>
-     bison <span class="se">\</span>
-     flex
+     libboost-system-dev
 </pre></div>
 </div>
 <p>On Alpine Linux:</p>
@@ -322,11 +317,11 @@ argument is omitted then a release build will be produced.</p>
 <span class="nb">cd</span> arrow/cpp
 mkdir release
 <span class="nb">cd</span> release
-cmake -DARROW_BUILD_TESTS<span class="o">=</span>ON ..
-make unittest
+cmake ..
+make
 </pre></div>
 </div>
-<p>Minimal debug build:</p>
+<p>Minimal debug build with unit tests:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/apache/arrow.git
 <span class="nb">cd</span> arrow/cpp
 mkdir debug
@@ -335,8 +330,9 @@ cmake -DCMAKE_BUILD_TYPE<span class="o">=</span>Debug -DARROW_BUILD_TESTS<span c
 make unittest
 </pre></div>
 </div>
-<p>If you do not need to build the test suite, you can omit the
-<code class="docutils literal notranslate"><span class="pre">ARROW_BUILD_TESTS</span></code> option (the default is not to build the unit tests).</p>
+<p>The unit tests are not built by default. After building, one can also invoke
+the unit tests using the <code class="docutils literal notranslate"><span class="pre">ctest</span></code> tool provided by CMake (not that <code class="docutils literal notranslate"><span class="pre">test</span></code>
+depends on <code class="docutils literal notranslate"><span class="pre">python</span></code> being available).</p>
 <p>On some Linux distributions, running the test suite might require setting an
 explicit locale. If you see any locale-related errors, try setting the
 environment variable (which requires the <cite>locales</cite> package or equivalent):</p>
@@ -763,7 +759,7 @@ by generating an Xcode project:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> cpp
 mkdir xcode-build
 <span class="nb">cd</span> xcode-build
-cmake .. -G Xcode -DARROW_BUILD_TESTS<span class="o">=</span>ON
+cmake .. -G Xcode -DARROW_BUILD_TESTS<span class="o">=</span>ON -DCMAKE_BUILD_TYPE<span class="o">=</span>DEBUG
 open arrow.xcodeproj
 </pre></div>
 </div>
@@ -1028,6 +1024,10 @@ can be built with the <code class="docutils literal notranslate"><span class="pr
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>make parquet
 </pre></div>
 </div>
+<p>On Linux and macOS if you do not have Apache Thrift installed on your system,
+or you are building with <code class="docutils literal notranslate"><span class="pre">-DThrift_SOURCE=BUNDLED</span></code>, you must install
+<code class="docutils literal notranslate"><span class="pre">bison</span></code> and <code class="docutils literal notranslate"><span class="pre">flex</span></code> packages. On Windows we handle these build dependencies
+automatically when building Thrift from source.</p>
 <p>Running <code class="docutils literal notranslate"><span class="pre">ctest</span> <span class="pre">-L</span> <span class="pre">unittest</span></code> will run all built C++ unit tests, while <code class="docutils literal notranslate"><span class="pre">ctest</span> <span class="pre">-L</span>
 <span class="pre">parquet</span></code> will run only the Parquet unit tests. The unit tests depend on an
 environment variable <code class="docutils literal notranslate"><span class="pre">PARQUET_TEST_DATA</span></code> that depends on a git submodule to the
@@ -1071,33 +1071,41 @@ try <a class="reference external" href="https://brew.sh/">Homebrew</a>:</p>
 <p>This section provides some information about some of the abstractions and
 development approaches we use to solve problems common to many parts of the C++
 project.</p>
+<div class="section" id="file-naming">
+<h3>File Naming<a class="headerlink" href="#file-naming" title="Permalink to this headline">¶</a></h3>
+<p>C++ source and header files should use underscores for word separation, not hyphens.
+Compiled executables, however, will automatically use hyphens (such that
+e.g. <code class="docutils literal notranslate"><span class="pre">src/arrow/scalar_test.cc</span></code> will be compiled into <code class="docutils literal notranslate"><span class="pre">arrow-scalar-test</span></code>).</p>
+<p>C++ header files use the <code class="docutils literal notranslate"><span class="pre">.h</span></code> extension. Any header file name not
+containing <code class="docutils literal notranslate"><span class="pre">internal</span></code> is considered to be a public header, and will be
+automatically installed by the build.</p>
+</div>
 <div class="section" id="memory-pools">
 <h3>Memory Pools<a class="headerlink" href="#memory-pools" title="Permalink to this headline">¶</a></h3>
 <p>We provide a default memory pool with <code class="docutils literal notranslate"><span class="pre">arrow::default_memory_pool()</span></code>. As a
 matter of convenience, some of the array builder classes have constructors
-which use the default pool without explicitly passing it. You can disable these
-constructors in your application (so that you are accounting properly for all
-memory allocations) by defining <code class="docutils literal notranslate"><span class="pre">ARROW_NO_DEFAULT_MEMORY_POOL</span></code>.</p>
-</div>
-<div class="section" id="header-files">
-<h3>Header files<a class="headerlink" href="#header-files" title="Permalink to this headline">¶</a></h3>
-<p>We use the <code class="docutils literal notranslate"><span class="pre">.h</span></code> extension for C++ header files. Any header file name not
-containing <code class="docutils literal notranslate"><span class="pre">internal</span></code> is considered to be a public header, and will be
-automatically installed by the build.</p>
+which use the default pool without explicitly passing it. One can override the
+default optional memory pool by defining the <code class="docutils literal notranslate"><span class="pre">ARROW_MEMORY_POOL_DEFAULT</span></code>
+macro to an assignment of a global function,
+e.g. <code class="docutils literal notranslate"><span class="pre">=</span> <span class="pre">my_default_memory_pool()</span></code>.</p>
 </div>
 <div class="section" id="error-handling-and-exceptions">
 <h3>Error Handling and Exceptions<a class="headerlink" href="#error-handling-and-exceptions" title="Permalink to this headline">¶</a></h3>
-<p>For error handling, we use <code class="docutils literal notranslate"><span class="pre">arrow::Status</span></code> values instead of throwing C++
+<p>For error handling, we return <code class="docutils literal notranslate"><span class="pre">arrow::Status</span></code> values instead of throwing C++
 exceptions. Since the Arrow C++ libraries are intended to be useful as a
 component in larger C++ projects, using <code class="docutils literal notranslate"><span class="pre">Status</span></code> objects can help with good
 code hygiene by making explicit when a function is expected to be able to fail.</p>
-<p>For expressing invariants and “cannot fail” errors, we use DCHECK macros
+<p>A more recent option is to return a <code class="docutils literal notranslate"><span class="pre">arrow::Result&lt;T&gt;</span></code> object that can
+represent either a successful result with a <code class="docutils literal notranslate"><span class="pre">T</span></code> value, or an error result
+with a <code class="docutils literal notranslate"><span class="pre">Status</span></code> value.</p>
+<p>For expressing internal invariants and “cannot fail” errors, we use <code class="docutils literal notranslate"><span class="pre">DCHECK</span></code> macros
 defined in <code class="docutils literal notranslate"><span class="pre">arrow/util/logging.h</span></code>. These checks are disabled in release builds
 and are intended to catch internal development errors, particularly when
 refactoring. These macros are not to be included in any public header files.</p>
 <p>Since we do not use exceptions, we avoid doing expensive work in object
 constructors. Objects that are expensive to construct may often have private
-constructors, with public static factory methods that return <code class="docutils literal notranslate"><span class="pre">Status</span></code>.</p>
+constructors, with public static factory methods that return <code class="docutils literal notranslate"><span class="pre">Status</span></code> or
+<code class="docutils literal notranslate"><span class="pre">Result&lt;T&gt;</span></code>.</p>
 <p>There are a number of object constructors, like <code class="docutils literal notranslate"><span class="pre">arrow::Schema</span></code> and
 <code class="docutils literal notranslate"><span class="pre">arrow::RecordBatch</span></code> where larger STL container objects like <code class="docutils literal notranslate"><span class="pre">std::vector</span></code> may
 be created. While it is possible for <code class="docutils literal notranslate"><span class="pre">std::bad_alloc</span></code> to be thrown in these
@@ -1128,7 +1136,7 @@ problems prior to having <code class="docutils literal notranslate"><span class=
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016-2018 Apache Software Foundation
+        &copy; Copyright 2016-2019 Apache Software Foundation
 
     </p>
   </div>

@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Streaming, Serialization, and IPC &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
+  <title>Streaming, Serialization, and IPC &mdash; Apache Arrow v0.15.0</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.14.2.dev0+g5f564424c.d20190805
+                0.15.0
               </div>
             
           
@@ -85,14 +85,19 @@
               
             
             
-              <p class="caption"><span class="caption-text">Arrow Columnar Format</span></p>
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../format/Guidelines.html">Implementation Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical Memory Layout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">IPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Format Metadata</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../format/README.html">Arrow specification documents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Guidelines.html">Implementation guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical memory layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">Interprocess messaging / communication (IPC)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Versioning.html">Format Versioning and Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Flight.html">Arrow Flight RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul class="current">
@@ -126,6 +131,7 @@
 <li class="toctree-l2"><a class="reference internal" href="json.html">Reading JSON files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parquet.html">Reading and Writing the Apache Parquet Format</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cuda.html">CUDA Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending_types.html">Extending pyarrow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="extending.html">Using pyarrow from C++ and Cython Code</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html">API Reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="getting_involved.html">Getting Involved</a></li>
@@ -139,6 +145,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/crossbow.html">Packaging and Testing with Crossbow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/documentation.html">Building the Documentation</a></li>
 </ul>
@@ -225,24 +232,22 @@ IO</span></a>.</p>
 <div class="section" id="using-streams">
 <h3>Using streams<a class="headerlink" href="#using-streams" title="Permalink to this headline">¶</a></h3>
 <p>First, let’s create a small record batch:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="kn">as</span> <span class="nn">pa</span>
+<pre class="literal-block">In [1]: import pyarrow as pa
 
-<span class="gp">In [2]: </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span>
-<span class="gp">   ...: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]),</span>
-<span class="gp">   ...: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="s1">&#39;baz&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">]),</span>
-<span class="gp">   ...: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">True</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">])</span>
-<span class="gp">   ...: </span><span class="p">]</span>
-<span class="gp">   ...: </span>
+In [2]: data = [
+   ...:     pa.array([1, 2, 3, 4]),
+   ...:     pa.array(['foo', 'bar', 'baz', None]),
+   ...:     pa.array([True, None, False, True])
+   ...: ]
+   ...: 
 
-<span class="gp">In [3]: </span><span class="n">batch</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">RecordBatch</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;f0&#39;</span><span class="p">,</span> <span class="s1">&#39;f1&#39;</span><span class="p">,</span> <span class="s1">&#39;f2&#39;</span><span class="p">])</span>
+In [3]: batch = pa.RecordBatch.from_arrays(data, ['f0', 'f1', 'f2'])
 
-<span class="gp">In [4]: </span><span class="n">batch</span><span class="o">.</span><span class="n">num_rows</span>
-<span class="gh">Out[4]: </span><span class="go">4</span>
+In [4]: batch.num_rows
+Out[4]: 4
 
-<span class="gp">In [5]: </span><span class="n">batch</span><span class="o">.</span><span class="n">num_columns</span>
-<span class="go">          Out[5]: 3</span>
-</pre></div>
-</div>
+In [5]: batch.num_columns
+Out[5]: 3</pre>
 <p>Now, we can begin writing a stream containing some number of these batches. For
 this we use <a class="reference internal" href="generated/pyarrow.RecordBatchStreamWriter.html#pyarrow.RecordBatchStreamWriter" title="pyarrow.RecordBatchStreamWriter"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecordBatchStreamWriter</span></code></a>, which can write to a writeable
 <code class="docutils literal notranslate"><span class="pre">NativeFile</span></code> object or a writeable Python object:</p>
@@ -265,7 +270,7 @@ particular stream. Now we can do:</p>
 <span class="gp">In [10]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">sink</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
 
 <span class="gp">In [11]: </span><span class="n">buf</span><span class="o">.</span><span class="n">size</span>
-<span class="gh">Out[11]: </span><span class="go">1972</span>
+<span class="gh">Out[11]: </span><span class="go">1984</span>
 </pre></div>
 </div>
 <p>Now <code class="docutils literal notranslate"><span class="pre">buf</span></code> contains the complete stream as an in-memory byte buffer. We can
@@ -311,7 +316,7 @@ batches are also zero-copy and do not allocate any new memory on read.</p>
 <span class="gp">In [21]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">sink</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
 
 <span class="gp">In [22]: </span><span class="n">buf</span><span class="o">.</span><span class="n">size</span>
-<span class="gh">Out[22]: </span><span class="go">4214</span>
+<span class="gh">Out[22]: </span><span class="go">4226</span>
 </pre></div>
 </div>
 <p>The difference between <a class="reference internal" href="generated/pyarrow.RecordBatchFileReader.html#pyarrow.RecordBatchFileReader" title="pyarrow.RecordBatchFileReader"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecordBatchFileReader</span></code></a> and
@@ -358,6 +363,12 @@ DataFrame output:</p>
 objects. While not a complete replacement for the <code class="docutils literal notranslate"><span class="pre">pickle</span></code> module, these
 functions can be significantly faster, particular when dealing with collections
 of NumPy arrays.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>While the functions in this section utilize the Arrow stream protocol
+internally, they do not produce data that is compatible with the above
+<code class="docutils literal notranslate"><span class="pre">ipc.open_file</span></code> and <code class="docutils literal notranslate"><span class="pre">ipc.open_stream</span></code> functions.</p>
+</div>
 <p>As an example, consider a dictionary containing NumPy arrays:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [29]: </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 
@@ -370,15 +381,13 @@ of NumPy arrays.</p>
 </div>
 <p>We use the <code class="docutils literal notranslate"><span class="pre">pyarrow.serialize</span></code> function to convert this data to a byte
 buffer:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [31]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
+<pre class="literal-block">In [31]: buf = pa.serialize(data).to_buffer()
 
-<span class="gp">In [32]: </span><span class="nb">type</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
-<span class="gh">Out[32]: </span><span class="go">pyarrow.lib.Buffer</span>
+In [32]: type(buf)
+Out[32]: pyarrow.lib.Buffer
 
-<span class="gp">In [33]: </span><span class="n">buf</span><span class="o">.</span><span class="n">size</span>
-<span class="go">                            Out[33]: 200028800</span>
-</pre></div>
-</div>
+In [33]: buf.size
+Out[33]: 200028800</pre>
 <p><code class="docutils literal notranslate"><span class="pre">pyarrow.serialize</span></code> creates an intermediate object which can be converted to
 a buffer (the <code class="docutils literal notranslate"><span class="pre">to_buffer</span></code> method) or written directly to an output stream.</p>
 <p><code class="docutils literal notranslate"><span class="pre">pyarrow.deserialize</span></code> converts a buffer-like object back to the original
@@ -387,19 +396,19 @@ Python object:</p>
 
 <span class="gp">In [35]: </span><span class="n">restored_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="gh">Out[35]: </span><span class="go"></span>
-<span class="go">array([[-1.72774193,  0.07374552,  2.2554118 , ...,  0.59393486,</span>
-<span class="go">        -1.28462186,  1.11848933],</span>
-<span class="go">       [-0.31589642, -1.37914852, -1.63471732, ..., -0.20162844,</span>
-<span class="go">         0.53397174,  0.14892697],</span>
-<span class="go">       [ 1.59703466,  0.2368002 ,  0.03585712, ..., -0.24178207,</span>
-<span class="go">        -0.65533831, -1.83227567],</span>
+<span class="go">array([[ 1.53868198, -1.58858893,  0.38442874, ...,  0.734756  ,</span>
+<span class="go">        -1.37138124, -0.41936366],</span>
+<span class="go">       [-1.44684407,  0.46221219,  2.24286835, ..., -0.36232897,</span>
+<span class="go">         0.97702942, -0.52308597],</span>
+<span class="go">       [ 1.12265088,  0.48604852, -0.67976813, ...,  0.69318274,</span>
+<span class="go">        -1.52989144,  0.64347253],</span>
 <span class="go">       ...,</span>
-<span class="go">       [-0.60353003, -0.37808888, -0.54915595, ...,  1.19010086,</span>
-<span class="go">         0.30903882,  0.27510819],</span>
-<span class="go">       [ 0.75373945, -0.73516996,  1.04007321, ...,  1.11755059,</span>
-<span class="go">         0.22134027,  1.65564359],</span>
-<span class="go">       [ 0.12596685, -1.07686877, -0.15418582, ...,  0.4585539 ,</span>
-<span class="go">         1.48428731,  1.24594085]])</span>
+<span class="go">       [ 0.13836338, -0.207254  , -0.3133631 , ..., -1.45987863,</span>
+<span class="go">         1.97244654, -0.38203836],</span>
+<span class="go">       [ 2.08286209,  0.96902055, -0.05178788, ...,  0.70172784,</span>
+<span class="go">         1.14161778,  0.50859145],</span>
+<span class="go">       [ 1.39830469, -1.84097861, -0.62031643, ..., -1.53022882,</span>
+<span class="go">        -2.11269127, -0.99909276]])</span>
 </pre></div>
 </div>
 <p>When dealing with NumPy arrays, <code class="docutils literal notranslate"><span class="pre">pyarrow.deserialize</span></code> can be significantly
@@ -408,7 +417,7 @@ into the input buffer. The larger the arrays, the larger the performance
 savings.</p>
 <p>Consider this example, we have for <code class="docutils literal notranslate"><span class="pre">pyarrow.deserialize</span></code></p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [36]: </span><span class="o">%</span><span class="k">timeit</span> restored_data = pa.deserialize(buf)
-<span class="go">1.52 ms +- 14.3 us per loop (mean +- std. dev. of 7 runs, 1000 loops each)</span>
+<span class="go">1.8 ms +- 22.6 us per loop (mean +- std. dev. of 7 runs, 1000 loops each)</span>
 </pre></div>
 </div>
 <p>And for pickle:</p>
@@ -417,7 +426,7 @@ savings.</p>
 <span class="gp">In [38]: </span><span class="n">pickled</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 <span class="gp">In [39]: </span><span class="o">%</span><span class="k">timeit</span> unpickled_data = pickle.loads(pickled)
-<span class="go">50.3 ms +- 481 us per loop (mean +- std. dev. of 7 runs, 10 loops each)</span>
+<span class="go">52.9 ms +- 39.8 us per loop (mean +- std. dev. of 7 runs, 10 loops each)</span>
 </pre></div>
 </div>
 <p>We aspire to make these functions a high-speed alternative to pickle for
@@ -487,7 +496,7 @@ this, use the <code class="docutils literal notranslate"><span class="pre">to_co
 important. The objects in the <code class="docutils literal notranslate"><span class="pre">'data'</span></code> field are <code class="docutils literal notranslate"><span class="pre">pyarrow.Buffer</span></code> objects,
 which are zero-copy convertible to Python <code class="docutils literal notranslate"><span class="pre">memoryview</span></code> objects:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [44]: </span><span class="n">memoryview</span><span class="p">(</span><span class="n">components</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-<span class="gh">Out[44]: </span><span class="go">&lt;memory at 0x7f3ff01b8588&gt;</span>
+<span class="gh">Out[44]: </span><span class="go">&lt;memory at 0x7fecd41abb88&gt;</span>
 </pre></div>
 </div>
 <p>A memoryview can be converted back to a Arrow <code class="docutils literal notranslate"><span class="pre">Buffer</span></code> with
@@ -503,26 +512,46 @@ which are zero-copy convertible to Python <code class="docutils literal notransl
 
 <span class="gp">In [48]: </span><span class="n">restored_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="gh">Out[48]: </span><span class="go"></span>
-<span class="go">array([[-1.89640953, -0.44879133, -0.77009226, -0.63579902,  0.52000205,</span>
-<span class="go">        -2.17374222,  0.84480296,  0.32401502,  0.58676189, -0.81778527],</span>
-<span class="go">       [ 0.61258076, -1.49940563, -1.87294412, -0.77344703, -0.30919273,</span>
-<span class="go">         0.28239137, -0.37960686, -0.60712826, -1.16784934, -2.4973498 ],</span>
-<span class="go">       [-2.08702784, -0.75278351, -0.71673949,  0.58728161,  0.13412485,</span>
-<span class="go">         1.39648337,  1.43921381,  0.65785603,  1.12261226,  0.36982486],</span>
-<span class="go">       [ 0.34713364, -3.31252693,  0.51500169, -0.9203796 , -0.28993355,</span>
-<span class="go">        -0.22665116,  0.49396868, -0.06614337, -1.39236034,  0.00497257],</span>
-<span class="go">       [ 0.92677286, -0.68808396,  0.94019313,  0.28496556,  0.94561716,</span>
-<span class="go">         0.28669881, -1.25518122, -0.35675917,  1.67361516, -0.18808222],</span>
-<span class="go">       [-0.17695683, -0.33169931,  0.21636867,  1.57454273,  0.434583  ,</span>
-<span class="go">        -0.65585403, -0.14970119, -0.03965638, -0.14559071,  1.05778634],</span>
-<span class="go">       [ 0.84682053,  0.97478067, -0.33690093, -0.02677898,  1.25795498,</span>
-<span class="go">        -0.56796153,  0.84580905,  0.41126073, -0.94547516,  0.1747619 ],</span>
-<span class="go">       [ 0.89593507,  1.33770214,  1.11088249,  1.26888025, -2.11744547,</span>
-<span class="go">         0.88784398, -0.10913464, -0.19863106, -0.64103475, -0.78799463],</span>
-<span class="go">       [ 0.59746934,  0.8653587 , -1.53476956,  1.12926562,  1.78809952,</span>
-<span class="go">        -0.91868508, -0.03788207, -0.2804014 ,  2.18197564, -0.48293435],</span>
-<span class="go">       [ 1.35782947, -0.0739988 , -2.1654266 , -0.21097542, -1.53444618,</span>
-<span class="go">         0.49217092,  1.98760456,  0.62050304,  1.66968593, -0.51099446]])</span>
+<span class="go">array([[-1.30496703e-01, -5.00294876e-02,  5.15705622e-01,</span>
+<span class="go">         3.70428363e-01,  7.69086076e-01,  3.31112476e-01,</span>
+<span class="go">        -1.02175694e+00,  9.60806183e-01,  2.28570266e+00,</span>
+<span class="go">        -1.22654047e+00],</span>
+<span class="go">       [ 9.07657369e-01,  3.60595920e-01,  1.63691546e-01,</span>
+<span class="go">        -5.04810619e-04,  1.22577312e+00, -4.41965354e-02,</span>
+<span class="go">         9.76385287e-01,  3.27715347e-01, -1.15605937e-01,</span>
+<span class="go">        -2.37393910e-01],</span>
+<span class="go">       [-3.31072979e-01,  6.79206764e-01,  9.25557262e-01,</span>
+<span class="go">        -1.67149248e-01,  8.53019442e-01, -5.80374168e-01,</span>
+<span class="go">        -3.29538629e-01, -1.75758685e+00, -7.28871669e-01,</span>
+<span class="go">        -6.58105746e-01],</span>
+<span class="go">       [-1.29144175e+00,  7.89144567e-01,  9.91614566e-01,</span>
+<span class="go">         3.82787785e-01,  5.78029269e-02, -1.64321453e+00,</span>
+<span class="go">         1.05519857e+00, -1.21193987e+00, -2.42246552e-01,</span>
+<span class="go">        -8.18638805e-02],</span>
+<span class="go">       [ 3.73609714e-01, -1.10129707e-01,  4.04223624e-01,</span>
+<span class="go">        -2.88984833e-01, -3.61420265e-01, -1.06701514e+00,</span>
+<span class="go">        -1.88023291e-01,  6.18384516e-01, -7.82292649e-01,</span>
+<span class="go">         9.29104673e-01],</span>
+<span class="go">       [-9.49621404e-01, -2.08538582e+00, -2.77073686e-02,</span>
+<span class="go">        -9.53710747e-01, -5.31093242e-02,  1.39992730e+00,</span>
+<span class="go">        -8.29234723e-01,  2.02248006e+00, -1.35453887e-01,</span>
+<span class="go">         2.67980683e-01],</span>
+<span class="go">       [ 2.24655494e-01,  7.44227442e-02,  3.93602474e-01,</span>
+<span class="go">         1.21845560e+00, -3.11277664e-01, -2.42258354e-01,</span>
+<span class="go">        -1.07334376e+00, -4.68847411e-01,  1.09387841e-01,</span>
+<span class="go">        -4.16820055e-01],</span>
+<span class="go">       [ 6.96142183e-01, -2.67793381e-01, -5.85638239e-01,</span>
+<span class="go">         2.19846746e+00,  1.05608911e+00,  8.97026010e-01,</span>
+<span class="go">        -1.35788818e+00, -8.65357935e-01, -6.09891530e-01,</span>
+<span class="go">        -2.64364738e+00],</span>
+<span class="go">       [ 1.23614483e-01,  3.17358676e-01, -5.74777295e-01,</span>
+<span class="go">        -1.05486514e+00,  9.09646368e-01,  1.41561676e+00,</span>
+<span class="go">         9.83586341e-01,  9.96514784e-01, -1.39645636e+00,</span>
+<span class="go">         6.25387040e-01],</span>
+<span class="go">       [ 1.52227607e+00,  1.46069263e+00, -4.97280480e-01,</span>
+<span class="go">         3.57320599e-01, -1.09802105e+00, -2.95423629e+00,</span>
+<span class="go">         8.12415907e-01, -9.07972706e-01, -1.11597208e+00,</span>
+<span class="go">        -5.81050181e-01]])</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">deserialize_components</span></code> is also available as a method on
@@ -620,7 +649,7 @@ on some files:</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016-2018 Apache Software Foundation
+        &copy; Copyright 2016-2019 Apache Software Foundation
 
     </p>
   </div>

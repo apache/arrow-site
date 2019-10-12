@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Row to columnar conversion &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
+  <title>Row to columnar conversion &mdash; Apache Arrow v0.15.0</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.14.2.dev0+g5f564424c.d20190805
+                0.15.0
               </div>
             
           
@@ -85,19 +85,24 @@
               
             
             
-              <p class="caption"><span class="caption-text">Arrow Columnar Format</span></p>
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../format/Guidelines.html">Implementation Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical Memory Layout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">IPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Format Metadata</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../format/README.html">Arrow specification documents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Guidelines.html">Implementation guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical memory layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">Interprocess messaging / communication (IPC)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/Versioning.html">Format Versioning and Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">C++ Implementation</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started.html">User Guide</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="index.html">Examples</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Row to columnar conversion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tuple_range_conversion.html">std::tuple-like ranges to Arrow</a></li>
@@ -114,6 +119,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../developers/cpp.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developers/crossbow.html">Packaging and Testing with Crossbow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developers/documentation.html">Building the Documentation</a></li>
 </ul>
@@ -229,12 +235,12 @@ instance, and then converts it back to the original array of structs.</p>
 
 <span class="c1">// Transforming a vector of structs into a columnar Table.</span>
 <span class="c1">//</span>
-<span class="c1">// The final representation should be an `arrow::Table` which in turn is made up of</span>
-<span class="c1">// an `arrow::Schema` and a list of `arrow::Column`. An `arrow::Column` is again a</span>
-<span class="c1">// named collection of one or more `arrow::Array` instances. As the first step, we</span>
-<span class="c1">// will iterate over the data and build up the arrays incrementally. For this task,</span>
-<span class="c1">// we provide `arrow::ArrayBuilder` classes that help in the construction of the</span>
-<span class="c1">// final `arrow::Array` instances.</span>
+<span class="c1">// The final representation should be an `arrow::Table` which in turn</span>
+<span class="c1">// is made up of an `arrow::Schema` and a list of</span>
+<span class="c1">// `arrow::ChunkedArray` instances. As the first step, we will iterate</span>
+<span class="c1">// over the data and build up the arrays incrementally.  For this</span>
+<span class="c1">// task, we provide `arrow::ArrayBuilder` classes that help in the</span>
+<span class="c1">// construction of the final `arrow::Array` instances.</span>
 <span class="c1">//</span>
 <span class="c1">// For each type, Arrow has a specially typed builder class. For the primitive</span>
 <span class="c1">// values `id` and `cost` we can use the respective `arrow::Int64Builder` and</span>
@@ -329,11 +335,11 @@ instance, and then converts it back to the original array of structs.</p>
   <span class="c1">// border would be inside a byte.</span>
 
   <span class="k">auto</span> <span class="n">ids</span> <span class="o">=</span>
-      <span class="n">std</span><span class="o">::</span><span class="n">static_pointer_cast</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Int64Array</span><span class="o">&gt;</span><span class="p">(</span><span class="n">table</span><span class="o">-&gt;</span><span class="n">column</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
+      <span class="n">std</span><span class="o">::</span><span class="n">static_pointer_cast</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Int64Array</span><span class="o">&gt;</span><span class="p">(</span><span class="n">table</span><span class="o">-&gt;</span><span class="n">column</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
   <span class="k">auto</span> <span class="n">costs</span> <span class="o">=</span>
-      <span class="n">std</span><span class="o">::</span><span class="n">static_pointer_cast</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">DoubleArray</span><span class="o">&gt;</span><span class="p">(</span><span class="n">table</span><span class="o">-&gt;</span><span class="n">column</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
+      <span class="n">std</span><span class="o">::</span><span class="n">static_pointer_cast</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">DoubleArray</span><span class="o">&gt;</span><span class="p">(</span><span class="n">table</span><span class="o">-&gt;</span><span class="n">column</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
   <span class="k">auto</span> <span class="n">cost_components</span> <span class="o">=</span>
-      <span class="n">std</span><span class="o">::</span><span class="n">static_pointer_cast</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">ListArray</span><span class="o">&gt;</span><span class="p">(</span><span class="n">table</span><span class="o">-&gt;</span><span class="n">column</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">data</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
+      <span class="n">std</span><span class="o">::</span><span class="n">static_pointer_cast</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">ListArray</span><span class="o">&gt;</span><span class="p">(</span><span class="n">table</span><span class="o">-&gt;</span><span class="n">column</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
   <span class="k">auto</span> <span class="n">cost_components_values</span> <span class="o">=</span>
       <span class="n">std</span><span class="o">::</span><span class="n">static_pointer_cast</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">DoubleArray</span><span class="o">&gt;</span><span class="p">(</span><span class="n">cost_components</span><span class="o">-&gt;</span><span class="n">values</span><span class="p">());</span>
   <span class="c1">// To enable zero-copy slices, the native values pointer might need to account</span>
@@ -402,7 +408,7 @@ instance, and then converts it back to the original array of structs.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016-2018 Apache Software Foundation
+        &copy; Copyright 2016-2019 Apache Software Foundation
 
     </p>
   </div>

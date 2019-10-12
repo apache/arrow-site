@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Reading and Writing the Apache Parquet Format &mdash; Apache Arrow v0.14.2.dev0+g5f564424c.d20190805</title>
+  <title>Reading and Writing the Apache Parquet Format &mdash; Apache Arrow v0.15.0</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.14.2.dev0+g5f564424c.d20190805
+                0.15.0
               </div>
             
           
@@ -85,14 +85,19 @@
               
             
             
-              <p class="caption"><span class="caption-text">Arrow Columnar Format</span></p>
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../format/Guidelines.html">Implementation Guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical Memory Layout</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">IPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Format Metadata</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../format/README.html">Arrow specification documents</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Guidelines.html">Implementation guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical memory layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Metadata: Logical types, schemas, data headers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">Interprocess messaging / communication (IPC)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Versioning.html">Format Versioning and Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Flight.html">Arrow Flight RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul class="current">
@@ -118,6 +123,7 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#finer-grained-reading-and-writing">Finer-grained Reading and Writing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#data-type-handling">Data Type Handling</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#reading-types-as-dictionaryarray">Reading types as DictionaryArray</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#storing-timestamps">Storing timestamps</a></li>
 </ul>
 </li>
@@ -131,6 +137,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="cuda.html">CUDA Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending_types.html">Extending pyarrow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="extending.html">Using pyarrow from C++ and Cython Code</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html">API Reference</a></li>
 <li class="toctree-l2"><a class="reference internal" href="getting_involved.html">Getting Involved</a></li>
@@ -144,6 +151,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/crossbow.html">Packaging and Testing with Crossbow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/benchmarks.html">Benchmarks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/documentation.html">Building the Documentation</a></li>
 </ul>
@@ -294,8 +302,8 @@ the whole file (due to the columnar layout):</p>
             <span class="sa">b</span><span class="s1">&#39;&quot;pandas_type&quot;: &quot;bool&quot;, &quot;numpy_type&quot;: &quot;bool&quot;, &quot;metadata&quot;: null}, &#39;</span>
             <span class="sa">b</span><span class="s1">&#39;{&quot;name&quot;: null, &quot;field_name&quot;: &quot;__index_level_0__&quot;, &quot;pandas_type&quot;:&#39;</span>
             <span class="sa">b</span><span class="s1">&#39; &quot;unicode&quot;, &quot;numpy_type&quot;: &quot;object&quot;, &quot;metadata&quot;: null}], &quot;creator&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;&quot;: {&quot;library&quot;: &quot;pyarrow&quot;, &quot;version&quot;: &quot;0.14.2.dev0+g5f564424c.d20&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;190805&quot;}, &quot;pandas_version&quot;: &quot;0.24.2&quot;}&#39;</span><span class="p">}</span>
+            <span class="sa">b</span><span class="s1">&#39;&quot;: {&quot;library&quot;: &quot;pyarrow&quot;, &quot;version&quot;: &quot;0.15.0&quot;}, &quot;pandas_version&quot;&#39;</span>
+            <span class="sa">b</span><span class="s1">&#39;: &quot;0.24.2&quot;}&#39;</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>When reading a subset of columns from a file that used a Pandas dataframe as the
@@ -374,57 +382,53 @@ you may choose to omit it by passing <code class="docutils literal notranslate">
 <div class="section" id="finer-grained-reading-and-writing">
 <h2>Finer-grained Reading and Writing<a class="headerlink" href="#finer-grained-reading-and-writing" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">read_table</span></code> uses the <a class="reference internal" href="generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile" title="pyarrow.parquet.ParquetFile"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParquetFile</span></code></a> class, which has other features:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [19]: </span><span class="n">parquet_file</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">ParquetFile</span><span class="p">(</span><span class="s1">&#39;example.parquet&#39;</span><span class="p">)</span>
+<pre class="literal-block">In [19]: parquet_file = pq.ParquetFile('example.parquet')
 
-<span class="gp">In [20]: </span><span class="n">parquet_file</span><span class="o">.</span><span class="n">metadata</span>
-<span class="gh">Out[20]: </span><span class="go"></span>
-<span class="go">&lt;pyarrow._parquet.FileMetaData object at 0x7f3ff3060958&gt;</span>
-<span class="go">  created_by: parquet-cpp version 1.5.1-SNAPSHOT</span>
-<span class="go">  num_columns: 4</span>
-<span class="go">  num_rows: 3</span>
-<span class="go">  num_row_groups: 1</span>
-<span class="go">  format_version: 1.0</span>
-<span class="go">  serialized_size: 1135</span>
+In [20]: parquet_file.metadata
+Out[20]: 
+&lt;pyarrow._parquet.FileMetaData object at 0x7fecd4128ae8&gt;
+  created_by: parquet-cpp version 1.5.1-SNAPSHOT
+  num_columns: 4
+  num_rows: 3
+  num_row_groups: 1
+  format_version: 1.0
+  serialized_size: 2515
 
-<span class="gp">In [21]: </span><span class="n">parquet_file</span><span class="o">.</span><span class="n">schema</span>
-<span class="go">                                                                                                                                                                                                                     Out[21]: </span>
-<span class="go">&lt;pyarrow._parquet.ParquetSchema object at 0x7f3ff2fe77f0&gt;</span>
-<span class="go">one: DOUBLE</span>
-<span class="go">two: BYTE_ARRAY String</span>
-<span class="go">three: BOOLEAN</span>
-<span class="go">__index_level_0__: BYTE_ARRAY String</span>
-</pre></div>
-</div>
+In [21]: parquet_file.schema
+Out[21]: 
+&lt;pyarrow._parquet.ParquetSchema object at 0x7fecd412f358&gt;
+one: DOUBLE
+two: BYTE_ARRAY String
+three: BOOLEAN
+__index_level_0__: BYTE_ARRAY String</pre>
 <p>As you can learn more in the <a class="reference external" href="https://github.com/apache/parquet-format">Apache Parquet format</a>, a Parquet file consists of
 multiple row groups. <code class="docutils literal notranslate"><span class="pre">read_table</span></code> will read all of the row groups and
 concatenate them into a single table. You can read individual row groups with
 <code class="docutils literal notranslate"><span class="pre">read_row_group</span></code>:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [22]: </span><span class="n">parquet_file</span><span class="o">.</span><span class="n">num_row_groups</span>
-<span class="gh">Out[22]: </span><span class="go">1</span>
+<pre class="literal-block">In [22]: parquet_file.num_row_groups
+Out[22]: 1
 
-<span class="gp">In [23]: </span><span class="n">parquet_file</span><span class="o">.</span><span class="n">read_row_group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<span class="go">           Out[23]: </span>
-<span class="go">pyarrow.Table</span>
-<span class="go">one: double</span>
-<span class="go">two: string</span>
-<span class="go">three: bool</span>
-<span class="go">__index_level_0__: string</span>
-<span class="go">metadata</span>
-<span class="gt">--------</span>
-<span class="p">{</span><span class="sa">b</span><span class="s1">&#39;pandas&#39;</span><span class="p">:</span> <span class="sa">b</span><span class="s1">&#39;{&quot;index_columns&quot;: [&quot;__index_level_0__&quot;], &quot;column_indexes&quot;: [{&quot;na&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;me&quot;: null, &quot;field_name&quot;: null, &quot;pandas_type&quot;: &quot;unicode&quot;, &quot;numpy_&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;type&quot;: &quot;object&quot;, &quot;metadata&quot;: {&quot;encoding&quot;: &quot;UTF-8&quot;}}], &quot;columns&quot;:&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39; [{&quot;name&quot;: &quot;one&quot;, &quot;field_name&quot;: &quot;one&quot;, &quot;pandas_type&quot;: &quot;float64&quot;,&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39; &quot;numpy_type&quot;: &quot;float64&quot;, &quot;metadata&quot;: null}, {&quot;name&quot;: &quot;two&quot;, &quot;fi&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;eld_name&quot;: &quot;two&quot;, &quot;pandas_type&quot;: &quot;unicode&quot;, &quot;numpy_type&quot;: &quot;objec&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;t&quot;, &quot;metadata&quot;: null}, {&quot;name&quot;: &quot;three&quot;, &quot;field_name&quot;: &quot;three&quot;, &#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;&quot;pandas_type&quot;: &quot;bool&quot;, &quot;numpy_type&quot;: &quot;bool&quot;, &quot;metadata&quot;: null}, &#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;{&quot;name&quot;: null, &quot;field_name&quot;: &quot;__index_level_0__&quot;, &quot;pandas_type&quot;:&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39; &quot;unicode&quot;, &quot;numpy_type&quot;: &quot;object&quot;, &quot;metadata&quot;: null}], &quot;creator&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;&quot;: {&quot;library&quot;: &quot;pyarrow&quot;, &quot;version&quot;: &quot;0.14.2.dev0+g5f564424c.d20&#39;</span>
-            <span class="sa">b</span><span class="s1">&#39;190805&quot;}, &quot;pandas_version&quot;: &quot;0.24.2&quot;}&#39;</span><span class="p">}</span>
-</pre></div>
-</div>
+In [23]: parquet_file.read_row_group(0)
+Out[23]: 
+pyarrow.Table
+one: double
+two: string
+three: bool
+__index_level_0__: string
+metadata
+--------
+{b'pandas': b'{&quot;index_columns&quot;: [&quot;__index_level_0__&quot;], &quot;column_indexes&quot;: [{&quot;na'
+            b'me&quot;: null, &quot;field_name&quot;: null, &quot;pandas_type&quot;: &quot;unicode&quot;, &quot;numpy_'
+            b'type&quot;: &quot;object&quot;, &quot;metadata&quot;: {&quot;encoding&quot;: &quot;UTF-8&quot;}}], &quot;columns&quot;:'
+            b' [{&quot;name&quot;: &quot;one&quot;, &quot;field_name&quot;: &quot;one&quot;, &quot;pandas_type&quot;: &quot;float64&quot;,'
+            b' &quot;numpy_type&quot;: &quot;float64&quot;, &quot;metadata&quot;: null}, {&quot;name&quot;: &quot;two&quot;, &quot;fi'
+            b'eld_name&quot;: &quot;two&quot;, &quot;pandas_type&quot;: &quot;unicode&quot;, &quot;numpy_type&quot;: &quot;objec'
+            b't&quot;, &quot;metadata&quot;: null}, {&quot;name&quot;: &quot;three&quot;, &quot;field_name&quot;: &quot;three&quot;, '
+            b'&quot;pandas_type&quot;: &quot;bool&quot;, &quot;numpy_type&quot;: &quot;bool&quot;, &quot;metadata&quot;: null}, '
+            b'{&quot;name&quot;: null, &quot;field_name&quot;: &quot;__index_level_0__&quot;, &quot;pandas_type&quot;:'
+            b' &quot;unicode&quot;, &quot;numpy_type&quot;: &quot;object&quot;, &quot;metadata&quot;: null}], &quot;creator'
+            b'&quot;: {&quot;library&quot;: &quot;pyarrow&quot;, &quot;version&quot;: &quot;0.15.0&quot;}, &quot;pandas_version&quot;'
+            b': &quot;0.24.2&quot;}'}</pre>
 <p>We can similarly write a Parquet file with multiple row groups by using
 <code class="docutils literal notranslate"><span class="pre">ParquetWriter</span></code>:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [24]: </span><span class="n">writer</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">ParquetWriter</span><span class="p">(</span><span class="s1">&#39;example2.parquet&#39;</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
@@ -451,6 +455,17 @@ concatenate them into a single table. You can read individual row groups with
 </div>
 <div class="section" id="data-type-handling">
 <h2>Data Type Handling<a class="headerlink" href="#data-type-handling" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="reading-types-as-dictionaryarray">
+<h3>Reading types as DictionaryArray<a class="headerlink" href="#reading-types-as-dictionaryarray" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">read_dictionary</span></code> option in <code class="docutils literal notranslate"><span class="pre">read_table</span></code> and <code class="docutils literal notranslate"><span class="pre">ParquetDataset</span></code> will
+cause columns to be read as <code class="docutils literal notranslate"><span class="pre">DictionaryArray</span></code>, which will become
+<code class="docutils literal notranslate"><span class="pre">pandas.Categorical</span></code> when converted to pandas. This option is only valid for
+string and binary column types, and it can yield significantly lower memory use
+and improved performance for columns with many repeated string values.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pq</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;binary_c0&#39;</span><span class="p">,</span> <span class="s1">&#39;stringb_c2&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="storing-timestamps">
 <h3>Storing timestamps<a class="headerlink" href="#storing-timestamps" title="Permalink to this headline">¶</a></h3>
 <p>Some Parquet readers may only support timestamps stored in millisecond
@@ -663,7 +678,7 @@ Available, Lease Status = Unlocked</p></li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016-2018 Apache Software Foundation
+        &copy; Copyright 2016-2019 Apache Software Foundation
 
     </p>
   </div>
