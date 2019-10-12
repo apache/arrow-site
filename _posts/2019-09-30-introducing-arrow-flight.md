@@ -124,10 +124,32 @@ low-level optimizations in gRPC in both C++ and Java to do the following:
 
 In a sense we are "having our cake and eat it, too". Flight implementations
 having these optimizations will have better performance, while naive gRPC
-clients talking to the Flight service can still use a Protobuf library to
-deserialize `FlightData` (with some performance penalty).
+clients talking to the Flight service and use a Protobuf library to deserialize
+`FlightData` (though with some performance penalty).
 
 ## Horizontal Scalability: Parallel and Partitioned Data Access
+
+Many distributed database-type systems make use of a architectural pattern
+where the results of client requests are routed through a "coordinator" and
+sent to the client. Aside from the obvious efficiency issues of transporting a
+dataset multiple times on its way to a client, it also presents a scalability
+problem for getting access to very large datasets.
+
+We wanted Flight to enable systems to create horizontally scalable data
+services without this issue. A client request to a dataset using the
+`GetFlightInfo` RPC returns a list of **endpoints**, each of which contains a
+server location and a **ticket** to send that server in a `DoGet` request to
+obtain a part of the full dataset. To get access to the entire dataset, all of
+the endpoints must be consumed.
+
+This multiple-endpoint pattern has a number of benefits:
+
+* Endpoints can be read by clients in parallel
+* The service that serves the `GetFlightInfo` "query planning" request can
+  delegate work to sibling services to take advantage of data locality or
+  simply to help with load balancing
+
+FIGURE
 
 ## Actions: Extending Flight with application business logic
 
