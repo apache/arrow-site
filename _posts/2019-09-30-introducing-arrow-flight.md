@@ -86,7 +86,9 @@ several basic kinds of requests:
 * **ListFlights**: return a list of available data streams
 * **GetSchema**: return the schema for a data stream
 * **GetFlightInfo**: return a "query plan" for a dataset of interest, possibly
-  requiring consuming multiple data streams
+  requiring consuming multiple data streams. This request can accept custom
+  serialized commands containing, for example, your specific application
+  parameters.
 * **DoGet**: send a data stream to a client
 * **DoPut**: receive a data stream from a client
 * **DoAction**: a perform an implementation-specific action and
@@ -127,6 +129,8 @@ having these optimizations will have better performance, while naive gRPC
 clients talking to the Flight service and use a Protobuf library to deserialize
 `FlightData` (though with some performance penalty).
 
+BENCHMARKS
+
 ## Horizontal Scalability: Parallel and Partitioned Data Access
 
 Many distributed database-type systems make use of a architectural pattern
@@ -148,19 +152,73 @@ This multiple-endpoint pattern has a number of benefits:
 * The service that serves the `GetFlightInfo` "query planning" request can
   delegate work to sibling services to take advantage of data locality or
   simply to help with load balancing
+* Nodes in a distributed cluster can take on different roles. For example, a
+  subset of nodes might be responsible for planning queries while other nodes
+  exclusively fulfill data stream ("DoGet") requests
 
 FIGURE
 
 ## Actions: Extending Flight with application business logic
 
-## Security and Authentication
+While the `GetFlightInfo` request supports sending opaque serialized commands
+when requesting a dataset, a client may need to be able to ask a server to
+perform other kinds of operations. For example, a client may request for a
+particular dataset to be "pinned" in memory so that subsequent requests from
+other clients are served faster.
 
-## Tracing and Middleware
+A Flight service can thus optionally define "actions" which are carried out by
+the `DoAction` RPC. An action request contains the name of the action being
+performed and optional serialized data containing further needed
+information. The result of an action is a gRPC stream of opaque binary results.
+
+An example action would be the command `'ListDatasets'` which could return a
+stream of dataset names that are available on that server.
+
+Note that it is not required for a server to implement any actions, and actions
+need not return results.
+
+## Encryption and Authentication
+
+Flight supports encryption out of the box using gRPC's built in TLS / OpenSSL
+capabilities.
+
+For authentication, there are extensible authentication handlers for the client
+and server that permit simple authentication schemes (like user and password)
+as well as more involved authentication such as Kerberos. The Flight protocol
+comes with a built-in `BasicAuth` so that user/password authentication out of
+the box without custom development.
+
+## Middleware and Tracing
+
+gRPC has the concept of "interceptors" which have allowed us to develop
+developer-defined "middleware" that can provide instrumentation of or telemetry
+for incoming and outgoing requests. One such framework for such instrumentation
+is the [OpenTracing][6] framework
 
 ## gRPC, but not only gRPC
+
+We specify server locations for `DoGet` requests using RFC 3986 compliant
+URIs. For example, TLS-secured gRPC may be specified like
+`grpc+tls://$HOST:$PORT`.
+
+While we think that using gRPC for the "command" layer of Flight servers makes
+sense, we may wish to support transport layers other than gRPC for data
+transfer. One example is [RDMA][7].
+
+## Getting Started
+
+Documentation for Flight users is a work in progress, but the libraries
+themselves are mature enough for beta user that are tolerant of some minor API
+or protocol changes over the coming year.
+
+One of the easiest ways to experiment with Flight is using the Python API,
+since custom servers and clients can be defined entirely in Python without any
+compilation required.
 
 [1]: https://grpc.io/
 [2]: https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst
 [3]: https://github.com/protocolbuffers/protobuf
 [4]: https://developers.google.com/protocol-buffers/docs/encoding
 [5]: https://github.com/apache/arrow/blob/apache-arrow-0.15.0/format/Flight.proto#L291
+[6]: https://opentracing.io/
+[7]: https://en.wikipedia.org/wiki/Remote_direct_memory_access
