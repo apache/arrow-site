@@ -37,10 +37,10 @@ general-purpose RPC library and framework. While we have focused on integration
 with gRPC, as a development framework Flight is not intended to be exclusive to
 gRPC.
 
-In the upcoming 0.15.0 Apache Arrow release, we have developed Flight
-implementations in C++ (with Python bindings) and Java. These libraries are
-ready for beta users who are comfortable being on the bleeding edge while we
-continue to refine some low-level details in the Flight internals.
+In the 0.15.0 Apache Arrow release, we have ready-to-use Flight implementations
+in C++ (with Python bindings) and Java. These libraries are suitable for beta
+users who are comfortable being on the bleeding edge while we continue to
+refine some low-level details in the Flight internals.
 
 ## Motivation
 
@@ -62,7 +62,7 @@ columnar format][2] has key features that can help us:
   parlance). In this post we will talk about "data streams", these are
   sequences of Arrow record batches using the project's binary protocol
 * The format is language-independent and now has library support in 11
-  languages and counting. For
+  languages and counting.
 
 Implementations of standard protocols like ODBC generally implement their own
 custom on-wire binary protocols that must be marshalled to and from each
@@ -85,7 +85,7 @@ several basic kinds of requests:
 
 * **ListFlights**: return a list of available data streams
 * **GetSchema**: return the schema for a data stream
-* **GetFlightInfo**: return a "query plan" for a dataset of interest, possibly
+* **GetFlightInfo**: return a "access plan" for a dataset of interest, possibly
   requiring consuming multiple data streams. This request can accept custom
   serialized commands containing, for example, your specific application
   parameters.
@@ -94,6 +94,10 @@ several basic kinds of requests:
 * **DoAction**: a perform an implementation-specific action and
   return any results, i.e. a generalized function call
 * **ListActions**: return a list of available action types
+
+We take advantage of gRPC's elegant "bidirectional" streaming support to allow
+clients and servers to send data and metadata to each other simultaneously
+while requests are being served.
 
 A simple Flight setup might consist of a single server to which clients connect
 and make DoGet requests.
@@ -108,15 +112,17 @@ and make DoGet requests.
 
 While using a general-purpose messaging library like gRPC has numerous specific
 benefits beyond the obvious ones (taking advantage of all the engineering that
-Google has done on the problem).
+Google has done on the problem), some work was needed to improve the
+performnace of transporting large datasets. Many kinds of gRPC users only deal
+with relatively small messages, for example.
 
-The best-supported way to use gRPC is to define services using an extended
-version of [Protocol Buffers][3] aka "Protobuf". A Protobuf plugin for gRPC
-generates a gRPC service that you can implement in your applications. RPC
-commands and data messages are serialized using the [Protobuf wire
-format][4]. Because we use "vanilla gRPC and Protocol Buffers", gRPC clients
-that are ignorant of the Arrow columnar format can still interact with Flight
-services and handle the Arrow data opaquely.
+The best-supported way to use gRPC is to define services in a [Protocol
+Buffers][3] (aka "Protobuf") `.proto` file. A Protobuf plugin for gRPC
+generates gRPC service stubs that you can use to implement in your
+applications. RPC commands and data messages are serialized using the [Protobuf
+wire format][4]. Because we use "vanilla gRPC and Protocol Buffers", gRPC
+clients that are ignorant of the Arrow columnar format can still interact with
+Flight services and handle the Arrow data opaquely.
 
 The main data-related Protobuf type in Flight is called `FlightData`. Reading
 and writing Protobuf messages in general is not free, so we implemented some
@@ -126,12 +132,14 @@ low-level optimizations in gRPC in both C++ and Java to do the following:
   batch being sent without going through any intermediate memory copying or
   serialization steps.
 * Reconstruct a Arrow record batch from the Protobuf representation of
-  `FlightData` without any memory copying or deserialization.
+  `FlightData` without any memory copying or deserialization. In fact, we
+  intercept the encoded data payloads without allowing the Protocol Buffers
+  library to touch them.
 
-In a sense we are "having our cake and eat it, too". Flight implementations
+In a sense we are "having our cake and eating it, too". Flight implementations
 having these optimizations will have better performance, while naive gRPC
-clients talking to the Flight service and use a Protobuf library to deserialize
-`FlightData` (though with some performance penalty).
+clients can still talk to the Flight service and use a Protobuf library to
+deserialize `FlightData` (albeit with some performance penalty).
 
 As far as absolute speed, in our C++ data throughput benchmarks, we are seeing
 end-to-end TCP throughput in excess of 2-3GB/s on localhost without TLS
@@ -142,16 +150,6 @@ $ ./arrow-flight-benchmark --records_per_stream 100000000
 Bytes read: 12800000000
 Nanos: 3900466413
 Speed: 3129.63 MB/s
-
-$ ./arrow-flight-benchmark --records_per_stream 100000000
-Bytes read: 12800000000
-Nanos: 3631432266
-Speed: 3361.49 MB/s
-
-$ ./arrow-flight-benchmark --records_per_stream 100000000
-Bytes read: 12800000000
-Nanos: 4730784322
-Speed: 2580.34 MB/s
 ```
 
 From this we can conclude that the machinery of Flight and gRPC adds relatively
@@ -171,14 +169,16 @@ services without this issue. A client request to a dataset using the
 `GetFlightInfo` RPC returns a list of **endpoints**, each of which contains a
 server location and a **ticket** to send that server in a `DoGet` request to
 obtain a part of the full dataset. To get access to the entire dataset, all of
-the endpoints must be consumed.
+the endpoints must be consumed. While Flight streams are not necessarily
+ordered, the we provide for application-defined metadata which can be used to
+serialize ordering information.
 
 This multiple-endpoint pattern has a number of benefits:
 
 * Endpoints can be read by clients in parallel
-* The service that serves the `GetFlightInfo` "query planning" request can
-  delegate work to sibling services to take advantage of data locality or
-  simply to help with load balancing
+* The service that serves the `GetFlightInfo` "planning" request can delegate
+  work to sibling services to take advantage of data locality or simply to help
+  with load balancing
 * Nodes in a distributed cluster can take on different roles. For example, a
   subset of nodes might be responsible for planning queries while other nodes
   exclusively fulfill data stream ("DoGet") requests
@@ -219,8 +219,8 @@ capabilities.
 For authentication, there are extensible authentication handlers for the client
 and server that permit simple authentication schemes (like user and password)
 as well as more involved authentication such as Kerberos. The Flight protocol
-comes with a built-in `BasicAuth` so that user/password authentication out of
-the box without custom development.
+comes with a built-in `BasicAuth` so that user/password authentication can be
+implemented out of the box without custom development.
 
 ## Middleware and Tracing
 
@@ -236,13 +236,16 @@ URIs. For example, TLS-secured gRPC may be specified like
 `grpc+tls://$HOST:$PORT`.
 
 While we think that using gRPC for the "command" layer of Flight servers makes
-sense, we may wish to support transport layers other than gRPC for data
-transfer. One example is [RDMA][7].
+sense, we may wish to support data transport layers other than TCP for data
+transfer. One example is [RDMA][7]. While some design and development work is
+required to make this possible, the idea is that gRPC could be used to
+coordinate get and put transfers which may be carried out on protocols other
+than TCP.
 
 ## Getting Started
 
 Documentation for Flight users is a work in progress, but the libraries
-themselves are mature enough for beta user that are tolerant of some minor API
+themselves are mature enough for beta users that are tolerant of some minor API
 or protocol changes over the coming year.
 
 One of the easiest ways to experiment with Flight is using the Python API,
