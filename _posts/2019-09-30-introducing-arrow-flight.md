@@ -83,6 +83,9 @@ The Arrow Flight libraries provide a development framework for implementing a
 service that can send and receive data streams. A Flight server supports
 several basic kinds of requests:
 
+* **Handshake**: a simple request to determine whether the client is authorized
+  and, in some cases, to establish an implementation-defined session token to
+  use for future requests
 * **ListFlights**: return a list of available data streams
 * **GetSchema**: return the schema for a data stream
 * **GetFlightInfo**: return a "access plan" for a dataset of interest, possibly
@@ -91,8 +94,8 @@ several basic kinds of requests:
   parameters.
 * **DoGet**: send a data stream to a client
 * **DoPut**: receive a data stream from a client
-* **DoAction**: a perform an implementation-specific action and
-  return any results, i.e. a generalized function call
+* **DoAction**: perform an implementation-specific action and return any
+  results, i.e. a generalized function call
 * **ListActions**: return a list of available action types
 
 We take advantage of gRPC's elegant "bidirectional" streaming support to allow
@@ -172,8 +175,8 @@ dataset using the `GetFlightInfo` RPC returns a list of **endpoints**, each of
 which contains a server location and a **ticket** to send that server in a
 `DoGet` request to obtain a part of the full dataset. To get access to the
 entire dataset, all of the endpoints must be consumed. While Flight streams are
-not necessarily ordered, the we provide for application-defined metadata which
-can be used to serialize ordering information.
+not necessarily ordered, we provide for application-defined metadata which can
+be used to serialize ordering information.
 
 This multiple-endpoint pattern has a number of benefits:
 
@@ -231,6 +234,9 @@ developer-defined "middleware" that can provide instrumentation of or telemetry
 for incoming and outgoing requests. One such framework for such instrumentation
 is [OpenTracing][6].
 
+Note that middleware functionality is one of the newest areas of the project
+and is only currently available in the project's master branch.
+
 ## gRPC, but not only gRPC
 
 We specify server locations for `DoGet` requests using RFC 3986 compliant
@@ -243,7 +249,7 @@ sense, we may wish to support data transport layers other than TCP such as
 possible, the idea is that gRPC could be used to coordinate get and put
 transfers which may be carried out on protocols other than TCP.
 
-## Getting Started
+## Getting Started and What's Next
 
 Documentation for Flight users is a work in progress, but the libraries
 themselves are mature enough for beta users that are tolerant of some minor API
@@ -253,6 +259,14 @@ One of the easiest ways to experiment with Flight is using the Python API,
 since custom servers and clients can be defined entirely in Python without any
 compilation required. You can see an [example Flight client and server in
 Python][8] in the Arrow codebase.
+
+As far as "what's next" in Flight, support for non-gRPC (or non-TCP) data
+transport may be an interesting direction of research and development work. A
+lot of the Flight work from here will be creating user-facing Flight-enabled
+services. Since Flight is a development framework, we expect that user-facing
+APIs will utilize a layer of API veneer that hides many general Flight details
+and details related to a particular application of Flight in a custom data
+service.
 
 [1]: https://grpc.io/
 [2]: https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst
