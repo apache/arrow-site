@@ -113,7 +113,7 @@ and make DoGet requests.
 While using a general-purpose messaging library like gRPC has numerous specific
 benefits beyond the obvious ones (taking advantage of all the engineering that
 Google has done on the problem), some work was needed to improve the
-performnace of transporting large datasets. Many kinds of gRPC users only deal
+performance of transporting large datasets. Many kinds of gRPC users only deal
 with relatively small messages, for example.
 
 The best-supported way to use gRPC is to define services in a [Protocol
