@@ -100,7 +100,7 @@ clients and servers to send data and metadata to each other simultaneously
 while requests are being served.
 
 A simple Flight setup might consist of a single server to which clients connect
-and make DoGet requests.
+and make `DoGet` requests.
 
 <div align="center">
 <img src="{{ site.baseurl }}/img/20191014_flight_simple.png"
@@ -118,7 +118,7 @@ with relatively small messages, for example.
 
 The best-supported way to use gRPC is to define services in a [Protocol
 Buffers][3] (aka "Protobuf") `.proto` file. A Protobuf plugin for gRPC
-generates gRPC service stubs that you can use to implement in your
+generates gRPC service stubs that you can use to implement your
 applications. RPC commands and data messages are serialized using the [Protobuf
 wire format][4]. Because we use "vanilla gRPC and Protocol Buffers", gRPC
 clients that are ignorant of the Arrow columnar format can still interact with
@@ -143,7 +143,9 @@ deserialize `FlightData` (albeit with some performance penalty).
 
 As far as absolute speed, in our C++ data throughput benchmarks, we are seeing
 end-to-end TCP throughput in excess of 2-3GB/s on localhost without TLS
-enabled.
+enabled. This benchmark shows a transfer of ~12 gigabytes of data in about 4
+seconds:
+
 
 ```shell
 $ ./arrow-flight-benchmark --records_per_stream 100000000
@@ -158,30 +160,30 @@ will be bottlenecked on network bandwidth.
 
 ## Horizontal Scalability: Parallel and Partitioned Data Access
 
-Many distributed database-type systems make use of a architectural pattern
+Many distributed database-type systems make use of an architectural pattern
 where the results of client requests are routed through a "coordinator" and
 sent to the client. Aside from the obvious efficiency issues of transporting a
 dataset multiple times on its way to a client, it also presents a scalability
 problem for getting access to very large datasets.
 
 We wanted Flight to enable systems to create horizontally scalable data
-services without this issue. A client request to a dataset using the
-`GetFlightInfo` RPC returns a list of **endpoints**, each of which contains a
-server location and a **ticket** to send that server in a `DoGet` request to
-obtain a part of the full dataset. To get access to the entire dataset, all of
-the endpoints must be consumed. While Flight streams are not necessarily
-ordered, the we provide for application-defined metadata which can be used to
-serialize ordering information.
+services without having to deal with such bottlenecks. A client request to a
+dataset using the `GetFlightInfo` RPC returns a list of **endpoints**, each of
+which contains a server location and a **ticket** to send that server in a
+`DoGet` request to obtain a part of the full dataset. To get access to the
+entire dataset, all of the endpoints must be consumed. While Flight streams are
+not necessarily ordered, the we provide for application-defined metadata which
+can be used to serialize ordering information.
 
 This multiple-endpoint pattern has a number of benefits:
 
-* Endpoints can be read by clients in parallel
+* Endpoints can be read by clients in parallel.
 * The service that serves the `GetFlightInfo` "planning" request can delegate
   work to sibling services to take advantage of data locality or simply to help
-  with load balancing
+  with load balancing.
 * Nodes in a distributed cluster can take on different roles. For example, a
   subset of nodes might be responsible for planning queries while other nodes
-  exclusively fulfill data stream ("DoGet") requests
+  exclusively fulfill data stream (`DoGet` or `DoPut`) requests.
 
 Here is an example diagram of a multi-node architecture with split service
 roles:
@@ -227,7 +229,7 @@ implemented out of the box without custom development.
 gRPC has the concept of "interceptors" which have allowed us to develop
 developer-defined "middleware" that can provide instrumentation of or telemetry
 for incoming and outgoing requests. One such framework for such instrumentation
-is the [OpenTracing][6] framework
+is [OpenTracing][6].
 
 ## gRPC, but not only gRPC
 
@@ -236,11 +238,10 @@ URIs. For example, TLS-secured gRPC may be specified like
 `grpc+tls://$HOST:$PORT`.
 
 While we think that using gRPC for the "command" layer of Flight servers makes
-sense, we may wish to support data transport layers other than TCP for data
-transfer. One example is [RDMA][7]. While some design and development work is
-required to make this possible, the idea is that gRPC could be used to
-coordinate get and put transfers which may be carried out on protocols other
-than TCP.
+sense, we may wish to support data transport layers other than TCP such as
+[RDMA][7]. While some design and development work is required to make this
+possible, the idea is that gRPC could be used to coordinate get and put
+transfers which may be carried out on protocols other than TCP.
 
 ## Getting Started
 
