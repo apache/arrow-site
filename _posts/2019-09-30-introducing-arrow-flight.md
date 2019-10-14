@@ -4,7 +4,7 @@ title: "Introducing Apache Arrow Flight: A Framework for Fast Data Transport"
 description: "This post introduces Arrow Flight, a framework for building high
 performance data services. We have been building Flight over the last 18 months
 and are looking for developers and users to get involved."
-date: "2019-10-09 00:00:00 -0600"
+date: "2019-10-13 00:00:00 -0600"
 author: Wes McKinney
 categories: [application]
 ---
@@ -98,7 +98,11 @@ several basic kinds of requests:
 A simple Flight setup might consist of a single server to which clients connect
 and make DoGet requests.
 
-FIGURE
+<div align="center">
+<img src="{{ site.baseurl }}/img/20191014_flight_simple.png"
+     alt="Flight Simple Architecture"
+     width="50%" class="img-responsive">
+</div>
 
 ## Optimizing Data Throughput over gRPC
 
@@ -129,7 +133,30 @@ having these optimizations will have better performance, while naive gRPC
 clients talking to the Flight service and use a Protobuf library to deserialize
 `FlightData` (though with some performance penalty).
 
-BENCHMARKS
+As far as absolute speed, in our C++ data throughput benchmarks, we are seeing
+end-to-end TCP throughput in excess of 2-3GB/s on localhost without TLS
+enabled.
+
+```shell
+$ ./arrow-flight-benchmark --records_per_stream 100000000
+Bytes read: 12800000000
+Nanos: 3900466413
+Speed: 3129.63 MB/s
+
+$ ./arrow-flight-benchmark --records_per_stream 100000000
+Bytes read: 12800000000
+Nanos: 3631432266
+Speed: 3361.49 MB/s
+
+$ ./arrow-flight-benchmark --records_per_stream 100000000
+Bytes read: 12800000000
+Nanos: 4730784322
+Speed: 2580.34 MB/s
+```
+
+From this we can conclude that the machinery of Flight and gRPC adds relatively
+little overhead, and it suggests that many real-world applications of Flight
+will be bottlenecked on network bandwidth.
 
 ## Horizontal Scalability: Parallel and Partitioned Data Access
 
@@ -156,7 +183,14 @@ This multiple-endpoint pattern has a number of benefits:
   subset of nodes might be responsible for planning queries while other nodes
   exclusively fulfill data stream ("DoGet") requests
 
-FIGURE
+Here is an example diagram of a multi-node architecture with split service
+roles:
+
+<div align="center">
+<img src="{{ site.baseurl }}/img/20191014_flight_complex.png"
+     alt="Flight Complex Architecture"
+     width="60%" class="img-responsive">
+</div>
 
 ## Actions: Extending Flight with application business logic
 
@@ -213,7 +247,8 @@ or protocol changes over the coming year.
 
 One of the easiest ways to experiment with Flight is using the Python API,
 since custom servers and clients can be defined entirely in Python without any
-compilation required.
+compilation required. You can see an [example Flight client and server in
+Python][8] in the Arrow codebase.
 
 [1]: https://grpc.io/
 [2]: https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst
@@ -222,3 +257,4 @@ compilation required.
 [5]: https://github.com/apache/arrow/blob/apache-arrow-0.15.0/format/Flight.proto#L291
 [6]: https://opentracing.io/
 [7]: https://en.wikipedia.org/wiki/Remote_direct_memory_access
+[8]: https://github.com/apache/arrow/tree/apache-arrow-0.15.0/python/examples/flight
