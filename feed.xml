@@ -1,4 +1,264 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2019-10-09T21:05:05-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow 0.15.0 Release</title><link href="https://arrow.apache.org/blog/2019/10/06/0.15.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.15.0 Release" /><published>2019-10-06T02:00:00-04:00</published><updated>2019-10-06T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/10/06/0.15.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/10/06/0.15.0-release/">&lt;!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2019-10-15T10:35:16-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Introducing Apache Arrow Flight: A Framework for Fast Data Transport</title><link href="https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/" rel="alternate" type="text/html" title="Introducing Apache Arrow Flight: A Framework for Fast Data Transport" /><published>2019-10-13T02:00:00-04:00</published><updated>2019-10-13T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/">&lt;!--
+
+--&gt;
+
+&lt;p&gt;Over the last 18 months, the Apache Arrow community has been busy designing and
+implementing &lt;strong&gt;Flight&lt;/strong&gt;, a new general-purpose client-server framework to
+simplify high performance transport of large datasets over network interfaces.&lt;/p&gt;
+
+&lt;p&gt;Flight initially is focused on optimized transport of the Arrow columnar format
+(i.e. “Arrow record batches”) over &lt;a href=&quot;https://grpc.io/&quot;&gt;gRPC&lt;/a&gt;, Google’s popular HTTP/2-based
+general-purpose RPC library and framework. While we have focused on integration
+with gRPC, as a development framework Flight is not intended to be exclusive to
+gRPC.&lt;/p&gt;
+
+&lt;p&gt;One of the biggest features that sets apart Flight from other data transport
+frameworks is parallel transfers, allowing data to be streamed to or from a
+cluster of servers simultaneously. This enables developers to more easily
+create scalable data services that can serve a growing client base.&lt;/p&gt;
+
+&lt;p&gt;In the 0.15.0 Apache Arrow release, we have ready-to-use Flight implementations
+in C++ (with Python bindings) and Java. These libraries are suitable for beta
+users who are comfortable with API or protocol changes while we continue to
+refine some low-level details in the Flight internals.&lt;/p&gt;
+
+&lt;h2 id=&quot;motivation&quot;&gt;Motivation&lt;/h2&gt;
+
+&lt;p&gt;Many people have experienced the pain associated with accessing large datasets
+over a network. There are many different transfer protocols and tools for
+reading datasets from remote data services, such as ODBC and JDBC. Over the
+last 10 years, file-based data warehousing in formats like CSV, Avro, and
+Parquet has become popular, but this also presents challenges as raw data must
+be transferred to local hosts before being deserialized.&lt;/p&gt;
+
+&lt;p&gt;The work we have done since the beginning of Apache Arrow holds exciting
+promise for accelerating data transport in a number of ways. The &lt;a href=&quot;https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst&quot;&gt;Arrow
+columnar format&lt;/a&gt; has key features that can help us:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;It is an “on-the-wire” representation of tabular data that does not require
+deserialization on receipt&lt;/li&gt;
+  &lt;li&gt;Its natural mode is that of “streaming batches”, larger datasets are
+transported a batch of rows at a time (called “record batches” in Arrow
+parlance). In this post we will talk about “data streams”, these are
+sequences of Arrow record batches using the project’s binary protocol&lt;/li&gt;
+  &lt;li&gt;The format is language-independent and now has library support in 11
+languages and counting.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Implementations of standard protocols like ODBC generally implement their own
+custom on-wire binary protocols that must be marshalled to and from each
+library’s public interface. The performance of ODBC or JDBC libraries varies
+greatly from case to case.&lt;/p&gt;
+
+&lt;p&gt;Our design goal for Flight is to create a new protocol for data services that
+uses the Arrow columnar format as both the over-the-wire data representation as
+well as the public API presented to developers. In doing so, we reduce or
+remove the serialization costs associated with data transport and increase the
+overall efficiency of distributed data systems. Additionally, two systems that
+are already using Apache Arrow for other purposes can communicate data to each
+other with extreme efficiency.&lt;/p&gt;
+
+&lt;h2 id=&quot;flight-basics&quot;&gt;Flight Basics&lt;/h2&gt;
+
+&lt;p&gt;The Arrow Flight libraries provide a development framework for implementing a
+service that can send and receive data streams. A Flight server supports
+several basic kinds of requests:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;Handshake&lt;/strong&gt;: a simple request to determine whether the client is authorized
+and, in some cases, to establish an implementation-defined session token to
+use for future requests&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;ListFlights&lt;/strong&gt;: return a list of available data streams&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;GetSchema&lt;/strong&gt;: return the schema for a data stream&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;GetFlightInfo&lt;/strong&gt;: return an “access plan” for a dataset of interest,
+possibly requiring consuming multiple data streams. This request can accept
+custom serialized commands containing, for example, your specific application
+parameters.&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;DoGet&lt;/strong&gt;: send a data stream to a client&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;DoPut&lt;/strong&gt;: receive a data stream from a client&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;DoAction&lt;/strong&gt;: perform an implementation-specific action and return any
+results, i.e. a generalized function call&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;ListActions&lt;/strong&gt;: return a list of available action types&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;We take advantage of gRPC’s elegant “bidirectional” streaming support (built on
+top of &lt;a href=&quot;https://grpc.io/docs/guides/concepts/&quot;&gt;HTTP/2 streaming&lt;/a&gt;) to allow clients and servers to send data and metadata
+to each other simultaneously while requests are being served.&lt;/p&gt;
+
+&lt;p&gt;A simple Flight setup might consist of a single server to which clients connect
+and make &lt;code class=&quot;highlighter-rouge&quot;&gt;DoGet&lt;/code&gt; requests.&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/img/20191014_flight_simple.png&quot; alt=&quot;Flight Simple Architecture&quot; width=&quot;50%&quot; class=&quot;img-responsive&quot; /&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;optimizing-data-throughput-over-grpc&quot;&gt;Optimizing Data Throughput over gRPC&lt;/h2&gt;
+
+&lt;p&gt;While using a general-purpose messaging library like gRPC has numerous specific
+benefits beyond the obvious ones (taking advantage of all the engineering that
+Google has done on the problem), some work was needed to improve the
+performance of transporting large datasets. Many kinds of gRPC users only deal
+with relatively small messages, for example.&lt;/p&gt;
+
+&lt;p&gt;The best-supported way to use gRPC is to define services in a &lt;a href=&quot;https://github.com/protocolbuffers/protobuf&quot;&gt;Protocol
+Buffers&lt;/a&gt; (aka “Protobuf”) &lt;code class=&quot;highlighter-rouge&quot;&gt;.proto&lt;/code&gt; file. A Protobuf plugin for gRPC
+generates gRPC service stubs that you can use to implement your
+applications. RPC commands and data messages are serialized using the &lt;a href=&quot;https://developers.google.com/protocol-buffers/docs/encoding&quot;&gt;Protobuf
+wire format&lt;/a&gt;. Because we use “vanilla gRPC and Protocol Buffers”, gRPC
+clients that are ignorant of the Arrow columnar format can still interact with
+Flight services and handle the Arrow data opaquely.&lt;/p&gt;
+
+&lt;p&gt;The main data-related Protobuf type in Flight is called &lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt;. Reading
+and writing Protobuf messages in general is not free, so we implemented some
+low-level optimizations in gRPC in both C++ and Java to do the following:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Generate the Protobuf wire format for &lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt; including the Arrow record
+batch being sent without going through any intermediate memory copying or
+serialization steps.&lt;/li&gt;
+  &lt;li&gt;Reconstruct a Arrow record batch from the Protobuf representation of
+&lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt; without any memory copying or deserialization. In fact, we
+intercept the encoded data payloads without allowing the Protocol Buffers
+library to touch them.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;In a sense we are “having our cake and eating it, too”. Flight implementations
+having these optimizations will have better performance, while naive gRPC
+clients can still talk to the Flight service and use a Protobuf library to
+deserialize &lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt; (albeit with some performance penalty).&lt;/p&gt;
+
+&lt;p&gt;As far as absolute speed, in our C++ data throughput benchmarks, we are seeing
+end-to-end TCP throughput in excess of 2-3GB/s on localhost without TLS
+enabled. This benchmark shows a transfer of ~12 gigabytes of data in about 4
+seconds:&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;./arrow-flight-benchmark &lt;span class=&quot;nt&quot;&gt;--records_per_stream&lt;/span&gt; 100000000
+Bytes &lt;span class=&quot;nb&quot;&gt;read&lt;/span&gt;: 12800000000
+Nanos: 3900466413
+Speed: 3129.63 MB/s
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;From this we can conclude that the machinery of Flight and gRPC adds relatively
+little overhead, and it suggests that many real-world applications of Flight
+will be bottlenecked on network bandwidth.&lt;/p&gt;
+
+&lt;h2 id=&quot;horizontal-scalability-parallel-and-partitioned-data-access&quot;&gt;Horizontal Scalability: Parallel and Partitioned Data Access&lt;/h2&gt;
+
+&lt;p&gt;Many distributed database-type systems make use of an architectural pattern
+where the results of client requests are routed through a “coordinator” and
+sent to the client. Aside from the obvious efficiency issues of transporting a
+dataset multiple times on its way to a client, it also presents a scalability
+problem for getting access to very large datasets.&lt;/p&gt;
+
+&lt;p&gt;We wanted Flight to enable systems to create horizontally scalable data
+services without having to deal with such bottlenecks. A client request to a
+dataset using the &lt;code class=&quot;highlighter-rouge&quot;&gt;GetFlightInfo&lt;/code&gt; RPC returns a list of &lt;strong&gt;endpoints&lt;/strong&gt;, each of
+which contains a server location and a &lt;strong&gt;ticket&lt;/strong&gt; to send that server in a
+&lt;code class=&quot;highlighter-rouge&quot;&gt;DoGet&lt;/code&gt; request to obtain a part of the full dataset. To get access to the
+entire dataset, all of the endpoints must be consumed. While Flight streams are
+not necessarily ordered, we provide for application-defined metadata which can
+be used to serialize ordering information.&lt;/p&gt;
+
+&lt;p&gt;This multiple-endpoint pattern has a number of benefits:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Endpoints can be read by clients in parallel.&lt;/li&gt;
+  &lt;li&gt;The service that serves the &lt;code class=&quot;highlighter-rouge&quot;&gt;GetFlightInfo&lt;/code&gt; “planning” request can delegate
+work to sibling services to take advantage of data locality or simply to help
+with load balancing.&lt;/li&gt;
+  &lt;li&gt;Nodes in a distributed cluster can take on different roles. For example, a
+subset of nodes might be responsible for planning queries while other nodes
+exclusively fulfill data stream (&lt;code class=&quot;highlighter-rouge&quot;&gt;DoGet&lt;/code&gt; or &lt;code class=&quot;highlighter-rouge&quot;&gt;DoPut&lt;/code&gt;) requests.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Here is an example diagram of a multi-node architecture with split service
+roles:&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/img/20191014_flight_complex.png&quot; alt=&quot;Flight Complex Architecture&quot; width=&quot;60%&quot; class=&quot;img-responsive&quot; /&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;actions-extending-flight-with-application-business-logic&quot;&gt;Actions: Extending Flight with application business logic&lt;/h2&gt;
+
+&lt;p&gt;While the &lt;code class=&quot;highlighter-rouge&quot;&gt;GetFlightInfo&lt;/code&gt; request supports sending opaque serialized commands
+when requesting a dataset, a client may need to be able to ask a server to
+perform other kinds of operations. For example, a client may request for a
+particular dataset to be “pinned” in memory so that subsequent requests from
+other clients are served faster.&lt;/p&gt;
+
+&lt;p&gt;A Flight service can thus optionally define “actions” which are carried out by
+the &lt;code class=&quot;highlighter-rouge&quot;&gt;DoAction&lt;/code&gt; RPC. An action request contains the name of the action being
+performed and optional serialized data containing further needed
+information. The result of an action is a gRPC stream of opaque binary results.&lt;/p&gt;
+
+&lt;p&gt;Some example actions:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Metadata discovery, beyond the capabilities provided by the built-in
+&lt;code class=&quot;highlighter-rouge&quot;&gt;ListFlights&lt;/code&gt; RPC&lt;/li&gt;
+  &lt;li&gt;Setting session-specific parameters and settings&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Note that it is not required for a server to implement any actions, and actions
+need not return results.&lt;/p&gt;
+
+&lt;h2 id=&quot;encryption-and-authentication&quot;&gt;Encryption and Authentication&lt;/h2&gt;
+
+&lt;p&gt;Flight supports encryption out of the box using gRPC’s built in TLS / OpenSSL
+capabilities.&lt;/p&gt;
+
+&lt;p&gt;For authentication, there are extensible authentication handlers for the client
+and server that permit simple authentication schemes (like user and password)
+as well as more involved authentication such as Kerberos. The Flight protocol
+comes with a built-in &lt;code class=&quot;highlighter-rouge&quot;&gt;BasicAuth&lt;/code&gt; so that user/password authentication can be
+implemented out of the box without custom development.&lt;/p&gt;
+
+&lt;h2 id=&quot;middleware-and-tracing&quot;&gt;Middleware and Tracing&lt;/h2&gt;
+
+&lt;p&gt;gRPC has the concept of “interceptors” which have allowed us to develop
+developer-defined “middleware” that can provide instrumentation of or telemetry
+for incoming and outgoing requests. One such framework for such instrumentation
+is &lt;a href=&quot;https://opentracing.io/&quot;&gt;OpenTracing&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Note that middleware functionality is one of the newest areas of the project
+and is only currently available in the project’s master branch.&lt;/p&gt;
+
+&lt;h2 id=&quot;grpc-but-not-only-grpc&quot;&gt;gRPC, but not only gRPC&lt;/h2&gt;
+
+&lt;p&gt;We specify server locations for &lt;code class=&quot;highlighter-rouge&quot;&gt;DoGet&lt;/code&gt; requests using RFC 3986 compliant
+URIs. For example, TLS-secured gRPC may be specified like
+&lt;code class=&quot;highlighter-rouge&quot;&gt;grpc+tls://$HOST:$PORT&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;While we think that using gRPC for the “command” layer of Flight servers makes
+sense, we may wish to support data transport layers other than TCP such as
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Remote_direct_memory_access&quot;&gt;RDMA&lt;/a&gt;. While some design and development work is required to make this
+possible, the idea is that gRPC could be used to coordinate get and put
+transfers which may be carried out on protocols other than TCP.&lt;/p&gt;
+
+&lt;h2 id=&quot;getting-started-and-whats-next&quot;&gt;Getting Started and What’s Next&lt;/h2&gt;
+
+&lt;p&gt;Documentation for Flight users is a work in progress, but the libraries
+themselves are mature enough for beta users that are tolerant of some minor API
+or protocol changes over the coming year.&lt;/p&gt;
+
+&lt;p&gt;One of the easiest ways to experiment with Flight is using the Python API,
+since custom servers and clients can be defined entirely in Python without any
+compilation required. You can see an &lt;a href=&quot;https://github.com/apache/arrow/tree/apache-arrow-0.15.0/python/examples/flight&quot;&gt;example Flight client and server in
+Python&lt;/a&gt; in the Arrow codebase.&lt;/p&gt;
+
+&lt;p&gt;In real-world use, Dremio has developed an &lt;a href=&quot;https://github.com/dremio-hub/dremio-flight-connector&quot;&gt;Arrow Flight-based&lt;/a&gt; connector
+which has been shown to &lt;a href=&quot;https://www.dremio.com/is-time-to-replace-odbc-jdbc/&quot;&gt;deliver 20-50x better performance over ODBC&lt;/a&gt;. For
+Apache Spark users, Arrow contributor Ryan Murray has created a &lt;a href=&quot;https://github.com/rymurr/flight-spark-source&quot;&gt;data source
+implementation&lt;/a&gt; to connect to Flight-enabled endpoints.&lt;/p&gt;
+
+&lt;p&gt;As far as “what’s next” in Flight, support for non-gRPC (or non-TCP) data
+transport may be an interesting direction of research and development work. A
+lot of the Flight work from here will be creating user-facing Flight-enabled
+services. Since Flight is a development framework, we expect that user-facing
+APIs will utilize a layer of API veneer that hides many general Flight details
+and details related to a particular application of Flight in a custom data
+service.&lt;/p&gt;</content><author><name>Wes McKinney</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry><entry><title type="html">Apache Arrow 0.15.0 Release</title><link href="https://arrow.apache.org/blog/2019/10/06/0.15.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.15.0 Release" /><published>2019-10-06T02:00:00-04:00</published><updated>2019-10-06T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/10/06/0.15.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/10/06/0.15.0-release/">&lt;!--
 
 --&gt;
 
@@ -1665,83 +1925,4 @@ common data formats like Apache Avro, CSV, JSON, and Apache ORC.&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;It promises to be an exciting 2019. We look forward to having you involved in
-the development community.&lt;/p&gt;</content><author><name>wesm</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry><entry><title type="html">Gandiva: A LLVM-based Analytical Expression Compiler for Apache Arrow</title><link href="https://arrow.apache.org/blog/2018/12/05/gandiva-donation/" rel="alternate" type="text/html" title="Gandiva: A LLVM-based Analytical Expression Compiler for Apache Arrow" /><published>2018-12-05T00:00:00-05:00</published><updated>2018-12-05T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2018/12/05/gandiva-donation</id><content type="html" xml:base="https://arrow.apache.org/blog/2018/12/05/gandiva-donation/">&lt;!--
-
---&gt;
-
-&lt;p&gt;Today we’re happy to announce that the Gandiva Initiative for Apache Arrow, an
-LLVM-based execution kernel, is now part of the Apache Arrow project. Gandiva
-was kindly donated by &lt;a href=&quot;https://www.dremio.com/&quot;&gt;Dremio&lt;/a&gt;, where it was
-originally developed and open-sourced. Gandiva extends Arrow’s capabilities to
-provide high performance analytical execution and is composed of two main
-components:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;
-    &lt;p&gt;A runtime expression compiler leveraging LLVM&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;A high performance execution environment&lt;/p&gt;
-  &lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Gandiva works as follows: applications submit an expression tree to the
-compiler, built in a language agnostic protobuf-based expression
-representation. From there, Gandiva then compiles the expression tree to native
-code for the current runtime environment and hardware. Once compiled, the
-Gandiva execution kernel then consumes and produces Arrow columnar batches. The
-generated code is highly optimized for parallel processing on modern CPUs. For
-example, on AVX-128 processors Gandiva can process 8 pairs of 2 byte values in
-a single vectorized operation, and on AVX-512 processors Gandiva can process 4x
-as many values in a single operation. Gandiva is built from the ground up to
-understand Arrow’s in-memory representation and optimize processing against it.&lt;/p&gt;
-
-&lt;p&gt;While Gandiva is just starting within the Arrow community, it already supports
-hundreds of &lt;a href=&quot;https://github.com/apache/arrow/blob/master/cpp/src/gandiva/function_registry.cc&quot;&gt;expressions&lt;/a&gt;, ranging from math functions to case
-statements. Gandiva was built as a standalone C++ library built on top of the
-core Apache Arrow codebase and was donated with C++ and Java APIs construction
-and execution APIs for projection and filtering operations. The Arrow community
-is already looking to expand Gandiva’s capabilities. This will include
-incorporating more operations and supporting many new language bindings. As an
-example, multiple community members are already actively building new language
-bindings that allow use of Gandiva within Python and Ruby.&lt;/p&gt;
-
-&lt;p&gt;While young within the Arrow community, Gandiva is already shipped and used in
-production by many Dremio customers as part of Dremio’s execution
-engine. Experiments have demonstrated &lt;a href=&quot;https://www.dremio.com/gandiva-performance-improvements-production-query/&quot;&gt;70x performance improvement&lt;/a&gt; on many
-SQL queries. We expect to see similar performance gains for many other projects
-that leverage Arrow.&lt;/p&gt;
-
-&lt;p&gt;The Arrow community is working to ship the first formal Apache Arrow release
-that includes Gandiva, and we hope this will be available within the next
-couple months. This should make it much easier for the broader analytics and
-data science development communities to leverage runtime code generation for
-high-performance data processing in a variety of contexts and projects.&lt;/p&gt;
-
-&lt;p&gt;We started the Arrow project a couple of years ago with the objective of
-creating an industry-standard columnar in-memory data representation for
-analytics. Within this short period of time, Apache Arrow has been adopted by
-dozens of both open source and commercial software products. Some key examples
-include technologies such as Apache Spark, Pandas, Nvidia RAPIDS, Dremio, and
-InfluxDB. This success has driven Arrow to now be downloaded more than 1
-million times per month. Over 200 developers have already contributed to Apache
-Arrow. If you’re interested in contributing to Gandiva or any other part of the
-Apache Arrow project, feel free to reach out on the mailing list and join us!&lt;/p&gt;
-
-&lt;p&gt;For additional technical details on Gandiva, you can check out some of the
-following resources:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;
-    &lt;p&gt;&lt;a href=&quot;https://www.dremio.com/announcing-gandiva-initiative-for-apache-arrow/&quot;&gt;https://www.dremio.com/announcing-gandiva-initiative-for-apache-arrow/&lt;/a&gt;&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;&lt;a href=&quot;https://www.dremio.com/gandiva-performance-improvements-production-query/&quot;&gt;https://www.dremio.com/gandiva-performance-improvements-production-query/&lt;/a&gt;&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;&lt;a href=&quot;https://www.dremio.com/webinars/vectorized-query-processing-apache-arrow/&quot;&gt;https://www.dremio.com/webinars/vectorized-query-processing-apache-arrow/&lt;/a&gt;&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;&lt;a href=&quot;https://www.dremio.com/adding-a-user-define-function-to-gandiva/&quot;&gt;https://www.dremio.com/adding-a-user-define-function-to-gandiva/&lt;/a&gt;&lt;/p&gt;
-  &lt;/li&gt;
-&lt;/ul&gt;</content><author><name>jacques</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry></feed>
+the development community.&lt;/p&gt;</content><author><name>wesm</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry></feed>
