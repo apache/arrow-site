@@ -37,9 +37,14 @@ general-purpose RPC library and framework. While we have focused on integration
 with gRPC, as a development framework Flight is not intended to be exclusive to
 gRPC.
 
+One of the biggest features that sets apart Flight from other data transport
+frameworks is parallel transfers, allowing data to be streamed to or from a
+cluster of servers simultaneously. This enables developers to more easily
+create scalable data services that can serve a growing client base.
+
 In the 0.15.0 Apache Arrow release, we have ready-to-use Flight implementations
 in C++ (with Python bindings) and Java. These libraries are suitable for beta
-users who are comfortable being on the bleeding edge while we continue to
+users who are comfortable with API or protocol changes while we continue to
 refine some low-level details in the Flight internals.
 
 ## Motivation
@@ -88,9 +93,9 @@ several basic kinds of requests:
   use for future requests
 * **ListFlights**: return a list of available data streams
 * **GetSchema**: return the schema for a data stream
-* **GetFlightInfo**: return a "access plan" for a dataset of interest, possibly
-  requiring consuming multiple data streams. This request can accept custom
-  serialized commands containing, for example, your specific application
+* **GetFlightInfo**: return an "access plan" for a dataset of interest,
+  possibly requiring consuming multiple data streams. This request can accept
+  custom serialized commands containing, for example, your specific application
   parameters.
 * **DoGet**: send a data stream to a client
 * **DoPut**: receive a data stream from a client
@@ -98,9 +103,9 @@ several basic kinds of requests:
   results, i.e. a generalized function call
 * **ListActions**: return a list of available action types
 
-We take advantage of gRPC's elegant "bidirectional" streaming support to allow
-clients and servers to send data and metadata to each other simultaneously
-while requests are being served.
+We take advantage of gRPC's elegant "bidirectional" streaming support (built on
+top of [HTTP/2 streaming][9]) to allow clients and servers to send data and metadata
+to each other simultaneously while requests are being served.
 
 A simple Flight setup might consist of a single server to which clients connect
 and make `DoGet` requests.
@@ -210,8 +215,11 @@ the `DoAction` RPC. An action request contains the name of the action being
 performed and optional serialized data containing further needed
 information. The result of an action is a gRPC stream of opaque binary results.
 
-An example action would be the command `'ListDatasets'` which could return a
-stream of dataset names that are available on that server.
+Some example actions:
+
+* Metadata discovery, beyond the capabilities provided by the built-in
+  `ListFlights` RPC
+* Setting session-specific parameters and settings
 
 Note that it is not required for a server to implement any actions, and actions
 need not return results.
@@ -260,6 +268,11 @@ since custom servers and clients can be defined entirely in Python without any
 compilation required. You can see an [example Flight client and server in
 Python][8] in the Arrow codebase.
 
+In real-world use, Dremio has developed an [Arrow Flight-based][10] connector
+which has been shown to [deliver 20-50x better performance over ODBC][11]. For
+Apache Spark users, Arrow contributor Ryan Murray has created a [data source
+implementation][12] to connect to Flight-enabled endpoints.
+
 As far as "what's next" in Flight, support for non-gRPC (or non-TCP) data
 transport may be an interesting direction of research and development work. A
 lot of the Flight work from here will be creating user-facing Flight-enabled
@@ -276,3 +289,7 @@ service.
 [6]: https://opentracing.io/
 [7]: https://en.wikipedia.org/wiki/Remote_direct_memory_access
 [8]: https://github.com/apache/arrow/tree/apache-arrow-0.15.0/python/examples/flight
+[9]: https://grpc.io/docs/guides/concepts/
+[10]: https://github.com/dremio-hub/dremio-flight-connector
+[11]: https://www.dremio.com/is-time-to-replace-odbc-jdbc/
+[12]: https://github.com/rymurr/flight-spark-source
