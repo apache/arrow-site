@@ -5,7 +5,7 @@ description: "This post introduces Arrow Flight, a framework for building high
 performance data services. We have been building Flight over the last 18 months
 and are looking for developers and users to get involved."
 date: "2019-10-13 00:00:00 -0600"
-author: Wes McKinney
+author: wesm
 categories: [application]
 ---
 <!--
@@ -26,6 +26,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 {% endcomment %}
 -->
+
+Translations: [日本語]({% post_url 2019-09-30-introducing-arrow-flight-japanese %})
 
 Over the last 18 months, the Apache Arrow community has been busy designing and
 implementing **Flight**, a new general-purpose client-server framework to
