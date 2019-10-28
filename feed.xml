@@ -1,6 +1,147 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2019-10-26T14:24:23-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Introducing Apache Arrow Flight: A Framework for Fast Data Transport</title><link href="https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/" rel="alternate" type="text/html" title="Introducing Apache Arrow Flight: A Framework for Fast Data Transport" /><published>2019-10-13T02:00:00-04:00</published><updated>2019-10-13T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/">&lt;!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2019-10-27T21:23:46-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow Flightの紹介：高速データトランスポートフレームワーク</title><link href="https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight-japanese/" rel="alternate" type="text/html" title="Apache Arrow Flightの紹介：高速データトランスポートフレームワーク" /><published>2019-10-13T02:00:00-04:00</published><updated>2019-10-13T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight-japanese</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight-japanese/">&lt;!--
 
 --&gt;
+
+&lt;p&gt;&lt;a href=&quot;/blog/2019/10/13/introducing-arrow-flight/&quot;&gt;原文（English）&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;この1.5年、Apache Arrowコミュニティーは&lt;strong&gt;Flight&lt;/strong&gt;の設計と実装を進めてきました。Flightは高速なデータトランスポートを実現するための新しいクライアント・サーバー型のフレームワークです。Flightを使うとネットワーク越しに大きなデータセットを送る処理を簡単に実現できます。Flightは特定用途向けに設計されたものではないため、幅広い用途で利用できます。&lt;/p&gt;
+
+&lt;p&gt;Flightの実装は、まず、&lt;a href=&quot;https://grpc.io/&quot;&gt;gRPC&lt;/a&gt;を使ったArrow列指向フォーマット（つまり「Arrowレコードバッチ」）のトランスポートの最適化に注力しました。gRPCはGoogleが開発しているHTTP/2ベースのRPCライブラリー・フレームワークで、広く利用されています。gRPCも特定用途向けではなく幅広い用途で使えるように設計されています。これまでFlightをgRPCベースで実装することに注力してきましたが、gRPCでだけ使えるようにしたいわけではありません。&lt;/p&gt;
+
+&lt;p&gt;Flightと他のデータトランスポートフレームワークとの大きな違いは並列転送機能です。クライアントとサーバークラスター間で同時にデータをストリームで転送できます。この機能により、簡単にスケーラブルなデータサービスを開発できます。スケーラブルなデータサービスとはクライアント数が増えても大丈夫なサービスです。&lt;/p&gt;
+
+&lt;p&gt;Apache Arrow 0.15.0でC++（Pytonバインディングあり）とJavaでFlightを使えるようになっています。 現時点ではベータユーザー向けです。ベータユーザーとはFlight内部の低レベルの改良によりAPIやプロトコルが変わっても適応できるユーザーのことです。&lt;/p&gt;
+
+&lt;h2 id=&quot;モチベーション&quot;&gt;モチベーション&lt;/h2&gt;
+
+&lt;p&gt;多くの人がネットワーク越しに大きなデータセットにアクセスすることに関して困っています。リモートのデータサービスからデータセットを読むためのさまざまな転送プロトコルやツールがたくさんあります。たとえばODBCやJDBCです。この10年、ファイルベースでデータを保管することが多くなりました。このときにはCSVやAvroやParquetといったフォーマットがよく使われます。しかし、この方法ではデシリアライズする前に生データをローカルのホストに転送しなければいけないという問題があります。&lt;/p&gt;
+
+&lt;p&gt;Apache Arrowの初期からやってきた作業によりさまざまな方法でデータトランスポートを加速できます。&lt;a href=&quot;https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst&quot;&gt;Arrow列指向フォーマット&lt;/a&gt;には次の重要な機能があります。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;表形式データの「転送用の」表現です。この表現はデータ受信側でデシリアライズが必要ありません。&lt;/li&gt;
+  &lt;li&gt;標準で「バッチをストリーム送信」するためのモードがあります。このモードでは、大きなデータセットを複数の行ごとにまとめて転送します。（Arrowの用語では「レコードバッチ」と呼んでいます。）この記事では「データストリーム」について話します。データストリームとはApache Arrowプロジェクトのバイナリープロトコルを使った一連のArrowレコードバッチです。&lt;/li&gt;
+  &lt;li&gt;このフォーマットはプログラミング言語に依存していません。このフォーマットは現在11のプログラミング言語がサポートしています。サポートしているプログラミング言語は増え続けています。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;ODBCのような標準的なプロトコルの各実装は、通常、それぞれ独自の転送用バイナリープロトコルを実装します。これらのプロトコルは各ライブラリーの公開インターフェイスの表現と相互に変換しなければいけません。ODBC・JDBCライブラリーのパフォーマンスは場合によって大きく異なります。&lt;/p&gt;
+
+&lt;p&gt;私たちのFlightの設計で目指していることは、データサービス用の新しいプロトコルを作ることです。このプロトコルは転送用のデータ表現にも開発者向けの公開APIにもArrow列指向フォーマットを使います。こうすることで、データトランスポート関連のシリアライズコストを減らし、分散データシステム全体を効率化できます。さらに、すでに別の用途にApache Arrowを使っているシステム間では非常に効率的にデータをやりとりできます。&lt;/p&gt;
+
+&lt;h2 id=&quot;flightの基礎&quot;&gt;Flightの基礎&lt;/h2&gt;
+
+&lt;p&gt;Arrow Flightライブラリーはデータストリームを送受信できるサービスを実装するための開発者向けフレームワークを提供します。Flightサーバーは次の基本的なリクエストをサポートしています。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;strong&gt;Handshake&lt;/strong&gt;：クライアントが認証済みかを確認するシンプルなリクエスト。いくつかのケースでは、以降のリクエストのために実装定義のセッショントークンを確立します。&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;ListFlights&lt;/strong&gt;：利用可能なデータストリームのリストを返します。&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;GetSchema&lt;/strong&gt;：データストリームのスキーマを返します。&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;GetFlightInfo&lt;/strong&gt;：対象のデータセット用の「アクセスプラン」を返します。複数のデータストリームを消費しなければいけないかもしれません。このリクエストにはシリアライズしたカスタムコマンドを含めることができます。たとえば、アプリケーション固有のパラメーターを含めることができます。&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;DoGet&lt;/strong&gt;：クライアントにデータストリームを送信します。&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;DoPut&lt;/strong&gt;: クライアントからデータストリームを受信します。&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;DoAction&lt;/strong&gt;：実装依存のアクションを実行し、結果を返します。つまり、一般的な関数呼び出しです。&lt;/li&gt;
+  &lt;li&gt;&lt;strong&gt;ListActions&lt;/strong&gt;：利用可能なアクションの種類を返します。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;gRPCの「双方向の」ストリーミングサポート（&lt;a href=&quot;https://grpc.io/docs/guides/concepts/&quot;&gt;HTTP/2ストリーミング&lt;/a&gt;上に実装されています）を活用して、リクエスト処理中でもデータとメタデータをクライアント・サーバー間でやりとりできます。&lt;/p&gt;
+
+&lt;p&gt;単純なFlightの構成は1台のサーバーとそのサーバーに接続し&lt;code class=&quot;highlighter-rouge&quot;&gt;DoGet&lt;/code&gt;リクエストをするクライアントという構成です。&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/img/20191014_flight_simple.png&quot; alt=&quot;Flight Simple Architecture&quot; width=&quot;50%&quot; class=&quot;img-responsive&quot; /&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;grpcごしのデータスループットの最適化&quot;&gt;gRPCごしのデータスループットの最適化&lt;/h2&gt;
+
+&lt;p&gt;gRPCのような汎用メッセージングライブラリーを使うことには多くの利点があります。汎用ライブラリーはすでに多数の問題を解決しているからです。gRPCの場合はGoogleが多数の問題を解決していました。しかし、大きなデータセットのトランスポート性能を改善するためにいくつかの処理を改善する必要がありました。多くのgRPCユーザーは比較的小さなメッセージしか扱っていないからです。&lt;/p&gt;
+
+&lt;p&gt;一番よくサポートされているgRPCを使う方法はサービスを&lt;a href=&quot;https://github.com/protocolbuffers/protobuf&quot;&gt;Protocol Buffers&lt;/a&gt;（「Protobuf」と呼ばれることもあります）の&lt;code class=&quot;highlighter-rouge&quot;&gt;.proto&lt;/code&gt;ファイルで定義する方法です。gRPCのProtobufプラグインはgRPCサービスのスタブを生成します。このスタブを使ってアプリケーションを実装します。RPCコマンドとデータメッセージは&lt;a href=&quot;https://developers.google.com/protocol-buffers/docs/encoding&quot;&gt;Protobufワイヤーフォーマット&lt;/a&gt;を使ってシリアライズします。Flightでは「普通のgRPCとProtocol Buffers」を使っているので、Arrow列指向フォーマットのことを知らないgRPCクライアントでもFlightサービスとやりとりできますし、Arrowデータの中身を気にせずに処理できます。&lt;/p&gt;
+
+&lt;p&gt;Flightの中の主要なデータ関連のProtobufの型は&lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt;と呼ばれています。一般的にProtobufメッセージの読み書きにはコストがかかります。そのため、C++でもJavaでもgRPCにいくつか次のような低レベルの最適化を実装しています。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt;用のProtobufワイヤーフォーマットを生成します。&lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt;には送信対象のArrowレコードバッチが含まれていますが、メモリーコピー・シリアライズ処理は一切ありません。&lt;/li&gt;
+  &lt;li&gt;Protobufで表現された&lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt;からメモリーコピー・デシリアライズ処理なしでArrowレコードバッチを再構築できます。実際には、Protocol Bufersライブラリーにエンコードされたデータペイロードを触らせないようにしています。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Protobufを使うがProtobufのメッセージパースのオーバーヘッドはなくしたいという両立できない2つのことを両立させようとしているということです。Flight実装は上述の最適化をして高速化しています。素のgRPCクライアントでもFlightサービスとやりとりできますが、素のgRPCクライアントにはこのような最適化はないので、Protobufライブラリーを使って&lt;code class=&quot;highlighter-rouge&quot;&gt;FlightData&lt;/code&gt;をデシリアライズすることになります。そのため、素のgRPCクライアントを使うといくらか性能が落ちます。&lt;/p&gt;
+
+&lt;p&gt;FlightのC++実装でのデータスループットベンチマークの結果での絶対的な性能ですが、どちらもローカルホストで動いているサーバー・クライアント間のTCPスループットは2-3GB/sを上回っていました。ただし、TLSは無効にした状態です。このベンチマークは約4秒で12GBのデータを転送できることを示しています。&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;./arrow-flight-benchmark &lt;span class=&quot;nt&quot;&gt;--records_per_stream&lt;/span&gt; 100000000
+Bytes &lt;span class=&quot;nb&quot;&gt;read&lt;/span&gt;: 12800000000
+Nanos: 3900466413
+Speed: 3129.63 MB/s
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;この結果から次の2つのことを言えます。1つはFlightとgRPCを使うと相対的に小さなオーバーヘッドはあるということです。もう1つは多くの実際のFlightアプリケーションではネットワークの帯域がボトルネックになりそうということです。&lt;/p&gt;
+
+&lt;h2 id=&quot;水平方向のスケーラビリティ並列データアクセスとパーティション化したデータアクセス&quot;&gt;水平方向のスケーラビリティ：並列データアクセスとパーティション化したデータアクセス&lt;/h2&gt;
+
+&lt;p&gt;分散型のデータベースシステムの多くは「コーディネーター」を通してクライアントのリクエストを処理するアーキテクチャーパターンを使っています。クライアントへのデータセットを複数回転送するという明らかに効率に課題がある点はさておき、巨大なデータセットへのアクセスに対するスケーラビリティの問題もあります。&lt;/p&gt;
+
+&lt;p&gt;Flightで次のようなシステムを作れるようにしました。それはこのようなボトルネックに取り組まずに水平方向にスケーラブルなデータサービスを作れるシステムです。&lt;code class=&quot;highlighter-rouge&quot;&gt;GetFlightInfo&lt;/code&gt; RPCを使ったクライアントのリクエストは &lt;strong&gt;エンドポイント&lt;/strong&gt; のリストを返します。返ってくる各エンドポイントにはサーバーの位置と &lt;strong&gt;チケット&lt;/strong&gt; の情報が入っています。チケットはデータセットの一部を取得する&lt;code class=&quot;highlighter-rouge&quot;&gt;DoGet&lt;/code&gt;リクエストに入れてサーバーに送ります。データセット全体にアクセスするためにはすべてのエンドポイントを処理する必要があります。どのエンドポイントのFlightのストリームから処理しなければいけないということはありません。どのエンドポイントのFlightのストリームから処理しても構いません。しかし、特定の順序で処理するための仕組みは用意しています。その仕組みとはアプリケーション固有のメタデータを使えるという仕組みです。順序の情報はメタデータで表現できます。&lt;/p&gt;
+
+&lt;p&gt;この複数エンドポイントパターンにはたくさんの利点があります。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;複数のクライアントが複数のエンドポイントから並列にデータを読み込めます。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;GetFlightInfo&lt;/code&gt;「プランニング」リクエストを提供するサービスは兄弟サービスに処理を移譲できます。これにより、データの局所性の利点を得られたり、単純にロードバランスしやすくなったりします。&lt;/li&gt;
+  &lt;li&gt;分散クラスター中のノードは異なる役割を引き受けることができます。たとえば、クラスター内の一部のノードはクエリープランニングに責任を持つかもしれません。一方、他のノードはデータストリームリクエスト（&lt;code class=&quot;highlighter-rouge&quot;&gt;DoGet&lt;/code&gt;または&lt;code class=&quot;highlighter-rouge&quot;&gt;DoPut&lt;/code&gt;）だけを処理するかもしれません。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;次の図はサービスの役割を分けた複数ノードアーキテクチャーの例です。&lt;/p&gt;
+
+&lt;div align=&quot;center&quot;&gt;
+&lt;img src=&quot;/img/20191014_flight_complex.png&quot; alt=&quot;Flight Complex Architecture&quot; width=&quot;60%&quot; class=&quot;img-responsive&quot; /&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;アクションアプリケーション固有のロジックでflightを拡張&quot;&gt;アクション：アプリケーション固有のロジックでFlightを拡張&lt;/h2&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;GetFlightInfo&lt;/code&gt;リクエストはデータセットをリクエストするときにシリアライズしたコマンドを中身を気にせずに送ることができますが、クライアントはデータストリームの送受信以外の操作をサーバーに依頼できなければいけないかもしれません。たとえば、クライアントは特定のデータセットをメモリー上に「ピン止め」することを要求するかもしれません。ピン止めすることで他のクライアントからの後続のリクエストを高速に処理できます。&lt;/p&gt;
+
+&lt;p&gt;Flightサービスは追加で「アクション」を定義できます。&lt;code class=&quot;highlighter-rouge&quot;&gt;DoAction&lt;/code&gt; RPCでアクションを実行できます。アクションリクエストには実行したいアクションの名前と追加情報が入っています。追加情報は省略可能です。アクションの結果はgRPCストリームです。このgRPCストリーム中には任意の結果を入れられます。&lt;/p&gt;
+
+&lt;p&gt;いくつかアクションの例を紹介します。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;メタデータを見つけるアクション。組み込みの&lt;code class=&quot;highlighter-rouge&quot;&gt;ListFlights&lt;/code&gt; RPCでも提供されている機能ですが、&lt;code class=&quot;highlighter-rouge&quot;&gt;ListFlights&lt;/code&gt;の機能で不十分な場合はアクションで実現できます。&lt;/li&gt;
+  &lt;li&gt;セッション固有のパラメーターを設定するアクション。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;サーバーはアクションを1つも実装しなくてもよいことに注意してください。また、アクションは結果を返さなくてもよいです。&lt;/p&gt;
+
+&lt;h2 id=&quot;暗号化と認証&quot;&gt;暗号化と認証&lt;/h2&gt;
+
+&lt;p&gt;Flightは組み込みで暗号化をサポートしています。gRPCの組み込みのTLS/OpenSSLの機能を使っています。&lt;/p&gt;
+
+&lt;p&gt;クライアント側・サーバー側ともに拡張可能な認証ハンドラーがあります。この認証ハンドラーを使えば、ユーザー名とパスワードのようなシンプルな認証スキーマも使えますし、ケルベロスのような複雑な認証も使えます。Flightプロトコルには組み込みの&lt;code class=&quot;highlighter-rouge&quot;&gt;BasicAuth&lt;/code&gt;機能がついています。そのため、追加の開発なしでそのままユーザー名とパスワードの認証を実現できます。&lt;/p&gt;
+
+&lt;h2 id=&quot;ミドルウェアとトレース&quot;&gt;ミドルウェアとトレース&lt;/h2&gt;
+
+&lt;p&gt;gRPCには「インターセプター」というコンセプトがあります。インターセプターを使うと開発者が定義した「ミドルウェア」を開発できます。ミドルウェアを使うと届いたリクエストと送るリクエストに介在することができます。このような処理をするフレームワークに&lt;a href=&quot;https://opentracing.io/&quot;&gt;OpenTracing&lt;/a&gt;があります。&lt;/p&gt;
+
+&lt;p&gt;ミドルウェアの機能は最近Flightに追加された機能です。そのため、今のところはmasterブランチでしか使えません。&lt;/p&gt;
+
+&lt;h2 id=&quot;grpcを使っているがgrpcだけではない&quot;&gt;gRPCを使っているがgRPCだけではない&lt;/h2&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;DoGet&lt;/code&gt;リクエストでサーバーの位置を指定する方法にはRFC 3986準拠のURIを使っています。たとえば、TLSを使ったgRPCは&lt;code class=&quot;highlighter-rouge&quot;&gt;grpc+tls://$HOST:$PORT&lt;/code&gt;というように指定します。&lt;/p&gt;
+
+&lt;p&gt;Flightサーバーの「コマンド」レイヤーにgRPCを使っているのは妥当だと思っていますが、&lt;a href=&quot;https://en.wikipedia.org/wiki/Remote_direct_memory_access&quot;&gt;RDMA&lt;/a&gt;のようなTCP以外のデータトランスポート層もサポートしたくなるかもしれません。設計・開発時間が必要になりますが、おそらく、TCP以外のプロトコル上でデータを転送するときでもgRPCを使えるでしょう。&lt;/p&gt;
+
+&lt;h2 id=&quot;はじめかたと今後の話&quot;&gt;はじめかたと今後の話&lt;/h2&gt;
+
+&lt;p&gt;Flightユーザー向けのドキュメントは作成中です。しかし、このライブラリーはベータユーザー向けには十分に使い物になります。ベータユーザーとは今後1年で発生するだろう軽微なAPI・プロトコルの変更に耐えられるユーザーです。&lt;/p&gt;
+
+&lt;p&gt;Flightをためす簡単な方法はPython APIを使う方法です。なぜならカスタムサーバーもカスタムクライアントもすべてPythonだけで定義できるからです。なにもコンパイルする必要はありません。Arrowのコードにある&lt;a href=&quot;https://github.com/apache/arrow/tree/apache-arrow-0.15.0/python/examples/flight&quot;&gt;PythonでのFlightクライアントとサーバーの例&lt;/a&gt;を参考にできます。&lt;/p&gt;
+
+&lt;p&gt;実際に使っている例もあります。Dremioは&lt;a href=&quot;https://github.com/dremio-hub/dremio-flight-connector&quot;&gt;Arrow Flightベースの&lt;/a&gt;コネクターを開発しました。このコネクターは&lt;a href=&quot;https://www.dremio.com/is-time-to-replace-odbc-jdbc/&quot;&gt;ODBCよりも20-50倍よい性能を発揮する&lt;/a&gt;ことを示しました。ArrowのコントリビューターであるRyan MurrayはApache Sparkユーザー向けにFlight対応エンドポイントに接続する&lt;a href=&quot;https://github.com/rymurr/flight-spark-source&quot;&gt;データソース実装&lt;/a&gt;を作りました。&lt;/p&gt;
+
+&lt;p&gt;最後に今後の話をします。gRPCではない（あるいはTCPではない）データトランスポートをサポートできないか研究開発を進めるかもしれません。Flightの開発が進むとユーザーが使えるFlight対応サービスが増えていくでしょう。Flightは開発フレームワークなので、ユーザーが使うAPIは高レベルなAPIだけになるようにするつもりです。高レベルなAPIではFlightの詳細と特定のFlightアプリケーションに関連する詳細を隠します。&lt;/p&gt;</content><author><name>wesm</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry><entry><title type="html">Introducing Apache Arrow Flight: A Framework for Fast Data Transport</title><link href="https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/" rel="alternate" type="text/html" title="Introducing Apache Arrow Flight: A Framework for Fast Data Transport" /><published>2019-10-13T02:00:00-04:00</published><updated>2019-10-13T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/">&lt;!--
+
+--&gt;
+
+&lt;p&gt;Translations: &lt;a href=&quot;/blog/2019/10/13/introducing-arrow-flight-japanese/&quot;&gt;日本語&lt;/a&gt;&lt;/p&gt;
 
 &lt;p&gt;Over the last 18 months, the Apache Arrow community has been busy designing and
 implementing &lt;strong&gt;Flight&lt;/strong&gt;, a new general-purpose client-server framework to
@@ -258,7 +399,7 @@ lot of the Flight work from here will be creating user-facing Flight-enabled
 services. Since Flight is a development framework, we expect that user-facing
 APIs will utilize a layer of API veneer that hides many general Flight details
 and details related to a particular application of Flight in a custom data
-service.&lt;/p&gt;</content><author><name>Wes McKinney</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry><entry><title type="html">Apache Arrow 0.15.0 Release</title><link href="https://arrow.apache.org/blog/2019/10/06/0.15.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.15.0 Release" /><published>2019-10-06T02:00:00-04:00</published><updated>2019-10-06T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/10/06/0.15.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/10/06/0.15.0-release/">&lt;!--
+service.&lt;/p&gt;</content><author><name>wesm</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry><entry><title type="html">Apache Arrow 0.15.0 Release</title><link href="https://arrow.apache.org/blog/2019/10/06/0.15.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.15.0 Release" /><published>2019-10-06T02:00:00-04:00</published><updated>2019-10-06T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/10/06/0.15.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/10/06/0.15.0-release/">&lt;!--
 
 --&gt;
 
@@ -1767,162 +1908,4 @@ transform it and copy it back to the socket connection.&lt;/p&gt;
 
 &lt;p&gt;Additional benchmarks and fine-tuning parameters can be found under &lt;code class=&quot;highlighter-rouge&quot;&gt;sparklyr&lt;/code&gt;
 &lt;a href=&quot;https://github.com/rstudio/sparklyr/pull/1611&quot;&gt;/rstudio/sparklyr/pull/1611&lt;/a&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;SparkR&lt;/code&gt; &lt;a href=&quot;https://github.com/apache/spark/pull/22954&quot;&gt;/apache/spark/pull/22954&lt;/a&gt;. Looking forward to bringing this feature
-to the Spark, Arrow and R communities.&lt;/p&gt;</content><author><name>Javier Luraschi</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry><entry><title type="html">Apache Arrow 0.12.0 Release</title><link href="https://arrow.apache.org/blog/2019/01/21/0.12.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.12.0 Release" /><published>2019-01-21T08:00:00-05:00</published><updated>2019-01-21T08:00:00-05:00</updated><id>https://arrow.apache.org/blog/2019/01/21/0.12.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/01/21/0.12.0-release/">&lt;!--
-
---&gt;
-
-&lt;p&gt;The Apache Arrow team is pleased to announce the 0.12.0 release. This is the
-largest release yet in the project, covering 3 months of development work and
-includes &lt;a href=&quot;https://issues.apache.org/jira/issues/?jql=project%20%3D%20ARROW%20AND%20status%20in%20(Resolved%2C%20Closed)%20AND%20fixVersion%20%3D%200.12.0&quot;&gt;&lt;strong&gt;614 resolved issues&lt;/strong&gt;&lt;/a&gt; from &lt;a href=&quot;https://arrow.apache.org/release/0.12.0.html#contributors&quot;&gt;&lt;strong&gt;77 distinct contributors&lt;/strong&gt;&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;See the &lt;a href=&quot;https://arrow.apache.org/install&quot;&gt;Install Page&lt;/a&gt; to learn how to get the libraries for your
-platform. The &lt;a href=&quot;https://arrow.apache.org/release/0.12.0.html&quot;&gt;complete changelog&lt;/a&gt; is also available.&lt;/p&gt;
-
-&lt;p&gt;It’s a huge release, but we’ll give some brief highlights and new from the
-project to help guide you to the parts of the project that may be of interest.&lt;/p&gt;
-
-&lt;h2 id=&quot;new-committers-and-pmc-member&quot;&gt;New committers and PMC member&lt;/h2&gt;
-
-&lt;p&gt;The Arrow team is growing! Since the 0.11.0 release we have added 3 new
-committers:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;a href=&quot;https://github.com/sbinet&quot;&gt;Sebastien Binet&lt;/a&gt;, who has mainly worked on the Go implementation&lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;https://github.com/romainfrancois&quot;&gt;Romain Francois&lt;/a&gt;, who has mainly worked on the R implementation&lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;https://github.com/shiro615&quot;&gt;Yosuke Shiro&lt;/a&gt;, who has mainly worked on the GLib (C) and Ruby
-implementations&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;We also pleased to announce that &lt;a href=&quot;https://github.com/kszucs&quot;&gt;Krisztián Szűcs&lt;/a&gt; has been promoted
-from committer to PMC (Project Management Committee) member.&lt;/p&gt;
-
-&lt;p&gt;Thank you for all your contributions!&lt;/p&gt;
-
-&lt;h2 id=&quot;code-donations&quot;&gt;Code donations&lt;/h2&gt;
-
-&lt;p&gt;Since the last release, we have received 3 code donations into the Apache
-project.&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;A &lt;a href=&quot;http://incubator.apache.org/ip-clearance/arrow-csharp-library.html&quot;&gt;native C# .NET library&lt;/a&gt; donated by Feyen Zylstra LLC.&lt;/li&gt;
-  &lt;li&gt;A &lt;a href=&quot;http://incubator.apache.org/ip-clearance/arrow-parquet-ruby.html&quot;&gt;Ruby library for Parquet files&lt;/a&gt; which uses the existing GLib bindings to
-the C++ Parquet library.&lt;/li&gt;
-  &lt;li&gt;A &lt;a href=&quot;http://incubator.apache.org/ip-clearance/arrow-parquet-rust.html&quot;&gt;native Rust Parquet library&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;We are excited to continue to grow the Apache Arrow development community.&lt;/p&gt;
-
-&lt;h2 id=&quot;combined-project-level-documentation&quot;&gt;Combined project-level documentation&lt;/h2&gt;
-
-&lt;p&gt;Since the last release, we have merged the Python and C++ documentation to
-create a combined project-wide documentation site:
-https://arrow.apache.org/docs. There is now some prose documentation about many
-parts of the C++ library. We intend to keep adding documentation for other
-parts of Apache Arrow to this site.&lt;/p&gt;
-
-&lt;h2 id=&quot;packages&quot;&gt;Packages&lt;/h2&gt;
-
-&lt;p&gt;We start providing the official APT and Yum repositories for C++ and
-GLib (C). See the &lt;a href=&quot;https://arrow.apache.org/install/&quot;&gt;install document&lt;/a&gt; for details.&lt;/p&gt;
-
-&lt;h2 id=&quot;c-notes&quot;&gt;C++ notes&lt;/h2&gt;
-
-&lt;p&gt;Much of the C++ development work the last 3 months concerned internal code
-refactoring and performance improvements. Some user-visible highlights of note:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;Experimental support for &lt;a href=&quot;https://github.com/apache/arrow/blob/master/cpp/src/arrow/sparse_tensor.h&quot;&gt;in-memory sparse tensors (or ndarrays)&lt;/a&gt;, with
-support for zero-copy IPC&lt;/li&gt;
-  &lt;li&gt;Support for building on Alpine Linux&lt;/li&gt;
-  &lt;li&gt;Significantly improved hash table utilities, with improved hash table
-performance in many parts of the library&lt;/li&gt;
-  &lt;li&gt;IO library improvements for both read and write buffering&lt;/li&gt;
-  &lt;li&gt;A fast &lt;a href=&quot;https://github.com/apache/arrow/blob/master/cpp/src/arrow/util/trie.h&quot;&gt;trie implementation&lt;/a&gt; for string searching&lt;/li&gt;
-  &lt;li&gt;Many improvements to the parallel CSV reader in performance and features. See
-the changelog&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Since the LLVM-based Gandiva expression compiler was donated to Apache Arrow
-during the last release cycle, development there has been moving along. We
-expect to have Windows support for Gandiva and to ship this in downstream
-packages (like Python) in the 0.13 release time frame.&lt;/p&gt;
-
-&lt;h2 id=&quot;go-notes&quot;&gt;Go notes&lt;/h2&gt;
-
-&lt;p&gt;The Arrow Go development team has been expanding. The Go library has gained
-support for many missing features from the columnar format as well as semantic
-constructs like chunked arrays and tables that are used heavily in the C++
-project.&lt;/p&gt;
-
-&lt;h2 id=&quot;glib-and-ruby-notes&quot;&gt;GLib and Ruby notes&lt;/h2&gt;
-
-&lt;p&gt;Development of the GLib-based C bindings and corresponding Ruby interfaces have
-advanced in lock-step with the C++, Python, and R libraries. In this release,
-there are many new features in C and Ruby:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;Compressed file read/write support&lt;/li&gt;
-  &lt;li&gt;Support for using the C++ parallel CSV reader&lt;/li&gt;
-  &lt;li&gt;Feather file support&lt;/li&gt;
-  &lt;li&gt;Gandiva bindings&lt;/li&gt;
-  &lt;li&gt;Plasma bindings&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&quot;python-notes&quot;&gt;Python notes&lt;/h2&gt;
-
-&lt;p&gt;We fixed a ton of bugs and made many improvements throughout the Python
-project. Some highlights from the Python side include:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;Python 3.7 support: wheels and conda packages are now available for Python
-3.7&lt;/li&gt;
-  &lt;li&gt;Substantially improved memory use when converting strings types to pandas
-format, including when reading Parquet files. Parquet users should notice
-significantly lower memory use in common use cases&lt;/li&gt;
-  &lt;li&gt;Support for reading and writing compressed files, can be used for CSV files,
-IPC, or any other form of IO&lt;/li&gt;
-  &lt;li&gt;The new &lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow.input_stream&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow.output_stream&lt;/code&gt; functions support
-read and write buffering. This is analogous to &lt;code class=&quot;highlighter-rouge&quot;&gt;BufferedIOBase&lt;/code&gt; from the
-Python standard library, but the internals are implemented natively in C++.&lt;/li&gt;
-  &lt;li&gt;Gandiva (LLVM expression compiler) bindings, though not yet available in
-pip/conda yet. Look for this in 0.13.0.&lt;/li&gt;
-  &lt;li&gt;Many improvements to Arrow CUDA integration, including interoperability with
-Numba&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&quot;r-notes&quot;&gt;R notes&lt;/h2&gt;
-
-&lt;p&gt;The R library made huge progress in 0.12, with work led by new committer Romain
-Francois. The R project’s features are not far behind the Python library, and
-we are hoping to be able to make the R library available to CRAN users for use
-with Apache Spark or for reading and writing Parquet files over the next
-quarter.&lt;/p&gt;
-
-&lt;p&gt;Users of the &lt;code class=&quot;highlighter-rouge&quot;&gt;feather&lt;/code&gt; R library will see significant speed increases in many
-cases when reading Feather files with the new Arrow R library.&lt;/p&gt;
-
-&lt;h2 id=&quot;rust-notes&quot;&gt;Rust notes&lt;/h2&gt;
-
-&lt;p&gt;Rust development had an active last 3 months; see the changelog for details.&lt;/p&gt;
-
-&lt;p&gt;A native Rust implementation was just donated to the project, and the community
-intends to provide a similar level of functionality for reading and writing
-Parquet files using the Arrow in-memory columnar format as an intermediary.&lt;/p&gt;
-
-&lt;h2 id=&quot;upcoming-roadmap-outlook-for-2019&quot;&gt;Upcoming Roadmap, Outlook for 2019&lt;/h2&gt;
-
-&lt;p&gt;Apache Arrow has become a large, diverse open source project. It is now being
-used in dozens of downstream open source and commercial projects. Work will be
-proceeding in many areas in 2019:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;Development of in-memory query execution engines (e.g. in C++, Rust)&lt;/li&gt;
-  &lt;li&gt;Expanded support for reading and writing the Apache Parquet format, and other
-common data formats like Apache Avro, CSV, JSON, and Apache ORC.&lt;/li&gt;
-  &lt;li&gt;New Flight RPC system for fast messaging of Arrow datasets&lt;/li&gt;
-  &lt;li&gt;Expanded support in existing programming languages&lt;/li&gt;
-  &lt;li&gt;New programming language bindings or native implementations&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;It promises to be an exciting 2019. We look forward to having you involved in
-the development community.&lt;/p&gt;</content><author><name>wesm</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry></feed>
+to the Spark, Arrow and R communities.&lt;/p&gt;</content><author><name>Javier Luraschi</name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /></entry></feed>
