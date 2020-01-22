@@ -53,9 +53,9 @@ in `requirements.txt` to install the latest patch release.
 These include the Apache Arrow and Apache Parquet C++ binary libraries bundled
 with the wheel.
 
-## Other Binary Installers
+## Other Installers
 
-For convenience, we also provide binaries through several package managers, built from the source release. As the Apache Arrow PMC has not explicitly voted on these packages, they are technically considered unofficial releases.
+For convenience, we also provide packages through several package managers. Many of them are provided as binary, built from the source release. As the Apache Arrow PMC has not explicitly voted on these packages, they are technically considered unofficial releases.
 
 ### C++ and Python Conda Packages
 
@@ -236,6 +236,21 @@ pacman -S --noconfirm mingw-w64-x86_64-arrow
 pacman -S --noconfirm mingw-w64-i686-arrow
 ```
 
+### C++ Package on vcpkg
+
+You can download and install Apache Arrow C++ using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
+
+```shell
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+./bootstrap-vcpkg.sh
+./vcpkg integrate install
+./vcpkg install arrow
+```
+
+The Apache Arrow C++ port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request][18] on the vcpkg repository.
+
+
 [1]: {{site.data.versions['current'].mirrors}}
 [2]: {{site.data.versions['current'].github-tag-link}}
 [4]: {{site.data.versions['current'].java-artifacts}}
@@ -249,3 +264,4 @@ pacman -S --noconfirm mingw-w64-i686-arrow
 [15]: {{site.data.versions['current'].sha512}}
 [16]: https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-arrow
 [17]: https://brew.sh/
+[18]: https://github.com/Microsoft/vcpkg
