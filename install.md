@@ -53,6 +53,20 @@ in `requirements.txt` to install the latest patch release.
 These include the Apache Arrow and Apache Parquet C++ binary libraries bundled
 with the wheel.
 
+## Other Package Installers
+
+You can download and install arrow using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
+
+```shell
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+./bootstrap-vcpkg.sh
+./vcpkg integrate install
+./vcpkg install arrow
+```
+
+The arrow port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+
 ## Other Binary Installers
 
 For convenience, we also provide binaries through several package managers, built from the source release. As the Apache Arrow PMC has not explicitly voted on these packages, they are technically considered unofficial releases.
