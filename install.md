@@ -53,6 +53,76 @@ in `requirements.txt` to install the latest patch release.
 These include the Apache Arrow and Apache Parquet C++ binary libraries bundled
 with the wheel.
 
+### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu and CentOS
+
+We have provided APT and Yum repositories for Apache Arrow C++ and
+Apache Arrow GLib (C). Here are supported platforms:
+
+* Debian GNU/Linux stretch
+* Debian GNU/Linux buster
+* Ubuntu 16.04 LTS
+* Ubuntu 18.04 LTS
+* Ubuntu 19.10
+* CentOS 6
+* CentOS 7
+* CentOS 8
+* Amazon Linux 2
+
+Debian GNU/Linux and Ubuntu:
+
+```shell
+sudo apt update
+sudo apt install -y -V lsb-release wget
+if [ $(lsb_release --codename --short) = "stretch" ]; then
+  sudo tee /etc/apt/sources.list.d/backports.list <<APT_LINE
+deb http://deb.debian.org/debian $(lsb_release --codename --short)-backports main
+APT_LINE
+fi
+wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+sudo apt update
+sudo apt install -y -V libarrow-dev # For C++
+sudo apt install -y -V libarrow-glib-dev # For GLib (C)
+sudo apt install -y -V libarrow-flight-dev # For Flight C++
+sudo apt install -y -V libplasma-dev # For Plasma C++
+sudo apt install -y -V libplasma-glib-dev # For Plasma GLib (C)
+sudo apt install -y -V libgandiva-dev # For Gandiva C++
+sudo apt install -y -V libgandiva-glib-dev # For Gandiva GLib (C)
+sudo apt install -y -V libparquet-dev # For Apache Parquet C++
+sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
+```
+
+CentOS 8:
+
+```shell
+sudo dnf install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
+sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-devel # For C++
+sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-glib-devel # For GLib (C)
+sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-devel # For Apache Parquet C++
+sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-glib-devel # For Parquet GLib (C)
+```
+
+CentOS 6 and 7:
+
+```shell
+sudo yum install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
+sudo yum install -y --enablerepo=epel arrow-devel # For C++
+sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
+sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
+sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
+```
+
+Amazon Linux:
+
+```shell
+sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-release-latest.rpm
+sudo yum install -y --enablerepo=epel arrow-devel # For C++
+sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
+sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
+sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
+```
+
 ## Other Installers
 
 For convenience, we also provide packages through several package managers. Many of them are provided as binary, built from the source release. As the Apache Arrow PMC has not explicitly voted on these packages, they are technically considered unofficial releases.
@@ -85,138 +155,6 @@ and GLib (C) package with:
 
 ```shell
 brew install apache-arrow-glib
-```
-
-### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu and CentOS
-
-We have provided APT and Yum repositories for Apache Arrow C++ and
-Apache Arrow GLib (C). Here are supported platforms:
-
-* Debian GNU/Linux stretch
-* Debian GNU/Linux buster
-* Ubuntu 16.04 LTS
-* Ubuntu 18.04 LTS
-* Ubuntu 18.10
-* Ubuntu 19.04
-* CentOS 6
-* CentOS 7
-
-Debian GNU/Linux buster:
-
-```shell
-sudo apt update
-sudo apt install -y -V apt-transport-https curl gnupg lsb-release
-sudo curl -L --output /usr/share/keyrings/apache-arrow-keyring.gpg https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-keyring.gpg
-sudo tee /etc/apt/sources.list.d/apache-arrow.list <<APT_LINE
-deb [arch=amd64 signed-by=/usr/share/keyrings/apache-arrow-keyring.gpg] https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/ $(lsb_release --codename --short) main
-deb-src [signed-by=/usr/share/keyrings/apache-arrow-keyring.gpg] https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/ $(lsb_release --codename --short) main
-APT_LINE
-sudo apt update
-sudo apt install -y -V libarrow-dev # For C++
-sudo apt install -y -V libarrow-glib-dev # For GLib (C)
-sudo apt install -y -V libarrow-flight-dev # For Flight C++
-sudo apt install -y -V libplasma-dev # For Plasma C++
-sudo apt install -y -V libplasma-glib-dev # For Plasma GLib (C)
-sudo apt install -y -V libgandiva-dev # For Gandiva C++
-sudo apt install -y -V libgandiva-glib-dev # For Gandiva GLib (C)
-sudo apt install -y -V libparquet-dev # For Apache Parquet C++
-sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
-```
-
-Debian GNU/Linux stretch:
-
-```shell
-sudo apt update
-sudo apt install -y -V apt-transport-https curl gnupg lsb-release
-sudo tee /etc/apt/sources.list.d/backports.list <<APT_LINE
-deb http://deb.debian.org/debian $(lsb_release --codename --short)-backports main
-APT_LINE
-sudo curl -L --output /usr/share/keyrings/apache-arrow-keyring.gpg https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-keyring.gpg
-sudo tee /etc/apt/sources.list.d/apache-arrow.list <<APT_LINE
-deb [arch=amd64 signed-by=/usr/share/keyrings/apache-arrow-keyring.gpg] https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/ $(lsb_release --codename --short) main
-deb-src [signed-by=/usr/share/keyrings/apache-arrow-keyring.gpg] https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/ $(lsb_release --codename --short) main
-APT_LINE
-curl https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-sudo tee /etc/apt/sources.list.d/llvm.list <<APT_LINE
-deb http://apt.llvm.org/$(lsb_release --codename --short)/ llvm-toolchain-$(lsb_release --codename --short)-7 main
-deb-src http://apt.llvm.org/$(lsb_release --codename --short)/ llvm-toolchain-$(lsb_release --codename --short)-7 main
-APT_LINE
-sudo apt update
-sudo apt install -y -V libarrow-dev # For C++
-sudo apt install -y -V libarrow-glib-dev # For GLib (C)
-sudo apt install -y -V libarrow-flight-dev # For Flight C++
-sudo apt install -y -V libplasma-dev # For Plasma C++
-sudo apt install -y -V libplasma-glib-dev # For Plasma GLib (C)
-sudo apt install -y -V libgandiva-dev # For Gandiva C++
-sudo apt install -y -V libgandiva-glib-dev # For Gandiva GLib (C)
-sudo apt install -y -V libparquet-dev # For Apache Parquet C++
-sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
-```
-
-Ubuntu 18.04 LTS or later:
-
-```shell
-sudo apt update
-sudo apt install -y -V apt-transport-https gnupg lsb-release wget
-sudo wget -O /usr/share/keyrings/apache-arrow-keyring.gpg https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-keyring.gpg
-sudo tee /etc/apt/sources.list.d/apache-arrow.list <<APT_LINE
-deb [arch=amd64 signed-by=/usr/share/keyrings/apache-arrow-keyring.gpg] https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/ $(lsb_release --codename --short) main
-deb-src [signed-by=/usr/share/keyrings/apache-arrow-keyring.gpg] https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/ $(lsb_release --codename --short) main
-APT_LINE
-sudo apt update
-sudo apt install -y -V libarrow-dev # For C++
-sudo apt install -y -V libarrow-glib-dev # For GLib (C)
-sudo apt install -y -V libarrow-flight-dev # For Flight C++
-sudo apt install -y -V libplasma-dev # For Plasma C++
-sudo apt install -y -V libplasma-glib-dev # For Plasma GLib (C)
-sudo apt install -y -V libgandiva-dev # For Gandiva C++
-sudo apt install -y -V libgandiva-glib-dev # For Gandiva GLib (C)
-sudo apt install -y -V libparquet-dev # For Apache Parquet C++
-sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
-```
-
-Ubuntu 16.04 LTS:
-
-```shell
-sudo apt update
-sudo apt install -y -V apt-transport-https curl gnupg lsb-release
-curl https://dist.apache.org/repos/dist/dev/arrow/KEYS | sudo apt-key add -
-sudo tee /etc/apt/sources.list.d/apache-arrow.list <<APT_LINE
-deb [arch=amd64] https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/ $(lsb_release --codename --short) main
-deb-src https://dl.bintray.com/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/ $(lsb_release --codename --short) main
-APT_LINE
-curl https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-sudo tee /etc/apt/sources.list.d/llvm.list <<APT_LINE
-deb http://apt.llvm.org/$(lsb_release --codename --short)/ llvm-toolchain-$(lsb_release --codename --short)-7 main
-deb-src http://apt.llvm.org/$(lsb_release --codename --short)/ llvm-toolchain-$(lsb_release --codename --short)-7 main
-APT_LINE
-sudo apt update
-sudo apt install -y -V libarrow-dev # For C++
-sudo apt install -y -V libarrow-glib-dev # For GLib (C)
-sudo apt install -y -V libplasma-dev # For Plasma C++
-sudo apt install -y -V libplasma-glib-dev # For Plasma GLib (C)
-sudo apt install -y -V libgandiva-dev # For Gandiva C++
-sudo apt install -y -V libgandiva-glib-dev # For Gandiva GLib (C)
-sudo apt install -y -V libparquet-dev # For Apache Parquet C++
-sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
-```
-
-CentOS:
-
-```shell
-sudo tee /etc/yum.repos.d/Apache-Arrow.repo <<REPO
-[apache-arrow]
-name=Apache Arrow
-baseurl=https://dl.bintray.com/apache/arrow/centos/\$releasever/\$basearch/
-gpgcheck=1
-enabled=1
-gpgkey=https://dl.bintray.com/apache/arrow/centos/RPM-GPG-KEY-apache-arrow
-REPO
-sudo yum install -y epel-release
-sudo yum install -y --enablerepo=epel arrow-devel # For C++
-sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
-sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
-sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
 ```
 
 ### C++ and GLib (C) Packages for MSYS2
