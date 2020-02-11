@@ -36,10 +36,14 @@
 
 
 <meta property="og:title" content="Schema class — Schema" />
-<meta property="og:description" content="Create a Schema when you
+<meta property="og:description" content="A Schema is a list of Fields, which map names to
+Arrow data types. Create a Schema when you
 want to convert an R data.frame to Arrow but don't want to rely on the
 default mapping of R types to Arrow types, such as when you want to choose a
-specific numeric precision." />
+specific numeric precision, or when creating a Dataset and you want to
+ensure a specific schema rather than inferring it from the various files.
+Many Arrow objects, including Table and Dataset, have a $schema method
+(active binding) that lets you access their schema." />
 <meta name="twitter:card" content="summary" />
 
 
@@ -82,7 +86,7 @@ specific numeric precision." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.15.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.16.0</span>
       </span>
     </div>
 
@@ -96,6 +100,21 @@ specific numeric precision." />
 </li>
 <li>
   <a href="../reference/index.html">Reference</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Articles
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="../articles/dataset.html">Working with Arrow Datasets and dplyr</a>
+    </li>
+    <li>
+      <a href="../articles/install.html">Installing the Arrow Package on Linux</a>
+    </li>
+  </ul>
 </li>
 <li>
   <a href="../news/index.html">Changelog</a>
@@ -157,10 +176,14 @@ specific numeric precision." />
     </div>
 
     <div class="ref-description">
-    <p>Create a <code>Schema</code> when you
+    <p>A <code>Schema</code> is a list of <a href='Field.html'>Field</a>s, which map names to
+Arrow <a href='data-type.html'>data types</a>. Create a <code>Schema</code> when you
 want to convert an R <code>data.frame</code> to Arrow but don't want to rely on the
 default mapping of R types to Arrow types, such as when you want to choose a
-specific numeric precision.</p>
+specific numeric precision, or when creating a <a href='Dataset.html'>Dataset</a> and you want to
+ensure a specific schema rather than inferring it from the various files.</p>
+<p>Many Arrow objects, including <a href='Table.html'>Table</a> and <a href='Dataset.html'>Dataset</a>, have a <code>$schema</code> method
+(active binding) that lets you access their schema.</p>
     </div>
 
     <pre class="usage"><span class='fu'>schema</span>(<span class='no'>...</span>)</pre>
@@ -174,34 +197,49 @@ specific numeric precision.</p>
     </tr>
     </table>
 
-    <h2 class="hasAnchor" id="usage"><a class="anchor" href="#usage"></a>Usage</h2>
-
-    
-<pre>s &lt;- schema(...)
-
-s$ToString()
-s$num_fields()
-s$field(i)
-</pre>
-
     <h2 class="hasAnchor" id="methods"><a class="anchor" href="#methods"></a>Methods</h2>
 
     
 
 <ul>
 <li><p><code>$ToString()</code>: convert to a string</p></li>
-<li><p><code>$num_fields()</code>: returns the number of fields</p></li>
 <li><p><code>$field(i)</code>: returns the field at index <code>i</code> (0-based)</p></li>
+<li><p><code>$GetFieldByName(x)</code>: returns the field with name <code>x</code></p></li>
+</ul>
+
+    <h2 class="hasAnchor" id="active-bindings"><a class="anchor" href="#active-bindings"></a>Active bindings</h2>
+
+    
+
+<ul>
+<li><p><code>$names</code>: returns the field names (called in <code><a href='https://rdrr.io/r/base/names.html'>names(Schema)</a></code>)</p></li>
+<li><p><code>$num_fields</code>: returns the number of fields (called in <code><a href='https://rdrr.io/r/base/length.html'>length(Schema)</a></code>)</p></li>
+<li><p><code>$fields</code>: returns the list of <code>Field</code>s in the <code>Schema</code>, suitable for
+iterating over</p></li>
+<li><p><code>$HasMetadata</code>: logical: does this <code>Schema</code> have extra metadata?</p></li>
+<li><p><code>$metadata</code>: returns the extra metadata, if present, else <code>NULL</code></p></li>
 </ul>
 
 
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='co'># \donttest{</span>
+<span class='no'>df</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/data.frame.html'>data.frame</a></span>(<span class='kw'>col1</span> <span class='kw'>=</span> <span class='fl'>2</span>:<span class='fl'>4</span>, <span class='kw'>col2</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='fl'>0.1</span>, <span class='fl'>0.3</span>, <span class='fl'>0.5</span>))
+<span class='no'>tab1</span> <span class='kw'>&lt;-</span> <span class='no'>Table</span>$<span class='fu'>create</span>(<span class='no'>df</span>)
+<span class='no'>tab1</span>$<span class='no'>schema</span></div><div class='output co'>#&gt; Schema
+#&gt; col1: int32
+#&gt; col2: double</div><div class='input'><span class='no'>tab2</span> <span class='kw'>&lt;-</span> <span class='no'>Table</span>$<span class='fu'>create</span>(<span class='no'>df</span>, <span class='kw'>schema</span> <span class='kw'>=</span> <span class='fu'>schema</span>(<span class='kw'>col1</span> <span class='kw'>=</span> <span class='fu'><a href='data-type.html'>int8</a></span>(), <span class='kw'>col2</span> <span class='kw'>=</span> <span class='fu'><a href='data-type.html'>float32</a></span>()))
+<span class='no'>tab2</span>$<span class='no'>schema</span></div><div class='output co'>#&gt; Schema
+#&gt; col1: int8
+#&gt; col2: float</div><div class='input'># }
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
       <li><a href="#arguments">Arguments</a></li>
-      <li><a href="#usage">Usage</a></li>
       <li><a href="#methods">Methods</a></li>
+      <li><a href="#active-bindings">Active bindings</a></li>
+      <li><a href="#examples">Examples</a></li>
     </ul>
 
   </div>
@@ -214,7 +252,7 @@ s$field(i)
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.1.</p>
 </div>
 
       </footer>

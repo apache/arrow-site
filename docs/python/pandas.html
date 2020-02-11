@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Pandas Integration &mdash; Apache Arrow v0.15.1</title>
+  <title>Pandas Integration &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
   
 
   
@@ -22,10 +22,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.15.1
+                0.16.1.dev0+g729a7689f.d20200211
               </div>
             
           
@@ -107,7 +107,8 @@
 <li class="toctree-l2"><a class="reference internal" href="memory.html">Memory and IO Interfaces</a></li>
 <li class="toctree-l2"><a class="reference internal" href="data.html">Data Types and In-Memory Data Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="ipc.html">Streaming, Serialization, and IPC</a></li>
-<li class="toctree-l2"><a class="reference internal" href="filesystems.html">File System Interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filesystems.html">Filesystem Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filesystems_deprecated.html">Filesystem Interface (legacy)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="plasma.html">The Plasma In-Memory Object Store</a></li>
 <li class="toctree-l2"><a class="reference internal" href="numpy.html">NumPy Integration</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Pandas Integration</a><ul>
@@ -121,6 +122,11 @@
 <li class="toctree-l4"><a class="reference internal" href="#datetime-timestamp-types">Datetime (Timestamp) types</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#date-types">Date types</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#time-types">Time types</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#memory-usage-and-zero-copy">Memory Usage and Zero Copy</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#zero-copy-series-conversions">Zero Copy Series Conversions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#reducing-memory-use-in-table-to-pandas">Reducing Memory Use in <code class="docutils literal notranslate"><span class="pre">Table.to_pandas</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -137,11 +143,12 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../java/index.html">Java Implementation</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../developers/contributing.html">Contribution Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/cpp/index.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/crossbow.html">Packaging and Testing with Crossbow</a></li>
@@ -225,9 +232,9 @@ to them.</p>
 is a separate topic from <a class="reference internal" href="numpy.html#numpy-interop"><span class="std std-ref">NumPy Integration</span></a>.</p>
 </div>
 <p>To follow examples in this document, make sure to run:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 
-<span class="gp">In [2]: </span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="kn">as</span> <span class="nn">pa</span>
+<span class="gp">In [2]: </span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
 </pre></div>
 </div>
 <div class="section" id="dataframes">
@@ -239,8 +246,8 @@ represent more data than a DataFrame, so a full conversion is not always possibl
 <p>Conversion from a Table to a DataFrame is done by calling
 <a class="reference internal" href="generated/pyarrow.Table.html#pyarrow.Table.to_pandas" title="pyarrow.Table.to_pandas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pyarrow.Table.to_pandas()</span></code></a>. The inverse is then achieved by using
 <a class="reference internal" href="generated/pyarrow.Table.html#pyarrow.Table.from_pandas" title="pyarrow.Table.from_pandas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pyarrow.Table.from_pandas()</span></code></a>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="kn">as</span> <span class="nn">pa</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 
 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]})</span>
 <span class="c1"># Convert from pandas to Arrow</span>
@@ -393,7 +400,7 @@ pandas, some systems work with object arrays of Python’s built-in
 <code class="docutils literal notranslate"><span class="pre">datetime.date</span></code> object:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [3]: </span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">date</span>
 
-<span class="gp">In [4]: </span><span class="n">s</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">date</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">),</span> <span class="bp">None</span><span class="p">,</span> <span class="n">date</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+<span class="gp">In [4]: </span><span class="n">s</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">date</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="n">date</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
 
 <span class="gp">In [5]: </span><span class="n">s</span>
 <span class="gh">Out[5]: </span><span class="go"></span>
@@ -405,13 +412,15 @@ pandas, some systems work with object arrays of Python’s built-in
 </div>
 <p>When converting to an Arrow array, the <code class="docutils literal notranslate"><span class="pre">date32</span></code> type will be used by
 default:</p>
-<pre class="literal-block">In [6]: arr = pa.array(s)
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
 
-In [7]: arr.type
-Out[7]: DataType(date32[day])
+<span class="gp">In [7]: </span><span class="n">arr</span><span class="o">.</span><span class="n">type</span>
+<span class="gh">Out[7]: </span><span class="go">DataType(date32[day])</span>
 
-In [8]: arr[0]
-Out[8]: datetime.date(2018, 12, 31)</pre>
+<span class="gp">In [8]: </span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gh">Out[8]: </span><span class="go">datetime.date(2018, 12, 31)</span>
+</pre></div>
+</div>
 <p>To use the 64-bit <code class="docutils literal notranslate"><span class="pre">date64</span></code>, specify this explicitly:</p>
 <div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [9]: </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;date64&#39;</span><span class="p">)</span>
 
@@ -431,7 +440,7 @@ Out[8]: datetime.date(2018, 12, 31)</pre>
 </div>
 <p>If you want to use NumPy’s <code class="docutils literal notranslate"><span class="pre">datetime64</span></code> dtype instead, pass
 <code class="docutils literal notranslate"><span class="pre">date_as_object=False</span></code>:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [12]: </span><span class="n">s2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">date_as_object</span><span class="o">=</span><span class="bp">False</span><span class="p">))</span>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [12]: </span><span class="n">s2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">date_as_object</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 
 <span class="gp">In [13]: </span><span class="n">s2</span><span class="o">.</span><span class="n">dtype</span>
 <span class="gh">Out[13]: </span><span class="go">dtype(&#39;&lt;M8[ns]&#39;)</span>
@@ -447,6 +456,70 @@ obtain this behavior</p>
 <div class="section" id="time-types">
 <h3>Time types<a class="headerlink" href="#time-types" title="Permalink to this headline">¶</a></h3>
 <p>TODO</p>
+</div>
+</div>
+<div class="section" id="memory-usage-and-zero-copy">
+<h2>Memory Usage and Zero Copy<a class="headerlink" href="#memory-usage-and-zero-copy" title="Permalink to this headline">¶</a></h2>
+<p>When converting from Arrow data structures to pandas objects using various
+<code class="docutils literal notranslate"><span class="pre">to_pandas</span></code> methods, one must occasionally be mindful of issues related to
+performance and memory usage.</p>
+<p>Since pandas’s internal data representation is generally different from the
+Arrow columnar format, zero copy conversions (where no memory allocation or
+computation is required) are only possible in certain limited cases.</p>
+<p>In the worst case scenario, calling <code class="docutils literal notranslate"><span class="pre">to_pandas</span></code> will result in two versions
+of the data in memory, one for Arrow and one for pandas, yielding approximately
+twice the memory footprint. We have implement some mitigations for this case,
+particularly when creating large <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> objects, that we describe below.</p>
+<div class="section" id="zero-copy-series-conversions">
+<h3>Zero Copy Series Conversions<a class="headerlink" href="#zero-copy-series-conversions" title="Permalink to this headline">¶</a></h3>
+<p>Zero copy conversions from <code class="docutils literal notranslate"><span class="pre">Array</span></code> or <code class="docutils literal notranslate"><span class="pre">ChunkedArray</span></code> to NumPy arrays or
+pandas Series are possible in certain narrow cases:</p>
+<ul class="simple">
+<li><p>The Arrow data is stored in an integer (signed or unsigned <code class="docutils literal notranslate"><span class="pre">int8</span></code> through
+<code class="docutils literal notranslate"><span class="pre">int64</span></code>) or floating point type (<code class="docutils literal notranslate"><span class="pre">float16</span></code> through <code class="docutils literal notranslate"><span class="pre">float64</span></code>). This
+includes many numeric types as well as timestamps.</p></li>
+<li><p>The Arrow data has no null values (since these are represented using bitmaps
+which are not supported by pandas).</p></li>
+<li><p>For <code class="docutils literal notranslate"><span class="pre">ChunkedArray</span></code>, the data consists of a single chunk,
+i.e. <code class="docutils literal notranslate"><span class="pre">arr.num_chunks</span> <span class="pre">==</span> <span class="pre">1</span></code>. Multiple chunks will always require a copy
+because of pandas’s contiguousness requirement.</p></li>
+</ul>
+<p>In these scenarios, <code class="docutils literal notranslate"><span class="pre">to_pandas</span></code> or <code class="docutils literal notranslate"><span class="pre">to_numpy</span></code> will be zero copy. In all
+other scenarios, a copy will be required.</p>
+</div>
+<div class="section" id="reducing-memory-use-in-table-to-pandas">
+<h3>Reducing Memory Use in <code class="docutils literal notranslate"><span class="pre">Table.to_pandas</span></code><a class="headerlink" href="#reducing-memory-use-in-table-to-pandas" title="Permalink to this headline">¶</a></h3>
+<p>As of this writing, pandas applies a data management strategy called
+“consolidation” to collect like-typed DataFrame columns in two-dimensional
+NumPy arrays, referred to internally as “blocks”. We have gone to great effort
+to construct the precise “consolidated” blocks so that pandas will not perform
+any further allocation or copies after we hand off the data to
+<code class="docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code>. The obvious downside of this consolidation strategy is
+that it forces a “memory doubling”.</p>
+<p>To try to limit the potential effects of “memory doubling” during
+<code class="docutils literal notranslate"><span class="pre">Table.to_pandas</span></code>, we provide a couple of options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">split_blocks=True</span></code>, when enabled <code class="docutils literal notranslate"><span class="pre">Table.to_pandas</span></code> produces one internal
+DataFrame “block” for each column, skipping the “consolidation” step. Note
+that many pandas operations will trigger consolidation anyway, but the peak
+memory use may be less than the worst case scenario of a full memory
+doubling. As a result of this option, we are able to do zero copy conversions
+of columns in the same cases where we can do zero copy with <code class="docutils literal notranslate"><span class="pre">Array</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ChunkedArray</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">self_destruct=True</span></code>, this destroys the internal Arrow memory buffers in
+each column <code class="docutils literal notranslate"><span class="pre">Table</span></code> object as they are converted to the pandas-compatible
+representation, potentially releasing memory to the operating system as soon
+as a column is converted. Note that this renders the calling <code class="docutils literal notranslate"><span class="pre">Table</span></code> object
+unsafe for further use, and any further methods called will cause your Python
+process to crash.</p></li>
+</ul>
+<p>Used together, the call</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">split_blocks</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">self_destruct</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">del</span> <span class="n">table</span>  <span class="c1"># not necessary, but a good practice</span>
+</pre></div>
+</div>
+<p>will yield significantly lower memory usage in some scenarios. Without these
+options, <code class="docutils literal notranslate"><span class="pre">to_pandas</span></code> will always double memory.</p>
 </div>
 </div>
 </div>

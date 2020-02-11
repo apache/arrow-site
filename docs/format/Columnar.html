@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Arrow Columnar Format &mdash; Apache Arrow v0.15.1</title>
+  <title>Arrow Columnar Format &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
   
 
   
@@ -22,10 +22,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.15.1
+                0.16.1.dev0+g729a7689f.d20200211
               </div>
             
           
@@ -145,11 +145,12 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../cpp/index.html">C++ Implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python bindings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../java/index.html">Java Implementation</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../developers/contributing.html">Contribution Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../developers/cpp.html">C++ Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/cpp/index.html">C++ Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/integration.html">Integration Testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developers/crossbow.html">Packaging and Testing with Crossbow</a></li>
@@ -228,7 +229,7 @@ for serialization and generic data transport.</p>
 implementation of the columnar format without the aid of an existing
 implementation. We utilize Google’s <a class="reference external" href="http://github.com/google/flatbuffers">Flatbuffers</a> project for
 metadata serialization, so it will be necessary to refer to the
-project’s <a class="reference external" href="FlatbuffersFiles">Flatbuffers protocol definition files</a>
+project’s <a class="reference external" href="https://github.com/apache/arrow/tree/master/format">Flatbuffers protocol definition files</a>
 while reading this document.</p>
 <p>The columnar format has some key features:</p>
 <ul class="simple">
@@ -307,7 +308,7 @@ variants of this layout are supported using 32-bit and 64-bit length
 encoding.</p></li>
 <li><p><strong>Struct</strong>: a nested layout consisting of a collection of named
 child <strong>fields</strong> each having the same length but possibly different
-types</p></li>
+types.</p></li>
 <li><p><strong>Sparse</strong> and <strong>Dense Union</strong>: a nested layout representing a
 sequence of values, each of which can have type chosen from a
 collection of child array types.</p></li>
@@ -373,7 +374,7 @@ each array slot.</p>
 <p>Whether any array slot is valid (non-null) is encoded in the respective bits of
 this bitmap. A 1 (set bit) for index <code class="docutils literal notranslate"><span class="pre">j</span></code> indicates that the value is not null,
 while a 0 (bit not set) indicates that it is null. Bitmaps are to be
-initialized to be all unset at allocation time (this includes padding).:</p>
+initialized to be all unset at allocation time (this includes padding):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">is_valid</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-&gt;</span> <span class="n">bitmap</span><span class="p">[</span><span class="n">j</span> <span class="o">/</span> <span class="mi">8</span><span class="p">]</span> <span class="o">&amp;</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">j</span> <span class="o">%</span> <span class="mi">8</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -462,7 +463,7 @@ buffer.</p>
 <h3>Variable-size Binary Layout<a class="headerlink" href="#variable-size-binary-layout" title="Permalink to this headline">¶</a></h3>
 <p>Each value in this layout consists of 0 or more bytes. While primitive
 arrays have a single values buffer, variable-size binary have an
-<strong>offsets</strong> buffer and <strong>data</strong> buffer</p>
+<strong>offsets</strong> buffer and <strong>data</strong> buffer.</p>
 <p>The offsets buffer contains <cite>length + 1</cite> signed integers (either
 32-bit or 64-bit, depending on the logical type), which encode the
 start position of each slot in the data buffer. The length of the
@@ -520,9 +521,9 @@ the 64-bit offset version would be denoted by <code class="docutils literal notr
   <span class="o">*</span> <span class="n">Validity</span> <span class="n">bitmap</span> <span class="n">buffer</span><span class="p">:</span> <span class="n">Not</span> <span class="n">required</span>
   <span class="o">*</span> <span class="n">Values</span> <span class="n">buffer</span> <span class="p">(</span><span class="n">int8</span><span class="p">)</span>
 
-    <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">6</span>                   <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">7</span><span class="o">-</span><span class="mi">63</span>  <span class="o">|</span>
-    <span class="o">|-----------------------------|-------------|</span>
-    <span class="o">|</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">127</span><span class="p">,</span> <span class="mi">127</span><span class="p">,</span> <span class="mi">50</span> <span class="o">|</span> <span class="n">unspecified</span> <span class="o">|</span>
+    <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">6</span>                    <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">7</span><span class="o">-</span><span class="mi">63</span>  <span class="o">|</span>
+    <span class="o">|------------------------------|-------------|</span>
+    <span class="o">|</span> <span class="mi">12</span><span class="p">,</span> <span class="o">-</span><span class="mi">7</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">127</span><span class="p">,</span> <span class="mi">127</span><span class="p">,</span> <span class="mi">50</span> <span class="o">|</span> <span class="n">unspecified</span> <span class="o">|</span>
 </pre></div>
 </div>
 <p><strong>Example Layout: ``List&lt;List&lt;Int8&gt;&gt;``</strong></p>
@@ -724,9 +725,9 @@ having the values: <code class="docutils literal notranslate"><span class="pre">
 
 <span class="o">*</span> <span class="n">Offset</span> <span class="n">buffer</span><span class="p">:</span>
 
-  <span class="o">|</span><span class="n">Byte</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span> <span class="o">|</span> <span class="n">Byte</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span>    <span class="o">|</span> <span class="n">Byte</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="o">|</span> <span class="n">Byte</span> <span class="mi">12</span><span class="o">-</span><span class="mi">15</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">16</span><span class="o">-</span><span class="mi">63</span> <span class="o">|</span>
-  <span class="o">|---------|-------------|-----------|------------|-------------|</span>
-  <span class="o">|</span> <span class="mi">0</span>       <span class="o">|</span> <span class="n">unspecified</span> <span class="o">|</span> <span class="mi">1</span>         <span class="o">|</span> <span class="mi">0</span>          <span class="o">|</span> <span class="n">unspecified</span> <span class="o">|</span>
+  <span class="o">|</span><span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span>   <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">12</span><span class="o">-</span><span class="mi">15</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">16</span><span class="o">-</span><span class="mi">63</span> <span class="o">|</span>
+  <span class="o">|----------|-------------|------------|-------------|-------------|</span>
+  <span class="o">|</span> <span class="mi">0</span>        <span class="o">|</span> <span class="n">unspecified</span> <span class="o">|</span> <span class="mi">1</span>          <span class="o">|</span> <span class="mi">0</span>           <span class="o">|</span> <span class="n">unspecified</span> <span class="o">|</span>
 
 <span class="o">*</span> <span class="n">Children</span> <span class="n">arrays</span><span class="p">:</span>
   <span class="o">*</span> <span class="n">Field</span><span class="o">-</span><span class="mi">0</span> <span class="n">array</span> <span class="p">(</span><span class="n">f</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
@@ -1064,7 +1065,7 @@ own application defined metadata to customize behavior.</p>
 <p>A RecordBatch message contains the actual data buffers corresponding
 to the physical memory layout determined by a schema. The metadata for
 this message provides the location and size of each buffer, permitting
-Arrat data structures to be reconstructed using pointer arithmetic and
+Array data structures to be reconstructed using pointer arithmetic and
 thus no memory copying.</p>
 <p>The serialized form of the record batch is the following:</p>
 <ul class="simple">
@@ -1089,7 +1090,7 @@ schema</p>
 </div>
 <p>The flattened version of this is:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">FieldNode</span> <span class="mi">0</span><span class="p">:</span> <span class="n">Struct</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;col1&#39;</span>
-<span class="n">FieldNode</span> <span class="mi">1</span><span class="p">:</span> <span class="n">Int32</span> <span class="n">name</span><span class="o">=</span><span class="n">a</span><span class="s1">&#39;</span>
+<span class="n">FieldNode</span> <span class="mi">1</span><span class="p">:</span> <span class="n">Int32</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;a&#39;</span>
 <span class="n">FieldNode</span> <span class="mi">2</span><span class="p">:</span> <span class="n">List</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;b&#39;</span>
 <span class="n">FieldNode</span> <span class="mi">3</span><span class="p">:</span> <span class="n">Int64</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;item&#39;</span>
 <span class="n">FieldNode</span> <span class="mi">4</span><span class="p">:</span> <span class="n">Float64</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;c&#39;</span>
@@ -1114,7 +1115,11 @@ table above):</p>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">Buffer</span></code> Flatbuffers value describes the location and size of a
 piece of memory. Generally these are interpreted relative to the
-<strong>encapsulated message format</strong> defined next.</p>
+<strong>encapsulated message format</strong> defined below.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">size</span></code> field of <code class="docutils literal notranslate"><span class="pre">Buffer</span></code> is not required to account for padding
+bytes. Since this metadata can be used to communicate in-memory pointer
+addresses between libraries, it is recommended to set <code class="docutils literal notranslate"><span class="pre">size</span></code> to the actual
+memory size rather than the padded size.</p>
 </div>
 <div class="section" id="byte-order-endianness">
 <h3>Byte Order (<a class="reference external" href="https://en.wikipedia.org/wiki/Endianness">Endianness</a>)<a class="headerlink" href="#byte-order-endianness" title="Permalink to this headline">¶</a></h3>
@@ -1152,6 +1157,13 @@ a <code class="docutils literal notranslate"><span class="pre">RecordBatch</span
 <span class="o">&lt;</span><span class="n">EOS</span> <span class="p">[</span><span class="n">optional</span><span class="p">]:</span> <span class="mh">0xFFFFFFFF</span> <span class="mh">0x00000000</span><span class="o">&gt;</span>
 </pre></div>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>An edge-case for interleaved dictionary and record batches occurs
+when the record batches contain dictionary encoded arrays that are
+completely null. In this case, the dictionary for the encoded column might
+appear after the first record batch.</p>
+</div>
 <p>When a stream reader implementation is reading a stream, after each
 message, it may read the next 8 bytes to determine both if the stream
 continues and the size of the message metadata that follows. Once the
@@ -1182,7 +1194,10 @@ file. See <code class="docutils literal notranslate"><span class="pre">File.fbs<
 <p>In the file format, there is no requirement that dictionary keys
 should be defined in a <code class="docutils literal notranslate"><span class="pre">DictionaryBatch</span></code> before they are used in a
 <code class="docutils literal notranslate"><span class="pre">RecordBatch</span></code>, as long as the keys are defined somewhere in the
-file.</p>
+file. Further more, it is invalid to have more then one <strong>non-delta</strong>
+dictionary batch per dictionary ID (i.e. dictionary replacement is not
+supported).  Delta dictionaries are applied in the order they appear in
+the file footer.</p>
 </div>
 <div class="section" id="dictionary-messages">
 <h3>Dictionary Messages<a class="headerlink" href="#dictionary-messages" title="Permalink to this headline">¶</a></h3>
@@ -1191,7 +1206,7 @@ batches, each having a single field. The complete semantic schema for a
 sequence of record batches, therefore, consists of the schema along with all of
 the dictionaries. The dictionary types are found in the schema, so it is
 necessary to read the schema to first determine the dictionary types so that
-the dictionaries can be properly interpreted.</p>
+the dictionaries can be properly interpreted:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">table</span> <span class="n">DictionaryBatch</span> <span class="p">{</span>
   <span class="nb">id</span><span class="p">:</span> <span class="n">long</span><span class="p">;</span>
   <span class="n">data</span><span class="p">:</span> <span class="n">RecordBatch</span><span class="p">;</span>
@@ -1230,6 +1245,35 @@ form:</p>
 <span class="mi">3</span>
 <span class="mi">2</span>
 <span class="mi">4</span>
+<span class="mi">0</span>
+<span class="n">EOS</span>
+</pre></div>
+</div>
+<p>Alternatively, if <code class="docutils literal notranslate"><span class="pre">isDelta</span></code> is set to false, then the dictionary
+replaces the existing dictionary for the same ID.  Using the same
+example as above, an alternate encoding could be:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">SCHEMA</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">DICTIONARY</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="s2">&quot;A&quot;</span>
+<span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="s2">&quot;B&quot;</span>
+<span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="s2">&quot;C&quot;</span>
+
+<span class="o">&lt;</span><span class="n">RECORD</span> <span class="n">BATCH</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="mi">0</span>
+<span class="mi">1</span>
+<span class="mi">2</span>
+<span class="mi">1</span>
+
+<span class="o">&lt;</span><span class="n">DICTIONARY</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="s2">&quot;A&quot;</span>
+<span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="s2">&quot;C&quot;</span>
+<span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="s2">&quot;D&quot;</span>
+<span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="s2">&quot;E&quot;</span>
+
+<span class="o">&lt;</span><span class="n">RECORD</span> <span class="n">BATCH</span> <span class="mi">1</span><span class="o">&gt;</span>
+<span class="mi">2</span>
+<span class="mi">1</span>
+<span class="mi">3</span>
 <span class="mi">0</span>
 <span class="n">EOS</span>
 </pre></div>
