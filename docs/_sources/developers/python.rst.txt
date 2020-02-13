@@ -44,7 +44,6 @@ fix many of the errors reported by ``flake8``:
 
 .. code-block:: shell
 
-   autopep8 --in-place ../integration/integration_test.py
    autopep8 --in-place --global-config=.flake8.cython pyarrow/table.pxi
 
 Unit Testing
@@ -56,7 +55,9 @@ like so:
 
 .. code-block:: shell
 
+   pushd arrow/python
    pytest pyarrow
+   popd
 
 Package requirements to run the unit tests are found in
 ``requirements-test.txt`` and can be installed if needed with ``pip install -r
@@ -144,6 +145,17 @@ You should now see
    total 8
    drwxrwxr-x 12 wesm wesm 4096 Apr 15 19:19 arrow/
 
+Pull in the test data and setup the environment variables:
+
+.. code-block:: shell
+
+   pushd arrow
+   git submodule init
+   git submodule update
+   export PARQUET_TEST_DATA="${PWD}/cpp/submodules/parquet-testing/data"
+   export ARROW_TEST_DATA="${PWD}/testing/data"
+
+
 Using Conda
 ~~~~~~~~~~~
 
@@ -166,8 +178,10 @@ On Linux and macOS:
         --file arrow/ci/conda_env_unix.yml \
         --file arrow/ci/conda_env_cpp.yml \
         --file arrow/ci/conda_env_python.yml \
+        --file arrow/ci/conda_env_gandiva.yml \
         compilers \
-        python=3.7
+        python=3.7 \
+        pandas
 
 As of January 2019, the ``compilers`` package is needed on many Linux
 distributions to use packages from conda-forge.
@@ -270,6 +284,12 @@ Now build and install the Arrow C++ libraries:
          -DARROW_FLIGHT=ON \
          -DARROW_GANDIVA=ON \
          -DARROW_ORC=ON \
+         -DARROW_WITH_BZ2=ON \
+         -DARROW_WITH_ZLIB=ON \
+         -DARROW_WITH_ZSTD=ON \
+         -DARROW_WITH_LZ4=ON \
+         -DARROW_WITH_SNAPPY=ON \
+         -DARROW_WITH_BROTLI=ON \
          -DARROW_PARQUET=ON \
          -DARROW_PYTHON=ON \
          -DARROW_PLASMA=ON \
@@ -287,6 +307,9 @@ to ``OFF``:
 * ``ARROW_ORC``: Support for Apache ORC file format
 * ``ARROW_PARQUET``: Support for Apache Parquet file format
 * ``ARROW_PLASMA``: Shared memory object store
+* ``ARROW_WITH_{BZ2, ZLIB, ZSTD, LZ4, SNAPPY, BROTLI}``: Build support for
+  compression libraries, used for reading and writing Parquet files and other
+  things.
 
 If multiple versions of Python are installed in your environment, you may have
 to pass additional parameters to cmake so that it can find the right
@@ -367,7 +390,7 @@ To debug the C++ libraries with gdb while running the Python unit
    gdb --args python -m pytest pyarrow/tests/test_to_run.py -k $TEST_TO_MATCH
 
 To set a breakpoint, use the same gdb syntax that you would when
-debugging a C++ unitttest, for example:
+debugging a C++ unittest, for example:
 
 .. code-block:: shell
 

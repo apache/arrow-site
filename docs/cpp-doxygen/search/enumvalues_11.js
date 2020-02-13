@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['scalar_9648',['SCALAR',['../structarrow_1_1compute_1_1_datum.html#ae1164fc67b6c27e5f39a7064fafd2ee6af67bf720dedf0b00b8a901ccf71b5b97',1,'arrow::compute::Datum::SCALAR()'],['../structarrow_1_1dataset_1_1_expression_type.html#aa055f8b51338c1fa7f7dda520053b4d5adf763cd188561b0a6fb97f4e6194d05a',1,'arrow::dataset::ExpressionType::SCALAR()'],['../namespacearrow_1_1compute.html#a8c7314c2838c3f4df31d9027983e7b0ba8f3d9a4b6a7b7f2c7afa61ca113d0db9',1,'arrow::compute::SCALAR()']]],
+  ['schema_9649',['SCHEMA',['../classarrow_1_1ipc_1_1_message.html#a6d6973b3b03de50d7be9dbab4db910dbadd37198990318877501c5bf3941cd5e9',1,'arrow::ipc::Message']]],
+  ['second_9650',['SECOND',['../structarrow_1_1_time_unit.html#a561ef51c3755bd873f8f86f5bc4ec1ffa1c81ae790d85d35422c1757e0b20be7a',1,'arrow::TimeUnit']]],
+  ['serializationerror_9651',['SerializationError',['../namespacearrow.html#a331ad1dbd1c157c8be168cb6548d188fa64353c9071b50ec2fe6b90ed122471a8',1,'arrow']]],
+  ['set_9652',['SET',['../structarrow_1_1py_1_1_python_type.html#a5647c556737ebf2394714fc7e3fe7e4da86c9eb98c8bdfbc09e5d9bce1481ee6d',1,'arrow::py::PythonType']]],
+  ['signed_9653',['SIGNED',['../structparquet_1_1_sort_order.html#a7aa8892393c3e16bd25f11595281eee8a345a20982b3fad52c262436456071f0a',1,'parquet::SortOrder']]],
+  ['signed_5finteger_9654',['SIGNED_INTEGER',['../classarrow_1_1compute_1_1_logical_type.html#a5d871b32b9c75a2f5b52e9904f707b5bac4051027b212b18f3f84316719f81425',1,'arrow::compute::LogicalType']]],
+  ['single_9655',['SINGLE',['../classarrow_1_1_floating_point_type.html#a5b11d7365a95daf044b4d502c1059543acc837c43ba78ed44f8f8ad5015839b53',1,'arrow::FloatingPointType']]],
+  ['smallint_9656',['SMALLINT',['../classarrow_1_1hiveserver2_1_1_column_type.html#abf5a04ecbc2fdaca1b6fb79695e59ad2a42a2165cd790300c66917317b8bf7818',1,'arrow::hiveserver2::ColumnType']]],
+  ['snappy_9657',['SNAPPY',['../structarrow_1_1_compression.html#a8abcec0357242c077a2905d645f2163faaa503712f544219feb56bf8b6bf1f5cc',1,'arrow::Compression']]],
+  ['sparse_9658',['SPARSE',['../structarrow_1_1_union_mode.html#a98f368f8fb8a5553a17abc2fb1e76dacaf747592e2e0c52a802406811b95b3a60',1,'arrow::UnionMode']]],
+  ['sparse_5ftensor_9659',['SPARSE_TENSOR',['../classarrow_1_1ipc_1_1_message.html#a6d6973b3b03de50d7be9dbab4db910dbafa6f46202431590abbe006c2b1142104',1,'arrow::ipc::Message']]],
+  ['sparsecootensor_9660',['SPARSECOOTENSOR',['../structarrow_1_1py_1_1_python_type.html#a5647c556737ebf2394714fc7e3fe7e4daf5d491621f1020b8da85035efc8590b1',1,'arrow::py::PythonType']]],
+  ['sparsecsrmatrix_9661',['SPARSECSRMATRIX',['../structarrow_1_1py_1_1_python_type.html#a5647c556737ebf2394714fc7e3fe7e4da350789b2e908d79e2f0a4b5ead39c298',1,'arrow::py::PythonType']]],
+  ['string_9662',['STRING',['../structarrow_1_1py_1_1_python_type.html#a5647c556737ebf2394714fc7e3fe7e4dab8dd53996d1f2d220d9faf74bd6eb542',1,'arrow::py::PythonType::STRING()'],['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44a864933bd7cdfa63ea75498c34db6545f',1,'arrow::Type::STRING()'],['../structparquet_1_1_logical_type_1_1_type.html#a417e83a60f7d477e6d39173d1f67053faf0e4bdf1007ed47b1f8cb6ccb79dc128',1,'parquet::LogicalType::Type::STRING()'],['../classarrow_1_1hiveserver2_1_1_column_type.html#abf5a04ecbc2fdaca1b6fb79695e59ad2a63b588d5559f64f89a416e656880b949',1,'arrow::hiveserver2::ColumnType::STRING()']]],
+  ['struct_9663',['STRUCT',['../classarrow_1_1compute_1_1_logical_type.html#a5d871b32b9c75a2f5b52e9904f707b5ba2cc0f959970d25290b39234e254d470b',1,'arrow::compute::LogicalType::STRUCT()'],['../structarrow_1_1_type.html#a00a041cb19a3be373da8eec7d4bf1f44aaa028b35c4e6a047c0e510ef1b0389ef',1,'arrow::Type::STRUCT()'],['../classarrow_1_1hiveserver2_1_1_column_type.html#abf5a04ecbc2fdaca1b6fb79695e59ad2ab8223be2455e0ea5a0e63e8f018d6fc3',1,'arrow::hiveserver2::ColumnType::STRUCT()']]]
+];
