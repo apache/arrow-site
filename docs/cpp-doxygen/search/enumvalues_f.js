@@ -1,0 +1,27 @@
+var searchData=
+[
+  ['parquet_5f1_5f0_9612',['PARQUET_1_0',['../structparquet_1_1_parquet_version.html#aaf8586f6c213f55116376dcff4c70805a5472b0f799fd796e0c26e6fd1dc518dc',1,'parquet::ParquetVersion']]],
+  ['parquet_5f2_5f0_9613',['PARQUET_2_0',['../structparquet_1_1_parquet_version.html#aaf8586f6c213f55116376dcff4c70805a73710598fa801b15ba691a68f0e4ac50',1,'parquet::ParquetVersion']]],
+  ['path_9614',['PATH',['../classarrow_1_1dataset_1_1_file_source.html#a695a2ccaa587f56fed9ca74621b6827aaac9420f4a580260f4d9b90e31042d825',1,'arrow::dataset::FileSource::PATH()'],['../structarrow_1_1flight_1_1_flight_descriptor.html#a86465cf81f2b46fd5e80b7082dec3962a0df0c0ebb47fafcad1af1cca9ee87e58',1,'arrow::flight::FlightDescriptor::PATH()']]],
+  ['pending_9615',['PENDING',['../classarrow_1_1hiveserver2_1_1_operation.html#ad298b58eb192a6063cc2529cb30fc4ceac69f06e1a9b016d133907b4e5f5864d2',1,'arrow::hiveserver2::Operation']]],
+  ['plain_9616',['PLAIN',['../structparquet_1_1_encoding.html#acd287bb69df941fa0e27dd594462f27ea2cb5b7729ec2667147b4e1c9175b008b',1,'parquet::Encoding']]],
+  ['plain_5fdictionary_9617',['PLAIN_DICTIONARY',['../structparquet_1_1_encoding.html#acd287bb69df941fa0e27dd594462f27ea1ff08baa520dff10f53748806e0393dd',1,'parquet::Encoding']]],
+  ['plasma_5fcreated_9618',['PLASMA_CREATED',['../namespaceplasma.html#a6a1816422abb257eda0498d6df72cfdca719df393e8a50579639ab2278715b788',1,'plasma']]],
+  ['plasma_5fevicted_9619',['PLASMA_EVICTED',['../namespaceplasma.html#a6a1816422abb257eda0498d6df72cfdca9a5543b89708c4578da00939bdc333bf',1,'plasma']]],
+  ['plasma_5fsealed_9620',['PLASMA_SEALED',['../namespaceplasma.html#a6a1816422abb257eda0498d6df72cfdca8b8234a4599538aa87ac9abc6562efbd',1,'plasma']]],
+  ['plasmaobjectalreadysealed_9621',['PlasmaObjectAlreadySealed',['../namespaceplasma.html#a57d04d585d40f8545ff6e31e58a1d198a1c1a82ff5b211dfbed2bfd5bdd245356',1,'plasma']]],
+  ['plasmaobjectexists_9622',['PlasmaObjectExists',['../namespaceplasma.html#a57d04d585d40f8545ff6e31e58a1d198aa28166d3ea8fe93848f8e63f233c21f9',1,'plasma']]],
+  ['plasmaobjectnonexistent_9623',['PlasmaObjectNonexistent',['../namespaceplasma.html#a57d04d585d40f8545ff6e31e58a1d198ae78e9831b75460c98fd3a033a466ae72',1,'plasma']]],
+  ['plasmastorefull_9624',['PlasmaStoreFull',['../namespaceplasma.html#a57d04d585d40f8545ff6e31e58a1d198a0eb600736e91ace6e9125aba8f0ebf98',1,'plasma']]],
+  ['primitive_9625',['PRIMITIVE',['../structarrow_1_1ipc_1_1feather_1_1_column_type.html#ab87c3cfee4ce14205f19dfd9bf5a0424aa5a68bcc5a0ae3adeead419ffffd8130',1,'arrow::ipc::feather::ColumnType::PRIMITIVE()'],['../classparquet_1_1schema_1_1_node.html#aab450ce50c75c565dde2d550311c5020a937da11d2024ff231f447c3053e74d88',1,'parquet::schema::Node::PRIMITIVE()']]],
+  ['prior_9626',['PRIOR',['../namespacearrow_1_1hiveserver2.html#a30d6319415f0ca9b461a2dd5e2616c55ae4bf0e3d9afa4b59492d1f1a22fb6a37',1,'arrow::hiveserver2']]],
+  ['protocol_5fv1_9627',['PROTOCOL_V1',['../namespacearrow_1_1hiveserver2.html#a10a1582b875c02d6fb521837c0134b4ea2c1ce0e20e3280b4fd815d50cb94c0fa',1,'arrow::hiveserver2']]],
+  ['protocol_5fv2_9628',['PROTOCOL_V2',['../namespacearrow_1_1hiveserver2.html#a10a1582b875c02d6fb521837c0134b4ea40b5bc8461d5e5d4566b5b6955c0ef58',1,'arrow::hiveserver2']]],
+  ['protocol_5fv3_9629',['PROTOCOL_V3',['../namespacearrow_1_1hiveserver2.html#a10a1582b875c02d6fb521837c0134b4eac8355152190e0ca8d854e757e4bb3524',1,'arrow::hiveserver2']]],
+  ['protocol_5fv4_9630',['PROTOCOL_V4',['../namespacearrow_1_1hiveserver2.html#a10a1582b875c02d6fb521837c0134b4ea8fc073e958b84bf9e8ffe0caab64e01e',1,'arrow::hiveserver2']]],
+  ['protocol_5fv5_9631',['PROTOCOL_V5',['../namespacearrow_1_1hiveserver2.html#a10a1582b875c02d6fb521837c0134b4eaaa0b281a3a26171b0b1912ede77e4c42',1,'arrow::hiveserver2']]],
+  ['protocol_5fv6_9632',['PROTOCOL_V6',['../namespacearrow_1_1hiveserver2.html#a10a1582b875c02d6fb521837c0134b4ea96838d96582c4fa443add35878456094',1,'arrow::hiveserver2']]],
+  ['protocol_5fv7_9633',['PROTOCOL_V7',['../namespacearrow_1_1hiveserver2.html#a10a1582b875c02d6fb521837c0134b4ead88f5dd0403018406a27f7887d35bbb3',1,'arrow::hiveserver2']]],
+  ['prune_9634',['Prune',['../classarrow_1_1fs_1_1_path_forest.html#a460dd0f3388269a06d383693dcdb2fcda6ad2f99b14fcb7eb1918894d4184028a',1,'arrow::fs::PathForest']]],
+  ['py2int_9635',['PY2INT',['../structarrow_1_1py_1_1_python_type.html#a5647c556737ebf2394714fc7e3fe7e4da68dd228bba8e8896f27e2e41e60703c0',1,'arrow::py::PythonType']]]
+];

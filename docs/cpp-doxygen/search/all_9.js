@@ -1,0 +1,23 @@
+var searchData=
+[
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fconnect_2206',['Java_org_apache_arrow_plasma_PlasmaClientJNI_connect',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a90795ce8a04474b1a9e21297a105551a',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fcontains_2207',['Java_org_apache_arrow_plasma_PlasmaClientJNI_contains',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a5ec1f063cfcb6cde3a93bc45bcf3787d',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fcreate_2208',['Java_org_apache_arrow_plasma_PlasmaClientJNI_create',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#ad2f2e4acac296576b39e471120b38038',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fdelete_2209',['Java_org_apache_arrow_plasma_PlasmaClientJNI_delete',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#ab6648caeb69f19c65b2191f557c4dccb',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fdisconnect_2210',['Java_org_apache_arrow_plasma_PlasmaClientJNI_disconnect',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a281ed5d16f09db7565697943ca23a633',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fevict_2211',['Java_org_apache_arrow_plasma_PlasmaClientJNI_evict',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#ab92b42c11b405e787b154a432177c897',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5ffetch_2212',['Java_org_apache_arrow_plasma_PlasmaClientJNI_fetch',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#af73052599904d0d09a0c948a2302338e',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fget_2213',['Java_org_apache_arrow_plasma_PlasmaClientJNI_get',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a9c2d676fbbd906979527888f8c2687b1',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fhash_2214',['Java_org_apache_arrow_plasma_PlasmaClientJNI_hash',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a2d2b6dc7ff438612984c61d989470305',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5frelease_2215',['Java_org_apache_arrow_plasma_PlasmaClientJNI_release',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#a88e6ab4b6788b4d85e52577113374690',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fseal_2216',['Java_org_apache_arrow_plasma_PlasmaClientJNI_seal',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#abf8c1cbd960f194044187013a3f0b31e',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['java_5forg_5fapache_5farrow_5fplasma_5fplasmaclientjni_5fwait_2217',['Java_org_apache_arrow_plasma_PlasmaClientJNI_wait',['../org__apache__arrow__plasma___plasma_client_j_n_i_8h.html#aca2e788c291d39a0e44c6f86429f9974',1,'org_apache_arrow_plasma_PlasmaClientJNI.h']]],
+  ['jemalloc_5fmemory_5fpool_2218',['jemalloc_memory_pool',['../namespacearrow.html#a07e44d557d9f98ba7a42bbcba1fb7698',1,'arrow']]],
+  ['jemalloc_5fset_5fdecay_5fms_2219',['jemalloc_set_decay_ms',['../namespacearrow.html#ad0ebc0eb6975ac95276758b9a171c82d',1,'arrow']]],
+  ['json_2220',['JSON',['../structparquet_1_1_converted_type.html#a4c93674b47bffc29042acda48281e198a2a6f70b90f27a8b057c973d69c008e46',1,'parquet::ConvertedType::JSON()'],['../structparquet_1_1_logical_type_1_1_type.html#a417e83a60f7d477e6d39173d1f67053fa635ee08d23d36c5a3fb3577c3335b96f',1,'parquet::LogicalType::Type::JSON()'],['../classparquet_1_1_logical_type.html#ae67294dde8fc4a072d55d10c6181afbc',1,'parquet::LogicalType::JSON()']]],
+  ['json_5fintegration_2eh_2221',['json_integration.h',['../json__integration_8h.html',1,'']]],
+  ['json_5finternal_2eh_2222',['json_internal.h',['../json__internal_8h.html',1,'']]],
+  ['json_5fsimple_2eh_2223',['json_simple.h',['../json__simple_8h.html',1,'']]],
+  ['jsonlogicaltype_2224',['JSONLogicalType',['../classparquet_1_1_j_s_o_n_logical_type.html',1,'parquet']]],
+  ['jsonprint_2225',['JSONPrint',['../classparquet_1_1_parquet_file_printer.html#a82369e2cc12b9af1d6e1e9b11388b7e4',1,'parquet::ParquetFilePrinter']]]
+];
