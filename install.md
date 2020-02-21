@@ -112,7 +112,10 @@ sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-glib-devel
 CentOS 6 and 7:
 
 ```shell
-sudo yum install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
+RHEL_VERSION=$(cut -d: -f5 /etc/system-release-cpe)
+RHEL_VERSION_MAJOR=$(echo $RHEL_VERSION | cut -d. -f1)
+
+sudo yum install -y https://apache.bintray.com/arrow/centos/$RHEL_VERSION_MAJOR/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Arrow Dataset C++
