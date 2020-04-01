@@ -28,8 +28,9 @@ limitations under the License.
 -->
 
 Apache Arrow aims to allow fast and seamless data interchange between
-heterogenous runtimes and environments.  Whether using the
-[Flight](https://arrow.apache.org/docs/format/Flight.html) RPC layer,
+heterogenous runtimes and environments.  Whether using the columnar
+[IPC stream protocol](https://arrow.apache.org/docs/format/Columnar.html),
+the [Flight](https://arrow.apache.org/docs/format/Flight.html) RPC layer,
 the Feather file format, the
 [Plasma](https://arrow.apache.org/docs/python/plasma.html) shared object
 store, or any application-specific data distribution mechanism, Arrow IPC
