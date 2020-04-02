@@ -195,7 +195,7 @@ The Apache Arrow C++ port in vcpkg is kept up to date by Microsoft team members 
 [5]: https://conda-forge.github.io
 [6]: {{site.data.versions['current'].mirrors-tar}}
 [10]: {{site.data.versions['current'].release-notes}}
-[11]: https://www.apache.org/dist/arrow/KEYS
+[11]: https://downloads.apache.org/arrow/KEYS
 [12]: https://www.apache.org/dyn/closer.cgi#verify
 [13]: {{site.data.versions['current'].asc}}
 [14]: {{site.data.versions['current'].sha256}}
