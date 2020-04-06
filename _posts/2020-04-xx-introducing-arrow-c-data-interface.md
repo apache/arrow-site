@@ -84,9 +84,9 @@ of data.
 ## Lifetime handling
 
 One common difficulty of data sharing between heterogenous runtimes is to
-correctly handle the lifetime of data.  The C Data Interface solves that issue
-by letting the data producer define a pointer to a release callback that the
-consumer must call when it has done using the data.  This way, the producer
-is free to define its memory management scheme.  For example, the Arrow C++
-library, when used as a producer, passes a release callback which simply
-decrements a `shared_ptr`'s reference count.
+correctly handle the lifetime of data.  The C Data Interface allows the producer
+to define its own memory management scheme through a release callback.
+This is a simple function pointer which consumers will call when they are
+finished using the data.  For example when used as a producer the Arrow C++
+library passes a release callback which simply decrements a `shared_ptr`'s
+reference count.
