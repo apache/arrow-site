@@ -27,22 +27,24 @@ limitations under the License.
 {% endcomment %}
 -->
 
-Apache Arrow is a cross-language, platform-independent in-memory format
-allowing zero-copy data sharing and transfer between heterogenous runtimes
-and applications.
+Apache Arrow includes a cross-language, platform-independent in-memory
+columnar format allowing zero-copy data sharing and transfer between
+heterogenous runtimes and applications.
 
-The easiest way to benefit from the Arrow format has always been to depend
+The easiest way to use the Arrow columnar format has always been to depend
 on one of the concrete implementations developed by the Apache Arrow community.
-There are 11 such implementations, each for a different language and ecosystem
-(Java, C++, Python, Rust, R, Javascript, C#, Go...).
+The project codebase contains libraries for 11 different programming languages
+so far, and will likely grow to include more languages in the future.
 
-However, packaging and ABI issues in C++ can deter from depending on the
-Arrow C++ library.  We have therefore provided an alternative which
-exchanges data at the C level, conforming to a simple data
-definition.  The C ABI is a platform-wide standard that is unlikely to
-definition.  The C ABI is a platform-wide standard that is unlikely to
-change (and practically never changes), because it ensures portability of
-libraries and executable binaries.
+However, some projects may wish to import and export the Arrow columnar format
+without taking on a new library dependency, such as the Arrow C++ library.
+We have therefore designed an alternative which exchanges data at the C level,
+conforming to a simple data definition.  The C ABI is a platform-wide standard
+that is unlikely to change (and practically never changes), because it ensures
+portability of libraries and executable binaries.  Two libraries that utilize
+the C structures defined by the C Data Interface can do zero-copy data
+transfers at runtime without any build-time or link-time dependency
+requirements.
 
 The best way to learn about the C Data Interface is to read the
 [spec](https://arrow.apache.org/docs/format/CDataInterface.html).
@@ -50,19 +52,24 @@ However, we will quickly go over its strong points.
 
 ## Two simple struct definitions
 
-To interact with the C Data Interface from you C or C++ level, the only
+To interact with the C Data Interface at the C or C++ level, the only
 thing you have to include in your code is two struct type declarations
-(and a couple of ``#define``s for constant values).  Those declarations
+(and a couple of `#define`s for constant values).  Those declarations
 only depend on standard C types, and can simply be pasted in a header
-file.
+file.  Other languages can also participate as long as they provide a
+Foreign Function Interface layer; this is the case for most modern
+languages, such as Python (with `ctypes` or `cffi`), Julia, Rust, Go, etc.
 
 ## Zero-copy data sharing
 
-The C Data Interface passes Arrow buffers through memory pointers.  So,
+The C Data Interface passes Arrow data buffers through memory pointers.  So,
 by construction, it allows you to share data from one runtime to
 another without copying it.  Since the data is in standard
 [Arrow in-memory format](https://arrow.apache.org/docs/format/Columnar.html),
 its layout is well-defined and unambiguous.
+
+This design also restricts the C Data Interface to *in-process* data sharing.
+For interprocess communication, we recommend use of the Arrow IPC format.
 
 ## Reduced marshalling
 
