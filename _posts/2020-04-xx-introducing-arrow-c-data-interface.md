@@ -1,7 +1,7 @@
 ---
 layout: post
-title: "Introducing the Apache Arrow C data interface"
-description: "This post introduces the Arrow C data interface, a simple C-based
+title: "Introducing the Apache Arrow C Data Interface"
+description: "This post introduces the Arrow C Data Interface, a simple C-based
 interoperability standard to simplify interactions between independent users
 and implementors of the Arrow in-memory format."
 date: "2020-04-02 00:00:00 +0100"
@@ -39,7 +39,7 @@ so far, and will likely grow to include more languages in the future.
 However, some projects may wish to import and export the Arrow columnar format
 without taking on a new library dependency, such as the Arrow C++ library.
 We have therefore designed an alternative which exchanges data at the C level,
-conforming to a simple data definition.  The C data interface carries no dependencies
+conforming to a simple data definition.  The C Data Interface carries no dependencies
 except a shared C ABI between binaries which use it.  C ABIs are platform-wide standards
 which are necessarily adhered to by all compilers which generate binaries and are extremely
 stable, ensuring portability of libraries and executable binaries.  Two libraries that utilize
