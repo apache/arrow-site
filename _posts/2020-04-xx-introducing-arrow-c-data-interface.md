@@ -60,7 +60,7 @@ file.
 
 The C Data Interface passes Arrow buffers through memory pointers.  So,
 by construction, it allows you to share data from one runtime to
-another without copying it.  Since the data is supposed to be in standard
+another without copying it.  Since the data is in standard
 [Arrow in-memory format](https://arrow.apache.org/docs/format/Columnar.html),
 its layout is well-defined and unambiguous.
 
