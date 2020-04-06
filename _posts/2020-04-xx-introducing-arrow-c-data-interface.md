@@ -97,3 +97,61 @@ This is a simple function pointer which consumers will call when they are
 finished using the data.  For example when used as a producer the Arrow C++
 library passes a release callback which simply decrements a `shared_ptr`'s
 reference count.
+
+## Application: passing data between R and Python
+
+The R and Python Arrow libraries are both based on the Arrow C++ library,
+however their respective toolchains (mandated by the R and Python packaging
+standards) are ABI-incompatible.  It is therefore impossible to pass data
+directly at the C++ level between the R and Python bindings.
+
+Using the C Data Interface, we have circumvented this restriction and provide
+a zero-copy data sharing API between R and Python.  It is based on the R
+[`reticulate`](https://rstudio.github.io/reticulate/) library.
+
+Here is an example session mixing R and Python library calls:
+
+```r
+library(arrow)
+library(reticulate)
+use_virtualenv("arrow")
+pa <- import("pyarrow")
+
+# Create an array in PyArrow
+a <- pa$array(c(1, 2, 3))
+a
+
+## Array
+## <double>
+## [
+##   1,
+##   2,
+##   3
+## ]
+
+# Apply R methods on the PyArrow-created array:
+a[a > 1]
+
+## Array
+## <double>
+## [
+##   2,
+##   3
+## ]
+
+# Create an array in R and pass it to PyArrow
+b <- Array$create(c(5, 6, 7))
+a_and_b <- pa$concat_arrays(r_to_py(list(a, b)))
+a_and_b
+
+## Array
+## <double>
+## [
+##   1,
+##   2,
+##   3,
+##   5,
+##   6,
+##   7
+## ]
+```
