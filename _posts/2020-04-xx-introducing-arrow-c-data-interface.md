@@ -52,8 +52,8 @@ However, we will quickly go over its strong points.
 
 To interact with the C Data Interface from you C or C++ level, the only
 thing you have to include in your code is two struct type declarations
-(and a couple of ``#define`` for constant values).  Those declarations
-only depend on standard C types.  You can simply paste them in a header
+(and a couple of ``#define``s for constant values).  Those declarations
+only depend on standard C types, and can simply be pasted in a header
 file.
 
 ## Zero-copy data sharing
