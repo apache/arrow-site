@@ -59,7 +59,7 @@ file.
 ## Zero-copy data sharing
 
 The C Data Interface passes Arrow buffers through memory pointers.  So,
-by construction, it allows you to share or pass data from one runtime to
+by construction, it allows you to share data from one runtime to
 another without copying it.  Since the data is supposed to be in standard
 [Arrow in-memory format](https://arrow.apache.org/docs/format/Columnar.html),
 its layout is well-defined and unambiguous.
