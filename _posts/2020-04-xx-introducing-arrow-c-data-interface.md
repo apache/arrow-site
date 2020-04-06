@@ -74,11 +74,12 @@ data in C or C++.  Only two aspects involve non-trivial marshalling:
 
 ## Separate type and data representation
 
-Some applications will produce many instances of data of a single datatype
-(for example, as a stream of record batches).  To allow those applications
-to reduce the overhead of datatype representation and reconstruction, the
-C Data Interface defines two independent structures: one representing a
-datatype (and optional metadata), one representing a piece of data.
+For applications which produce many instances of data of a single datatype
+(for example, as a stream of record batches), repeatedly reconstructing the
+datatype from its string encoding would represent unnecessary overhead.  To
+address this use case, the C Data Interface defines two independent structures:
+one representing a datatype (and optional metadata), one representing a piece
+of data.
 
 ## Lifetime handling
 
