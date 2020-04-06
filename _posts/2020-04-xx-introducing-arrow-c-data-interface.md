@@ -39,9 +39,10 @@ so far, and will likely grow to include more languages in the future.
 However, some projects may wish to import and export the Arrow columnar format
 without taking on a new library dependency, such as the Arrow C++ library.
 We have therefore designed an alternative which exchanges data at the C level,
-conforming to a simple data definition.  The C ABI is a platform-wide standard
-that is unlikely to change (and practically never changes), because it ensures
-portability of libraries and executable binaries.  Two libraries that utilize
+conforming to a simple data definition.  The C data interface carries no dependencies
+except a shared C ABI between binaries which use it.  C ABIs are platform-wide standards
+which are necessarily adhered to by all compilers which generate binaries and are extremely
+stable, ensuring portability of libraries and executable binaries.  Two libraries that utilize
 the C structures defined by the C Data Interface can do zero-copy data
 transfers at runtime without any build-time or link-time dependency
 requirements.
