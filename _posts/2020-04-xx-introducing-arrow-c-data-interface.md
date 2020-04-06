@@ -37,8 +37,9 @@ There are 11 such implementations, each for a different language and ecosystem
 (Java, C++, Python, Rust, R, Javascript, C#, Go...).
 
 However, packaging and ABI issues in C++ can deter from depending on the
-Arrow C++ library.  We have therefore worked on an alternative, which
-involves exchanging data at the C level by conforming to a simple data
+Arrow C++ library.  We have therefore provided an alternative which
+exchanges data at the C level, conforming to a simple data
+definition.  The C ABI is a platform-wide standard that is unlikely to
 definition.  The C ABI is a platform-wide standard that is unlikely to
 change (and practically never changes), because it ensures portability of
 libraries and executable binaries.
