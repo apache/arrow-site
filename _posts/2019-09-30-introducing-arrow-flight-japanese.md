@@ -5,6 +5,9 @@ description: "この記事ではArrow Flightという高速データサービス
 date: "2019-10-13 00:00:00 -0600"
 author: wesm
 categories: [application,translation]
+translations:
+  - language: 原文（English）
+    url: 2019/10/13/introducing-arrow-flight/
 ---
 <!--
 {% comment %}
@@ -24,8 +27,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 {% endcomment %}
 -->
-
-[原文（English）]({% post_url 2019-09-30-introducing-arrow-flight %})
 
 この1.5年、Apache Arrowコミュニティーは**Flight**の設計と実装を進めてきました。Flightは高速なデータトランスポートを実現するための新しいクライアント・サーバー型のフレームワークです。Flightを使うとネットワーク越しに大きなデータセットを送る処理を簡単に実現できます。Flightは特定用途向けに設計されたものではないため、幅広い用途で利用できます。
 
