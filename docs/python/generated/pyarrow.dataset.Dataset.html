@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.dataset.Dataset &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>pyarrow.dataset.dataset &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -36,8 +36,8 @@
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="pyarrow.dataset.Scanner" href="pyarrow.dataset.Scanner.html" />
-    <link rel="prev" title="pyarrow.dataset.FileSystemSourceFactory" href="pyarrow.dataset.FileSystemSourceFactory.html" /> 
+    <link rel="next" title="pyarrow.dataset.FileSystemDataset" href="pyarrow.dataset.FileSystemDataset.html" />
+    <link rel="prev" title="pyarrow.dataset.HivePartitioning" href="pyarrow.dataset.HivePartitioning.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -85,18 +85,13 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
@@ -114,8 +109,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../pandas.html">Pandas Integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../timestamps.html">Timestamps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../csv.html">Reading CSV files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../feather.html">Feather File Format</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../json.html">Reading JSON files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../parquet.html">Reading and Writing the Apache Parquet Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dataset.html">Tabular Datasets</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cuda.html">CUDA Integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../extending_types.html">Extending pyarrow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../extending.html">Using pyarrow from C++ and Cython Code</a></li>
@@ -143,7 +140,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../benchmarks.html">Benchmarks</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -205,7 +205,7 @@
         
           <li><a href="../api/dataset.html">Datasets</a> &raquo;</li>
         
-      <li>pyarrow.dataset.Dataset</li>
+      <li>pyarrow.dataset.dataset</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -225,178 +225,137 @@
            <div itemprop="articleBody">
             
   <div class="section" id="pyarrow-dataset-dataset">
-<h1>pyarrow.dataset.Dataset<a class="headerlink" href="#pyarrow-dataset-dataset" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
-<dt id="pyarrow.dataset.Dataset">
-<em class="property">class </em><code class="sig-prename descclassname">pyarrow.dataset.</code><code class="sig-name descname">Dataset</code><a class="headerlink" href="#pyarrow.dataset.Dataset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Collection of data fragments coming from possibly multiple sources.</p>
-<p>Arrow Datasets allow you to query against data that has been split across
-multiple files. This sharding of data may indicate partitioning, which
-can accelerate queries that only touch some partitions (files).</p>
-<dl class="method">
-<dt id="pyarrow.dataset.Dataset.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.dataset.Dataset.__init__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a dataset</p>
-<p>A schema must be passed because most of the sources’ schema is
-unknown before executing possibly expensive scanning operation, but
-projecting, filtering, predicate pushdown requires a well defined
-schema to work on.</p>
+<h1>pyarrow.dataset.dataset<a class="headerlink" href="#pyarrow-dataset-dataset" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="pyarrow.dataset.dataset">
+<code class="sig-prename descclassname">pyarrow.dataset.</code><code class="sig-name descname">dataset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span></em>, <em class="sig-param"><span class="n">schema</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">format</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">filesystem</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">partitioning</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">partition_base_dir</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">exclude_invalid_files</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ignore_prefixes</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pyarrow/dataset.html#dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyarrow.dataset.dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open a dataset.</p>
+<p>Datasets provides functionality to efficiently work with tabular,
+potentially larger than memory and multi-file dataset.</p>
+<ul class="simple">
+<li><p>A unified interface for different sources, like Parquet and Feather</p></li>
+<li><p>Discovery of sources (crawling directories, handle directory-based
+partitioned datasets, basic schema normalization)</p></li>
+<li><p>Optimized reading with predicate pushdown (filtering rows), projection
+(selecting columns), parallel reading or fine-grained managing of tasks.</p></li>
+</ul>
+<p>Note that this is the high-level API, to have more control over the dataset
+construction use the low-level API classes (FileSystemDataset,
+FilesystemDatasetFactory, etc.)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sources</strong> (<em>list of Source</em>) – One or more input sources</p></li>
-<li><p><strong>schema</strong> (<a class="reference internal" href="pyarrow.Schema.html#pyarrow.Schema" title="pyarrow.Schema"><em>Schema</em></a>) – A known schema to conform to.</p></li>
-</ul>
+<li><p><strong>source</strong> (<em>path</em><em>, </em><em>list of paths</em><em>, </em><em>dataset</em><em>, </em><em>list of datasets</em><em> or </em><em>URI</em>) – <dl class="simple">
+<dt>Path pointing to a single file:</dt><dd><p>Open a FileSystemDataset from a single file.</p>
+</dd>
+<dt>Path pointing to a directory:</dt><dd><p>The directory gets discovered recursively according to a
+partitioning scheme if given.</p>
+</dd>
+<dt>List of file paths:</dt><dd><p>Create a FileSystemDataset from explicitly given files. The files
+must be located on the same filesystem given by the filesystem
+parameter.
+Note that in contrary of construction from a single file, passing
+URIs as paths is not allowed.</p>
+</dd>
+<dt>List of datasets:</dt><dd><p>A nested UnionDataset gets constructed, it allows arbitrary
+composition of other datasets.
+Note that additional keyword arguments are not allowed.</p>
 </dd>
 </dl>
-</dd></dl>
-
-<p class="rubric">Methods</p>
-<table class="longtable docutils align-default">
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 90%" />
-</colgroup>
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pyarrow.dataset.Dataset.__init__" title="pyarrow.dataset.Dataset.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a></p></td>
-<td><p>Create a dataset</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pyarrow.dataset.Dataset.scan" title="pyarrow.dataset.Dataset.scan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">scan</span></code></a></p></td>
-<td><p>Builds a scan operation against the dataset.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pyarrow.dataset.Dataset.to_batches" title="pyarrow.dataset.Dataset.to_batches"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_batches</span></code></a></p></td>
-<td><p>Read the dataset as materialized record batches.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pyarrow.dataset.Dataset.to_table" title="pyarrow.dataset.Dataset.to_table"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_table</span></code></a></p></td>
-<td><p>Read the dataset to an arrow table.</p></td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Attributes</p>
-<table class="longtable docutils align-default">
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 90%" />
-</colgroup>
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pyarrow.dataset.Dataset.schema" title="pyarrow.dataset.Dataset.schema"><code class="xref py py-obj docutils literal notranslate"><span class="pre">schema</span></code></a></p></td>
-<td><p>The common schema of the full Dataset</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pyarrow.dataset.Dataset.sources" title="pyarrow.dataset.Dataset.sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sources</span></code></a></p></td>
-<td><p>List of the data sources</p></td>
-</tr>
-</tbody>
-</table>
-<dl class="method">
-<dt id="pyarrow.dataset.Dataset.scan">
-<code class="sig-name descname">scan</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.dataset.Dataset.scan" title="Permalink to this definition">¶</a></dt>
-<dd><p>Builds a scan operation against the dataset.</p>
-<p>It poduces a stream of ScanTasks which is meant to be a unit of work to
-be dispatched. The tasks are not executed automatically, the user is
-responsible to execute and dispatch the individual tasks, so custom
-local task scheduling can be implemented.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>columns</strong> (<em>list of str</em><em>, </em><em>default None</em>) – List of columns to project. Order and duplicates will be preserved.
-The columns will be passed down to Sources and corresponding data
-fragments to avoid loading, copying, and deserializing columns
-that will not be required further down the compute chain.
-By default all of the available columns are projected. Raises
-an exception if any of the referenced column names does not exist
-in the dataset’s Schema.</p></li>
-<li><p><strong>filter</strong> (<a class="reference internal" href="pyarrow.dataset.Expression.html#pyarrow.dataset.Expression" title="pyarrow.dataset.Expression"><em>Expression</em></a><em>, </em><em>default None</em>) – Scan will return only the rows matching the filter.
-If possible the predicate will be pushed down to exploit the
-partition information or internal metadata found in the data
-source, e.g. Parquet statistics. Otherwise filters the loaded
-RecordBatches before yielding them.</p></li>
-<li><p><strong>memory_pool</strong> (<a class="reference internal" href="pyarrow.MemoryPool.html#pyarrow.MemoryPool" title="pyarrow.MemoryPool"><em>MemoryPool</em></a><em>, </em><em>default None</em>) – For memory allocations, if required. If not specified, uses the
-default pool.</p></li>
+</p></li>
+<li><p><strong>schema</strong> (<em>Schema</em><em>, </em><em>optional</em>) – Optionally provide the Schema for the Dataset, in which case it will
+not be inferred from the source.</p></li>
+<li><p><strong>format</strong> (<a class="reference internal" href="pyarrow.dataset.FileFormat.html#pyarrow.dataset.FileFormat" title="pyarrow.dataset.FileFormat"><em>FileFormat</em></a><em> or </em><em>str</em>) – Currently “parquet” and “ipc”/”arrow”/”feather” are supported. For
+Feather, only version 2 files are supported.</p></li>
+<li><p><strong>filesystem</strong> (<a class="reference internal" href="pyarrow.fs.FileSystem.html#pyarrow.fs.FileSystem" title="pyarrow.fs.FileSystem"><em>FileSystem</em></a><em> or </em><em>URI string</em><em>, </em><em>default None</em>) – If a single path is given as source and filesystem is None, then the
+filesystem will be inferred from the path.
+If an URI string is passed, then a filesystem object is constructed
+using the URI’s optional path component as a directory prefix. See the
+examples below.
+Note that the URIs on Windows must follow ‘<a class="reference external" href="file:///C">file:///C</a>:…’ or
+‘<a class="reference external" href="file:/C">file:/C</a>:…’ patterns.</p></li>
+<li><p><strong>partitioning</strong> (<em>Partitioning</em><em>, </em><a class="reference internal" href="pyarrow.dataset.PartitioningFactory.html#pyarrow.dataset.PartitioningFactory" title="pyarrow.dataset.PartitioningFactory"><em>PartitioningFactory</em></a><em>, </em><em>str</em><em>, </em><em>list of str</em>) – The partitioning scheme specified with the <code class="docutils literal notranslate"><span class="pre">partitioning()</span></code>
+function. A flavor string can be used as shortcut, and with a list of
+field names a DirectionaryPartitioning will be inferred.</p></li>
+<li><p><strong>partition_base_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – For the purposes of applying the partitioning, paths will be
+stripped of the partition_base_dir. Files not matching the
+partition_base_dir prefix will be skipped for partitioning discovery.
+The ignored files will still be part of the Dataset, but will not
+have partition information.</p></li>
+<li><p><strong>exclude_invalid_files</strong> (<em>bool</em><em>, </em><em>optional</em><em> (</em><em>default True</em><em>)</em>) – If True, invalid files will be excluded (file format specific check).
+This will incur IO for each files in a serial and single threaded
+fashion. Disabling this feature will skip the IO, but unsupported
+files may be present in the Dataset (resulting in an error at scan
+time).</p></li>
+<li><p><strong>ignore_prefixes</strong> (<em>list</em><em>, </em><em>optional</em>) – Files matching one of those prefixes will be ignored by the
+discovery process. This is matched to the basename of a path.
+By default this is [‘.’, ‘_’].
+Note that discovery happens only if a directory is passed as source.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>scan_tasks</strong> (<em>iterator of ScanTask</em>)</p>
+<dd class="field-even"><p><strong>dataset</strong> (<em>Dataset</em>) – Either a FileSystemDataset or a UnionDataset depending on the source
+parameter.</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="pyarrow.dataset.Dataset.schema">
-<code class="sig-name descname">schema</code><a class="headerlink" href="#pyarrow.dataset.Dataset.schema" title="Permalink to this definition">¶</a></dt>
-<dd><p>The common schema of the full Dataset</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="pyarrow.dataset.Dataset.sources">
-<code class="sig-name descname">sources</code><a class="headerlink" href="#pyarrow.dataset.Dataset.sources" title="Permalink to this definition">¶</a></dt>
-<dd><p>List of the data sources</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyarrow.dataset.Dataset.to_batches">
-<code class="sig-name descname">to_batches</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.dataset.Dataset.to_batches" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read the dataset as materialized record batches.</p>
-<p>Builds a scan operation against the dataset and sequentially executes
-the ScanTasks as the returned generator gets consumed.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>columns</strong> (<em>list of str</em><em>, </em><em>default None</em>) – List of columns to project. Order and duplicates will be preserved.
-The columns will be passed down to Sources and corresponding data
-fragments to avoid loading, copying, and deserializing columns
-that will not be required further down the compute chain.
-By default all of the available columns are projected. Raises
-an exception if any of the referenced column names does not exist
-in the dataset’s Schema.</p></li>
-<li><p><strong>filter</strong> (<a class="reference internal" href="pyarrow.dataset.Expression.html#pyarrow.dataset.Expression" title="pyarrow.dataset.Expression"><em>Expression</em></a><em>, </em><em>default None</em>) – Scan will return only the rows matching the filter.
-If possible the predicate will be pushed down to exploit the
-partition information or internal metadata found in the data
-source, e.g. Parquet statistics. Otherwise filters the loaded
-RecordBatches before yielding them.</p></li>
-<li><p><strong>memory_pool</strong> (<a class="reference internal" href="pyarrow.MemoryPool.html#pyarrow.MemoryPool" title="pyarrow.MemoryPool"><em>MemoryPool</em></a><em>, </em><em>default None</em>) – For memory allocations, if required. If not specified, uses the
-default pool.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>record_batches</strong> (<em>iterator of RecordBatch</em>)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyarrow.dataset.Dataset.to_table">
-<code class="sig-name descname">to_table</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.dataset.Dataset.to_table" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read the dataset to an arrow table.</p>
-<p>Note that this method reads all the selected data from the dataset
-into memory.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>columns</strong> (<em>list of str</em><em>, </em><em>default None</em>) – List of columns to project. Order and duplicates will be preserved.
-The columns will be passed down to Sources and corresponding data
-fragments to avoid loading, copying, and deserializing columns
-that will not be required further down the compute chain.
-By default all of the available columns are projected. Raises
-an exception if any of the referenced column names does not exist
-in the dataset’s Schema.</p></li>
-<li><p><strong>filter</strong> (<a class="reference internal" href="pyarrow.dataset.Expression.html#pyarrow.dataset.Expression" title="pyarrow.dataset.Expression"><em>Expression</em></a><em>, </em><em>default None</em>) – Scan will return only the rows matching the filter.
-If possible the predicate will be pushed down to exploit the
-partition information or internal metadata found in the data
-source, e.g. Parquet statistics. Otherwise filters the loaded
-RecordBatches before yielding them.</p></li>
-<li><p><strong>use_threads</strong> (<em>boolean</em><em>, </em><em>default True</em>) – If enabled, then maximum paralellism will be used determined by
-the number of available CPU cores.</p></li>
-<li><p><strong>memory_pool</strong> (<a class="reference internal" href="pyarrow.MemoryPool.html#pyarrow.MemoryPool" title="pyarrow.MemoryPool"><em>MemoryPool</em></a><em>, </em><em>default None</em>) – For memory allocations, if required. If not specified, uses the
-default pool.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>table</strong> (<em>Table instance</em>)</p>
-</dd>
-</dl>
-</dd></dl>
-
+<p class="rubric">Examples</p>
+<p>Opening a single file:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">(</span><span class="s2">&quot;path/to/file.parquet&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;parquet&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Opening a single file with an explicit schema:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">(</span><span class="s2">&quot;path/to/file.parquet&quot;</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">myschema</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;parquet&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Opening a dataset for a single directory:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">(</span><span class="s2">&quot;path/to/nyc-taxi/&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;parquet&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">(</span><span class="s2">&quot;s3://mybucket/nyc-taxi/&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;parquet&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Opening a dataset from a list of relatives local paths:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">([</span>
+<span class="gp">... </span>    <span class="s2">&quot;part0/data.parquet&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s2">&quot;part1/data.parquet&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s2">&quot;part3/data.parquet&quot;</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;parquet&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>With filesystem provided:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">paths</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="s1">&#39;part0/data.parquet&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s1">&#39;part1/data.parquet&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s1">&#39;part3/data.parquet&#39;</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="s1">&#39;file:///directory/prefix, format=&#39;</span><span class="n">parquet</span><span class="s1">&#39;)</span>
+</pre></div>
+</div>
+<p>Which is equivalent with:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fs</span> <span class="o">=</span> <span class="n">SubTreeFileSystem</span><span class="p">(</span><span class="s2">&quot;/directory/prefix&quot;</span><span class="p">,</span> <span class="n">LocalFileSystem</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;parquet&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>With a remote filesystem URI:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">paths</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="s1">&#39;nested/directory/part0/data.parquet&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s1">&#39;nested/directory/part1/data.parquet&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="s1">&#39;nested/directory/part3/data.parquet&#39;</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="s1">&#39;s3://bucket/&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;parquet&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Similarly to the local example, the directory prefix may be included in the
+filesystem URI:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="s1">&#39;s3://bucket/nested/directory&#39;</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;parquet&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Construction of a nested dataset:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span><span class="p">([</span>
+<span class="gp">... </span>    <span class="n">dataset</span><span class="p">(</span><span class="s2">&quot;s3://old-taxi-data&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;parquet&quot;</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">dataset</span><span class="p">(</span><span class="s2">&quot;local/path/to/data&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;ipc&quot;</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </div>
@@ -409,10 +368,10 @@ default pool.</p></li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="pyarrow.dataset.Scanner.html" class="btn btn-neutral float-right" title="pyarrow.dataset.Scanner" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="pyarrow.dataset.FileSystemDataset.html" class="btn btn-neutral float-right" title="pyarrow.dataset.FileSystemDataset" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="pyarrow.dataset.FileSystemSourceFactory.html" class="btn btn-neutral float-left" title="pyarrow.dataset.FileSystemSourceFactory" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="pyarrow.dataset.HivePartitioning.html" class="btn btn-neutral float-left" title="pyarrow.dataset.HivePartitioning" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.feather &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>pyarrow.feather &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -83,25 +83,23 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../cpp/index.html">C++ Implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../python/index.html">Python bindings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -194,11 +192,8 @@
 <span class="c1"># specific language governing permissions and limitations</span>
 <span class="c1"># under the License.</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
 
 <span class="kn">import</span> <span class="nn">os</span>
-
-<span class="kn">import</span> <span class="nn">six</span>
 
 <span class="kn">from</span> <span class="nn">pyarrow.pandas_compat</span> <span class="kn">import</span> <span class="n">_pandas_api</span>  <span class="c1"># noqa</span>
 <span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="kn">import</span> <span class="n">FeatherError</span>  <span class="c1"># noqa</span>
@@ -211,75 +206,7 @@
         <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;feather requires pandas &gt;= 0.17.0&quot;</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">FeatherReader</span><span class="p">(</span><span class="n">ext</span><span class="o">.</span><span class="n">FeatherReader</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
-        <span class="n">_check_pandas_version</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">source</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">()</span>
-        <span class="n">column_types</span> <span class="o">=</span> <span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
-        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">int</span><span class="p">,</span> <span class="n">column_types</span><span class="p">)):</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">str</span><span class="p">,</span> <span class="n">column_types</span><span class="p">)):</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_names</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
-
-        <span class="n">column_type_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">column_types</span><span class="p">]</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Columns must be indices or names. &quot;</span>
-                        <span class="s2">&quot;Got columns </span><span class="si">{}</span><span class="s2"> of types </span><span class="si">{}</span><span class="s2">&quot;</span>
-                        <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">column_type_names</span><span class="p">))</span>
-
-    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span>
-            <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">check_chunked_overflow</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">num_chunks</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">return</span>
-
-    <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">(</span><span class="n">ext</span><span class="o">.</span><span class="n">binary</span><span class="p">(),</span> <span class="n">ext</span><span class="o">.</span><span class="n">string</span><span class="p">()):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Column &#39;</span><span class="si">{0}</span><span class="s2">&#39; exceeds 2GB maximum capacity of &quot;</span>
-                         <span class="s2">&quot;a Feather binary column. This restriction may be &quot;</span>
-                         <span class="s2">&quot;lifted in the future&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># TODO(wesm): Not sure when else this might be reached</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Column &#39;</span><span class="si">{0}</span><span class="s2">&#39; of type </span><span class="si">{1}</span><span class="s2"> was chunked on conversion &quot;</span>
-                         <span class="s2">&quot;to Arrow and cannot be currently written to &quot;</span>
-                         <span class="s2">&quot;Feather format&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">type</span><span class="p">)))</span>
-
-
-<span class="k">class</span> <span class="nc">FeatherWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dest</span><span class="p">):</span>
-        <span class="n">_check_pandas_version</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dest</span> <span class="o">=</span> <span class="n">dest</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="o">=</span> <span class="n">ext</span><span class="o">.</span><span class="n">FeatherWriter</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">_pandas_api</span><span class="o">.</span><span class="n">has_sparse</span>
-                <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">_pandas_api</span><span class="o">.</span><span class="n">pd</span><span class="o">.</span><span class="n">SparseDataFrame</span><span class="p">)):</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_dense</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">is_unique</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cannot serialize duplicate column names&quot;</span><span class="p">)</span>
-
-        <span class="c1"># TODO(wesm): Remove this length check, see ARROW-1732</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="p">):</span>
-                <span class="n">col</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                <span class="n">check_chunked_overflow</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">write_array</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-
-<span class="k">class</span> <span class="nc">FeatherDataset</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">FeatherDataset</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Encapsulates details of reading a list of Feather files.</span>
 
@@ -287,7 +214,7 @@
 <span class="sd">    ----------</span>
 <span class="sd">    path_or_paths : List[str]</span>
 <span class="sd">        A list of file names</span>
-<span class="sd">    validate_schema : boolean, default True</span>
+<span class="sd">    validate_schema : bool, default True</span>
 <span class="sd">        Check that individual file schemas are all the same / compatible</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -309,21 +236,21 @@
 <span class="sd">        pyarrow.Table</span>
 <span class="sd">            Content of the file as a table (of columns)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">_fil</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+        <span class="n">_fil</span> <span class="o">=</span> <span class="n">read_table</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tables</span> <span class="o">=</span> <span class="p">[</span><span class="n">_fil</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">=</span> <span class="n">_fil</span><span class="o">.</span><span class="n">schema</span>
 
-        <span class="k">for</span> <span class="n">fil</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-            <span class="n">fil_table</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="n">fil</span><span class="p">)</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">read_table</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_schema</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">validate_schemas</span><span class="p">(</span><span class="n">fil</span><span class="p">,</span> <span class="n">fil_table</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fil_table</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">validate_schemas</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">concat_tables</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tables</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">validate_schemas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">piece</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Schema in </span><span class="si">{0!s}</span><span class="s1"> was different. </span><span class="se">\n</span><span class="s1">&#39;</span>
-                             <span class="s1">&#39;</span><span class="si">{1!s}</span><span class="se">\n\n</span><span class="s1">vs</span><span class="se">\n\n</span><span class="si">{2!s}</span><span class="s1">&#39;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Schema in </span><span class="si">{!s}</span><span class="s1"> was different. </span><span class="se">\n</span><span class="s1">&#39;</span>
+                             <span class="s1">&#39;</span><span class="si">{!s}</span><span class="se">\n\n</span><span class="s1">vs</span><span class="se">\n\n</span><span class="si">{!s}</span><span class="s1">&#39;</span>
                              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
                                      <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
 
@@ -335,7 +262,7 @@
 <span class="sd">        ----------</span>
 <span class="sd">        columns : List[str]</span>
 <span class="sd">            Names of columns to read from the file</span>
-<span class="sd">        use_threads : boolean, default True</span>
+<span class="sd">        use_threads : bool, default True</span>
 <span class="sd">            Use multiple threads when converting to pandas</span>
 
 <span class="sd">        Returns</span>
@@ -347,25 +274,86 @@
             <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="write_feather"><a class="viewcode-back" href="../../python/generated/pyarrow.feather.write_feather.html#pyarrow.feather.write_feather">[docs]</a><span class="k">def</span> <span class="nf">write_feather</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">dest</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">check_chunked_overflow</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">num_chunks</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">col</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">(</span><span class="n">ext</span><span class="o">.</span><span class="n">binary</span><span class="p">(),</span> <span class="n">ext</span><span class="o">.</span><span class="n">string</span><span class="p">()):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Column &#39;</span><span class="si">{}</span><span class="s2">&#39; exceeds 2GB maximum capacity of &quot;</span>
+                         <span class="s2">&quot;a Feather binary column. This restriction may be &quot;</span>
+                         <span class="s2">&quot;lifted in the future&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># TODO(wesm): Not sure when else this might be reached</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Column &#39;</span><span class="si">{}</span><span class="s2">&#39; of type </span><span class="si">{}</span><span class="s2"> was chunked on conversion &quot;</span>
+                         <span class="s2">&quot;to Arrow and cannot be currently written to &quot;</span>
+                         <span class="s2">&quot;Feather format&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">type</span><span class="p">)))</span>
+
+
+<div class="viewcode-block" id="write_feather"><a class="viewcode-back" href="../../python/generated/pyarrow.feather.write_feather.html#pyarrow.feather.write_feather">[docs]</a><span class="k">def</span> <span class="nf">write_feather</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">dest</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression_level</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">chunksize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Write a pandas.DataFrame to Feather format</span>
+<span class="sd">    Write a pandas.DataFrame to Feather format.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">    dest : string</span>
-<span class="sd">        Local file path</span>
+<span class="sd">    df : pandas.DataFrame or pyarrow.Table</span>
+<span class="sd">        Data to write out as Feather format.</span>
+<span class="sd">    dest : str</span>
+<span class="sd">        Local destination path.</span>
+<span class="sd">    compression : string, default None</span>
+<span class="sd">        Can be one of {&quot;zstd&quot;, &quot;lz4&quot;, &quot;uncompressed&quot;}. The default of None uses</span>
+<span class="sd">        LZ4 for V2 files if it is available, otherwise uncompressed.</span>
+<span class="sd">    compression_level : int, default None</span>
+<span class="sd">        Use a compression level particular to the chosen compressor. If None</span>
+<span class="sd">        use the default compression level</span>
+<span class="sd">    chunksize : int, default None</span>
+<span class="sd">        For V2 files, the internal maximum size of Arrow RecordBatch chunks</span>
+<span class="sd">        when writing the Arrow IPC file format. None means use the default,</span>
+<span class="sd">        which is currently 64K</span>
+<span class="sd">    version : int, default 2</span>
+<span class="sd">        Feather file version. Version 2 is the current. Version 1 is the more</span>
+<span class="sd">        limited legacy format</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">writer</span> <span class="o">=</span> <span class="n">FeatherWriter</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">_pandas_api</span><span class="o">.</span><span class="n">have_pandas</span><span class="p">:</span>
+        <span class="n">_check_pandas_version</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">_pandas_api</span><span class="o">.</span><span class="n">has_sparse</span>
+                <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">_pandas_api</span><span class="o">.</span><span class="n">pd</span><span class="o">.</span><span class="n">SparseDataFrame</span><span class="p">)):</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_dense</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">_pandas_api</span><span class="o">.</span><span class="n">is_data_frame</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">version</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Version 1 does not chunking</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">names</span><span class="p">):</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">check_chunked_overflow</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">df</span>
+
+    <span class="k">if</span> <span class="n">version</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">column_names</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cannot serialize duplicate column names&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">compression</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Feather V1 files do not support compression &quot;</span>
+                             <span class="s2">&quot;option&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">chunksize</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Feather V1 files do not support chunksize &quot;</span>
+                             <span class="s2">&quot;option&quot;</span><span class="p">)</span>
+
+    <span class="n">supported_compression_options</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;lz4&#39;</span><span class="p">,</span> <span class="s1">&#39;zstd&#39;</span><span class="p">,</span> <span class="s1">&#39;uncompressed&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">compression</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">supported_compression_options</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;compression=&quot;</span><span class="si">{}</span><span class="s1">&quot; not supported, must be one of </span><span class="si">{}</span><span class="s1">&#39;</span>
+                         <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">compression</span><span class="p">,</span> <span class="n">supported_compression_options</span><span class="p">))</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="n">ext</span><span class="o">.</span><span class="n">write_feather</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">dest</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+                          <span class="n">compression_level</span><span class="o">=</span><span class="n">compression_level</span><span class="p">,</span>
+                          <span class="n">chunksize</span><span class="o">=</span><span class="n">chunksize</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-        <span class="c1"># Try to make sure the resource is closed</span>
-        <span class="kn">import</span> <span class="nn">gc</span>
-        <span class="n">writer</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dest</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dest</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">os</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
@@ -373,44 +361,64 @@
         <span class="k">raise</span></div>
 
 
-<div class="viewcode-block" id="read_feather"><a class="viewcode-back" href="../../python/generated/pyarrow.feather.read_feather.html#pyarrow.feather.read_feather">[docs]</a><span class="k">def</span> <span class="nf">read_feather</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="read_feather"><a class="viewcode-back" href="../../python/generated/pyarrow.feather.read_feather.html#pyarrow.feather.read_feather">[docs]</a><span class="k">def</span> <span class="nf">read_feather</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Read a pandas.DataFrame from Feather format</span>
+<span class="sd">    Read a pandas.DataFrame from Feather format. To read as pyarrow.Table use</span>
+<span class="sd">    feather.read_table.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    source : string file path, or file-like object</span>
+<span class="sd">    source : str file path, or file-like object</span>
 <span class="sd">    columns : sequence, optional</span>
 <span class="sd">        Only read a specific set of columns. If not provided, all columns are</span>
-<span class="sd">        read</span>
+<span class="sd">        read.</span>
 <span class="sd">    use_threads: bool, default True</span>
-<span class="sd">        Whether to parallelize reading using multiple threads</span>
+<span class="sd">        Whether to parallelize reading using multiple threads.</span>
+<span class="sd">    memory_map : boolean, default True</span>
+<span class="sd">        Use memory mapping when opening file on disk</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    df : pandas.DataFrame</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">reader</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_pandas</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span></div>
+    <span class="n">_check_pandas_version</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">read_table</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">))</span></div>
 
 
-<span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="read_table"><a class="viewcode-back" href="../../python/generated/pyarrow.feather.read_table.html#pyarrow.feather.read_table">[docs]</a><span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read a pyarrow.Table from Feather format</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    source : string file path, or file-like object</span>
+<span class="sd">    source : str file path, or file-like object</span>
 <span class="sd">    columns : sequence, optional</span>
 <span class="sd">        Only read a specific set of columns. If not provided, all columns are</span>
-<span class="sd">        read</span>
+<span class="sd">        read.</span>
+<span class="sd">    memory_map : boolean, default True</span>
+<span class="sd">        Use memory mapping when opening file on disk</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    table : pyarrow.Table</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">reader</span> <span class="o">=</span> <span class="n">FeatherReader</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">ext</span><span class="o">.</span><span class="n">FeatherReader</span><span class="p">()</span>
+    <span class="n">reader</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">use_memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="n">column_types</span> <span class="o">=</span> <span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">int</span><span class="p">,</span> <span class="n">column_types</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">str</span><span class="p">,</span> <span class="n">column_types</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_names</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+
+    <span class="n">column_type_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">column_types</span><span class="p">]</span>
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Columns must be indices or names. &quot;</span>
+                    <span class="s2">&quot;Got columns </span><span class="si">{}</span><span class="s2"> of types </span><span class="si">{}</span><span class="s2">&quot;</span>
+                    <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">column_type_names</span><span class="p">))</span></div>
 </pre></div>
 
            </div>

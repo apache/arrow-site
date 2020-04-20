@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.filesystem &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>pyarrow.filesystem &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -83,25 +83,23 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../cpp/index.html">C++ Implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../python/index.html">Python bindings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -194,26 +192,31 @@
 <span class="c1"># specific language governing permissions and limitations</span>
 <span class="c1"># under the License.</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
 
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">posixpath</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
 
 <span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span> <span class="k">as</span> <span class="n">pjoin</span>
-<span class="kn">from</span> <span class="nn">six.moves.urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
 
 <span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
 <span class="kn">from</span> <span class="nn">pyarrow.util</span> <span class="kn">import</span> <span class="n">implements</span><span class="p">,</span> <span class="n">_stringify_path</span><span class="p">,</span> <span class="n">_is_path_like</span>
 
 
-<span class="k">class</span> <span class="nc">FileSystem</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">FileSystem</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Abstract filesystem interface</span>
+<span class="sd">    Abstract filesystem interface.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span> <span class="nf">cat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return contents of file as a bytes object</span>
+<span class="sd">        Return contents of file as a bytes object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            File path to read content from.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -224,30 +227,36 @@
 
     <span class="k">def</span> <span class="nf">ls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return list of file paths</span>
+<span class="sd">        Return list of file paths.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Directory to list contents from.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Delete the indicated file or directory</span>
+<span class="sd">        Delete the indicated file or directory.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        path : string</span>
-<span class="sd">        recursive : boolean, default False</span>
-<span class="sd">            If True, also delete child paths for directories</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Path to delete.</span>
+<span class="sd">        recursive : bool, default False</span>
+<span class="sd">            If True, also delete child paths for directories.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="k">def</span> <span class="nf">disk_usage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute bytes used by all contents under indicated path in file tree</span>
+<span class="sd">        Compute bytes used by all contents under indicated path in file tree.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        path : string</span>
-<span class="sd">            Can be a file path or directory</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Can be a file path or directory.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -271,6 +280,7 @@
 
     <span class="k">def</span> <span class="nf">stat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Information about a filesystem entry.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -280,44 +290,72 @@
 
     <span class="k">def</span> <span class="nf">rm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Alias for FileSystem.delete</span>
+<span class="sd">        Alias for FileSystem.delete.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="n">recursive</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">mv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Alias for FileSystem.rename</span>
+<span class="sd">        Alias for FileSystem.rename.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Rename file, like UNIX mv command</span>
+<span class="sd">        Rename file, like UNIX mv command.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        path : string</span>
-<span class="sd">            Path to alter</span>
-<span class="sd">        new_path : string</span>
-<span class="sd">            Path to move to</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Path to alter.</span>
+<span class="sd">        new_path : str</span>
+<span class="sd">            Path to move to.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;FileSystem.rename&#39;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">create_parents</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a directory.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Path to the directory.</span>
+<span class="sd">        create_parents : bool, default True</span>
+<span class="sd">            If the parent directories don&#39;t exists create them as well.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="k">def</span> <span class="nf">exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return True if path exists.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Path to check.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="k">def</span> <span class="nf">isdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return True if path is a directory</span>
+<span class="sd">        Return True if path is a directory.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Path to check.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
     <span class="k">def</span> <span class="nf">isfile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return True if path is a file</span>
+<span class="sd">        Return True if path is a file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Path to check.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
@@ -332,24 +370,24 @@
                      <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Read Parquet data from path in file system. Can read from a single file</span>
-<span class="sd">        or a directory of files</span>
+<span class="sd">        or a directory of files.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        path : str</span>
 <span class="sd">            Single file path or directory</span>
 <span class="sd">        columns : List[str], optional</span>
-<span class="sd">            Subset of columns to read</span>
+<span class="sd">            Subset of columns to read.</span>
 <span class="sd">        metadata : pyarrow.parquet.FileMetaData</span>
-<span class="sd">            Known metadata to validate files against</span>
+<span class="sd">            Known metadata to validate files against.</span>
 <span class="sd">        schema : pyarrow.parquet.Schema</span>
 <span class="sd">            Known schema to validate files against. Alternative to metadata</span>
-<span class="sd">            argument</span>
-<span class="sd">        use_threads : boolean, default True</span>
-<span class="sd">            Perform multi-threaded column reads</span>
-<span class="sd">        use_pandas_metadata : boolean, default False</span>
+<span class="sd">            argument.</span>
+<span class="sd">        use_threads : bool, default True</span>
+<span class="sd">            Perform multi-threaded column reads.</span>
+<span class="sd">        use_pandas_metadata : bool, default False</span>
 <span class="sd">            If True and file has custom pandas schema metadata, ensure that</span>
-<span class="sd">            index columns are also loaded</span>
+<span class="sd">            index columns are also loaded.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -363,7 +401,7 @@
 
     <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Open file for reading or writing</span>
+<span class="sd">        Open file for reading or writing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
@@ -417,7 +455,7 @@
 <div class="viewcode-block" id="LocalFileSystem.open"><a class="viewcode-back" href="../../python/generated/pyarrow.LocalFileSystem.html#pyarrow.LocalFileSystem.open">[docs]</a>    <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">open</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Open file for reading or writing</span>
+<span class="sd">        Open file for reading or writing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">_stringify_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span></div>
@@ -428,7 +466,7 @@
 
 <div class="viewcode-block" id="LocalFileSystem.walk"><a class="viewcode-back" href="../../python/generated/pyarrow.LocalFileSystem.html#pyarrow.LocalFileSystem.walk">[docs]</a>    <span class="k">def</span> <span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Directory tree generator, see os.walk</span>
+<span class="sd">        Directory tree generator, see os.walk.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">_stringify_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div></div>
@@ -454,7 +492,7 @@
     <span class="k">def</span> <span class="nf">_isfilestore</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Object Stores like S3 and GCSFS are based on key lookups, not true</span>
-<span class="sd">        file-paths</span>
+<span class="sd">        file-paths.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="kc">False</span>
 
@@ -479,7 +517,7 @@
     <span class="nd">@implements</span><span class="p">(</span><span class="n">FileSystem</span><span class="o">.</span><span class="n">open</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Open file for reading or writing</span>
+<span class="sd">        Open file for reading or writing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">_stringify_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
@@ -490,7 +528,7 @@
 
     <span class="k">def</span> <span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Directory tree generator, like os.walk</span>
+<span class="sd">        Directory tree generator, like os.walk.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">_stringify_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
@@ -521,10 +559,10 @@
 
     <span class="k">def</span> <span class="nf">walk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Directory tree generator, like os.walk</span>
+<span class="sd">        Directory tree generator, like os.walk.</span>
 
 <span class="sd">        Generator version of what is in s3fs, which yields a flattened list of</span>
-<span class="sd">        files</span>
+<span class="sd">        files.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">_sanitize_s3</span><span class="p">(</span><span class="n">_stringify_path</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
         <span class="n">directories</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
@@ -548,8 +586,7 @@
         <span class="k">yield</span> <span class="n">path</span><span class="p">,</span> <span class="n">directories</span><span class="p">,</span> <span class="n">files</span>
 
         <span class="k">for</span> <span class="n">directory</span> <span class="ow">in</span> <span class="n">directories</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">tup</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="n">refresh</span><span class="p">):</span>
-                <span class="k">yield</span> <span class="n">tup</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="n">refresh</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_sanitize_s3</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
@@ -573,7 +610,7 @@
             <span class="k">elif</span> <span class="n">mro</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;LocalFileSystem&#39;</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">LocalFileSystem</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span>
 
-        <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s1">&#39;Unrecognized filesystem: </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fs_type</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="s1">&#39;Unrecognized filesystem: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fs_type</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">fs</span>
 
@@ -594,7 +631,7 @@
     <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_ensure_filesystem</span><span class="p">(</span><span class="n">filesystem</span><span class="p">),</span> <span class="n">path</span>
 
-    <span class="n">parsed_uri</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">parsed_uri</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlparse</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">parsed_uri</span><span class="o">.</span><span class="n">scheme</span> <span class="o">==</span> <span class="s1">&#39;hdfs&#39;</span> <span class="ow">or</span> <span class="n">parsed_uri</span><span class="o">.</span><span class="n">scheme</span> <span class="o">==</span> <span class="s1">&#39;viewfs&#39;</span><span class="p">:</span>
         <span class="c1"># Input is hdfs URI such as hdfs://host:port/myfile.parquet</span>
         <span class="n">netloc_split</span> <span class="o">=</span> <span class="n">parsed_uri</span><span class="o">.</span><span class="n">netloc</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>

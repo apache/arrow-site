@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.parquet &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>pyarrow.parquet &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -83,25 +83,23 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../cpp/index.html">C++ Implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../python/index.html">Python bindings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -194,19 +192,17 @@
 <span class="c1"># specific language governing permissions and limitations</span>
 <span class="c1"># under the License.</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
 
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
 <span class="kn">from</span> <span class="nn">concurrent</span> <span class="kn">import</span> <span class="n">futures</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
 
-<span class="kn">from</span> <span class="nn">six.moves.urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">import</span> <span class="nn">six</span>
 <span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
 
 <span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
 <span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">lib</span>
@@ -226,7 +222,7 @@
 
 <span class="k">def</span> <span class="nf">_parse_uri</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">_stringify_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-    <span class="n">parsed_uri</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">parsed_uri</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlparse</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">parsed_uri</span><span class="o">.</span><span class="n">scheme</span> <span class="ow">in</span> <span class="n">_URI_STRIP_SCHEMES</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">parsed_uri</span><span class="o">.</span><span class="n">path</span>
     <span class="k">else</span><span class="p">:</span>
@@ -245,65 +241,140 @@
 
 
 <span class="k">def</span> <span class="nf">_check_contains_null</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">binary_type</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">byte</span> <span class="ow">in</span> <span class="n">val</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">byte</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">binary_type</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">byte</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
                 <span class="n">compare_to</span> <span class="o">=</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">compare_to</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="k">if</span> <span class="n">byte</span> <span class="o">==</span> <span class="n">compare_to</span><span class="p">:</span>
                 <span class="k">return</span> <span class="kc">True</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">six</span><span class="o">.</span><span class="n">text_type</span><span class="p">):</span>
-        <span class="k">return</span> <span class="sa">u</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">val</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">val</span>
     <span class="k">return</span> <span class="kc">False</span>
 
 
-<span class="k">def</span> <span class="nf">_check_filters</span><span class="p">(</span><span class="n">filters</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_check_filters</span><span class="p">(</span><span class="n">filters</span><span class="p">,</span> <span class="n">check_null_strings</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Check if filters are well-formed.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">filters</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filters</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Malformed filters&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filters</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">six</span><span class="o">.</span><span class="n">string_types</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filters</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
             <span class="c1"># We have encountered the situation where we have one nesting level</span>
             <span class="c1"># too few:</span>
             <span class="c1">#   We have [(,,), ..] instead of [[(,,), ..]]</span>
             <span class="n">filters</span> <span class="o">=</span> <span class="p">[</span><span class="n">filters</span><span class="p">]</span>
-        <span class="k">for</span> <span class="n">conjunction</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">conjunction</span><span class="p">:</span>
-                <span class="k">if</span> <span class="p">(</span>
-                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
-                    <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">_check_contains_null</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">)</span>
-                    <span class="ow">or</span> <span class="n">_check_contains_null</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
-                <span class="p">):</span>
-                    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                        <span class="s2">&quot;Null-terminated binary strings are not supported as&quot;</span>
-                        <span class="s2">&quot; filter values.&quot;</span>
-                    <span class="p">)</span>
+        <span class="k">if</span> <span class="n">check_null_strings</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">conjunction</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">conjunction</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+                        <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">_check_contains_null</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">)</span>
+                        <span class="ow">or</span> <span class="n">_check_contains_null</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                    <span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                            <span class="s2">&quot;Null-terminated binary strings are not supported &quot;</span>
+                            <span class="s2">&quot;as filter values.&quot;</span>
+                        <span class="p">)</span>
     <span class="k">return</span> <span class="n">filters</span>
+
+
+<span class="n">_DNF_filter_doc</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;Predicates are expressed in disjunctive normal form (DNF), like</span>
+<span class="s2">    ``[[(&#39;x&#39;, &#39;=&#39;, 0), ...], ...]``. DNF allows arbitrary boolean logical</span>
+<span class="s2">    combinations of single column predicates. The innermost tuples each</span>
+<span class="s2">    describe a single column predicate. The list of inner predicates is</span>
+<span class="s2">    interpreted as a conjunction (AND), forming a more selective and</span>
+<span class="s2">    multiple column predicate. Finally, the most outer list combines these</span>
+<span class="s2">    filters as a disjunction (OR).</span>
+
+<span class="s2">    Predicates may also be passed as List[Tuple]. This form is interpreted</span>
+<span class="s2">    as a single conjunction. To express OR in predicates, one must</span>
+<span class="s2">    use the (preferred) List[List[Tuple]] notation.&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_filters_to_expression</span><span class="p">(</span><span class="n">filters</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if filters are well-formed.</span>
+
+<span class="sd">    See _DNF_filter_doc above for more details.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">pyarrow.dataset</span> <span class="k">as</span> <span class="nn">ds</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filters</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">Expression</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">filters</span>
+
+    <span class="n">filters</span> <span class="o">=</span> <span class="n">_check_filters</span><span class="p">(</span><span class="n">filters</span><span class="p">,</span> <span class="n">check_null_strings</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">convert_single_predicate</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="n">field</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;=&quot;</span> <span class="ow">or</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;==&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">field</span> <span class="o">==</span> <span class="n">val</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;!=&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">field</span> <span class="o">!=</span> <span class="n">val</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&lt;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">field</span> <span class="o">&lt;</span> <span class="n">val</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&gt;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">field</span> <span class="o">&gt;</span> <span class="n">val</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&lt;=&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">field</span> <span class="o">&lt;=</span> <span class="n">val</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;&gt;=&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">field</span> <span class="o">&gt;=</span> <span class="n">val</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;in&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">field</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">&#39;not in&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">~</span><span class="n">field</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;&quot;</span><span class="si">{0}</span><span class="s1">&quot; is not a valid operator in predicates.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">val</span><span class="p">)))</span>
+
+    <span class="n">or_exprs</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">conjunction</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">:</span>
+        <span class="n">and_exprs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">conjunction</span><span class="p">:</span>
+            <span class="n">and_exprs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">convert_single_predicate</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
+
+        <span class="n">expr</span> <span class="o">=</span> <span class="n">and_exprs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">and_exprs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">and_expr</span> <span class="ow">in</span> <span class="n">and_exprs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                <span class="n">expr</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">AndExpression</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">and_expr</span><span class="p">)</span>
+
+        <span class="n">or_exprs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+
+    <span class="n">expr</span> <span class="o">=</span> <span class="n">or_exprs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">or_exprs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">expr</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">OrExpression</span><span class="p">(</span><span class="o">*</span><span class="n">or_exprs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">or_expr</span> <span class="ow">in</span> <span class="n">or_exprs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">expr</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">OrExpression</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">or_expr</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">expr</span>
+
 
 <span class="c1"># ----------------------------------------------------------------------</span>
 <span class="c1"># Reading a single Parquet file</span>
 
 
-<div class="viewcode-block" id="ParquetFile"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile">[docs]</a><span class="k">class</span> <span class="nc">ParquetFile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="ParquetFile"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile">[docs]</a><span class="k">class</span> <span class="nc">ParquetFile</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Reader interface for a single Parquet file</span>
+<span class="sd">    Reader interface for a single Parquet file.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    source : str, pathlib.Path, pyarrow.NativeFile, or file-like object</span>
 <span class="sd">        Readable source. For passing bytes or buffer-like file containing a</span>
-<span class="sd">        Parquet file, use pyarrow.BufferReader</span>
+<span class="sd">        Parquet file, use pyarrow.BufferReader.</span>
 <span class="sd">    metadata : FileMetaData, default None</span>
 <span class="sd">        Use existing metadata object, rather than reading from file.</span>
 <span class="sd">    common_metadata : FileMetaData, default None</span>
 <span class="sd">        Will be used in reads for pandas schema metadata if not found in the</span>
-<span class="sd">        main file&#39;s metadata, no other uses at the moment</span>
-<span class="sd">    memory_map : boolean, default False</span>
+<span class="sd">        main file&#39;s metadata, no other uses at the moment.</span>
+<span class="sd">    memory_map : bool, default False</span>
 <span class="sd">        If the source is a file path, use a memory map to read file, which can</span>
-<span class="sd">        improve performance in some environments</span>
+<span class="sd">        improve performance in some environments.</span>
 <span class="sd">    buffer_size : int, default 0</span>
 <span class="sd">        If positive, perform read buffering when deserializing individual</span>
 <span class="sd">        column chunks. Otherwise IO calls are unbuffered.</span>
@@ -342,7 +413,18 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the Parquet schema, unconverted to Arrow types</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">schema</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema_arrow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the inferred Arrow schema, converted from the whole Parquet</span>
+<span class="sd">        file&#39;s schema</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">schema_arrow</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">num_row_groups</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -351,19 +433,19 @@
 <div class="viewcode-block" id="ParquetFile.read_row_group"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile.read_row_group">[docs]</a>    <span class="k">def</span> <span class="nf">read_row_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                        <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Read a single row group from a Parquet file</span>
+<span class="sd">        Read a single row group from a Parquet file.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        columns: list</span>
 <span class="sd">            If not None, only these columns will be read from the row group. A</span>
 <span class="sd">            column name may be a prefix of a nested field, e.g. &#39;a&#39; will select</span>
-<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;</span>
-<span class="sd">        use_threads : boolean, default True</span>
-<span class="sd">            Perform multi-threaded column reads</span>
-<span class="sd">        use_pandas_metadata : boolean, default False</span>
+<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;.</span>
+<span class="sd">        use_threads : bool, default True</span>
+<span class="sd">            Perform multi-threaded column reads.</span>
+<span class="sd">        use_pandas_metadata : bool, default False</span>
 <span class="sd">            If True and file has custom pandas schema metadata, ensure that</span>
-<span class="sd">            index columns are also loaded</span>
+<span class="sd">            index columns are also loaded.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -378,7 +460,7 @@
 <div class="viewcode-block" id="ParquetFile.read_row_groups"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile.read_row_groups">[docs]</a>    <span class="k">def</span> <span class="nf">read_row_groups</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row_groups</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                         <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Read a multiple row groups from a Parquet file</span>
+<span class="sd">        Read a multiple row groups from a Parquet file.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -387,17 +469,17 @@
 <span class="sd">        columns: list</span>
 <span class="sd">            If not None, only these columns will be read from the row group. A</span>
 <span class="sd">            column name may be a prefix of a nested field, e.g. &#39;a&#39; will select</span>
-<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;</span>
-<span class="sd">        use_threads : boolean, default True</span>
-<span class="sd">            Perform multi-threaded column reads</span>
-<span class="sd">        use_pandas_metadata : boolean, default False</span>
+<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;.</span>
+<span class="sd">        use_threads : bool, default True</span>
+<span class="sd">            Perform multi-threaded column reads.</span>
+<span class="sd">        use_pandas_metadata : bool, default False</span>
 <span class="sd">            If True and file has custom pandas schema metadata, ensure that</span>
-<span class="sd">            index columns are also loaded</span>
+<span class="sd">            index columns are also loaded.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        pyarrow.table.Table</span>
-<span class="sd">            Content of the row groups as a table (of columns)</span>
+<span class="sd">            Content of the row groups as a table (of columns).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">column_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_indices</span><span class="p">(</span>
             <span class="n">columns</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="n">use_pandas_metadata</span><span class="p">)</span>
@@ -407,24 +489,24 @@
 
 <div class="viewcode-block" id="ParquetFile.read"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Read a Table from Parquet format</span>
+<span class="sd">        Read a Table from Parquet format,</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        columns: list</span>
 <span class="sd">            If not None, only these columns will be read from the file. A</span>
 <span class="sd">            column name may be a prefix of a nested field, e.g. &#39;a&#39; will select</span>
-<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;</span>
-<span class="sd">        use_threads : boolean, default True</span>
-<span class="sd">            Perform multi-threaded column reads</span>
-<span class="sd">        use_pandas_metadata : boolean, default False</span>
+<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;.</span>
+<span class="sd">        use_threads : bool, default True</span>
+<span class="sd">            Perform multi-threaded column reads.</span>
+<span class="sd">        use_pandas_metadata : bool, default False</span>
 <span class="sd">            If True and file has custom pandas schema metadata, ensure that</span>
-<span class="sd">            index columns are also loaded</span>
+<span class="sd">            index columns are also loaded.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        pyarrow.table.Table</span>
-<span class="sd">            Content of the file as a table (of columns)</span>
+<span class="sd">            Content of the file as a table (of columns).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">column_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_indices</span><span class="p">(</span>
             <span class="n">columns</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="n">use_pandas_metadata</span><span class="p">)</span>
@@ -433,16 +515,19 @@
 
 <div class="viewcode-block" id="ParquetFile.scan_contents"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile.scan_contents">[docs]</a>    <span class="k">def</span> <span class="nf">scan_contents</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">65536</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Read contents of file with a single thread for indicated columns and</span>
-<span class="sd">        batch size. Number of rows in file is returned. This function is used</span>
-<span class="sd">        for benchmarking</span>
+<span class="sd">        Read contents of file for the given columns and batch size.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This function&#39;s primary purpose is benchmarking.</span>
+<span class="sd">        The scan is executed on a single thread.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        columns : list of integers, default None</span>
-<span class="sd">            If None, scan all columns</span>
+<span class="sd">            Select columns to read, if None scan all columns.</span>
 <span class="sd">        batch_size : int, default 64K</span>
-<span class="sd">            Number of rows to read at a time internally</span>
+<span class="sd">            Number of rows to read at a time internally.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -524,33 +609,33 @@
 
 
 <span class="n">_parquet_writer_arg_docs</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;version : {&quot;1.0&quot;, &quot;2.0&quot;}, default &quot;1.0&quot;</span>
-<span class="s2">    The Parquet format version, defaults to 1.0</span>
+<span class="s2">    The Parquet format version, defaults to 1.0.</span>
 <span class="s2">use_dictionary : bool or list</span>
 <span class="s2">    Specify if we should use dictionary encoding in general or only for</span>
 <span class="s2">    some columns.</span>
-<span class="s2">use_deprecated_int96_timestamps : boolean, default None</span>
+<span class="s2">use_deprecated_int96_timestamps : bool, default None</span>
 <span class="s2">    Write timestamps to INT96 Parquet format. Defaults to False unless enabled</span>
 <span class="s2">    by flavor argument. This take priority over the coerce_timestamps option.</span>
-<span class="s2">coerce_timestamps : string, default None</span>
+<span class="s2">coerce_timestamps : str, default None</span>
 <span class="s2">    Cast timestamps a particular resolution.</span>
 <span class="s2">    Valid values: {None, &#39;ms&#39;, &#39;us&#39;}</span>
 <span class="s2">data_page_size : int, default None</span>
 <span class="s2">    Set a target threshold for the approximate encoded size of data</span>
 <span class="s2">    pages within a column chunk (in bytes). If None, use the default data page</span>
 <span class="s2">    size of 1MByte.</span>
-<span class="s2">allow_truncated_timestamps : boolean, default False</span>
+<span class="s2">allow_truncated_timestamps : bool, default False</span>
 <span class="s2">    Allow loss of data when coercing timestamps to a particular</span>
 <span class="s2">    resolution. E.g. if microsecond or nanosecond data is lost when coercing to</span>
-<span class="s2">    &#39;ms&#39;, do not raise an exception</span>
+<span class="s2">    &#39;ms&#39;, do not raise an exception.</span>
 <span class="s2">compression : str or dict</span>
 <span class="s2">    Specify the compression codec, either on a general basis or per-column.</span>
-<span class="s2">    Valid values: {&#39;NONE&#39;, &#39;SNAPPY&#39;, &#39;GZIP&#39;, &#39;LZO&#39;, &#39;BROTLI&#39;, &#39;LZ4&#39;, &#39;ZSTD&#39;}</span>
+<span class="s2">    Valid values: {&#39;NONE&#39;, &#39;SNAPPY&#39;, &#39;GZIP&#39;, &#39;LZO&#39;, &#39;BROTLI&#39;, &#39;LZ4&#39;, &#39;ZSTD&#39;}.</span>
 <span class="s2">write_statistics : bool or list</span>
 <span class="s2">    Specify if we should write statistics in general (default is True) or only</span>
 <span class="s2">    for some columns.</span>
 <span class="s2">flavor : {&#39;spark&#39;}, default None</span>
 <span class="s2">    Sanitize schema or set other compatibility options to work with</span>
-<span class="s2">    various target systems</span>
+<span class="s2">    various target systems.</span>
 <span class="s2">filesystem : FileSystem, default None</span>
 <span class="s2">    If nothing passed, will be inferred from `where` if path-like, else</span>
 <span class="s2">    `where` is already a file-like object so no filesystem is needed.</span>
@@ -561,24 +646,36 @@
 <span class="s2">    meaning for each codec, so you have to read the documentation of the</span>
 <span class="s2">    codec you are using.</span>
 <span class="s2">    An exception is thrown if the compression codec does not allow specifying</span>
-<span class="s2">    a compression level.&quot;&quot;&quot;</span>
+<span class="s2">    a compression level.</span>
+<span class="s2">use_byte_stream_split: bool or list, default False</span>
+<span class="s2">    Specify if the byte_stream_split encoding should be used in general or</span>
+<span class="s2">    only for some columns. If both dictionary and byte_stream_stream are</span>
+<span class="s2">    enabled, then dictionary is preferred.</span>
+<span class="s2">    The byte_stream_split encoding is valid only for floating-point data types</span>
+<span class="s2">    and should be combined with a compression codec.</span>
+<span class="s2">writer_engine_version: str, default &quot;V2&quot;</span>
+<span class="s2">    The engine version to use when writing out Arrow data.  V2 supports</span>
+<span class="s2">    all nested types. V1 is legacy and will be removed in a future release.</span>
+<span class="s2">    Setting the environment variable ARROW_PARQUET_WRITER_ENGINE will</span>
+<span class="s2">    override the default.</span>
+<span class="s2">&quot;&quot;&quot;</span>
 
 
-<div class="viewcode-block" id="ParquetWriter"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetWriter.html#pyarrow.parquet.ParquetWriter">[docs]</a><span class="k">class</span> <span class="nc">ParquetWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="ParquetWriter"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetWriter.html#pyarrow.parquet.ParquetWriter">[docs]</a><span class="k">class</span> <span class="nc">ParquetWriter</span><span class="p">:</span>
 
     <span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">Class for incrementally building a Parquet file for Arrow tables</span>
+<span class="s2">Class for incrementally building a Parquet file for Arrow tables.</span>
 
 <span class="s2">Parameters</span>
 <span class="s2">----------</span>
 <span class="s2">where : path or file-like object</span>
 <span class="s2">schema : arrow Schema</span>
-<span class="si">{0}</span><span class="s2"></span>
+<span class="si">{}</span><span class="s2"></span>
 <span class="s2">**options : dict</span>
 <span class="s2">    If options contains a key `metadata_collector` then the</span>
 <span class="s2">    corresponding value is assumed to be a list (or any object with</span>
-<span class="s2">    `.append` method) that will be filled with file metadata instances</span>
-<span class="s2">    of dataset pieces.</span>
+<span class="s2">    `.append` method) that will be filled with the file metadata instance</span>
+<span class="s2">    of the written file.</span>
 <span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_parquet_writer_arg_docs</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ParquetWriter.__init__"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetWriter.html#pyarrow.parquet.ParquetWriter.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -589,6 +686,8 @@
                  <span class="n">write_statistics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">compression_level</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">use_byte_stream_split</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">writer_engine_version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">options</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">use_deprecated_int96_timestamps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Use int96 timestamps for Spark</span>
@@ -616,6 +715,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">sink</span> <span class="o">=</span> <span class="n">where</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_collector</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;metadata_collector&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">engine_version</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ARROW_PARQUET_WRITER_ENGINE&#39;</span><span class="p">,</span> <span class="s1">&#39;V2&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="o">=</span> <span class="n">_parquet</span><span class="o">.</span><span class="n">ParquetWriter</span><span class="p">(</span>
             <span class="n">sink</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span>
             <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
@@ -624,6 +724,8 @@
             <span class="n">write_statistics</span><span class="o">=</span><span class="n">write_statistics</span><span class="p">,</span>
             <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="n">use_deprecated_int96_timestamps</span><span class="p">,</span>
             <span class="n">compression_level</span><span class="o">=</span><span class="n">compression_level</span><span class="p">,</span>
+            <span class="n">use_byte_stream_split</span><span class="o">=</span><span class="n">use_byte_stream_split</span><span class="p">,</span>
+            <span class="n">writer_engine_version</span><span class="o">=</span><span class="n">engine_version</span><span class="p">,</span>
             <span class="o">**</span><span class="n">options</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">is_open</span> <span class="o">=</span> <span class="kc">True</span></div>
 
@@ -646,8 +748,8 @@
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span> <span class="n">check_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;Table schema does not match schema used to create file: &#39;</span>
-                   <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">table:</span><span class="se">\n</span><span class="si">{0!s}</span><span class="s1"> vs. </span><span class="se">\n</span><span class="s1">file:</span><span class="se">\n</span><span class="si">{1!s}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
-                                                               <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
+                   <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">table:</span><span class="se">\n</span><span class="si">{!s}</span><span class="s1"> vs. </span><span class="se">\n</span><span class="s1">file:</span><span class="se">\n</span><span class="si">{!s}</span><span class="s1">&#39;</span>
+                   <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="p">))</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span></div>
@@ -672,22 +774,23 @@
 <span class="c1"># file, possibly part of a partitioned dataset</span>
 
 
-<span class="k">class</span> <span class="nc">ParquetDatasetPiece</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">ParquetDatasetPiece</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A single chunk of a potentially larger Parquet dataset to read. The</span>
-<span class="sd">    arguments will indicate to read either a single row group or all row</span>
-<span class="sd">    groups, and whether to add partition keys to the resulting pyarrow.Table</span>
+<span class="sd">    A single chunk of a potentially larger Parquet dataset to read.</span>
+
+<span class="sd">    The arguments will indicate to read either a single row group or all row</span>
+<span class="sd">    groups, and whether to add partition keys to the resulting pyarrow.Table.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    path : str or pathlib.Path</span>
-<span class="sd">        Path to file in the file system where this piece is located</span>
+<span class="sd">        Path to file in the file system where this piece is located.</span>
 <span class="sd">    open_file_func : callable</span>
-<span class="sd">        Function to use for obtaining file handle to dataset piece</span>
+<span class="sd">        Function to use for obtaining file handle to dataset piece.</span>
 <span class="sd">    partition_keys : list of tuples</span>
-<span class="sd">      [(column name, ordinal index)]</span>
+<span class="sd">        Two-element tuples of ``(column name, ordinal index)``.</span>
 <span class="sd">    row_group : int, default None</span>
-<span class="sd">        Row group to load. By default, reads all row groups</span>
+<span class="sd">        Row group to load. By default, reads all row groups.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">open_file_func</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span><span class="nb">open</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">),</span>
                  <span class="n">file_options</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">partition_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -704,11 +807,8 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">row_group</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">row_group</span> <span class="ow">and</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other</span><span class="p">)</span>
-
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">(</span><span class="si">{1!r}</span><span class="s1">, row_group=</span><span class="si">{2!r}</span><span class="s1">, partition_keys=</span><span class="si">{3!r}</span><span class="s1">)&#39;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">(</span><span class="si">{!r}</span><span class="s1">, row_group=</span><span class="si">{!r}</span><span class="s1">, partition_keys=</span><span class="si">{!r}</span><span class="s1">)&#39;</span>
                 <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">row_group</span><span class="p">,</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">))</span>
@@ -717,20 +817,20 @@
         <span class="n">result</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">partition_str</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">=</span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">partition_str</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
                                       <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_keys</span><span class="p">)</span>
-            <span class="n">result</span> <span class="o">+=</span> <span class="s1">&#39;partition[</span><span class="si">{0}</span><span class="s1">] &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">partition_str</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="s1">&#39;partition[</span><span class="si">{}</span><span class="s1">] &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">partition_str</span><span class="p">)</span>
 
         <span class="n">result</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_group</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">+=</span> <span class="s1">&#39; | row_group=</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">row_group</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="s1">&#39; | row_group=</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">row_group</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">result</span>
 
     <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns the file&#39;s metadata</span>
+<span class="sd">        Return the file&#39;s metadata.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -741,7 +841,7 @@
 
     <span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns instance of ParquetFile</span>
+<span class="sd">        Return instance of ParquetFile.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">reader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">open_file_func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reader</span><span class="p">,</span> <span class="n">ParquetFile</span><span class="p">):</span>
@@ -751,16 +851,16 @@
     <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">partitions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
              <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Read this piece as a pyarrow.Table</span>
+<span class="sd">        Read this piece as a pyarrow.Table.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        columns : list of column names, default None</span>
-<span class="sd">        use_threads : boolean, default True</span>
-<span class="sd">            Perform multi-threaded column reads</span>
+<span class="sd">        use_threads : bool, default True</span>
+<span class="sd">            Perform multi-threaded column reads.</span>
 <span class="sd">        partitions : ParquetPartitions, default None</span>
 <span class="sd">        file : file-like object</span>
-<span class="sd">            passed to ParquetFile</span>
+<span class="sd">            Passed to ParquetFile.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -812,8 +912,9 @@
         <span class="k">return</span> <span class="n">table</span>
 
 
-<span class="k">class</span> <span class="nc">PartitionSet</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A data structure for cataloguing the observed Parquet partitions at a</span>
+<span class="k">class</span> <span class="nc">PartitionSet</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A data structure for cataloguing the observed Parquet partitions at a</span>
 <span class="sd">    particular level. So if we have</span>
 
 <span class="sd">    /foo=a/bar=0</span>
@@ -870,7 +971,7 @@
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span> <span class="o">==</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">ParquetPartitions</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">ParquetPartitions</span><span class="p">:</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">levels</span> <span class="o">=</span> <span class="p">[]</span>
@@ -895,14 +996,12 @@
         <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
-    <span class="k">def</span> <span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="c1"># required for python 2, cython implements it by default</span>
-        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other</span><span class="p">)</span>
-
     <span class="k">def</span> <span class="nf">get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Record a partition value at a particular level, returning the distinct</span>
-<span class="sd">        code for that value at that level. Example:</span>
+<span class="sd">        code for that value at that level.</span>
+
+<span class="sd">        Example:</span>
 
 <span class="sd">        partitions.get_index(1, &#39;foo&#39;, &#39;a&#39;) returns 0</span>
 <span class="sd">        partitions.get_index(1, &#39;foo&#39;, &#39;b&#39;) returns 1</span>
@@ -913,14 +1012,14 @@
 <span class="sd">        ----------</span>
 <span class="sd">        level : int</span>
 <span class="sd">            The nesting level of the partition we are observing</span>
-<span class="sd">        name : string</span>
+<span class="sd">        name : str</span>
 <span class="sd">            The partition name</span>
-<span class="sd">        key : string or int</span>
+<span class="sd">        key : str or int</span>
 <span class="sd">            The partition value</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_names</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1"> was the name of the partition in &#39;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> was the name of the partition in &#39;</span>
                                  <span class="s1">&#39;another level&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
 
             <span class="n">part_set</span> <span class="o">=</span> <span class="n">PartitionSet</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
@@ -943,14 +1042,13 @@
             <span class="k">if</span> <span class="n">op</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;in&#39;</span><span class="p">,</span> <span class="s1">&#39;not in&#39;</span><span class="p">}:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Op &#39;</span><span class="si">%s</span><span class="s2">&#39; not supported with set value&quot;</span><span class="p">,</span>
                                  <span class="n">op</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">f_value</span><span class="p">]))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">({</span><span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">f_value</span><span class="p">})</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All elements of set &#39;</span><span class="si">%s</span><span class="s2">&#39; must be of&quot;</span>
                                  <span class="s2">&quot; same type&quot;</span><span class="p">,</span> <span class="n">f_value</span><span class="p">)</span>
             <span class="n">f_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">f_value</span><span class="p">)))</span>
 
-        <span class="n">p_value</span> <span class="o">=</span> <span class="n">f_type</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level</span><span class="p">]</span>
-                          <span class="o">.</span><span class="n">dictionary</span><span class="p">[</span><span class="n">p_value_index</span><span class="p">]</span>
-                          <span class="o">.</span><span class="n">as_py</span><span class="p">()))</span>
+        <span class="n">p_value</span> <span class="o">=</span> <span class="n">f_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level</span><span class="p">]</span>
+                         <span class="o">.</span><span class="n">dictionary</span><span class="p">[</span><span class="n">p_value_index</span><span class="p">]</span><span class="o">.</span><span class="n">as_py</span><span class="p">())</span>
 
         <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;=&quot;</span> <span class="ow">or</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;==&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">p_value</span> <span class="o">==</span> <span class="n">f_value</span>
@@ -973,10 +1071,8 @@
                              <span class="nb">filter</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
 
-<span class="k">class</span> <span class="nc">ParquetManifest</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="k">class</span> <span class="nc">ParquetManifest</span><span class="p">:</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">open_file_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">pathsep</span><span class="o">=</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="n">partition_scheme</span><span class="o">=</span><span class="s1">&#39;hive&#39;</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
         <span class="n">filesystem</span><span class="p">,</span> <span class="n">dirpath</span> <span class="o">=</span> <span class="n">_get_filesystem_and_path</span><span class="p">(</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">dirpath</span><span class="p">)</span>
@@ -1033,7 +1129,7 @@
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_files</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_directories</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Found files in an intermediate &#39;</span>
-                             <span class="s1">&#39;directory: </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base_path</span><span class="p">))</span>
+                             <span class="s1">&#39;directory: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base_path</span><span class="p">))</span>
         <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered_directories</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_visit_directories</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">filtered_directories</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1071,7 +1167,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_scheme</span> <span class="o">==</span> <span class="s1">&#39;hive&#39;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_parse_hive_partition</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;partition schema: </span><span class="si">{0}</span><span class="s1">&#39;</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;partition schema: </span><span class="si">{}</span><span class="s1">&#39;</span>
                                       <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition_scheme</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">_push_pieces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">part_keys</span><span class="p">):</span>
@@ -1085,13 +1181,13 @@
 <span class="k">def</span> <span class="nf">_parse_hive_partition</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
     <span class="k">if</span> <span class="s1">&#39;=&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Directory name did not appear to be a &#39;</span>
-                         <span class="s1">&#39;partition: </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+                         <span class="s1">&#39;partition: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_is_private_directory</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
     <span class="n">_</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">tail</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;=&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tail</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">tail</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">tail</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">))</span> <span class="ow">and</span> <span class="s1">&#39;=&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tail</span>
 
 
 <span class="k">def</span> <span class="nf">_path_split</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">sep</span><span class="p">):</span>
@@ -1130,62 +1226,93 @@
 <span class="s2">    nested types, you must pass the full column &quot;path&quot;, which could be</span>
 <span class="s2">    something like level1.level2.list.item. Refer to the Parquet</span>
 <span class="s2">    file&#39;s schema to obtain the paths.</span>
-<span class="s2">memory_map : boolean, default False</span>
+<span class="s2">memory_map : bool, default False</span>
 <span class="s2">    If the source is a file path, use a memory map to read file, which can</span>
-<span class="s2">    improve performance in some environments</span>
+<span class="s2">    improve performance in some environments.</span>
 <span class="s2">buffer_size : int, default 0</span>
 <span class="s2">    If positive, perform read buffering when deserializing individual</span>
-<span class="s2">    column chunks. Otherwise IO calls are unbuffered.&quot;&quot;&quot;</span>
+<span class="s2">    column chunks. Otherwise IO calls are unbuffered.</span>
+<span class="s2">partitioning : Partitioning or str or list of str, default &quot;hive&quot;</span>
+<span class="s2">    The partitioning scheme for a partitioned dataset. The default of &quot;hive&quot;</span>
+<span class="s2">    assumes directory names with key=value pairs like &quot;/year=2009/month=11&quot;.</span>
+<span class="s2">    In addition, a scheme like &quot;/2009/11&quot; is also supported, in which case</span>
+<span class="s2">    you need to specify the field names or a full schema. See the</span>
+<span class="s2">    ``pyarrow.dataset.partitioning()`` function for more details.</span>
+<span class="s2">use_legacy_dataset : bool, default True</span>
+<span class="s2">    Set to False to enable the new code path (experimental, using the</span>
+<span class="s2">    new Arrow Dataset API). Among other things, this allows to pass</span>
+<span class="s2">    `filters` for all columns and not only the partition keys, enables</span>
+<span class="s2">    different partitioning schemes, etc.&quot;&quot;&quot;</span>
 
 
-<div class="viewcode-block" id="ParquetDataset"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset">[docs]</a><span class="k">class</span> <span class="nc">ParquetDataset</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="ParquetDataset"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset">[docs]</a><span class="k">class</span> <span class="nc">ParquetDataset</span><span class="p">:</span>
 
     <span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">Encapsulates details of reading a complete Parquet dataset possibly</span>
-<span class="s2">consisting of multiple files and partitions in subdirectories</span>
+<span class="s2">consisting of multiple files and partitions in subdirectories.</span>
 
 <span class="s2">Parameters</span>
 <span class="s2">----------</span>
 <span class="s2">path_or_paths : str or List[str]</span>
-<span class="s2">    A directory name, single file name, or list of file names</span>
+<span class="s2">    A directory name, single file name, or list of file names.</span>
 <span class="s2">filesystem : FileSystem, default None</span>
 <span class="s2">    If nothing passed, paths assumed to be found in the local on-disk</span>
-<span class="s2">    filesystem</span>
+<span class="s2">    filesystem.</span>
 <span class="s2">metadata : pyarrow.parquet.FileMetaData</span>
-<span class="s2">    Use metadata obtained elsewhere to validate file schemas</span>
+<span class="s2">    Use metadata obtained elsewhere to validate file schemas.</span>
 <span class="s2">schema : pyarrow.parquet.Schema</span>
 <span class="s2">    Use schema obtained elsewhere to validate file schemas. Alternative to</span>
-<span class="s2">    metadata parameter</span>
-<span class="s2">split_row_groups : boolean, default False</span>
-<span class="s2">    Divide files into pieces for each row group in the file</span>
-<span class="s2">validate_schema : boolean, default True</span>
-<span class="s2">    Check that individual file schemas are all the same / compatible</span>
+<span class="s2">    metadata parameter.</span>
+<span class="s2">split_row_groups : bool, default False</span>
+<span class="s2">    Divide files into pieces for each row group in the file.</span>
+<span class="s2">validate_schema : bool, default True</span>
+<span class="s2">    Check that individual file schemas are all the same / compatible.</span>
 <span class="s2">filters : List[Tuple] or List[List[Tuple]] or None (default)</span>
-<span class="s2">    List of filters to apply, like ``[[(&#39;x&#39;, &#39;=&#39;, 0), ...], ...]``. This</span>
-<span class="s2">    implements partition-level (hive) filtering only, i.e., to prevent the</span>
-<span class="s2">    loading of some files of the dataset.</span>
+<span class="s2">    Rows which do not match the filter predicate will be removed from scanned</span>
+<span class="s2">    data. Partition keys embedded in a nested directory structure will be</span>
+<span class="s2">    exploited to avoid loading files at all if they contain no matching rows.</span>
+<span class="s2">    If `use_legacy_dataset` is True, filters can only reference partition</span>
+<span class="s2">    keys and only a hive-style directory structure is supported. When</span>
+<span class="s2">    setting `use_legacy_dataset` to False, also within-file level filtering</span>
+<span class="s2">    and different partitioning schemes are supported.</span>
 
-<span class="s2">    Predicates are expressed in disjunctive normal form (DNF). This means</span>
-<span class="s2">    that the innermost tuple describe a single column predicate. These</span>
-<span class="s2">    inner predicate make are all combined with a conjunction (AND) into a</span>
-<span class="s2">    larger predicate. The most outer list then combines all filters</span>
-<span class="s2">    with a disjunction (OR). By this, we should be able to express all</span>
-<span class="s2">    kinds of filters that are possible using boolean logic.</span>
-
-<span class="s2">    This function also supports passing in as List[Tuple]. These predicates</span>
-<span class="s2">    are evaluated as a conjunction. To express OR in predicates, one must</span>
-<span class="s2">    use the (preferred) List[List[Tuple]] notation.</span>
+<span class="s2">    </span><span class="si">{1}</span><span class="s2"></span>
 <span class="s2">metadata_nthreads: int, default 1</span>
 <span class="s2">    How many threads to allow the thread pool which is used to read the</span>
 <span class="s2">    dataset metadata. Increasing this is helpful to read partitioned</span>
 <span class="s2">    datasets.</span>
 <span class="si">{0}</span><span class="s2"></span>
-<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_read_docstring_common</span><span class="p">)</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_read_docstring_common</span><span class="p">,</span> <span class="n">_DNF_filter_doc</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">split_row_groups</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span>
+                <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">use_legacy_dataset</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_ParquetDatasetV2</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span>
+                                     <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span>
+                                     <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">,</span>
+                                     <span class="n">read_dictionary</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">,</span>
+                                     <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span>
+                                     <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">,</span>
+                                     <span class="c1"># unsupported keywords</span>
+                                     <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+                                     <span class="n">split_row_groups</span><span class="o">=</span><span class="n">split_row_groups</span><span class="p">,</span>
+                                     <span class="n">validate_schema</span><span class="o">=</span><span class="n">validate_schema</span><span class="p">,</span>
+                                     <span class="n">metadata_nthreads</span><span class="o">=</span><span class="n">metadata_nthreads</span><span class="p">)</span>
+        <span class="bp">self</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
 
 <div class="viewcode-block" id="ParquetDataset.__init__"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">split_row_groups</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+                 <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span>
+                 <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">partitioning</span> <span class="o">!=</span> <span class="s2">&quot;hive&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;Only &quot;hive&quot; for hive-like partitioning is supported when &#39;</span>
+                <span class="s1">&#39;using use_legacy_dataset=True&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span> <span class="o">=</span> <span class="n">_ParquetDatasetMetadata</span><span class="p">()</span>
         <span class="n">a_path</span> <span class="o">=</span> <span class="n">path_or_paths</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a_path</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
@@ -1259,10 +1386,6 @@
         <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
-    <span class="k">def</span> <span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="c1"># required for python 2, cython implements it by default</span>
-        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other</span><span class="p">)</span>
-
 <div class="viewcode-block" id="ParquetDataset.validate_schemas"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset.validate_schemas">[docs]</a>    <span class="k">def</span> <span class="nf">validate_schemas</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1286,28 +1409,28 @@
             <span class="n">file_metadata</span> <span class="o">=</span> <span class="n">piece</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">()</span>
             <span class="n">file_schema</span> <span class="o">=</span> <span class="n">file_metadata</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">to_arrow_schema</span><span class="p">()</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">dataset_schema</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">file_schema</span><span class="p">,</span> <span class="n">check_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Schema in </span><span class="si">{0!s}</span><span class="s1"> was different. </span><span class="se">\n</span><span class="s1">&#39;</span>
-                                 <span class="s1">&#39;</span><span class="si">{1!s}</span><span class="se">\n\n</span><span class="s1">vs</span><span class="se">\n\n</span><span class="si">{2!s}</span><span class="s1">&#39;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Schema in </span><span class="si">{!s}</span><span class="s1"> was different. </span><span class="se">\n</span><span class="s1">&#39;</span>
+                                 <span class="s1">&#39;</span><span class="si">{!s}</span><span class="se">\n\n</span><span class="s1">vs</span><span class="se">\n\n</span><span class="si">{!s}</span><span class="s1">&#39;</span>
                                  <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="n">file_schema</span><span class="p">,</span>
                                          <span class="n">dataset_schema</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="ParquetDataset.read"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Read multiple Parquet files as a single pyarrow.Table</span>
+<span class="sd">        Read multiple Parquet files as a single pyarrow.Table.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        columns : List[str]</span>
-<span class="sd">            Names of columns to read from the file</span>
-<span class="sd">        use_threads : boolean, default True</span>
+<span class="sd">            Names of columns to read from the file.</span>
+<span class="sd">        use_threads : bool, default True</span>
 <span class="sd">            Perform multi-threaded column reads</span>
 <span class="sd">        use_pandas_metadata : bool, default False</span>
-<span class="sd">            Passed through to each dataset piece</span>
+<span class="sd">            Passed through to each dataset piece.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        pyarrow.Table</span>
-<span class="sd">            Content of the file as a table (of columns)</span>
+<span class="sd">            Content of the file as a table (of columns).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">piece</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pieces</span><span class="p">:</span>
@@ -1334,12 +1457,12 @@
 <div class="viewcode-block" id="ParquetDataset.read_pandas"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset.read_pandas">[docs]</a>    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Read dataset including pandas metadata, if any. Other arguments passed</span>
-<span class="sd">        through to ParquetDataset.read, see docstring for further details</span>
+<span class="sd">        through to ParquetDataset.read, see docstring for further details.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        pyarrow.Table</span>
-<span class="sd">            Content of the file as a table (of columns)</span>
+<span class="sd">            Content of the file as a table (of columns).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
@@ -1404,12 +1527,118 @@
         <span class="n">pieces</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">path_or_paths</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">fs</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s1">&#39;Passed non-file path: </span><span class="si">{0}</span><span class="s1">&#39;</span>
+                <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="s1">&#39;Passed non-file path: </span><span class="si">{}</span><span class="s1">&#39;</span>
                               <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
             <span class="n">piece</span> <span class="o">=</span> <span class="n">ParquetDatasetPiece</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">open_file_func</span><span class="o">=</span><span class="n">open_file_func</span><span class="p">)</span>
             <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">piece</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">pieces</span><span class="p">,</span> <span class="n">partitions</span><span class="p">,</span> <span class="n">common_metadata_path</span><span class="p">,</span> <span class="n">metadata_path</span>
+
+
+<span class="k">class</span> <span class="nc">_ParquetDatasetV2</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ParquetDataset shim using the Dataset API under the hood.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">pyarrow.dataset</span> <span class="k">as</span> <span class="nn">ds</span>
+        <span class="kn">import</span> <span class="nn">pyarrow.fs</span>
+
+        <span class="c1"># Raise error for not supported keywords</span>
+        <span class="k">for</span> <span class="n">keyword</span><span class="p">,</span> <span class="n">default</span> <span class="ow">in</span> <span class="p">[</span>
+                <span class="p">(</span><span class="s2">&quot;schema&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;split_row_groups&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;validate_schema&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;metadata_nthreads&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]:</span>
+            <span class="k">if</span> <span class="n">keyword</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="ow">and</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">keyword</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">default</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Keyword &#39;</span><span class="si">{0}</span><span class="s2">&#39; is not yet supported with the new &quot;</span>
+                    <span class="s2">&quot;Dataset API&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">keyword</span><span class="p">))</span>
+
+        <span class="c1"># map old filesystems to new one</span>
+        <span class="c1"># TODO(dataset) deal with other file systems</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">LocalFileSystem</span><span class="p">):</span>
+            <span class="n">filesystem</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">LocalFileSystem</span><span class="p">(</span><span class="n">use_mmap</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">memory_map</span><span class="p">:</span>
+            <span class="c1"># if memory_map is specified, assume local file system (string</span>
+            <span class="c1"># path can in principle be URI for any filesystem)</span>
+            <span class="n">filesystem</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">LocalFileSystem</span><span class="p">(</span><span class="n">use_mmap</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># map additional arguments</span>
+        <span class="n">read_options</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">buffer_size</span><span class="p">:</span>
+            <span class="n">read_options</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">use_buffered_stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">read_dictionary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">read_options</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dictionary_columns</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">)</span>
+        <span class="n">parquet_format</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">ParquetFileFormat</span><span class="p">(</span><span class="n">read_options</span><span class="o">=</span><span class="n">read_options</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">dataset</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span>
+                                   <span class="nb">format</span><span class="o">=</span><span class="n">parquet_format</span><span class="p">,</span>
+                                   <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filters</span> <span class="o">=</span> <span class="n">filters</span>
+        <span class="k">if</span> <span class="n">filters</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_filter_expression</span> <span class="o">=</span> <span class="n">_filters_to_expression</span><span class="p">(</span><span class="n">filters</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_filter_expression</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">schema</span>
+
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read (multiple) Parquet files as a single pyarrow.Table.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : List[str]</span>
+<span class="sd">            Names of columns to read from the dataset.</span>
+<span class="sd">        use_threads : bool, default True</span>
+<span class="sd">            Perform multi-threaded column reads.</span>
+<span class="sd">        use_pandas_metadata : bool, default False</span>
+<span class="sd">            If True and file has custom pandas schema metadata, ensure that</span>
+<span class="sd">            index columns are also loaded.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pyarrow.Table</span>
+<span class="sd">            Content of the file as a table (of columns).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if use_pandas_metadata, we need to include index columns in the</span>
+        <span class="c1"># column selection, to be able to restore those in the pandas DataFrame</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span>
+        <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">use_pandas_metadata</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">metadata</span> <span class="ow">and</span> <span class="sa">b</span><span class="s1">&#39;pandas&#39;</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
+                <span class="n">index_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">_get_pandas_index_columns</span><span class="p">(</span><span class="n">metadata</span><span class="p">))</span>
+                <span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">index_columns</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
+
+        <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">to_table</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_filter_expression</span><span class="p">,</span>
+            <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span>
+        <span class="p">)</span>
+
+        <span class="c1"># if use_pandas_metadata, restore the pandas metadata (which gets</span>
+        <span class="c1"># lost if doing a specific `columns` selection in to_table)</span>
+        <span class="k">if</span> <span class="n">use_pandas_metadata</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">metadata</span> <span class="ow">and</span> <span class="sa">b</span><span class="s2">&quot;pandas&quot;</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
+                <span class="n">new_metadata</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+                <span class="n">new_metadata</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="sa">b</span><span class="s2">&quot;pandas&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">[</span><span class="sa">b</span><span class="s2">&quot;pandas&quot;</span><span class="p">]})</span>
+                <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">replace_schema_metadata</span><span class="p">(</span><span class="n">new_metadata</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">table</span>
+
+    <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read dataset including pandas metadata, if any. Other arguments passed</span>
+<span class="sd">        through to ParquetDataset.read, see docstring for further details.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pieces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO raise deprecation warning</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">get_fragments</span><span class="p">())</span>
 
 
 <span class="n">_read_table_docstring</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
@@ -1420,21 +1649,26 @@
 <span class="s2">source: str, pyarrow.NativeFile, or file-like object</span>
 <span class="s2">    If a string passed, can be a single file name or directory name. For</span>
 <span class="s2">    file-like objects, only read a single file. Use pyarrow.BufferReader to</span>
-<span class="s2">    read a file contained in a bytes or buffer-like object</span>
+<span class="s2">    read a file contained in a bytes or buffer-like object.</span>
 <span class="s2">columns: list</span>
 <span class="s2">    If not None, only these columns will be read from the file. A column</span>
 <span class="s2">    name may be a prefix of a nested field, e.g. &#39;a&#39; will select &#39;a.b&#39;,</span>
-<span class="s2">    &#39;a.c&#39;, and &#39;a.d.e&#39;</span>
-<span class="s2">use_threads : boolean, default True</span>
-<span class="s2">    Perform multi-threaded column reads</span>
+<span class="s2">    &#39;a.c&#39;, and &#39;a.d.e&#39;.</span>
+<span class="s2">use_threads : bool, default True</span>
+<span class="s2">    Perform multi-threaded column reads.</span>
 <span class="s2">metadata : FileMetaData</span>
 <span class="s2">    If separately computed</span>
 <span class="si">{1}</span><span class="s2"></span>
 <span class="s2">filters : List[Tuple] or List[List[Tuple]] or None (default)</span>
-<span class="s2">    List of filters to apply, like ``[[(&#39;x&#39;, &#39;=&#39;, 0), ...], ...]``. This</span>
-<span class="s2">    implements partition-level (hive) filtering only, i.e., to prevent the</span>
-<span class="s2">    loading of some files of the dataset if `source` is a directory.</span>
-<span class="s2">    See the docstring of ParquetDataset for more details.</span>
+<span class="s2">    Rows which do not match the filter predicate will be removed from scanned</span>
+<span class="s2">    data. Partition keys embedded in a nested directory structure will be</span>
+<span class="s2">    exploited to avoid loading files at all if they contain no matching rows.</span>
+<span class="s2">    If `use_legacy_dataset` is True, filters can only reference partition</span>
+<span class="s2">    keys and only a hive-style directory structure is supported. When</span>
+<span class="s2">    setting `use_legacy_dataset` to False, also within-file level filtering</span>
+<span class="s2">    and different partitioning schemes are supported.</span>
+
+<span class="s2">    </span><span class="si">{3}</span><span class="s2"></span>
 
 <span class="s2">Returns</span>
 <span class="s2">-------</span>
@@ -1445,12 +1679,32 @@
 <div class="viewcode-block" id="read_table"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.read_table.html#pyarrow.parquet.read_table">[docs]</a><span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-               <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+               <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span> <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_legacy_dataset</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_path_like</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;File-like objects are not yet supported with &quot;</span>
+                             <span class="s2">&quot;the new Dataset API&quot;</span><span class="p">)</span>
+
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">_ParquetDatasetV2</span><span class="p">(</span>
+            <span class="n">source</span><span class="p">,</span>
+            <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span>
+            <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">,</span>
+            <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span>
+            <span class="n">read_dictionary</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">,</span>
+            <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">,</span>
+            <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span>
+            <span class="c1"># unsupported keywords</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">,</span>
+                            <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="n">use_pandas_metadata</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="n">_is_path_like</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
         <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetDataset</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span>
                             <span class="n">read_dictionary</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">,</span>
                             <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">,</span>
-                            <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+                            <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span>
+                            <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
                          <span class="n">read_dictionary</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">,</span>
@@ -1463,15 +1717,17 @@
 <span class="n">read_table</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">_read_table_docstring</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
     <span class="s1">&#39;Read a Table from Parquet format&#39;</span><span class="p">,</span>
     <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">_read_docstring_common</span><span class="p">,</span>
-               <span class="sd">&quot;&quot;&quot;use_pandas_metadata : boolean, default False</span>
+               <span class="sd">&quot;&quot;&quot;use_pandas_metadata : bool, default False</span>
 <span class="sd">    If True and file has custom pandas schema metadata, ensure that</span>
 <span class="sd">    index columns are also loaded&quot;&quot;&quot;</span><span class="p">)),</span>
     <span class="sd">&quot;&quot;&quot;pyarrow.Table</span>
-<span class="sd">    Content of the file as a table (of columns)&quot;&quot;&quot;</span><span class="p">)</span>
+<span class="sd">    Content of the file as a table (of columns)&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="n">_DNF_filter_doc</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="read_pandas"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.read_pandas.html#pyarrow.parquet.read_pandas">[docs]</a><span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">read_table</span><span class="p">(</span>
         <span class="n">source</span><span class="p">,</span>
         <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
@@ -1481,6 +1737,7 @@
         <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span>
         <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">,</span>
         <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="n">use_legacy_dataset</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 
@@ -1490,7 +1747,8 @@
     <span class="n">_read_docstring_common</span><span class="p">,</span>
     <span class="sd">&quot;&quot;&quot;pyarrow.Table</span>
 <span class="sd">    Content of the file as a Table of Columns, including DataFrame</span>
-<span class="sd">    indexes as columns&quot;&quot;&quot;</span><span class="p">)</span>
+<span class="sd">    indexes as columns&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="n">_DNF_filter_doc</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="write_table"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.write_table.html#pyarrow.parquet.write_table">[docs]</a><span class="k">def</span> <span class="nf">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;1.0&#39;</span><span class="p">,</span>
@@ -1502,6 +1760,7 @@
                 <span class="n">data_page_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">flavor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">compression_level</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">use_byte_stream_split</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">row_group_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;chunk_size&#39;</span><span class="p">,</span> <span class="n">row_group_size</span><span class="p">)</span>
     <span class="n">use_int96</span> <span class="o">=</span> <span class="n">use_deprecated_int96_timestamps</span>
@@ -1519,6 +1778,7 @@
                 <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
                 <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="n">use_int96</span><span class="p">,</span>
                 <span class="n">compression_level</span><span class="o">=</span><span class="n">compression_level</span><span class="p">,</span>
+                <span class="n">use_byte_stream_split</span><span class="o">=</span><span class="n">use_byte_stream_split</span><span class="p">,</span>
                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
             <span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -1531,7 +1791,7 @@
 
 
 <span class="n">write_table</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">Write a Table to Parquet format</span>
+<span class="s2">Write a Table to Parquet format.</span>
 
 <span class="s2">Parameters</span>
 <span class="s2">----------</span>
@@ -1539,7 +1799,7 @@
 <span class="s2">where: string or pyarrow.NativeFile</span>
 <span class="s2">row_group_size: int</span>
 <span class="s2">    The number of rows per rowgroup</span>
-<span class="si">{0}</span><span class="s2"></span>
+<span class="si">{}</span><span class="s2"></span>
 <span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_parquet_writer_arg_docs</span><span class="p">)</span>
 
 
@@ -1574,7 +1834,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    table : pyarrow.Table</span>
-<span class="sd">    root_path : string,</span>
+<span class="sd">    root_path : str,</span>
 <span class="sd">        The root directory of the dataset</span>
 <span class="sd">    filesystem : FileSystem, default None</span>
 <span class="sd">        If nothing passed, paths assumed to be found in the local on-disk</span>
@@ -1587,14 +1847,17 @@
 <span class="sd">        and allow you to override the partition filename. If nothing is</span>
 <span class="sd">        passed, the filename will consist of a uuid.</span>
 <span class="sd">    **kwargs : dict,</span>
-<span class="sd">        kwargs for write_table function. Using `metadata_collector` in</span>
-<span class="sd">        kwargs allows one to collect the file metadata instances of</span>
-<span class="sd">        dataset pieces. See docstring for `write_table` or</span>
-<span class="sd">        `ParquetWriter` for more information.</span>
+<span class="sd">        Additional kwargs for write_table function. See docstring for</span>
+<span class="sd">        `write_table` or `ParquetWriter` for more information.</span>
+<span class="sd">        Using `metadata_collector` in kwargs allows one to collect the</span>
+<span class="sd">        file metadata instances of dataset pieces. The file paths in the</span>
+<span class="sd">        ColumnChunkMetaData will be set relative to `root_path`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">fs</span><span class="p">,</span> <span class="n">root_path</span> <span class="o">=</span> <span class="n">_get_filesystem_and_path</span><span class="p">(</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">root_path</span><span class="p">)</span>
 
     <span class="n">_mkdir_if_not_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">root_path</span><span class="p">)</span>
+
+    <span class="n">metadata_collector</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;metadata_collector&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">partition_cols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_cols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">ignore_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -1620,15 +1883,18 @@
                  <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">partition_cols</span><span class="p">,</span> <span class="n">keys</span><span class="p">)])</span>
             <span class="n">subtable</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">subgroup</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                                             <span class="n">schema</span><span class="o">=</span><span class="n">subschema</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">root_path</span><span class="p">,</span> <span class="n">subdir</span><span class="p">])</span>
-            <span class="n">_mkdir_if_not_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">prefix</span><span class="p">)</span>
+            <span class="n">_mkdir_if_not_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">root_path</span><span class="p">,</span> <span class="n">subdir</span><span class="p">]))</span>
             <span class="k">if</span> <span class="n">partition_filename_cb</span><span class="p">:</span>
                 <span class="n">outfile</span> <span class="o">=</span> <span class="n">partition_filename_cb</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">outfile</span> <span class="o">=</span> <span class="n">guid</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39;.parquet&#39;</span>
-            <span class="n">full_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span> <span class="n">outfile</span><span class="p">])</span>
+            <span class="n">relative_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">subdir</span><span class="p">,</span> <span class="n">outfile</span><span class="p">])</span>
+            <span class="n">full_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">root_path</span><span class="p">,</span> <span class="n">relative_path</span><span class="p">])</span>
             <span class="k">with</span> <span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">full_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">write_table</span><span class="p">(</span><span class="n">subtable</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">write_table</span><span class="p">(</span><span class="n">subtable</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">metadata_collector</span><span class="o">=</span><span class="n">metadata_collector</span><span class="p">,</span>
+                            <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">metadata_collector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">metadata_collector</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_file_path</span><span class="p">(</span><span class="n">relative_path</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">partition_filename_cb</span><span class="p">:</span>
             <span class="n">outfile</span> <span class="o">=</span> <span class="n">partition_filename_cb</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
@@ -1636,29 +1902,32 @@
             <span class="n">outfile</span> <span class="o">=</span> <span class="n">guid</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39;.parquet&#39;</span>
         <span class="n">full_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">root_path</span><span class="p">,</span> <span class="n">outfile</span><span class="p">])</span>
         <span class="k">with</span> <span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">full_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+            <span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">metadata_collector</span><span class="o">=</span><span class="n">metadata_collector</span><span class="p">,</span>
+                        <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">metadata_collector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">metadata_collector</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_file_path</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="write_metadata"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.write_metadata.html#pyarrow.parquet.write_metadata">[docs]</a><span class="k">def</span> <span class="nf">write_metadata</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s1">&#39;1.0&#39;</span><span class="p">,</span>
                    <span class="n">use_deprecated_int96_timestamps</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                    <span class="n">coerce_timestamps</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Write metadata-only Parquet file from schema</span>
+<span class="sd">    Write metadata-only Parquet file from schema.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    schema : pyarrow.Schema</span>
 <span class="sd">    where: string or pyarrow.NativeFile</span>
 <span class="sd">    version : {&quot;1.0&quot;, &quot;2.0&quot;}, default &quot;1.0&quot;</span>
-<span class="sd">        The Parquet format version, defaults to 1.0</span>
-<span class="sd">    use_deprecated_int96_timestamps : boolean, default False</span>
-<span class="sd">        Write nanosecond resolution timestamps to INT96 Parquet format</span>
-<span class="sd">    coerce_timestamps : string, default None</span>
+<span class="sd">        The Parquet format version, defaults to 1.0.</span>
+<span class="sd">    use_deprecated_int96_timestamps : bool, default False</span>
+<span class="sd">        Write nanosecond resolution timestamps to INT96 Parquet format.</span>
+<span class="sd">    coerce_timestamps : str, default None</span>
 <span class="sd">        Cast timestamps a particular resolution.</span>
-<span class="sd">        Valid values: {None, &#39;ms&#39;, &#39;us&#39;}</span>
+<span class="sd">        Valid values: {None, &#39;ms&#39;, &#39;us&#39;}.</span>
 <span class="sd">    filesystem : FileSystem, default None</span>
 <span class="sd">        If nothing passed, paths assumed to be found in the local on-disk</span>
-<span class="sd">        filesystem</span>
+<span class="sd">        filesystem.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span>
         <span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
@@ -1669,13 +1938,13 @@
 
 <div class="viewcode-block" id="read_metadata"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.read_metadata.html#pyarrow.parquet.read_metadata">[docs]</a><span class="k">def</span> <span class="nf">read_metadata</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Read FileMetadata from footer of a single Parquet file</span>
+<span class="sd">    Read FileMetadata from footer of a single Parquet file.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    where : string (filepath) or file-like object</span>
-<span class="sd">    memory_map : boolean, default False</span>
-<span class="sd">        Create memory map when the source is a file path</span>
+<span class="sd">    where : str (filepath) or file-like object</span>
+<span class="sd">    memory_map : bool, default False</span>
+<span class="sd">        Create memory map when the source is a file path.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1686,13 +1955,13 @@
 
 <div class="viewcode-block" id="read_schema"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.read_schema.html#pyarrow.parquet.read_schema">[docs]</a><span class="k">def</span> <span class="nf">read_schema</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Read effective Arrow schema from Parquet file metadata</span>
+<span class="sd">    Read effective Arrow schema from Parquet file metadata.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    where : string (filepath) or file-like object</span>
-<span class="sd">    memory_map : boolean, default False</span>
-<span class="sd">        Create memory map when the source is a file path</span>
+<span class="sd">    where : str (filepath) or file-like object</span>
+<span class="sd">    memory_map : bool, default False</span>
+<span class="sd">        Create memory map when the source is a file path.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>

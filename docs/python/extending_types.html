@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Extending pyarrow &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>Extending pyarrow &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -85,18 +85,13 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../format/Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../format/Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
@@ -114,13 +109,16 @@
 <li class="toctree-l2"><a class="reference internal" href="pandas.html">Pandas Integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="timestamps.html">Timestamps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="csv.html">Reading CSV files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feather.html">Feather File Format</a></li>
 <li class="toctree-l2"><a class="reference internal" href="json.html">Reading JSON files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="parquet.html">Reading and Writing the Apache Parquet Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataset.html">Tabular Datasets</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cuda.html">CUDA Integration</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Extending pyarrow</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#controlling-conversion-to-pyarrow-array-with-the-arrow-array-protocol">Controlling conversion to pyarrow.Array with the <code class="docutils literal notranslate"><span class="pre">__arrow_array__</span></code> protocol</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#defining-extension-types-user-defined-types">Defining extension types (“user-defined types”)</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#parametrized-extension-type">Parametrized extension type</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#custom-extension-array-class">Custom extension array class</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#conversion-to-pandas">Conversion to pandas</a></li>
 </ul>
 </li>
@@ -132,7 +130,10 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -213,7 +214,7 @@
 <span id="extending-types"></span><h1>Extending pyarrow<a class="headerlink" href="#extending-pyarrow" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="controlling-conversion-to-pyarrow-array-with-the-arrow-array-protocol">
 <h2>Controlling conversion to pyarrow.Array with the <code class="docutils literal notranslate"><span class="pre">__arrow_array__</span></code> protocol<a class="headerlink" href="#controlling-conversion-to-pyarrow-array-with-the-arrow-array-protocol" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="xref py py-func docutils literal notranslate"><span class="pre">pyarrow.array()</span></code> function has built-in support for Python sequences,
+<p>The <a class="reference internal" href="generated/pyarrow.Array.html#pyarrow.array" title="pyarrow.array"><code class="xref py py-func docutils literal notranslate"><span class="pre">pyarrow.array()</span></code></a> function has built-in support for Python sequences,
 numpy arrays and pandas 1D objects (Series, Index, Categorical, ..) to convert
 those to Arrow arrays. This can be extended for other array-like objects
 by implementing the <code class="docutils literal notranslate"><span class="pre">__arrow_array__</span></code> method (similar to numpy’s <code class="docutils literal notranslate"><span class="pre">__array__</span></code>
@@ -231,8 +232,8 @@ define the <code class="docutils literal notranslate"><span class="pre">__arrow_
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">__arrow_array__</span></code> method takes an optional <cite>type</cite> keyword which is passed
-through from <code class="xref py py-func docutils literal notranslate"><span class="pre">pyarrow.array()</span></code>. The method is allowed to return either
-a <a class="reference internal" href="generated/pyarrow.Array.html#pyarrow.Array" title="pyarrow.Array"><code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code></a> or a <a class="reference internal" href="generated/pyarrow.ChunkedArray.html#pyarrow.ChunkedArray" title="pyarrow.ChunkedArray"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChunkedArray</span></code></a>.</p>
+through from <a class="reference internal" href="generated/pyarrow.Array.html#pyarrow.array" title="pyarrow.array"><code class="xref py py-func docutils literal notranslate"><span class="pre">pyarrow.array()</span></code></a>. The method is allowed to return either
+a <code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code> or a <a class="reference internal" href="generated/pyarrow.ChunkedArray.html#pyarrow.ChunkedArray" title="pyarrow.ChunkedArray"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChunkedArray</span></code></a>.</p>
 </div>
 <div class="section" id="defining-extension-types-user-defined-types">
 <h2>Defining extension types (“user-defined types”)<a class="headerlink" href="#defining-extension-types-user-defined-types" title="Permalink to this headline">¶</a></h2>
@@ -402,9 +403,66 @@ data type from above would look like:</p>
 </div>
 <p>Also the storage type does not need to be fixed but can be parametrized.</p>
 </div>
+<div class="section" id="custom-extension-array-class">
+<h3>Custom extension array class<a class="headerlink" href="#custom-extension-array-class" title="Permalink to this headline">¶</a></h3>
+<p>By default, all arrays with an extension type are constructed or deserialized into
+a built-in <a class="reference internal" href="generated/pyarrow.ExtensionArray.html#pyarrow.ExtensionArray" title="pyarrow.ExtensionArray"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtensionArray</span></code></a> object. Nevertheless, one could want to subclass
+<a class="reference internal" href="generated/pyarrow.ExtensionArray.html#pyarrow.ExtensionArray" title="pyarrow.ExtensionArray"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtensionArray</span></code></a> in order to add some custom logic specific to the extension
+type. Arrow allows to do so by adding a special method <code class="docutils literal notranslate"><span class="pre">__arrow_ext_class__</span></code> to the
+definition of the extension type.</p>
+<p>For instance, let us consider the example from the <a class="reference external" href="https://docs.scipy.org/doc/numpy-1.13.0/user/quickstart.html">Numpy Quickstart</a> of points in 3D space.
+We can store these as a fixed-size list, where we wish to be able to extract
+the data as a 2-D Numpy array <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">3)</span></code> without any copy:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Point3DArray</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">ExtensionArray</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">to_numpy_array</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+
+<span class="k">class</span> <span class="nc">Point3DType</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">PyExtensionType</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">PyExtensionType</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Point3DType</span><span class="p">,</span> <span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__arrow_ext_class__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Point3DArray</span>
+</pre></div>
+</div>
+<p>Arrays built using this extension type now have the expected custom array class:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">storage</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]],</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="mi">3</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ExtensionArray</span><span class="o">.</span><span class="n">from_storage</span><span class="p">(</span><span class="n">Point3DType</span><span class="p">(),</span> <span class="n">storage</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span>
+<span class="go">&lt;__main__.Point3DArray object at 0x7f40dea80670&gt;</span>
+<span class="go">[</span>
+<span class="go">    [</span>
+<span class="go">        1,</span>
+<span class="go">        2,</span>
+<span class="go">        3</span>
+<span class="go">    ],</span>
+<span class="go">    [</span>
+<span class="go">        4,</span>
+<span class="go">        5,</span>
+<span class="go">        6</span>
+<span class="go">    ]</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+<p>The additional methods in the extension class are then available to the user:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="o">.</span><span class="n">to_numpy_array</span><span class="p">()</span>
+<span class="go">array([[1., 2., 3.],</span>
+<span class="go">   [4., 5., 6.]], dtype=float32)</span>
+</pre></div>
+</div>
+<p>This array can be sent over IPC, received in another Python process, and the custom
+extension array class will be preserved (as long as the definitions of the classes above
+are available).</p>
+<p>The same <code class="docutils literal notranslate"><span class="pre">__arrow_ext_class__</span></code> specialization can be used with custom types defined
+by subclassing <a class="reference internal" href="generated/pyarrow.ExtensionType.html#pyarrow.ExtensionType" title="pyarrow.ExtensionType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtensionType</span></code></a>.</p>
+</div>
 <div class="section" id="conversion-to-pandas">
 <h3>Conversion to pandas<a class="headerlink" href="#conversion-to-pandas" title="Permalink to this headline">¶</a></h3>
-<p>The conversion to pandas (in <a class="reference internal" href="generated/pyarrow.Table.html#pyarrow.Table.to_pandas" title="pyarrow.Table.to_pandas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Table.to_pandas()</span></code></a>) of columns with an
+<p>The conversion to pandas (in <code class="xref py py-meth docutils literal notranslate"><span class="pre">Table.to_pandas()</span></code>) of columns with an
 extension type can controlled in case there is a corresponding
 <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/development/extending.html#extension-types">pandas extension array</a>
 for your extension type.</p>
