@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Integration Testing &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>Integration Testing &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Other Data Structures" href="Other.html" />
+    <link rel="next" title="The Arrow C data interface" href="CDataInterface.html" />
     <link rel="prev" title="Arrow Flight RPC" href="Flight.html" /> 
 </head>
 
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -85,25 +85,27 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Flight.html">Arrow Flight RPC</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Integration Testing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Integration Testing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#running-integration-tests">Running integration tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#json-test-data-format">JSON test data format</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../cpp/index.html">C++ Implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python bindings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -180,8 +182,78 @@
             
   <div class="section" id="integration-testing">
 <span id="format-integration-testing"></span><h1>Integration Testing<a class="headerlink" href="#integration-testing" title="Permalink to this headline">¶</a></h1>
+<p>Our strategy for integration testing between Arrow implementations is:</p>
+<ul class="simple">
+<li><p>Test datasets are specified in a custom human-readable, JSON-based format
+designed exclusively for Arrow’s integration tests</p></li>
+<li><p>Each implementation provides a testing executable capable of converting
+between the JSON and the binary Arrow file representation</p></li>
+<li><p>The test executable is also capable of validating the contents of a binary
+file against a corresponding JSON file</p></li>
+</ul>
+<div class="section" id="running-integration-tests">
+<h2>Running integration tests<a class="headerlink" href="#running-integration-tests" title="Permalink to this headline">¶</a></h2>
+<p>The integration test data generator and runner uses <code class="docutils literal notranslate"><span class="pre">archery</span></code>, a Python script
+that requires Python 3.6 or higher. You can create a standalone Python
+distribution and environment for running the tests by using
+<a class="reference external" href="https://conda.io/miniconda.html">miniconda</a>. On Linux this is:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">MINICONDA_URL</span><span class="o">=</span>https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+wget -O miniconda.sh <span class="nv">$MINICONDA_URL</span>
+bash miniconda.sh -b -p miniconda
+<span class="nb">export</span> <span class="nv">PATH</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>/miniconda/bin:<span class="nv">$PATH</span>
+
+conda create -n arrow-integration <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.6 nomkl numpy six
+conda activate arrow-integration
+</pre></div>
+</div>
+<p>If you are on macOS, instead use the URL:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">MINICONDA_URL</span><span class="o">=</span>https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+</pre></div>
+</div>
+<p>Once you have Python, you can install archery</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>pip install -e dev/archery
+</pre></div>
+</div>
+<p>The integration tests are run using the <code class="docutils literal notranslate"><span class="pre">archery</span> <span class="pre">integration</span></code> command.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>archery integration --help
+</pre></div>
+</div>
+<p>In order to run integration tests, you’ll first need to build each component
+you want to include. See the respective developer docs for C++, Java, etc.
+for instructions on building those.</p>
+<p>Some languages may require additional build options to enable integration
+testing. For C++, for example, you need to add <code class="docutils literal notranslate"><span class="pre">-DARROW_BUILD_INTEGRATION=ON</span></code>
+to your cmake command.</p>
+<p>Depending on which components you have built, you can enable and add them to
+the archery test run. For example, if you only have the C++ project built, run:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>archery integration --with-cpp<span class="o">=</span><span class="m">1</span>
+</pre></div>
+</div>
+<p>For Java, it may look like:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nv">VERSION</span><span class="o">=</span><span class="m">0</span>.11.0-SNAPSHOT
+<span class="nb">export</span> <span class="nv">ARROW_JAVA_INTEGRATION_JAR</span><span class="o">=</span><span class="nv">$JAVA_DIR</span>/tools/target/arrow-tools-<span class="nv">$VERSION</span>-jar-with-dependencies.jar
+archery integration --with-cpp<span class="o">=</span><span class="m">1</span> --with-java<span class="o">=</span><span class="m">1</span>
+</pre></div>
+</div>
+<p>To run all tests, including Flight integration tests, do:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>archery integration --with-all --run-flight
+</pre></div>
+</div>
+<p>Note that we run these tests in continuous integration, and the CI job uses
+docker-compose. You may also run the docker-compose job locally, or at least
+refer to it if you have questions about how to build other languages or enable
+certain tests.</p>
+<p>See <a class="reference internal" href="../developers/integration.html#integration"><span class="std std-ref">Integration Testing</span></a> for more information about the project’s
+<code class="docutils literal notranslate"><span class="pre">docker-compose</span></code> configuration.</p>
+</div>
+<div class="section" id="json-test-data-format">
+<h2>JSON test data format<a class="headerlink" href="#json-test-data-format" title="Permalink to this headline">¶</a></h2>
 <p>A JSON representation of Arrow columnar data is provided for
-cross-language integration testing purposes.</p>
+cross-language integration testing purposes.
+This representation is <a class="reference external" href="https://lists.apache.org/thread.html/6947fb7666a0f9cc27d9677d2dad0fb5990f9063b7cf3d80af5e270f%40%3Cdev.arrow.apache.org%3E">not canonical</a>
+but it provides a human-readable way of verifying language implementations.</p>
+<p>See <a class="reference external" href="https://github.com/apache/arrow/tree/master/integration/data">here</a>
+for some examples of this JSON data.</p>
 <p>The high level structure of a JSON integration test files is as follows:</p>
 <p><strong>Data file</strong></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -191,80 +263,55 @@ cross-language integration testing purposes.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>All files contain <code class="docutils literal notranslate"><span class="pre">schema</span></code> and <code class="docutils literal notranslate"><span class="pre">batches</span></code>, while <code class="docutils literal notranslate"><span class="pre">dictionaries</span></code> is only
+present if there are dictionary type fields in the schema.</p>
 <p><strong>Schema</strong></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;fields&quot;</span> <span class="p">:</span> <span class="p">[</span>
     <span class="o">/*</span> <span class="n">Field</span> <span class="o">*/</span>
-  <span class="p">]</span>
+  <span class="p">],</span>
+  <span class="s2">&quot;metadata&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">Metadata</span> <span class="o">*/</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p><strong>Field</strong></p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;name_of_the_field&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;nullable&quot;</span> <span class="p">:</span> <span class="n">false</span><span class="p">,</span>
+  <span class="s2">&quot;nullable&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">boolean</span> <span class="o">*/</span><span class="p">,</span>
   <span class="s2">&quot;type&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">Type</span> <span class="o">*/</span><span class="p">,</span>
   <span class="s2">&quot;children&quot;</span> <span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">Field</span> <span class="o">*/</span> <span class="p">],</span>
+  <span class="s2">&quot;dictionary&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span><span class="p">,</span>
+    <span class="s2">&quot;indexType&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">Type</span> <span class="o">*/</span><span class="p">,</span>
+    <span class="s2">&quot;isOrdered&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">boolean</span> <span class="o">*/</span>
+  <span class="p">},</span>
+  <span class="s2">&quot;metadata&quot;</span> <span class="p">:</span> <span class="o">/*</span> <span class="n">Metadata</span> <span class="o">*/</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p><strong>RecordBatch</strong>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="o">/*</span><span class="n">length</span> <span class="n">of</span> <span class="n">batch</span><span class="o">*/</span><span class="p">,</span>
-  <span class="s2">&quot;columns&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">FieldData</span> <span class="o">*/</span> <span class="p">]</span>
-<span class="p">}</span>
+<p>The <code class="docutils literal notranslate"><span class="pre">dictionary</span></code> attribute is present if and only if the <code class="docutils literal notranslate"><span class="pre">Field</span></code> corresponds to a
+dictionary type, and its <code class="docutils literal notranslate"><span class="pre">id</span></code> maps onto a column in the <code class="docutils literal notranslate"><span class="pre">DictionaryBatch</span></code>. In this
+case the <code class="docutils literal notranslate"><span class="pre">type</span></code> attribute describes the value type of the dictionary.</p>
+<p>For primitive types, <code class="docutils literal notranslate"><span class="pre">children</span></code> is an empty array.</p>
+<p><strong>Metadata</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">null</span> <span class="o">|</span>
+<span class="p">[</span> <span class="p">{</span>
+  <span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">string</span> <span class="o">*/</span><span class="p">,</span>
+  <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">string</span> <span class="o">*/</span>
+<span class="p">}</span> <span class="p">]</span>
 </pre></div>
 </div>
-<p><strong>FieldData</strong>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;field_name&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;count&quot;</span> <span class="s2">&quot;field_length&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;BUFFER_TYPE&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">BufferData</span> <span class="o">*/</span>
-  <span class="o">...</span>
-  <span class="s2">&quot;BUFFER_TYPE&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">BufferData</span> <span class="o">*/</span>
-  <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">FieldData</span> <span class="o">*/</span> <span class="p">]</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Here <code class="docutils literal notranslate"><span class="pre">BUFFER_TYPE</span></code> is one of <code class="docutils literal notranslate"><span class="pre">VALIDITY</span></code>, <code class="docutils literal notranslate"><span class="pre">OFFSET</span></code> (for
-variable-length types), <code class="docutils literal notranslate"><span class="pre">TYPE</span></code> (for unions), or <code class="docutils literal notranslate"><span class="pre">DATA</span></code>.</p>
-<p><code class="docutils literal notranslate"><span class="pre">BufferData</span></code> is encoded based on the type of buffer:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">VALIDITY</span></code>: a JSON array of 1 (valid) and 0 (null)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">OFFSET</span></code>: a JSON array of integers for 32-bit offsets or
-string-formatted integers for 64-bit offsets</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">TYPE</span></code>: a JSON array of integers</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">DATA</span></code>: a JSON array of encoded values</p></li>
-</ul>
-<p>The value encoding for <code class="docutils literal notranslate"><span class="pre">DATA</span></code> is different depending on the logical
-type:</p>
-<ul class="simple">
-<li><p>For boolean type: an array of 1 (true) and 0 (false)</p></li>
-<li><p>For integer-based types (including timestamps): an array of integers</p></li>
-<li><p>For 64-bit integers: an array of integers formatted as JSON strings
-to avoid loss of precision</p></li>
-<li><p>For floating point types: as is</p></li>
-<li><p>For Binary types, a hex-string is produced to encode a variable- or
-fixed-size binary value</p></li>
-</ul>
+<p>A key-value mapping of custom metadata. It may be omitted or null, in which case it is
+considered equivalent to <code class="docutils literal notranslate"><span class="pre">[]</span></code> (no metadata). Duplicated keys are not forbidden here.</p>
 <p><strong>Type</strong>:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;null|struct|list|largelist|fixedsizelist|union|int|floatingpoint|utf8|largeutf8|binary|largebinary|fixedsizebinary|bool|decimal|date|time|timestamp|interval|duration|map&quot;</span>
-  <span class="o">//</span> <span class="n">fields</span> <span class="k">as</span> <span class="n">defined</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">Flatbuffer</span> <span class="n">depending</span> <span class="n">on</span> <span class="n">the</span> <span class="nb">type</span> <span class="n">name</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Union:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;union&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;mode&quot;</span> <span class="p">:</span> <span class="s2">&quot;Sparse|Dense&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;typeIds&quot;</span> <span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span> <span class="p">]</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">typeIds</span></code> field in the Union are the codes used to denote each type, which
-may be different from the index of the child array. This is so that the union
-type ids do not have to be enumerated from 0.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">Type</span></code> will have other fields as defined in
+<a class="reference external" href="https://github.com/apache/arrow/tree/master/format/Schema.fbs">Schema.fbs</a>
+depending on its name.</p>
 <p>Int:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;int&quot;</span><span class="p">,</span>
@@ -298,12 +345,13 @@ type ids do not have to be enumerated from 0.</p>
 <p>Timestamp:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;unit&quot;</span> <span class="p">:</span> <span class="s2">&quot;$TIME_UNIT&quot;</span>
-  <span class="s2">&quot;timezone&quot;</span><span class="p">:</span> <span class="s2">&quot;$timezone&quot;</span> <span class="p">[</span><span class="n">optional</span><span class="p">]</span>
+  <span class="s2">&quot;unit&quot;</span> <span class="p">:</span> <span class="s2">&quot;$TIME_UNIT&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;timezone&quot;</span><span class="p">:</span> <span class="s2">&quot;$timezone&quot;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">$TIME_UNIT</span></code> is one of <code class="docutils literal notranslate"><span class="pre">&quot;SECOND|MILLISECOND|MICROSECOND|NANOSECOND&quot;</span></code></p>
+<p>“timezone” is an optional string.</p>
 <p>Duration:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;duration&quot;</span><span class="p">,</span>
@@ -329,9 +377,151 @@ type ids do not have to be enumerated from 0.</p>
 <p>Interval:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
   <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;interval&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;unit&quot;</span> <span class="p">:</span> <span class="s2">&quot;YEAR_MONTH&quot;</span>
+  <span class="s2">&quot;unit&quot;</span> <span class="p">:</span> <span class="s2">&quot;YEAR_MONTH|DAY_TIME&quot;</span>
 <span class="p">}</span>
 </pre></div>
+</div>
+<p>Union:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;union&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;mode&quot;</span> <span class="p">:</span> <span class="s2">&quot;SPARSE|DENSE&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;typeIds&quot;</span> <span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">typeIds</span></code> field in <code class="docutils literal notranslate"><span class="pre">Union</span></code> are the codes used to denote which member of
+the union is active in each array slot. Note that in general these discriminants are not identical
+to the index of the corresponding child array.</p>
+<p>List:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;list&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The type that the list is a “list of” will be included in the <code class="docutils literal notranslate"><span class="pre">Field</span></code>’s
+“children” member, as a single <code class="docutils literal notranslate"><span class="pre">Field</span></code> there. For example, for a list of
+<code class="docutils literal notranslate"><span class="pre">int32</span></code>,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;list_nullable&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;list&quot;</span>
+  <span class="p">},</span>
+  <span class="s2">&quot;nullable&quot;</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span>
+  <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span>
+      <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;item&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;int&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;isSigned&quot;</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span>
+        <span class="s2">&quot;bitWidth&quot;</span><span class="p">:</span> <span class="mi">32</span>
+      <span class="p">},</span>
+      <span class="s2">&quot;nullable&quot;</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span>
+      <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">[]</span>
+    <span class="p">}</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>FixedSizeList:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;fixedsizelist&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;listSize&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This type likewise comes with a length-1 “children” array.</p>
+<p>Struct:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;struct&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">Field</span></code>’s “children” contains an array of <code class="docutils literal notranslate"><span class="pre">Fields</span></code> with meaningful
+names and types.</p>
+<p>Map:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;map&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;keysSorted&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">boolean</span> <span class="o">*/</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">Field</span></code>’s “children” contains a single <code class="docutils literal notranslate"><span class="pre">struct</span></code> field, which itself
+contains 2 children, named “key” and “value”.</p>
+<p>Null:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;null&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>RecordBatch</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">integer</span> <span class="n">number</span> <span class="n">of</span> <span class="n">rows</span> <span class="o">*/</span><span class="p">,</span>
+  <span class="s2">&quot;columns&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">FieldData</span> <span class="o">*/</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>DictionaryBatch</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">integer</span> <span class="o">*/</span><span class="p">,</span>
+  <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">RecordBatch</span> <span class="o">*/</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>FieldData</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;field_name&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;count&quot;</span> <span class="s2">&quot;field_length&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;$BUFFER_TYPE&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">BufferData</span> <span class="o">*/</span>
+  <span class="o">...</span>
+  <span class="s2">&quot;$BUFFER_TYPE&quot;</span><span class="p">:</span> <span class="o">/*</span> <span class="n">BufferData</span> <span class="o">*/</span>
+  <span class="s2">&quot;children&quot;</span><span class="p">:</span> <span class="p">[</span> <span class="o">/*</span> <span class="n">FieldData</span> <span class="o">*/</span> <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The “name” member of a <code class="docutils literal notranslate"><span class="pre">Field</span></code> in the <code class="docutils literal notranslate"><span class="pre">Schema</span></code> corresponds to the “name”
+of a <code class="docutils literal notranslate"><span class="pre">FieldData</span></code> contained in the “columns” of a <code class="docutils literal notranslate"><span class="pre">RecordBatch</span></code>.
+For nested types (list, struct, etc.), <code class="docutils literal notranslate"><span class="pre">Field</span></code>’s “children” each have a
+“name” that corresponds to the “name” of a <code class="docutils literal notranslate"><span class="pre">FieldData</span></code> inside the
+“children” of that <code class="docutils literal notranslate"><span class="pre">FieldData</span></code>.
+For <code class="docutils literal notranslate"><span class="pre">FieldData</span></code> inside of a <code class="docutils literal notranslate"><span class="pre">DictionaryBatch</span></code>, the “name” field does not
+correspond to anything.</p>
+<p>Here <code class="docutils literal notranslate"><span class="pre">$BUFFER_TYPE</span></code> is one of <code class="docutils literal notranslate"><span class="pre">VALIDITY</span></code>, <code class="docutils literal notranslate"><span class="pre">OFFSET</span></code> (for
+variable-length types, such as strings and lists), <code class="docutils literal notranslate"><span class="pre">TYPE_ID</span></code> (for unions),
+or <code class="docutils literal notranslate"><span class="pre">DATA</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">BufferData</span></code> is encoded based on the type of buffer:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">VALIDITY</span></code>: a JSON array of 1 (valid) and 0 (null). Data for  non-nullable
+<code class="docutils literal notranslate"><span class="pre">Field</span></code> still has a <code class="docutils literal notranslate"><span class="pre">VALIDITY</span></code> array, even though all values are 1.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OFFSET</span></code>: a JSON array of integers for 32-bit offsets or
+string-formatted integers for 64-bit offsets</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TYPE_ID</span></code>: a JSON array of integers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DATA</span></code>: a JSON array of encoded values</p></li>
+</ul>
+<p>The value encoding for <code class="docutils literal notranslate"><span class="pre">DATA</span></code> is different depending on the logical
+type:</p>
+<ul class="simple">
+<li><p>For boolean type: an array of 1 (true) and 0 (false).</p></li>
+<li><p>For integer-based types (including timestamps): an array of JSON numbers.</p></li>
+<li><p>For 64-bit integers: an array of integers formatted as JSON strings,
+so as to avoid loss of precision.</p></li>
+<li><p>For floating point types: an array of JSON numbers. Values are limited
+to 3 decimal places to avoid loss of precision.</p></li>
+<li><p>For binary types, an array of uppercase hex-encoded strings, so as
+to represent arbitrary binary data.</p></li>
+<li><p>For UTF-8 string types, an array of JSON strings.</p></li>
+</ul>
+<p>For “list” and “largelist” types, <code class="docutils literal notranslate"><span class="pre">BufferData</span></code> has <code class="docutils literal notranslate"><span class="pre">VALIDITY</span></code> and
+<code class="docutils literal notranslate"><span class="pre">OFFSET</span></code>, and the rest of the data is inside “children”. These child
+<code class="docutils literal notranslate"><span class="pre">FieldData</span></code> contain all of the same attributes as non-child data, so in
+the example of a list of <code class="docutils literal notranslate"><span class="pre">int32</span></code>, the child data has <code class="docutils literal notranslate"><span class="pre">VALIDITY</span></code> and
+<code class="docutils literal notranslate"><span class="pre">DATA</span></code>.</p>
+<p>For “fixedsizelist”, there is no <code class="docutils literal notranslate"><span class="pre">OFFSET</span></code> member because the offsets are
+implied by the field’s “listSize”.</p>
+<p>Note that the “count” for these child data may not match the parent “count”.
+For example, if a <code class="docutils literal notranslate"><span class="pre">RecordBatch</span></code> has 7 rows and contains a <code class="docutils literal notranslate"><span class="pre">FixedSizeList</span></code>
+of <code class="docutils literal notranslate"><span class="pre">listSize</span></code> 4, then the data inside the “children” of that <code class="docutils literal notranslate"><span class="pre">FieldData</span></code>
+will have count 28.</p>
+<p>For “null” type, <code class="docutils literal notranslate"><span class="pre">BufferData</span></code> does not contain any buffers.</p>
 </div>
 </div>
 
@@ -343,7 +533,7 @@ type ids do not have to be enumerated from 0.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="Other.html" class="btn btn-neutral float-right" title="Other Data Structures" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="CDataInterface.html" class="btn btn-neutral float-right" title="The Arrow C data interface" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="Flight.html" class="btn btn-neutral float-left" title="Arrow Flight RPC" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

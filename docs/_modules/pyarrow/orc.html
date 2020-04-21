@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.orc &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>pyarrow.orc &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -83,25 +83,23 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../cpp/index.html">C++ Implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../python/index.html">Python bindings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -194,7 +192,6 @@
 <span class="c1"># specific language governing permissions and limitations</span>
 <span class="c1"># under the License.</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
 
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">count</span>
 <span class="kn">from</span> <span class="nn">numbers</span> <span class="kn">import</span> <span class="n">Integral</span>
@@ -220,14 +217,12 @@
             <span class="k">for</span> <span class="n">sub</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">_traverse</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">counter</span><span class="p">):</span>
                 <span class="k">yield</span> <span class="n">path</span> <span class="o">+</span> <span class="n">sub</span><span class="p">,</span> <span class="n">c</span>
     <span class="k">elif</span> <span class="n">_is_map</span><span class="p">(</span><span class="n">typ</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">sub_c</span> <span class="ow">in</span> <span class="n">_traverse</span><span class="p">(</span><span class="n">typ</span><span class="o">.</span><span class="n">value_type</span><span class="p">,</span> <span class="n">counter</span><span class="p">):</span>
-            <span class="k">yield</span> <span class="n">sub_c</span>
+        <span class="k">yield from</span> <span class="n">_traverse</span><span class="p">(</span><span class="n">typ</span><span class="o">.</span><span class="n">value_type</span><span class="p">,</span> <span class="n">counter</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">types</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">typ</span><span class="p">):</span>
         <span class="c1"># Skip one index for list type, since this can never be selected</span>
         <span class="c1"># directly</span>
         <span class="nb">next</span><span class="p">(</span><span class="n">counter</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">sub_c</span> <span class="ow">in</span> <span class="n">_traverse</span><span class="p">(</span><span class="n">typ</span><span class="o">.</span><span class="n">value_type</span><span class="p">,</span> <span class="n">counter</span><span class="p">):</span>
-            <span class="k">yield</span> <span class="n">sub_c</span>
+        <span class="k">yield from</span> <span class="n">_traverse</span><span class="p">(</span><span class="n">typ</span><span class="o">.</span><span class="n">value_type</span><span class="p">,</span> <span class="n">counter</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">types</span><span class="o">.</span><span class="n">is_union</span><span class="p">(</span><span class="n">typ</span><span class="p">):</span>
         <span class="c1"># Union types not supported, just skip the indexes</span>
         <span class="k">for</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">typ</span><span class="p">:</span>
@@ -240,7 +235,7 @@
     <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">i</span><span class="p">):</span> <span class="n">c</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">_traverse</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">count</span><span class="p">(</span><span class="mi">1</span><span class="p">))}</span>
 
 
-<div class="viewcode-block" id="ORCFile"><a class="viewcode-back" href="../../python/generated/pyarrow.orc.ORCFile.html#pyarrow.orc.ORCFile">[docs]</a><span class="k">class</span> <span class="nc">ORCFile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="ORCFile"><a class="viewcode-back" href="../../python/generated/pyarrow.orc.ORCFile.html#pyarrow.orc.ORCFile">[docs]</a><span class="k">class</span> <span class="nc">ORCFile</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Reader interface for a single ORC file</span>
 

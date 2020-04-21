@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Memory Management &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>Memory Management &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -85,18 +85,13 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../format/Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../format/Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../format/Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
@@ -108,6 +103,7 @@
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Memory Management</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#buffers">Buffers</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#memory-pools">Memory Pools</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#devices">Devices</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="arrays.html">Arrays</a></li>
@@ -125,7 +121,10 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python bindings</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -246,7 +245,7 @@ functions.</p>
 <div class="section" id="allocating-a-buffer">
 <h3>Allocating a Buffer<a class="headerlink" href="#allocating-a-buffer" title="Permalink to this headline">¶</a></h3>
 <p>You can allocate a buffer yourself by calling one of the
-<a class="reference internal" href="api/memory.html#_CPPv4N5arrow14AllocateBufferEP10MemoryPoolK7int64_tPNSt10shared_ptrI6BufferEE" title="arrow::AllocateBuffer"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::AllocateBuffer()</span></code></a> or <a class="reference internal" href="api/memory.html#_CPPv4N5arrow23AllocateResizableBufferEP10MemoryPoolK7int64_tPNSt10shared_ptrI15ResizableBufferEE" title="arrow::AllocateResizableBuffer"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::AllocateResizableBuffer()</span></code></a>
+<a class="reference internal" href="api/memory.html#_CPPv4N5arrow14AllocateBufferEK7int64_tP10MemoryPool" title="arrow::AllocateBuffer"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::AllocateBuffer()</span></code></a> or <a class="reference internal" href="api/memory.html#_CPPv4N5arrow23AllocateResizableBufferEK7int64_tP10MemoryPool" title="arrow::AllocateResizableBuffer"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::AllocateResizableBuffer()</span></code></a>
 overloads:</p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Buffer</span><span class="o">&gt;</span> <span class="n">buffer</span><span class="p">;</span>
 
@@ -298,6 +297,42 @@ you can do so using the <code class="xref cpp cpp-class docutils literal notrans
 <p>Conversely, you can also use a STL allocator to allocate Arrow memory,
 using the <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::stl::STLMemoryPool</span></code> class.  However, this may be less
 performant, as STL allocators don’t provide a resizing operation.</p>
+</div>
+</div>
+<div class="section" id="devices">
+<h2>Devices<a class="headerlink" href="#devices" title="Permalink to this headline">¶</a></h2>
+<p>Many Arrow applications only access host (CPU) memory.  However, in some cases
+it is desirable to handle on-device memory (such as on-board memory on a GPU)
+as well as host memory.</p>
+<p>Arrow represents the CPU and other devices using the
+<a class="reference internal" href="api/memory.html#_CPPv4N5arrow6DeviceE" title="arrow::Device"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::Device</span></code></a> abstraction.  The associated class <a class="reference internal" href="api/memory.html#_CPPv4N5arrow13MemoryManagerE" title="arrow::MemoryManager"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::MemoryManager</span></code></a>
+specifies how to allocate on a given device.  Each device has a default memory manager, but
+additional instances may be constructed (for example, wrapping a custom
+<a class="reference internal" href="api/memory.html#_CPPv4N5arrow10MemoryPoolE" title="arrow::MemoryPool"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::MemoryPool</span></code></a> the CPU).
+<a class="reference internal" href="api/memory.html#_CPPv4N5arrow13MemoryManagerE" title="arrow::MemoryManager"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::MemoryManager</span></code></a> instances which specify how to allocate
+memory on a given device (for example, using a particular
+<a class="reference internal" href="api/memory.html#_CPPv4N5arrow10MemoryPoolE" title="arrow::MemoryPool"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::MemoryPool</span></code></a> on the CPU).</p>
+<div class="section" id="device-agnostic-programming">
+<h3>Device-Agnostic Programming<a class="headerlink" href="#device-agnostic-programming" title="Permalink to this headline">¶</a></h3>
+<p>If you receive a Buffer from third-party code, you can query whether it is
+CPU-readable by calling its <a class="reference internal" href="api/memory.html#_CPPv4NK5arrow6Buffer6is_cpuEv" title="arrow::Buffer::is_cpu"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">is_cpu()</span></code></a> method.</p>
+<p>You can also view the Buffer on a given device, in a generic way, by calling
+<a class="reference internal" href="api/memory.html#_CPPv4N5arrow6Buffer4ViewENSt10shared_ptrI6BufferEERKNSt10shared_ptrI13MemoryManagerEE" title="arrow::Buffer::View"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::Buffer::View()</span></code></a> or <a class="reference internal" href="api/memory.html#_CPPv4N5arrow6Buffer10ViewOrCopyENSt10shared_ptrI6BufferEERKNSt10shared_ptrI13MemoryManagerEE" title="arrow::Buffer::ViewOrCopy"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::Buffer::ViewOrCopy()</span></code></a>.  This will
+be a no-operation if the source and destination devices are identical.
+Otherwise, a device-dependent mechanism will attempt to construct a memory
+address for the destination device that gives access to the buffer contents.
+Actual device-to-device transfer may happen lazily, when reading the buffer
+contents.</p>
+<p>Similarly, if you want to do I/O on a buffer without assuming a CPU-readable
+buffer, you can call <a class="reference internal" href="api/memory.html#_CPPv4N5arrow6Buffer9GetReaderENSt10shared_ptrI6BufferEE" title="arrow::Buffer::GetReader"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::Buffer::GetReader()</span></code></a> and
+<a class="reference internal" href="api/memory.html#_CPPv4N5arrow6Buffer9GetWriterENSt10shared_ptrI6BufferEE" title="arrow::Buffer::GetWriter"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::Buffer::GetWriter()</span></code></a>.</p>
+<p>For example, to get an on-CPU view or copy of an arbitrary buffer, you can
+simply do:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Buffer</span><span class="o">&gt;</span> <span class="n">arbitrary_buffer</span> <span class="o">=</span> <span class="p">...</span> <span class="p">;</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Buffer</span><span class="o">&gt;</span> <span class="n">cpu_buffer</span> <span class="o">=</span> <span class="n">arrow</span><span class="o">::</span><span class="n">Buffer</span><span class="o">::</span><span class="n">ViewOrCopy</span><span class="p">(</span>
+   <span class="n">arbitrary_buffer</span><span class="p">,</span> <span class="n">arrow</span><span class="o">::</span><span class="n">default_cpu_memory_manager</span><span class="p">());</span>
+</pre></div>
+</div>
 </div>
 </div>
 </div>

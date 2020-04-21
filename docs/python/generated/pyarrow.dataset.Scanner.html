@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.dataset.Scanner &mdash; Apache Arrow v0.16.1.dev0+g729a7689f.d20200211</title>
+  <title>pyarrow.dataset.Scanner &mdash; Apache Arrow v0.17.0</title>
   
 
   
@@ -37,7 +37,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="pyarrow.dataset.Expression" href="pyarrow.dataset.Expression.html" />
-    <link rel="prev" title="pyarrow.dataset.Dataset" href="pyarrow.dataset.Dataset.html" /> 
+    <link rel="prev" title="pyarrow.dataset.UnionDataset" href="pyarrow.dataset.UnionDataset.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.16.1.dev0+g729a7689f.d20200211
+                0.17.0
               </div>
             
           
@@ -85,18 +85,13 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Guidelines.html">Implementation Guidelines</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Layout.html">Physical Memory Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/IPC.html">IPC</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../format/Metadata.html">Format Metadata</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
+              <p class="caption"><span class="caption-text">Arrow Specifications and Protocols</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Versioning.html">Format Versioning and Stability</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Columnar.html">Arrow Columnar Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/CDataInterface.html">The Arrow C data interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Arrow Libraries</span></p>
@@ -114,8 +109,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../pandas.html">Pandas Integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../timestamps.html">Timestamps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../csv.html">Reading CSV files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../feather.html">Feather File Format</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../json.html">Reading JSON files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../parquet.html">Reading and Writing the Apache Parquet Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dataset.html">Tabular Datasets</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cuda.html">CUDA Integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../extending_types.html">Extending pyarrow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../extending.html">Using pyarrow from C++ and Cython Code</a></li>
@@ -143,7 +140,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../benchmarks.html">Benchmarks</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../../java/index.html">Java Implementation</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/java/">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C GLib</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Development and Contributing</span></p>
 <ul>
@@ -226,7 +226,7 @@
             
   <div class="section" id="pyarrow-dataset-scanner">
 <h1>pyarrow.dataset.Scanner<a class="headerlink" href="#pyarrow-dataset-scanner" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
+<dl class="py class">
 <dt id="pyarrow.dataset.Scanner">
 <em class="property">class </em><code class="sig-prename descclassname">pyarrow.dataset.</code><code class="sig-name descname">Scanner</code><a class="headerlink" href="#pyarrow.dataset.Scanner" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
@@ -236,9 +236,9 @@ sources together.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dataset</strong> (<a class="reference internal" href="pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset" title="pyarrow.dataset.Dataset"><em>Dataset</em></a>) – Dataset to scan.</p></li>
+<li><p><strong>dataset</strong> (<em>Dataset</em>) – Dataset to scan.</p></li>
 <li><p><strong>columns</strong> (<em>list of str</em><em>, </em><em>default None</em>) – List of columns to project. Order and duplicates will be preserved.
-The columns will be passed down to Sources and corresponding data
+The columns will be passed down to Datasets and corresponding data
 fragments to avoid loading, copying, and deserializing columns
 that will not be required further down the compute chain.
 By default all of the available columns are projected. Raises
@@ -249,14 +249,17 @@ If possible the predicate will be pushed down to exploit the
 partition information or internal metadata found in the data
 source, e.g. Parquet statistics. Otherwise filters the loaded
 RecordBatches before yielding them.</p></li>
-<li><p><strong>use_threads</strong> (<em>boolean</em><em>, </em><em>default True</em>) – If enabled, then maximum paralellism will be used determined by
+<li><p><strong>use_threads</strong> (<em>bool</em><em>, </em><em>default True</em>) – If enabled, then maximum parallelism will be used determined by
 the number of available CPU cores.</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em><em>, </em><em>default 32K</em>) – The maximum row count for scanned record batches. If scanned
+record batches are overflowing memory then this method can be
+called to reduce their size.</p></li>
 <li><p><strong>memory_pool</strong> (<a class="reference internal" href="pyarrow.MemoryPool.html#pyarrow.MemoryPool" title="pyarrow.MemoryPool"><em>MemoryPool</em></a><em>, </em><em>default None</em>) – For memory allocations, if required. If not specified, uses the
 default pool.</p></li>
 </ul>
 </dd>
 </dl>
-<dl class="method">
+<dl class="py method">
 <dt id="pyarrow.dataset.Scanner.__init__">
 <code class="sig-name descname">__init__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.dataset.Scanner.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
@@ -272,15 +275,24 @@ default pool.</p></li>
 <tr class="row-odd"><td><p><a class="reference internal" href="#pyarrow.dataset.Scanner.__init__" title="pyarrow.dataset.Scanner.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a></p></td>
 <td><p>Initialize self.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pyarrow.dataset.Scanner.scan" title="pyarrow.dataset.Scanner.scan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">scan</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#pyarrow.dataset.Scanner.get_fragments" title="pyarrow.dataset.Scanner.get_fragments"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_fragments</span></code></a></p></td>
+<td><p>Returns an iterator over the fragments in this scan.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pyarrow.dataset.Scanner.scan" title="pyarrow.dataset.Scanner.scan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">scan</span></code></a></p></td>
 <td><p>Returns a stream of ScanTasks</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pyarrow.dataset.Scanner.to_table" title="pyarrow.dataset.Scanner.to_table"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_table</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#pyarrow.dataset.Scanner.to_table" title="pyarrow.dataset.Scanner.to_table"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_table</span></code></a></p></td>
 <td><p>Convert a Scanner into a Table.</p></td>
 </tr>
 </tbody>
 </table>
-<dl class="method">
+<dl class="py method">
+<dt id="pyarrow.dataset.Scanner.get_fragments">
+<code class="sig-name descname">get_fragments</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.dataset.Scanner.get_fragments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an iterator over the fragments in this scan.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pyarrow.dataset.Scanner.scan">
 <code class="sig-name descname">scan</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.dataset.Scanner.scan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a stream of ScanTasks</p>
@@ -293,7 +305,7 @@ be safe to run in a concurrent fashion and outlive the iterator.</p>
 </dl>
 </dd></dl>
 
-<dl class="method">
+<dl class="py method">
 <dt id="pyarrow.dataset.Scanner.to_table">
 <code class="sig-name descname">to_table</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyarrow.dataset.Scanner.to_table" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert a Scanner into a Table.</p>
@@ -321,7 +333,7 @@ the Scan result in memory before creating the Table.</p>
         <a href="pyarrow.dataset.Expression.html" class="btn btn-neutral float-right" title="pyarrow.dataset.Expression" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="pyarrow.dataset.Dataset.html" class="btn btn-neutral float-left" title="pyarrow.dataset.Dataset" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="pyarrow.dataset.UnionDataset.html" class="btn btn-neutral float-left" title="pyarrow.dataset.UnionDataset" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
