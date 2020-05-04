@@ -1,4 +1,139 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2020-04-23T17:55:54-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow 0.17.0 Release</title><link href="https://arrow.apache.org/blog/2020/04/21/0.17.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.17.0 Release" /><published>2020-04-21T02:00:00-04:00</published><updated>2020-04-21T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2020/04/21/0.17.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2020/04/21/0.17.0-release/">&lt;!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2020-05-04T13:49:32-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Introducing the Apache Arrow C Data Interface</title><link href="https://arrow.apache.org/blog/2020/05/03/introducing-arrow-c-data-interface/" rel="alternate" type="text/html" title="Introducing the Apache Arrow C Data Interface" /><published>2020-05-03T19:00:00-04:00</published><updated>2020-05-03T19:00:00-04:00</updated><id>https://arrow.apache.org/blog/2020/05/03/introducing-arrow-c-data-interface</id><content type="html" xml:base="https://arrow.apache.org/blog/2020/05/03/introducing-arrow-c-data-interface/">&lt;!--
+
+--&gt;
+
+&lt;p&gt;Apache Arrow includes a cross-language, platform-independent in-memory
+&lt;a href=&quot;https://arrow.apache.org/docs/format/Columnar.html&quot;&gt;columnar format&lt;/a&gt;
+allowing zero-copy data sharing and transfer between heterogenous runtimes
+and applications.&lt;/p&gt;
+
+&lt;p&gt;The easiest way to use the Arrow columnar format has always been to depend
+on one of the concrete implementations developed by the Apache Arrow community.
+The project codebase contains libraries for 11 different programming languages
+so far, and will likely grow to include more languages in the future.&lt;/p&gt;
+
+&lt;p&gt;However, some projects may wish to import and export the Arrow columnar format
+without taking on a new library dependency, such as the Arrow C++ library.
+We have therefore designed an alternative which exchanges data at the C level,
+conforming to a simple data definition.  The C Data Interface carries no dependencies
+except a shared C ABI between binaries which use it.  C ABIs are platform-wide standards
+which are necessarily adhered to by all compilers which generate binaries and are extremely
+stable, ensuring portability of libraries and executable binaries.  Two libraries that utilize
+the C structures defined by the C Data Interface can do zero-copy data
+transfers at runtime without any build-time or link-time dependency
+requirements.&lt;/p&gt;
+
+&lt;p&gt;The best way to learn about the C Data Interface is to read the
+&lt;a href=&quot;https://arrow.apache.org/docs/format/CDataInterface.html&quot;&gt;spec&lt;/a&gt;.
+However, we will quickly go over its strong points.&lt;/p&gt;
+
+&lt;h2 id=&quot;two-simple-struct-definitions&quot;&gt;Two simple struct definitions&lt;/h2&gt;
+
+&lt;p&gt;To interact with the C Data Interface at the C or C++ level, the only
+thing you have to include in your code is two struct type declarations
+(and a couple of &lt;code class=&quot;highlighter-rouge&quot;&gt;#define&lt;/code&gt;s for constant values).  Those declarations
+only depend on standard C types, and can simply be pasted in a header
+file.  Other languages can also participate as long as they provide a
+Foreign Function Interface layer; this is the case for most modern
+languages, such as Python (with &lt;code class=&quot;highlighter-rouge&quot;&gt;ctypes&lt;/code&gt; or &lt;code class=&quot;highlighter-rouge&quot;&gt;cffi&lt;/code&gt;), Julia, Rust, Go, etc.&lt;/p&gt;
+
+&lt;h2 id=&quot;zero-copy-data-sharing&quot;&gt;Zero-copy data sharing&lt;/h2&gt;
+
+&lt;p&gt;The C Data Interface passes Arrow data buffers through memory pointers.  So,
+by construction, it allows you to share data from one runtime to
+another without copying it.  Since the data is in standard
+&lt;a href=&quot;https://arrow.apache.org/docs/format/Columnar.html&quot;&gt;Arrow in-memory format&lt;/a&gt;,
+its layout is well-defined and unambiguous.&lt;/p&gt;
+
+&lt;p&gt;This design also restricts the C Data Interface to &lt;em&gt;in-process&lt;/em&gt; data sharing.
+For interprocess communication, we recommend use of the Arrow
+&lt;a href=&quot;https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc&quot;&gt;IPC format&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;reduced-marshalling&quot;&gt;Reduced marshalling&lt;/h2&gt;
+
+&lt;p&gt;The C Data Interface stays close to the natural way of expressing Arrow-like
+data in C or C++.  Only two aspects involve non-trivial marshalling:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;the encoding of data types, using a very simple string-based language&lt;/li&gt;
+  &lt;li&gt;the encoding of optional metadata, using a very simple length-prefixed format&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;separate-type-and-data-representation&quot;&gt;Separate type and data representation&lt;/h2&gt;
+
+&lt;p&gt;For applications which produce many instances of data of a single datatype
+(for example, as a stream of record batches), repeatedly reconstructing the
+datatype from its string encoding would represent unnecessary overhead.  To
+address this use case, the C Data Interface defines two independent structures:
+one representing a datatype (and optional metadata), one representing a piece
+of data.&lt;/p&gt;
+
+&lt;h2 id=&quot;lifetime-handling&quot;&gt;Lifetime handling&lt;/h2&gt;
+
+&lt;p&gt;One common difficulty of data sharing between heterogenous runtimes is to
+correctly handle the lifetime of data.  The C Data Interface allows the producer
+to define its own memory management scheme through a release callback.
+This is a simple function pointer which consumers will call when they are
+finished using the data.  For example when used as a producer the Arrow C++
+library passes a release callback which simply decrements a &lt;code class=&quot;highlighter-rouge&quot;&gt;shared_ptr&lt;/code&gt;’s
+reference count.&lt;/p&gt;
+
+&lt;h2 id=&quot;application-passing-data-between-r-and-python&quot;&gt;Application: passing data between R and Python&lt;/h2&gt;
+
+&lt;p&gt;The R and Python Arrow libraries are both based on the Arrow C++ library,
+however their respective toolchains (mandated by the R and Python packaging
+standards) are ABI-incompatible.  It is therefore impossible to pass data
+directly at the C++ level between the R and Python bindings.&lt;/p&gt;
+
+&lt;p&gt;Using the C Data Interface, we have circumvented this restriction and provide
+a zero-copy data sharing API between R and Python.  It is based on the R
+&lt;a href=&quot;https://rstudio.github.io/reticulate/&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;reticulate&lt;/code&gt;&lt;/a&gt; library.&lt;/p&gt;
+
+&lt;p&gt;Here is an example session mixing R and Python library calls:&lt;/p&gt;
+
+&lt;div class=&quot;language-r highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;library&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arrow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;library&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reticulate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;use_virtualenv&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;arrow&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pa&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;import&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;pyarrow&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;# Create an array in PyArrow&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pa&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;m&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## Array&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## &amp;lt;double&amp;gt;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## [&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   1,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   2,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   3&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## ]&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;# Apply R methods on the PyArrow-created array:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## Array&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## &amp;lt;double&amp;gt;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## [&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   2,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   3&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## ]&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;# Create an array in R and pass it to PyArrow&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Array&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;create&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;m&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;m&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a_and_b&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pa&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;concat_arrays&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;r_to_py&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;list&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)))&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a_and_b&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## Array&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## &amp;lt;double&amp;gt;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## [&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   1,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   2,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   3,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   5,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   6,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;##   7&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;## ]&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>apitrou</name></author><summary type="html">Apache Arrow includes a cross-language, platform-independent in-memory columnar format allowing zero-copy data sharing and transfer between heterogenous runtimes and applications. The easiest way to use the Arrow columnar format has always been to depend on one of the concrete implementations developed by the Apache Arrow community. The project codebase contains libraries for 11 different programming languages so far, and will likely grow to include more languages in the future. However, some projects may wish to import and export the Arrow columnar format without taking on a new library dependency, such as the Arrow C++ library. We have therefore designed an alternative which exchanges data at the C level, conforming to a simple data definition. The C Data Interface carries no dependencies except a shared C ABI between binaries which use it. C ABIs are platform-wide standards which are necessarily adhered to by all compilers which generate binaries and are extremely stable, ensuring portability of libraries and executable binaries. Two libraries that utilize the C structures defined by the C Data Interface can do zero-copy data transfers at runtime without any build-time or link-time dependency requirements. The best way to learn about the C Data Interface is to read the spec. However, we will quickly go over its strong points. Two simple struct definitions To interact with the C Data Interface at the C or C++ level, the only thing you have to include in your code is two struct type declarations (and a couple of #defines for constant values). Those declarations only depend on standard C types, and can simply be pasted in a header file. Other languages can also participate as long as they provide a Foreign Function Interface layer; this is the case for most modern languages, such as Python (with ctypes or cffi), Julia, Rust, Go, etc. Zero-copy data sharing The C Data Interface passes Arrow data buffers through memory pointers. So, by construction, it allows you to share data from one runtime to another without copying it. Since the data is in standard Arrow in-memory format, its layout is well-defined and unambiguous. This design also restricts the C Data Interface to in-process data sharing. For interprocess communication, we recommend use of the Arrow IPC format. Reduced marshalling The C Data Interface stays close to the natural way of expressing Arrow-like data in C or C++. Only two aspects involve non-trivial marshalling: the encoding of data types, using a very simple string-based language the encoding of optional metadata, using a very simple length-prefixed format Separate type and data representation For applications which produce many instances of data of a single datatype (for example, as a stream of record batches), repeatedly reconstructing the datatype from its string encoding would represent unnecessary overhead. To address this use case, the C Data Interface defines two independent structures: one representing a datatype (and optional metadata), one representing a piece of data. Lifetime handling One common difficulty of data sharing between heterogenous runtimes is to correctly handle the lifetime of data. The C Data Interface allows the producer to define its own memory management scheme through a release callback. This is a simple function pointer which consumers will call when they are finished using the data. For example when used as a producer the Arrow C++ library passes a release callback which simply decrements a shared_ptr’s reference count. Application: passing data between R and Python The R and Python Arrow libraries are both based on the Arrow C++ library, however their respective toolchains (mandated by the R and Python packaging standards) are ABI-incompatible. It is therefore impossible to pass data directly at the C++ level between the R and Python bindings. Using the C Data Interface, we have circumvented this restriction and provide a zero-copy data sharing API between R and Python. It is based on the R reticulate library. Here is an example session mixing R and Python library calls: library(arrow) library(reticulate) use_virtualenv(&quot;arrow&quot;) pa &amp;lt;- import(&quot;pyarrow&quot;) # Create an array in PyArrow a &amp;lt;- pa$array(c(1, 2, 3)) a ## Array ## &amp;lt;double&amp;gt; ## [ ## 1, ## 2, ## 3 ## ] # Apply R methods on the PyArrow-created array: a[a &amp;gt; 1] ## Array ## &amp;lt;double&amp;gt; ## [ ## 2, ## 3 ## ] # Create an array in R and pass it to PyArrow b &amp;lt;- Array$create(c(5, 6, 7)) a_and_b &amp;lt;- pa$concat_arrays(r_to_py(list(a, b))) a_and_b ## Array ## &amp;lt;double&amp;gt; ## [ ## 1, ## 2, ## 3, ## 5, ## 6, ## 7 ## ]</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 0.17.0 Release</title><link href="https://arrow.apache.org/blog/2020/04/21/0.17.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.17.0 Release" /><published>2020-04-21T02:00:00-04:00</published><updated>2020-04-21T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2020/04/21/0.17.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2020/04/21/0.17.0-release/">&lt;!--
 
 --&gt;
 
@@ -1862,165 +1997,4 @@ in the Arrow binary protocol&lt;/li&gt;
 needs&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://lists.apache.org/thread.html/a99124e57c14c3c9ef9d98f3c80cfe1dd25496bf3ff7046778add937@%3Cdev.arrow.apache.org%3E&quot;&gt;Sparse representation and compression in Arrow&lt;/a&gt;&lt;/li&gt;
   &lt;li&gt;&lt;a href=&quot;https://lists.apache.org/thread.html/82a7c026ad18dbe9fdbcffa3560979aff6fd86dd56a49f40d9cfb46e@%3Cdev.arrow.apache.org%3E&quot;&gt;Flight extensions: middleware API and generalized Put operations&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content><author><name>pmc</name></author><summary type="html">The Apache Arrow team is pleased to announce the 0.14.0 release. This covers 3 months of development work and includes 602 resolved issues from 75 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The complete changelog is also available. This post will give some brief highlights in the project since the 0.13.0 release from April. New committers Since the 0.13.0 release, the following have been added: Neville Dipale was added as a committer François Saint-Jacques was added as a committer Praveen Kumar was added as a committer Thank you for all your contributions! Upcoming 1.0.0 Format Stability Release We are planning for our next major release to move from 0.14.0 to 1.0.0. The major version number will indicate stability of the Arrow columnar format and binary protocol. While the format has already been stable since December 2017, we believe it is a good idea to make this stability official and to indicate that it is safe to persist serialized Arrow data in applications. This means that applications will be able to safely upgrade to new Arrow versions without having to worry about backwards incompatibilities. We will write in a future blog post about the stability guarantees we intend to provide to help application developers plan accordingly. Packaging We added support for the following platforms: Debian GNU/Linux buster Ubuntu 19.04 We dropped support for Ubuntu 14.04. Development Infrastructure and Tooling As the project has grown larger and more diverse, we are increasingly outgrowing what we can test in public continuous integration services like Travis CI and Appveyor. In addition, we share these resources with the entire Apache Software Foundation, and given the high volume of pull requests into Apache Arrow, maintainers are frequently waiting many hours for the green light to merge patches. The complexity of our testing is driven by the number of different components and programming languages as well as increasingly long compilation and test execution times as individual libraries grow larger. The 50 minute time limit of public CI services is simply too limited to comprehensively test the project. Additionally, the CI host machines are constrained in their features and memory limits, preventing us from testing features that are only relevant on large amounts of data (10GB or more) or functionality that requires a CUDA-enabled GPU. Organizations that contribute to Apache Arrow are working on physical build infrastructure and tools to improve build times and build scalability. One such new tool is ursabot, a GitHub-enabled bot that can be used to trigger builds either on physical build or in the cloud. It can also be used to trigger benchmark timing comparisons. If you are contributing to the project, you may see Ursabot being employed to trigger tests in pull requests. To help assist with migrating away from Travis CI, we are also working to make as many of our builds reproducible with Docker and not reliant on Travis CI-specific configuration details. This will also help contributors reproduce build failures locally without having to wait for Travis CI. Columnar Format Notes User-defined “extension” types have been formalized in the Arrow format, enabling library users to embed custom data types in the Arrow columnar format. Initial support is available in C++, Java, and Python. A new Duration logical type was added to represent absolute lengths of time. Arrow Flight notes Flight now supports many of the features of a complete RPC framework. Authentication APIs are now supported across all languages (ARROW-5137) Encrypted communication using OpenSSL is supported (ARROW-5643, ARROW-5529) Clients can specify timeouts on remote calls (ARROW-5136) On the protocol level, endpoints are now identified with URIs, to support an open-ended number of potential transports (including TLS and Unix sockets, and perhaps even non-gRPC-based transports in the future) (ARROW-4651) Application-defined metadata can be sent alongside data (ARROW-4626, ARROW-4627). Windows is now a supported platform for Flight in C++ and Python (ARROW-3294), and Python wheels are shipped for all languages (ARROW-3150, ARROW-5656). C++, Python, and Java have been brought to parity, now that actions can return streaming results in Java (ARROW-5254). C++ notes 188 resolved issues related to the C++ implementation, so we summarize some of the work here. General platform improvements A FileSystem abstraction (ARROW-767) has been added, which paves the way for a future Arrow Datasets library allowing to access sharded data on arbitrary storage systems, including remote or cloud storage. A first draft of the Datasets API was committed in ARROW-5512. Right now, this comes with no implementation, but we expect to slowly build it up in the coming weeks or months. Early feedback is welcome on this API. The dictionary API has been reworked in ARROW-3144. The dictionary values used to be tied to the DictionaryType instance, which ended up too inflexible. Since dictionary-encoding is more often an optimization than a semantic property of the data, we decided to move the dictionary values to the ArrayData structure, making it natural for dictionary-encoded arrays to share the same DataType instance, regardless of the encoding details. The FixedSizeList and Map types have been implemented, including in integration tests. The Map type is akin to a List of Struct(key, value) entries, but making it explicit that the underlying data has key-value mapping semantics. Also, map entries are always non-null. A Result&amp;lt;T&amp;gt; class has been introduced in ARROW-4800. The aim is to allow to return an error as w ell as a function’s logical result without resorting to pointer-out arguments. The Parquet C++ library has been refactored to use common Arrow IO classes for improved C++ platform interoperability. Line-delimited JSON reader A multithreaded line-delimited JSON reader (powered internally by RapidJSON) is now available for use (also in Python and R via bindings) . This will likely be expanded to support more kinds of JSON storage in the future. New computational kernels A number of new computational kernels have been developed Compare filter for logical comparisons yielding boolean arrays Filter kernel for selecting elements of an input array according to a boolean selection array. Take kernel, which selects elements by integer index, has been expanded to support nested types C# Notes The native C# implementation has continued to mature since 0.13. This release includes a number of performance, memory use, and usability improvements. Go notes Go’s support for the Arrow columnar format continues to expand. Go now supports reading and writing the Arrow columnar binary protocol, and it has also been added to the cross language integration tests. There are now four languages (C++, Go, Java, and JavaScript) included in our integration tests to verify cross-language interoperability. Java notes Support for referencing arbitrary memory using ArrowBuf has been implemented, paving the way for memory map support in Java A number of performance improvements around vector value access were added (see ARROW-5264, ARROW-5290). The Map type has been implemented in Java and integration tested with C++ Several microbenchmarks have been added and improved. Including a significant speed-up of zeroing out buffers. A new algorithms package has been started to contain reference implementations of common algorithms. The initial contribution is for Array/Vector sorting. JavaScript Notes A new incremental array builder API is available. MATLAB Notes Version 0.14.0 features improved Feather file support in the MEX bindings. Python notes We fixed a problem with the Python wheels causing the Python wheels to be much larger in 0.13.0 than they were in 0.12.0. Since the introduction of LLVM into our build toolchain, the wheels are going to still be significantly bigger. We are interested in approaches to enable pyarrow to be installed in pieces with pip or conda rather than monolithically. It is now possible to define ExtensionTypes with a Python implementation (ARROW-840). Those ExtensionTypes can survive a roundtrip through C++ and serialization. The Flight improvements highlighted above (see C++ notes) are all available from Python. Furthermore, Flight is now bundled in our binary wheels and conda packages for Linux, Windows and macOS (ARROW-3150, ARROW-5656). We will build “manylinux2010” binary wheels for Linux systems, in addition to “manylinux1” wheels (ARROW-2461). Manylinux2010 is a newer standard for more recent systems, with less limiting toolchain constraints. Installing manylinux2010 wheels requires an up-to-date version of pip. Various bug fixes for CSV reading in Python and C++ including the ability to parse Decimal(x, y) columns. Parquet improvements Column statistics for logical types like unicode strings, unsigned integers, and timestamps are casted to compatible Python types (see ARROW-4139) It’s now possible to configure “data page” sizes when writing a file from Python Ruby and C GLib notes The GLib and Ruby bindings have been tracking features in the C++ project. This release includes bindings for Gandiva, JSON reader, and other C++ features. Rust notes There is ongoing work in Rust happening on Parquet file support, computational kernels, and the DataFusion query engine. See the full changelog for details. R notes We have been working on build and packaging for R so that community members can hopefully release the project to CRAN in the near future. Feature development for R has continued to follow the upstream C++ project. Community Discussions Ongoing There are a number of active discussions ongoing on the developer dev@arrow.apache.org mailing list. We look forward to hearing from the community there: Timing and scope of 1.0.0 release Solutions to increase continuous integration capacity A proposal for versioning and forward/backward compatibility guarantees for the 1.0.0 release was shared, not much discussion has occurred yet. Addressing possible unaligned access and undefined behavior concerns in the Arrow binary protocol Supporting smaller than 128-bit encoding of fixed width decimals Forking the Avro C++ implementation so as to adapt it to Arrow’s needs Sparse representation and compression in Arrow Flight extensions: middleware API and generalized Put operations</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 0.13.0 Release</title><link href="https://arrow.apache.org/blog/2019/04/02/0.13.0-release/" rel="alternate" type="text/html" title="Apache Arrow 0.13.0 Release" /><published>2019-04-02T09:00:00-04:00</published><updated>2019-04-02T09:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/04/02/0.13.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/04/02/0.13.0-release/">&lt;!--
-
---&gt;
-
-&lt;p&gt;The Apache Arrow team is pleased to announce the 0.13.0 release. This covers
-more than 2 months of development work and includes &lt;a href=&quot;https://issues.apache.org/jira/issues/?jql=project%20%3D%20ARROW%20AND%20status%20%3D%20Resolved%20AND%20fixVersion%20%3D%200.13.0&quot;&gt;&lt;strong&gt;550 resolved
-issues&lt;/strong&gt;&lt;/a&gt; from &lt;a href=&quot;https://arrow.apache.org/release/0.13.0.html#contributors&quot;&gt;&lt;strong&gt;81 distinct contributors&lt;/strong&gt;&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;See the &lt;a href=&quot;https://arrow.apache.org/install&quot;&gt;Install Page&lt;/a&gt; to learn how to get the libraries for your
-platform. The &lt;a href=&quot;https://arrow.apache.org/release/0.13.0.html&quot;&gt;complete changelog&lt;/a&gt; is also available.&lt;/p&gt;
-
-&lt;p&gt;While it’s a large release, this post will give some brief highlights in the
-project since the 0.12.0 release from January.&lt;/p&gt;
-
-&lt;h2 id=&quot;new-committers-and-pmc-member&quot;&gt;New committers and PMC member&lt;/h2&gt;
-
-&lt;p&gt;The Arrow team is growing! Since the 0.12.0 release we have increased the size
-of our committer and PMC rosters.&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;a href=&quot;https://github.com/andygrove&quot;&gt;Andy Grove&lt;/a&gt; was promoted to PMC member&lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;https://github.com/paddyhoran&quot;&gt;Paddy Horan&lt;/a&gt; was added as a committer&lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;https://github.com/emkornfield&quot;&gt;Micah Kornfield&lt;/a&gt; was added as a committer&lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;https://github.com/pravindra&quot;&gt;Ravindra Pindikura&lt;/a&gt; was added as a committer&lt;/li&gt;
-  &lt;li&gt;&lt;a href=&quot;https://github.com/sunchao&quot;&gt;Chao Sun&lt;/a&gt; was added as a committer&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Thank you for all your contributions!&lt;/p&gt;
-
-&lt;h2 id=&quot;rust-datafusion-query-engine-donation&quot;&gt;Rust DataFusion Query Engine donation&lt;/h2&gt;
-
-&lt;p&gt;Since the last release, we received a donation of &lt;a href=&quot;http://incubator.apache.org/ip-clearance/arrow-rust-datafusion.html&quot;&gt;DataFusion&lt;/a&gt;, a
-Rust-native query engine for the Arrow columnar format, whose development had
-been led prior by Andy Grove. &lt;a href=&quot;http://arrow.apache.org/blog/2019/02/04/datafusion-donation/&quot;&gt;Read more about DataFusion&lt;/a&gt; in our February
-blog post.&lt;/p&gt;
-
-&lt;p&gt;This is an exciting development for the Rust community, and we look forward to
-developing more analytical query processing within the Apache Arrow project.&lt;/p&gt;
-
-&lt;h2 id=&quot;arrow-flight-grpc-progress&quot;&gt;Arrow Flight gRPC progress&lt;/h2&gt;
-
-&lt;p&gt;Over the last couple months, we have made significant progress on Arrow Flight,
-an Arrow-native data messaging framework. We have integration tests to check
-C++ and Java compatibility, and we have added Python bindings for the C++
-library. We will write a future blog post to go into more detail about how
-Flight works.&lt;/p&gt;
-
-&lt;h2 id=&quot;c-notes&quot;&gt;C++ notes&lt;/h2&gt;
-
-&lt;p&gt;There were 231 issues relating to C++ in this release, far too much to
-summarize in a blog post. Some notable items include:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;An experimental &lt;code class=&quot;highlighter-rouge&quot;&gt;ExtensionType&lt;/code&gt; was developed for creating user-defined data
-types that can be embedded in the Arrow binary protocol. This is not yet
-finalized, but &lt;a href=&quot;https://github.com/apache/arrow/blob/master/cpp/src/arrow/extension_type.h&quot;&gt;feedback would be welcome&lt;/a&gt;.&lt;/li&gt;
-  &lt;li&gt;We have undertaken a significant reworking of our CMake build system for C++
-to make the third party dependencies more configurable. Among other things,
-this eases work on packaging for Linux distributions. Read more about this in
-the &lt;a href=&quot;https://github.com/apache/arrow/blob/master/docs/source/developers/cpp.rst#build-dependency-management&quot;&gt;C++ developer documentation&lt;/a&gt;.&lt;/li&gt;
-  &lt;li&gt;Laying more groundwork for an Arrow-native in-memory query engine&lt;/li&gt;
-  &lt;li&gt;We began building a reader for line-delimited JSON files&lt;/li&gt;
-  &lt;li&gt;Gandiva can now be compiled on Windows with Visual Studio&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&quot;c-notes-1&quot;&gt;C# Notes&lt;/h2&gt;
-
-&lt;p&gt;C# .NET development has picked up since the initial code donation last
-fall. 11 issues were resolved this release cycle.&lt;/p&gt;
-
-&lt;p&gt;The Arrow C# package is &lt;a href=&quot;https://www.nuget.org/packages/Apache.Arrow/0.13.0&quot;&gt;now available via NuGet&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h2 id=&quot;go-notes&quot;&gt;Go notes&lt;/h2&gt;
-
-&lt;p&gt;8 Go-related issues were resolved. A notable feature is the addition of a CSV
-file writer.&lt;/p&gt;
-
-&lt;h2 id=&quot;java-notes&quot;&gt;Java notes&lt;/h2&gt;
-
-&lt;p&gt;26 Java issues were resolved. Outside of Flight-related work, some notable
-items include:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;Migration to Java 8 date and time APIs from Joda&lt;/li&gt;
-  &lt;li&gt;Array type support in JDBC adapter&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&quot;javascript-notes&quot;&gt;Javascript Notes&lt;/h2&gt;
-
-&lt;p&gt;The recent &lt;a href=&quot;https://www.npmjs.com/package/apache-arrow/v/0.4.1&quot;&gt;JavaScript 0.4.1 release&lt;/a&gt; is the last JavaScript-only release
-of Apache Arrow. Starting with 0.13 the Javascript implementation is now
-included in mainline Arrow releases! The version number of the released
-JavaScript packages will now be in sync with the mainline version number.&lt;/p&gt;
-
-&lt;h2 id=&quot;python-notes&quot;&gt;Python notes&lt;/h2&gt;
-
-&lt;p&gt;86 Python-related issues were resolved. Some highlights include:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;The Gandiva LLVM expression compiler is now available in the Python wheels
-through the &lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow.gandiva&lt;/code&gt; module.&lt;/li&gt;
-  &lt;li&gt;Flight RPC bindings&lt;/li&gt;
-  &lt;li&gt;Improved pandas serialization performance with RangeIndex&lt;/li&gt;
-  &lt;li&gt;pyarrow can be used without pandas installed&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Note that Apache Arrow will continue to support Python 2.7 until January 2020.&lt;/p&gt;
-
-&lt;h2 id=&quot;ruby-and-c-glib-notes&quot;&gt;Ruby and C GLib notes&lt;/h2&gt;
-
-&lt;p&gt;36 C/GLib- and Ruby-related issues were resolved. The work continues to follow
-the upstream work in the C++ project.&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;Arrow::RecordBatch#raw_records&lt;/code&gt; was added. It can convert a record batch to
-a Ruby’s array in 10x-200x faster than the same conversion by a pure-Ruby
-implementation.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&quot;rust-notes&quot;&gt;Rust notes&lt;/h2&gt;
-
-&lt;p&gt;69 Rust-related issues were resolved. Many of these relate to ongoing work in
-the DataFusion query engine. Some notable items include:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;Date/time support&lt;/li&gt;
-  &lt;li&gt;SIMD for arithmetic operations&lt;/li&gt;
-  &lt;li&gt;Writing CSV and reading line-delimited JSON&lt;/li&gt;
-  &lt;li&gt;Parquet data source support for DataFusion&lt;/li&gt;
-  &lt;li&gt;Prototype DataFrame-style API for DataFusion&lt;/li&gt;
-  &lt;li&gt;Continued evolution of Parquet file reader&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&quot;r-development-progress&quot;&gt;R development progress&lt;/h2&gt;
-
-&lt;p&gt;The Arrow R developers have expanded the scope of the R language bindings and
-additionally worked on packaging support to be able to submit the package to
-CRAN in the near future. 23 issues were resolved for this release.&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&quot;http://arrow.apache.org/blog/2019/01/25/r-spark-improvements/&quot;&gt;We wrote in January about ongoing work&lt;/a&gt; to accelerate R work on Apache Spark
-using Arrow.&lt;/p&gt;
-
-&lt;h2 id=&quot;community-discussions-ongoing&quot;&gt;Community Discussions Ongoing&lt;/h2&gt;
-
-&lt;p&gt;There are a number of active discussions ongoing on the developer
-&lt;code class=&quot;highlighter-rouge&quot;&gt;dev@arrow.apache.org&lt;/code&gt; mailing list. We look forward to hearing from the
-community there:&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;&lt;strong&gt;Benchmarking&lt;/strong&gt;: we are working to create tools for tracking all of our
-benchmark results on a commit-by-commit basis in a centralized database
-schema so that we can monitor for performance regressions over time. We hope
-to develop a publicly viewable benchmark result dashboard.&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;C++ Datasets&lt;/strong&gt;: development of a unified API for reading and writing
-datasets stored in various common formats like Parquet, JSON, and CSV.&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;C++ Query Engine&lt;/strong&gt;: architecture of a parallel Arrow-native query engine
-for C++&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Arrow Flight Evolution&lt;/strong&gt;: adding features to support different real-world
-data messaging use cases&lt;/li&gt;
-  &lt;li&gt;&lt;strong&gt;Arrow Columnar Format evolution&lt;/strong&gt;: we are discussing a new “duration” or
-“time interval” type and some other additions to the Arrow columnar format.&lt;/li&gt;
-&lt;/ul&gt;</content><author><name>wesm</name></author><summary type="html">The Apache Arrow team is pleased to announce the 0.13.0 release. This covers more than 2 months of development work and includes 550 resolved issues from 81 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The complete changelog is also available. While it’s a large release, this post will give some brief highlights in the project since the 0.12.0 release from January. New committers and PMC member The Arrow team is growing! Since the 0.12.0 release we have increased the size of our committer and PMC rosters. Andy Grove was promoted to PMC member Paddy Horan was added as a committer Micah Kornfield was added as a committer Ravindra Pindikura was added as a committer Chao Sun was added as a committer Thank you for all your contributions! Rust DataFusion Query Engine donation Since the last release, we received a donation of DataFusion, a Rust-native query engine for the Arrow columnar format, whose development had been led prior by Andy Grove. Read more about DataFusion in our February blog post. This is an exciting development for the Rust community, and we look forward to developing more analytical query processing within the Apache Arrow project. Arrow Flight gRPC progress Over the last couple months, we have made significant progress on Arrow Flight, an Arrow-native data messaging framework. We have integration tests to check C++ and Java compatibility, and we have added Python bindings for the C++ library. We will write a future blog post to go into more detail about how Flight works. C++ notes There were 231 issues relating to C++ in this release, far too much to summarize in a blog post. Some notable items include: An experimental ExtensionType was developed for creating user-defined data types that can be embedded in the Arrow binary protocol. This is not yet finalized, but feedback would be welcome. We have undertaken a significant reworking of our CMake build system for C++ to make the third party dependencies more configurable. Among other things, this eases work on packaging for Linux distributions. Read more about this in the C++ developer documentation. Laying more groundwork for an Arrow-native in-memory query engine We began building a reader for line-delimited JSON files Gandiva can now be compiled on Windows with Visual Studio C# Notes C# .NET development has picked up since the initial code donation last fall. 11 issues were resolved this release cycle. The Arrow C# package is now available via NuGet. Go notes 8 Go-related issues were resolved. A notable feature is the addition of a CSV file writer. Java notes 26 Java issues were resolved. Outside of Flight-related work, some notable items include: Migration to Java 8 date and time APIs from Joda Array type support in JDBC adapter Javascript Notes The recent JavaScript 0.4.1 release is the last JavaScript-only release of Apache Arrow. Starting with 0.13 the Javascript implementation is now included in mainline Arrow releases! The version number of the released JavaScript packages will now be in sync with the mainline version number. Python notes 86 Python-related issues were resolved. Some highlights include: The Gandiva LLVM expression compiler is now available in the Python wheels through the pyarrow.gandiva module. Flight RPC bindings Improved pandas serialization performance with RangeIndex pyarrow can be used without pandas installed Note that Apache Arrow will continue to support Python 2.7 until January 2020. Ruby and C GLib notes 36 C/GLib- and Ruby-related issues were resolved. The work continues to follow the upstream work in the C++ project. Arrow::RecordBatch#raw_records was added. It can convert a record batch to a Ruby’s array in 10x-200x faster than the same conversion by a pure-Ruby implementation. Rust notes 69 Rust-related issues were resolved. Many of these relate to ongoing work in the DataFusion query engine. Some notable items include: Date/time support SIMD for arithmetic operations Writing CSV and reading line-delimited JSON Parquet data source support for DataFusion Prototype DataFrame-style API for DataFusion Continued evolution of Parquet file reader R development progress The Arrow R developers have expanded the scope of the R language bindings and additionally worked on packaging support to be able to submit the package to CRAN in the near future. 23 issues were resolved for this release. We wrote in January about ongoing work to accelerate R work on Apache Spark using Arrow. Community Discussions Ongoing There are a number of active discussions ongoing on the developer dev@arrow.apache.org mailing list. We look forward to hearing from the community there: Benchmarking: we are working to create tools for tracking all of our benchmark results on a commit-by-commit basis in a centralized database schema so that we can monitor for performance regressions over time. We hope to develop a publicly viewable benchmark result dashboard. C++ Datasets: development of a unified API for reading and writing datasets stored in various common formats like Parquet, JSON, and CSV. C++ Query Engine: architecture of a parallel Arrow-native query engine for C++ Arrow Flight Evolution: adding features to support different real-world data messaging use cases Arrow Columnar Format evolution: we are discussing a new “duration” or “time interval” type and some other additions to the Arrow columnar format.</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+&lt;/ul&gt;</content><author><name>pmc</name></author><summary type="html">The Apache Arrow team is pleased to announce the 0.14.0 release. This covers 3 months of development work and includes 602 resolved issues from 75 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The complete changelog is also available. This post will give some brief highlights in the project since the 0.13.0 release from April. New committers Since the 0.13.0 release, the following have been added: Neville Dipale was added as a committer François Saint-Jacques was added as a committer Praveen Kumar was added as a committer Thank you for all your contributions! Upcoming 1.0.0 Format Stability Release We are planning for our next major release to move from 0.14.0 to 1.0.0. The major version number will indicate stability of the Arrow columnar format and binary protocol. While the format has already been stable since December 2017, we believe it is a good idea to make this stability official and to indicate that it is safe to persist serialized Arrow data in applications. This means that applications will be able to safely upgrade to new Arrow versions without having to worry about backwards incompatibilities. We will write in a future blog post about the stability guarantees we intend to provide to help application developers plan accordingly. Packaging We added support for the following platforms: Debian GNU/Linux buster Ubuntu 19.04 We dropped support for Ubuntu 14.04. Development Infrastructure and Tooling As the project has grown larger and more diverse, we are increasingly outgrowing what we can test in public continuous integration services like Travis CI and Appveyor. In addition, we share these resources with the entire Apache Software Foundation, and given the high volume of pull requests into Apache Arrow, maintainers are frequently waiting many hours for the green light to merge patches. The complexity of our testing is driven by the number of different components and programming languages as well as increasingly long compilation and test execution times as individual libraries grow larger. The 50 minute time limit of public CI services is simply too limited to comprehensively test the project. Additionally, the CI host machines are constrained in their features and memory limits, preventing us from testing features that are only relevant on large amounts of data (10GB or more) or functionality that requires a CUDA-enabled GPU. Organizations that contribute to Apache Arrow are working on physical build infrastructure and tools to improve build times and build scalability. One such new tool is ursabot, a GitHub-enabled bot that can be used to trigger builds either on physical build or in the cloud. It can also be used to trigger benchmark timing comparisons. If you are contributing to the project, you may see Ursabot being employed to trigger tests in pull requests. To help assist with migrating away from Travis CI, we are also working to make as many of our builds reproducible with Docker and not reliant on Travis CI-specific configuration details. This will also help contributors reproduce build failures locally without having to wait for Travis CI. Columnar Format Notes User-defined “extension” types have been formalized in the Arrow format, enabling library users to embed custom data types in the Arrow columnar format. Initial support is available in C++, Java, and Python. A new Duration logical type was added to represent absolute lengths of time. Arrow Flight notes Flight now supports many of the features of a complete RPC framework. Authentication APIs are now supported across all languages (ARROW-5137) Encrypted communication using OpenSSL is supported (ARROW-5643, ARROW-5529) Clients can specify timeouts on remote calls (ARROW-5136) On the protocol level, endpoints are now identified with URIs, to support an open-ended number of potential transports (including TLS and Unix sockets, and perhaps even non-gRPC-based transports in the future) (ARROW-4651) Application-defined metadata can be sent alongside data (ARROW-4626, ARROW-4627). Windows is now a supported platform for Flight in C++ and Python (ARROW-3294), and Python wheels are shipped for all languages (ARROW-3150, ARROW-5656). C++, Python, and Java have been brought to parity, now that actions can return streaming results in Java (ARROW-5254). C++ notes 188 resolved issues related to the C++ implementation, so we summarize some of the work here. General platform improvements A FileSystem abstraction (ARROW-767) has been added, which paves the way for a future Arrow Datasets library allowing to access sharded data on arbitrary storage systems, including remote or cloud storage. A first draft of the Datasets API was committed in ARROW-5512. Right now, this comes with no implementation, but we expect to slowly build it up in the coming weeks or months. Early feedback is welcome on this API. The dictionary API has been reworked in ARROW-3144. The dictionary values used to be tied to the DictionaryType instance, which ended up too inflexible. Since dictionary-encoding is more often an optimization than a semantic property of the data, we decided to move the dictionary values to the ArrayData structure, making it natural for dictionary-encoded arrays to share the same DataType instance, regardless of the encoding details. The FixedSizeList and Map types have been implemented, including in integration tests. The Map type is akin to a List of Struct(key, value) entries, but making it explicit that the underlying data has key-value mapping semantics. Also, map entries are always non-null. A Result&amp;lt;T&amp;gt; class has been introduced in ARROW-4800. The aim is to allow to return an error as w ell as a function’s logical result without resorting to pointer-out arguments. The Parquet C++ library has been refactored to use common Arrow IO classes for improved C++ platform interoperability. Line-delimited JSON reader A multithreaded line-delimited JSON reader (powered internally by RapidJSON) is now available for use (also in Python and R via bindings) . This will likely be expanded to support more kinds of JSON storage in the future. New computational kernels A number of new computational kernels have been developed Compare filter for logical comparisons yielding boolean arrays Filter kernel for selecting elements of an input array according to a boolean selection array. Take kernel, which selects elements by integer index, has been expanded to support nested types C# Notes The native C# implementation has continued to mature since 0.13. This release includes a number of performance, memory use, and usability improvements. Go notes Go’s support for the Arrow columnar format continues to expand. Go now supports reading and writing the Arrow columnar binary protocol, and it has also been added to the cross language integration tests. There are now four languages (C++, Go, Java, and JavaScript) included in our integration tests to verify cross-language interoperability. Java notes Support for referencing arbitrary memory using ArrowBuf has been implemented, paving the way for memory map support in Java A number of performance improvements around vector value access were added (see ARROW-5264, ARROW-5290). The Map type has been implemented in Java and integration tested with C++ Several microbenchmarks have been added and improved. Including a significant speed-up of zeroing out buffers. A new algorithms package has been started to contain reference implementations of common algorithms. The initial contribution is for Array/Vector sorting. JavaScript Notes A new incremental array builder API is available. MATLAB Notes Version 0.14.0 features improved Feather file support in the MEX bindings. Python notes We fixed a problem with the Python wheels causing the Python wheels to be much larger in 0.13.0 than they were in 0.12.0. Since the introduction of LLVM into our build toolchain, the wheels are going to still be significantly bigger. We are interested in approaches to enable pyarrow to be installed in pieces with pip or conda rather than monolithically. It is now possible to define ExtensionTypes with a Python implementation (ARROW-840). Those ExtensionTypes can survive a roundtrip through C++ and serialization. The Flight improvements highlighted above (see C++ notes) are all available from Python. Furthermore, Flight is now bundled in our binary wheels and conda packages for Linux, Windows and macOS (ARROW-3150, ARROW-5656). We will build “manylinux2010” binary wheels for Linux systems, in addition to “manylinux1” wheels (ARROW-2461). Manylinux2010 is a newer standard for more recent systems, with less limiting toolchain constraints. Installing manylinux2010 wheels requires an up-to-date version of pip. Various bug fixes for CSV reading in Python and C++ including the ability to parse Decimal(x, y) columns. Parquet improvements Column statistics for logical types like unicode strings, unsigned integers, and timestamps are casted to compatible Python types (see ARROW-4139) It’s now possible to configure “data page” sizes when writing a file from Python Ruby and C GLib notes The GLib and Ruby bindings have been tracking features in the C++ project. This release includes bindings for Gandiva, JSON reader, and other C++ features. Rust notes There is ongoing work in Rust happening on Parquet file support, computational kernels, and the DataFusion query engine. See the full changelog for details. R notes We have been working on build and packaging for R so that community members can hopefully release the project to CRAN in the near future. Feature development for R has continued to follow the upstream C++ project. Community Discussions Ongoing There are a number of active discussions ongoing on the developer dev@arrow.apache.org mailing list. We look forward to hearing from the community there: Timing and scope of 1.0.0 release Solutions to increase continuous integration capacity A proposal for versioning and forward/backward compatibility guarantees for the 1.0.0 release was shared, not much discussion has occurred yet. Addressing possible unaligned access and undefined behavior concerns in the Arrow binary protocol Supporting smaller than 128-bit encoding of fixed width decimals Forking the Avro C++ implementation so as to adapt it to Arrow’s needs Sparse representation and compression in Arrow Flight extensions: middleware API and generalized Put operations</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
