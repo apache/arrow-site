@@ -4,7 +4,7 @@ title: "Introducing the Apache Arrow C Data Interface"
 description: "This post introduces the Arrow C Data Interface, a simple C-based
 interoperability standard to simplify interactions between independent users
 and implementors of the Arrow in-memory format."
-date: "2020-04-22 00:00:00 +0100"
+date: "2020-05-04 00:00:00 +0100"
 author: apitrou
 categories: [application]
 ---
