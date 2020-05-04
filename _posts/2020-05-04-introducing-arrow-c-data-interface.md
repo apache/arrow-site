@@ -28,8 +28,9 @@ limitations under the License.
 -->
 
 Apache Arrow includes a cross-language, platform-independent in-memory
-columnar format allowing zero-copy data sharing and transfer between
-heterogenous runtimes and applications.
+[columnar format](https://arrow.apache.org/docs/format/Columnar.html)
+allowing zero-copy data sharing and transfer between heterogenous runtimes
+and applications.
 
 The easiest way to use the Arrow columnar format has always been to depend
 on one of the concrete implementations developed by the Apache Arrow community.
@@ -70,7 +71,8 @@ another without copying it.  Since the data is in standard
 its layout is well-defined and unambiguous.
 
 This design also restricts the C Data Interface to *in-process* data sharing.
-For interprocess communication, we recommend use of the Arrow IPC format.
+For interprocess communication, we recommend use of the Arrow
+[IPC format](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc).
 
 ## Reduced marshalling
 
