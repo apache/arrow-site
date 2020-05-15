@@ -135,6 +135,12 @@ short description of your use case.
   genomic, clinical, images, sensor, environmental, and IoT data -
   all in one analytical platform. [SciDB streaming][22] and
   [accelerated_io_tools][24] are powered by Apache Arrow.
+* **[TileDB][32]:** TileDB is an open-source, cloud-optimized engine for storing
+  and accessing dense/sparse multi-dimensional arrays and dataframes. It is an
+  embeddable C++ library that works on Linux, macOS, and Windows, which comes
+  with numerous APIs and integrations. We use Arrow in our [TileDB-VCF][33]
+  project for genomics to achieve zero-copying when accessing TileDB data from
+  Spark and Dask.
 * **[Turbodbc][4]:** Python module to access relational databases via the Open
   Database Connectivity (ODBC) interface. It provides the ability to return
   Arrow Tables and RecordBatches in addition to the Python Database API
@@ -180,3 +186,5 @@ short description of your use case.
 [29]: https://www.inaccel.com/
 [30]: https://www.mathworks.com
 [31]: https://github.com/RandomFractals/vscode-data-preview
+[32]: https://github.com/TileDB-Inc/TileDB
+[33]: https://github.com/TileDB-Inc/TileDB-VCF
