@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.feather &mdash; Apache Arrow v0.17.0</title>
+  <title>pyarrow.feather &mdash; Apache Arrow v0.17.1</title>
   
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.17.0
+                0.17.1
               </div>
             
           
@@ -196,8 +196,8 @@
 <span class="kn">import</span> <span class="nn">os</span>
 
 <span class="kn">from</span> <span class="nn">pyarrow.pandas_compat</span> <span class="kn">import</span> <span class="n">_pandas_api</span>  <span class="c1"># noqa</span>
-<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="kn">import</span> <span class="n">FeatherError</span>  <span class="c1"># noqa</span>
-<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="kn">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">concat_tables</span>
+<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Codec</span><span class="p">,</span> <span class="n">FeatherError</span><span class="p">,</span> <span class="n">Table</span><span class="p">,</span>  <span class="c1"># noqa</span>
+                         <span class="n">concat_tables</span><span class="p">,</span> <span class="n">schema</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">pyarrow.lib</span> <span class="k">as</span> <span class="nn">ext</span>
 
 
@@ -289,6 +289,9 @@
                          <span class="s2">&quot;Feather format&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">type</span><span class="p">)))</span>
 
 
+<span class="n">_FEATHER_SUPPORTED_CODECS</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lz4&#39;</span><span class="p">,</span> <span class="s1">&#39;zstd&#39;</span><span class="p">,</span> <span class="s1">&#39;uncompressed&#39;</span><span class="p">}</span>
+
+
 <div class="viewcode-block" id="write_feather"><a class="viewcode-back" href="../../python/generated/pyarrow.feather.write_feather.html#pyarrow.feather.write_feather">[docs]</a><span class="k">def</span> <span class="nf">write_feather</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">dest</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression_level</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                   <span class="n">chunksize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -342,11 +345,14 @@
         <span class="k">if</span> <span class="n">chunksize</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Feather V1 files do not support chunksize &quot;</span>
                              <span class="s2">&quot;option&quot;</span><span class="p">)</span>
-
-    <span class="n">supported_compression_options</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;lz4&#39;</span><span class="p">,</span> <span class="s1">&#39;zstd&#39;</span><span class="p">,</span> <span class="s1">&#39;uncompressed&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">compression</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">supported_compression_options</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;compression=&quot;</span><span class="si">{}</span><span class="s1">&quot; not supported, must be one of </span><span class="si">{}</span><span class="s1">&#39;</span>
-                         <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">compression</span><span class="p">,</span> <span class="n">supported_compression_options</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">compression</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">Codec</span><span class="o">.</span><span class="n">is_available</span><span class="p">(</span><span class="s1">&#39;lz4_frame&#39;</span><span class="p">):</span>
+            <span class="n">compression</span> <span class="o">=</span> <span class="s1">&#39;lz4&#39;</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">compression</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span>
+              <span class="n">compression</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_FEATHER_SUPPORTED_CODECS</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;compression=&quot;</span><span class="si">{}</span><span class="s1">&quot; not supported, must be &#39;</span>
+                             <span class="s1">&#39;one of </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">compression</span><span class="p">,</span>
+                                                <span class="n">_FEATHER_SUPPORTED_CODECS</span><span class="p">))</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">ext</span><span class="o">.</span><span class="n">write_feather</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">dest</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
@@ -411,14 +417,27 @@
 
     <span class="n">column_types</span> <span class="o">=</span> <span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
     <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">int</span><span class="p">,</span> <span class="n">column_types</span><span class="p">)):</span>
-        <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">str</span><span class="p">,</span> <span class="n">column_types</span><span class="p">)):</span>
-        <span class="k">return</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_names</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_names</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">column_type_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">column_types</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Columns must be indices or names. &quot;</span>
+                        <span class="s2">&quot;Got columns </span><span class="si">{}</span><span class="s2"> of types </span><span class="si">{}</span><span class="s2">&quot;</span>
+                        <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">column_type_names</span><span class="p">))</span>
 
-    <span class="n">column_type_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">column_types</span><span class="p">]</span>
-    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Columns must be indices or names. &quot;</span>
-                    <span class="s2">&quot;Got columns </span><span class="si">{}</span><span class="s2"> of types </span><span class="si">{}</span><span class="s2">&quot;</span>
-                    <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">column_type_names</span><span class="p">))</span></div>
+    <span class="c1"># Feather v1 already respects the column selection</span>
+    <span class="k">if</span> <span class="n">reader</span><span class="o">.</span><span class="n">version</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">table</span>
+    <span class="c1"># Feather v2 reads with sorted / deduplicated selection</span>
+    <span class="k">elif</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span> <span class="o">==</span> <span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">table</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># follow exact order / selection of names</span>
+        <span class="n">new_fields</span> <span class="o">=</span> <span class="p">[</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
+        <span class="n">new_schema</span> <span class="o">=</span> <span class="n">schema</span><span class="p">(</span><span class="n">new_fields</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+        <span class="n">new_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">table</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Table</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">new_columns</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">new_schema</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

@@ -1,0 +1,140 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.13">
+  <compounddef id="tensor__to__py_8md" kind="file" language="Markdown">
+    <compoundname>tensor_to_py.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">&lt;!---</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>Licensed<sp/>under<sp/>the<sp/>Apache<sp/>License,<sp/>Version<sp/>2.0<sp/>(the<sp/>&quot;License&quot;);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>you<sp/>may<sp/>not<sp/>use<sp/>this<sp/>file<sp/>except<sp/>in<sp/>compliance<sp/>with<sp/>the<sp/>License.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>You<sp/>may<sp/>obtain<sp/>a<sp/>copy<sp/>of<sp/>the<sp/>License<sp/>at</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>http://www.apache.org/licenses/LICENSE-2.0</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/>Unless<sp/>required<sp/>by<sp/>applicable<sp/>law<sp/>or<sp/>agreed<sp/>to<sp/>in<sp/>writing,<sp/>software</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>distributed<sp/>under<sp/>the<sp/>License<sp/>is<sp/>distributed<sp/>on<sp/>an<sp/>&quot;AS<sp/>IS&quot;<sp/>BASIS,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>WITHOUT<sp/>WARRANTIES<sp/>OR<sp/>CONDITIONS<sp/>OF<sp/>ANY<sp/>KIND,<sp/>either<sp/>express<sp/>or<sp/>implied.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>See<sp/>the<sp/>License<sp/>for<sp/>the<sp/>specific<sp/>language<sp/>governing<sp/>permissions<sp/>and</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>limitations<sp/>under<sp/>the<sp/>License.<sp/>See<sp/>accompanying<sp/>LICENSE<sp/>file.</highlight></codeline>
+<codeline><highlight class="normal">--&gt;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Use<sp/>Plasma<sp/>to<sp/>Access<sp/>Tensors<sp/>from<sp/>C++<sp/>in<sp/>Python</highlight></codeline>
+<codeline><highlight class="normal">==============================================</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>short<sp/>tutorial<sp/>shows<sp/>how<sp/>to<sp/>use<sp/>Arrow<sp/>and<sp/>the<sp/>Plasma<sp/>Store<sp/>to<sp/>send<sp/>data</highlight></codeline>
+<codeline><highlight class="normal">from<sp/>C++<sp/>to<sp/>Python.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">In<sp/>detail,<sp/>we<sp/>will<sp/>show<sp/>how<sp/>to:</highlight></codeline>
+<codeline><highlight class="normal">1.<sp/>Serialize<sp/>a<sp/>floating-point<sp/>array<sp/>in<sp/>C++<sp/>into<sp/>an<sp/>Arrow<sp/>tensor</highlight></codeline>
+<codeline><highlight class="normal">2.<sp/>Save<sp/>the<sp/>Arrow<sp/>tensor<sp/>to<sp/>Plasma</highlight></codeline>
+<codeline><highlight class="normal">3.<sp/>Access<sp/>the<sp/>Tensor<sp/>in<sp/>a<sp/>Python<sp/>process</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>approach<sp/>has<sp/>the<sp/>advantage<sp/>that<sp/>multiple<sp/>python<sp/>processes<sp/>can<sp/>all<sp/>read</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>tensor<sp/>with<sp/>zero-copy.<sp/>Therefore,<sp/>only<sp/>one<sp/>copy<sp/>is<sp/>necessary<sp/>when<sp/>we<sp/>send</highlight></codeline>
+<codeline><highlight class="normal">a<sp/>tensor<sp/>from<sp/>one<sp/>C++<sp/>process<sp/>to<sp/>many<sp/>python<sp/>processes.</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Step<sp/>0:<sp/>Set<sp/>up</highlight></codeline>
+<codeline><highlight class="normal">------</highlight></codeline>
+<codeline><highlight class="normal">We<sp/>will<sp/>include<sp/>the<sp/>following<sp/>header<sp/>files<sp/>and<sp/>construct<sp/>a<sp/>Plasma<sp/>client.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```cpp</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&lt;plasma/client.h&gt;</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&lt;arrow/tensor.h&gt;</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&lt;arrow/array.h&gt;</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&lt;arrow/buffer.h&gt;</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&lt;arrow/io/memory.h&gt;</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&lt;arrow/ipc/writer.h&gt;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">PlasmaClient<sp/>client_;</highlight></codeline>
+<codeline><highlight class="normal">ARROW_CHECK_OK(client_.Connect(&quot;/tmp/plasma&quot;,<sp/>&quot;&quot;,<sp/>0));</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Step<sp/>1:<sp/>Serialize<sp/>a<sp/>floating<sp/>point<sp/>array<sp/>in<sp/>C++<sp/>into<sp/>an<sp/>Arrow<sp/>Tensor</highlight></codeline>
+<codeline><highlight class="normal">--------------------------------------------------------------------</highlight></codeline>
+<codeline><highlight class="normal">In<sp/>this<sp/>step,<sp/>we<sp/>will<sp/>construct<sp/>a<sp/>floating-point<sp/>array<sp/>in<sp/>C++.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```cpp</highlight></codeline>
+<codeline><highlight class="normal">//<sp/>Generate<sp/>an<sp/>Object<sp/>ID<sp/>for<sp/>Plasma</highlight></codeline>
+<codeline><highlight class="normal">ObjectID<sp/>object_id<sp/>=<sp/>ObjectID::from_binary(&quot;11111111111111111111&quot;);</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">//<sp/>Generate<sp/>Float<sp/>Array</highlight></codeline>
+<codeline><highlight class="normal">int64_t<sp/>input_length<sp/>=<sp/>1000;</highlight></codeline>
+<codeline><highlight class="normal">std::vector&lt;float&gt;<sp/>input(input_length);</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>(int64_t<sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>input_length;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>input[i]<sp/>=<sp/>2.0;</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">//<sp/>Create<sp/>Arrow<sp/>Tensor<sp/>Object,<sp/>no<sp/>copy<sp/>made!</highlight></codeline>
+<codeline><highlight class="normal">//<sp/>{input_length}<sp/>is<sp/>the<sp/>shape<sp/>of<sp/>the<sp/>tensor</highlight></codeline>
+<codeline><highlight class="normal">auto<sp/>value_buffer<sp/>=<sp/>Buffer::Wrap&lt;float&gt;(input);</highlight></codeline>
+<codeline><highlight class="normal">Tensor<sp/>t(float32(),<sp/>value_buffer,<sp/>{input_length});</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Step<sp/>2:<sp/>Save<sp/>the<sp/>Arrow<sp/>Tensor<sp/>to<sp/>Plasma<sp/>In-Memory<sp/>Object<sp/>Store</highlight></codeline>
+<codeline><highlight class="normal">--------------------------------------------------------------</highlight></codeline>
+<codeline><highlight class="normal">Continuing<sp/>from<sp/>Step<sp/>1,<sp/>this<sp/>step<sp/>will<sp/>save<sp/>the<sp/>tensor<sp/>to<sp/>Plasma<sp/>Store.<sp/>We</highlight></codeline>
+<codeline><highlight class="normal">use<sp/>`arrow::ipc::WriteTensor`<sp/>to<sp/>write<sp/>the<sp/>data.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>variable<sp/>`meta_len`<sp/>will<sp/>contain<sp/>the<sp/>length<sp/>of<sp/>the<sp/>tensor<sp/>metadata</highlight></codeline>
+<codeline><highlight class="normal">after<sp/>the<sp/>call<sp/>to<sp/>`arrow::ipc::WriteTensor`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```cpp</highlight></codeline>
+<codeline><highlight class="normal">//<sp/>Get<sp/>the<sp/>size<sp/>of<sp/>the<sp/>tensor<sp/>to<sp/>be<sp/>stored<sp/>in<sp/>Plasma</highlight></codeline>
+<codeline><highlight class="normal">int64_t<sp/>datasize;</highlight></codeline>
+<codeline><highlight class="normal">ARROW_CHECK_OK(ipc::GetTensorSize(t,<sp/>&amp;datasize));</highlight></codeline>
+<codeline><highlight class="normal">int32_t<sp/>meta_len<sp/>=<sp/>0;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">//<sp/>Create<sp/>the<sp/>Plasma<sp/>Object</highlight></codeline>
+<codeline><highlight class="normal">//<sp/>Plasma<sp/>is<sp/>responsible<sp/>for<sp/>initializing<sp/>and<sp/>resizing<sp/>the<sp/>buffer</highlight></codeline>
+<codeline><highlight class="normal">//<sp/>This<sp/>buffer<sp/>will<sp/>contain<sp/>the<sp/>_serialized_<sp/>tensor</highlight></codeline>
+<codeline><highlight class="normal">std::shared_ptr&lt;Buffer&gt;<sp/>buffer;</highlight></codeline>
+<codeline><highlight class="normal">ARROW_CHECK_OK(</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>client_.Create(object_id,<sp/>datasize,<sp/>NULL,<sp/>0,<sp/>&amp;buffer));</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">//<sp/>Writing<sp/>Process,<sp/>this<sp/>will<sp/>copy<sp/>the<sp/>tensor<sp/>into<sp/>Plasma</highlight></codeline>
+<codeline><highlight class="normal">io::FixedSizeBufferWriter<sp/>stream(buffer);</highlight></codeline>
+<codeline><highlight class="normal">ARROW_CHECK_OK(arrow::ipc::WriteTensor(t,<sp/>&amp;stream,<sp/>&amp;meta_len,<sp/>&amp;datasize));</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">//<sp/>Seal<sp/>Plasma<sp/>Object</highlight></codeline>
+<codeline><highlight class="normal">//<sp/>This<sp/>computes<sp/>a<sp/>hash<sp/>of<sp/>the<sp/>object<sp/>data<sp/>by<sp/>default</highlight></codeline>
+<codeline><highlight class="normal">ARROW_CHECK_OK(client_.Seal(object_id));</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Step<sp/>3:<sp/>Access<sp/>the<sp/>Tensor<sp/>in<sp/>a<sp/>Python<sp/>Process</highlight></codeline>
+<codeline><highlight class="normal">---------------------------------------------</highlight></codeline>
+<codeline><highlight class="normal">In<sp/>Python,<sp/>we<sp/>will<sp/>construct<sp/>a<sp/>Plasma<sp/>client<sp/>and<sp/>point<sp/>it<sp/>to<sp/>the<sp/>store&apos;s<sp/>socket.</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>`inputs`<sp/>variable<sp/>will<sp/>be<sp/>a<sp/>list<sp/>of<sp/>Object<sp/>IDs<sp/>in<sp/>their<sp/>raw<sp/>byte<sp/>string<sp/>form.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">import<sp/>pyarrow<sp/>as<sp/>pa</highlight></codeline>
+<codeline><highlight class="normal">import<sp/>pyarrow.plasma<sp/>as<sp/>plasma</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">plasma_client<sp/>=<sp/>plasma.connect(&apos;/tmp/plasma&apos;)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>inputs:<sp/>a<sp/>list<sp/>of<sp/>object<sp/>ids</highlight></codeline>
+<codeline><highlight class="normal">inputs<sp/>=<sp/>[20<sp/>*<sp/>b&apos;1&apos;]</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>Construct<sp/>Object<sp/>ID<sp/>and<sp/>perform<sp/>a<sp/>batch<sp/>get</highlight></codeline>
+<codeline><highlight class="normal">object_ids<sp/>=<sp/>[plasma.ObjectID(inp)<sp/>for<sp/>inp<sp/>in<sp/>inputs]</highlight></codeline>
+<codeline><highlight class="normal">buffers<sp/>=<sp/>plasma_client.get_buffers(object_ids)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>Read<sp/>the<sp/>tensor<sp/>and<sp/>convert<sp/>to<sp/>numpy<sp/>array<sp/>for<sp/>each<sp/>object</highlight></codeline>
+<codeline><highlight class="normal">arrs<sp/>=<sp/>[]</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>buffer<sp/>in<sp/>buffers:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>reader<sp/>=<sp/>pa.BufferReader(buffer)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>t<sp/>=<sp/>pa.read_tensor(reader)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>arr<sp/>=<sp/>t.to_numpy()</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>arrs.append(arr)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>arrs<sp/>is<sp/>now<sp/>a<sp/>list<sp/>of<sp/>numpy<sp/>arrays</highlight></codeline>
+<codeline><highlight class="normal">assert<sp/>np.all(arrs[0]<sp/>==<sp/>2.0<sp/>*<sp/>np.ones(1000,<sp/>dtype=&quot;float32&quot;))</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+    </programlisting>
+    <location file="tutorials/tensor_to_py.md"/>
+  </compounddef>
+</doxygen>
