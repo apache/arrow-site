@@ -84,6 +84,7 @@ sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --cod
 sudo apt update
 sudo apt install -y -V libarrow-dev # For C++
 sudo apt install -y -V libarrow-glib-dev # For GLib (C)
+sudo apt install -y -V libarrow-dataset-dev # For Arrow Dataset C++
 sudo apt install -y -V libarrow-flight-dev # For Flight C++
 sudo apt install -y -V libplasma-dev # For Plasma C++
 sudo apt install -y -V libplasma-glib-dev # For Plasma GLib (C)
@@ -99,6 +100,7 @@ CentOS 8:
 sudo dnf install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
 sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-devel # For C++
 sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-glib-devel # For GLib (C)
+sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-dataset-devel # For Arrow Dataset C++
 sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-devel # For Apache Parquet C++
 sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-glib-devel # For Parquet GLib (C)
 ```
@@ -109,6 +111,7 @@ CentOS 6 and 7:
 sudo yum install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
+sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Arrow Dataset C++
 sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
 sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
 ```
@@ -120,6 +123,7 @@ sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.
 sudo yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
+sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Arrow Dataset C++
 sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
 sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
 ```
