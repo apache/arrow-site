@@ -73,7 +73,7 @@ Debian GNU/Linux and Ubuntu:
 
 ```shell
 sudo apt update
-sudo apt install -y -V lsb-release wget
+sudo apt install -y -V ca-certificates lsb-release wget
 if [ $(lsb_release --codename --short) = "stretch" ]; then
   sudo tee /etc/apt/sources.list.d/backports.list <<APT_LINE
 deb http://deb.debian.org/debian $(lsb_release --codename --short)-backports main
