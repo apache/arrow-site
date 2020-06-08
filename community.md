@@ -63,4 +63,4 @@ If you know your question is actually a bug report or feature request, we encour
 
 ## Contributing
 
-As mentioned above, we use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue tracker and GitHub for source control. See the [contribution guidelines](http://arrow.apache.org/docs/developers/contributing.html) for more.
+As mentioned above, we use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue tracker and GitHub for source control. See the [contribution guidelines](https://arrow.apache.org/docs/developers/contributing.html) for more.

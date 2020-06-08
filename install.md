@@ -28,6 +28,8 @@ limitations under the License.
 
 See the [release notes][10] for more about what's new.
 
+For information on previous releases, see [here][19].
+
 ### Source Release
 
 * **Source Release**: [{{site.data.versions['current'].tarball_name}}][6]
@@ -208,3 +210,4 @@ The Apache Arrow C++ port in vcpkg is kept up to date by Microsoft team members 
 [16]: https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-arrow
 [17]: https://brew.sh/
 [18]: https://github.com/Microsoft/vcpkg
+[19]: {{ site.baseurl }}/release/
