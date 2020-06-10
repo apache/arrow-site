@@ -24,11 +24,51 @@ limitations under the License.
 
 # Frequently Asked Questions
 
+## General
+
+### What *is* Arrow?
+
+Arrow is fundamentally a standard for how to represent columnar data in memory, along with libraries in many languages that implement that standard. By implementing the Arrow format, these libraries allow different processes, perhaps written in different languages, to share data efficiently.
+
+In addition to serving as a universal standard for data interchange, many projects, both within the core `apache/arrow` repository and in the broader community, use Arrow as a foundation for fast data analysis.
+
+### Why create a new standard?
+
+## Project status
+
 ### How stable is the Arrow format? Is it safe to use in my application?
 
 The Arrow in-memory format is considered stable, and we intend to make only backwards-compatible changes, such as additional data types. We do not yet recommend the Arrow file format for long-term disk persistence of data; that said, it is perfectly acceptable to write Arrow memory to disk for purposes of memory mapping and caching.
 
 We encourage people to start building Arrow-based in-memory computing applications now, and choose a suitable file format for disk storage if necessary. The Arrow libraries include adapters for several file formats, including Parquet, ORC, CSV, and JSON.
+
+## Getting started
+
+### Where can I get Arrow libraries?
+
+Arrow libraries for many languages are available through the usual package managers. See the [install](/install/) page for specifics.
+
+## Getting involved
+
+### I have some questions. How can I get help?
+
+The [Arrow mailing lists](/community/) are the best place to ask questions. Don't be shy--we're here to help.
+
+### I tried to use Arrow and it didn't work. Can you fix it?
+
+Hopefully! Please make a detailed bug report--that's a valuable contribution to the project itself. See the [contribution guidelines](https://arrow.apache.org/docs/developers/contributing.html) for how to make a report.
+
+### Arrow looks great and I'd totally use it if it only did X. When will it be done?
+
+We use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue tracker. Search for an issue that matches your need. If you find one, feel free to comment on it and describe your use case--that will help whoever picks up the task. If you don't find one, make it.
+
+Ultimately, Arrow is software written by and for the community. If you don't see someone else in the community working on your issue, the best way to get it done is to pitch in yourself. We're more than willing to help you contribute successfully to the project.
+
+### How can I report a security vulnerability?
+
+Please send an email to [private@arrow.apache.org](mailto:private@arrow.apache.org). See the [security](/security/) page for more.
+
+## Relation to other projects
 
 ### What is the difference between Apache Arrow and Apache Parquet?
 
