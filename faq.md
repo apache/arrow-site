@@ -38,7 +38,7 @@ Arrow format.
 
 Arrow additionally defines a streaming format and a file format for
 inter-process communication (IPC), based on the in-memory format.  It also
-defines a generic client-server RPC mechanism (Flight RPC), based on the
+defines a generic client-server RPC mechanism (Arrow Flight), based on the
 IPC format, and implemented on top of the gRPC framework.  <!-- TODO links -->
 
 ### Why create a new standard?
@@ -66,7 +66,6 @@ including Parquet, ORC, CSV, and JSON.
 
 ### How stable are the Arrow libraries?
 
-Some implementations of Arrow are more complete and more stable than others.
 We refer you to the [implementation matrix](https://github.com/apache/arrow/blob/master/docs/source/status.rst).
 
 ## Getting started
@@ -112,15 +111,11 @@ See the [security]({{ site.baseurl }}/security/) page for more.
 ### What is the difference between Apache Arrow and Apache Parquet?
 <!-- Revise this -->
 
-Parquet files are designed for disk storage, while Arrow is designed for in-memory use,
-though you can put it on disk and then memory-map later. Arrow and Parquet are
-intended to be compatible with each other and used together in applications.
-
 Parquet is a storage format designed for maximum space efficiency, using
 advanced compression and encoding techniques.  It is ideal when wanting to
 minimize disk usage while storing gigabytes of data, or perhaps more.
 This efficiency comes at the cost of relatively expensive reading into memory,
-as Parquet data cannot be directly operated on, and it must be decoded in
+as Parquet data cannot be directly operated on but must be decoded in
 large chunks.
 
 Conversely, Arrow is an in-memory format meant for direct and efficient use
