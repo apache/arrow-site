@@ -75,6 +75,15 @@ short description of your use case.
   Dremio reads data from any source (RDBMS, HDFS, S3, NoSQL) into Arrow
   buffers, and provides fast SQL access via ODBC, JDBC, and REST for BI,
   Python, R, and more (all backed by Apache Arrow).
+* **[Falcon][25]:** An interactive data exploration tool with coordinated views.
+  Falcon loads Arrow files using the Arrow JavaScript module. Since Arrow does
+  not need to be parsed (like text-based formats like CSV and JSON), startup cost
+  is significantly minimized.
+* **[FASTDATA.io][26]**: Plasma Engine (unrelated to Arrow's Plasma In-Memory
+  Object Store) exploits the massive parallel processing power of GPUs for
+  stream and batch processing. It supports Arrow as input and output, uses
+  Arrow internally to maximize performance, and can be used with existing
+  Apache Spark™ APIs.
 * **[Fletcher][20]:** Fletcher is a framework that can integrate FPGA
   accelerators with tools and frameworks that use the Apache Arrow in-memory
   format. From a set of Arrow Schemas, Fletcher generates highly optimized
@@ -145,15 +154,6 @@ short description of your use case.
   Database Connectivity (ODBC) interface. It provides the ability to return
   Arrow Tables and RecordBatches in addition to the Python Database API
   Specification 2.0.
-* **[Falcon][25]:** An interactive data exploration tool with coordinated views.
-  Falcon loads Arrow files using the Arrow JavaScript module. Since Arrow does
-  not need to be parsed (like text-based formats like CSV and JSON), startup cost
-  is significantly minimized.
-* **[FASTDATA.io][26]**: Plasma Engine (unrelated to Arrow's Plasma In-Memory
-  Object Store) exploits the massive parallel processing power of GPUs for
-  stream and batch processing. It supports Arrow as input and output, uses
-  Arrow internally to maximize performance, and can be used with existing
-  Apache Spark™ APIs.
 
 [1]: https://www.apache.org/foundation/marks/
 [2]: https://www.apache.org/foundation/marks/faq/
