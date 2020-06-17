@@ -60,7 +60,7 @@ a shared-memory object store written in C++ and exposed in Python. Plasma
 holds immutable objects in shared memory so that they can be accessed
 efficiently by many clients across process boundaries.
 
-The Arrow format also defines a [C data interface]({% post_url 2020-05-04-introducing-arrow-c-data-interface %})
+The Arrow format also defines a [C data interface]({% post_url 2020-05-04-introducing-arrow-c-data-interface %}),
 which allows zero-copy data sharing inside a single process without any
 build-time or link-time dependency requirements. This allows, for example,
 [R users to access `pyarrow`-based projects]({{ site.baseurl }}/docs/r/articles/python.html)
