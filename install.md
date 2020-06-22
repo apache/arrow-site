@@ -223,4 +223,4 @@ install.packages("arrow")
 [18]: https://github.com/Microsoft/vcpkg
 [19]: {{ site.baseurl }}/release/
 [20]: https://cran.r-project.org/
-[19]: {{ site.baseurl }}/getting_started/
+[21]: {{ site.baseurl }}/getting_started/

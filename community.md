@@ -41,12 +41,19 @@ These arrow.apache.org mailing lists are for project discussion:
 
 When emailing one of the lists, you may want to prefix the subject line with one or more tags, like `[C++] why did this segfault?`, `[Python] trouble with wheels`, etc., so that the appropriate people in the community notice the message.
 
-In addition, these lists log several activity streams:
+You may also wish to subscript to these lists, which capture some activity streams:
 
 <ul>
-  <li> <code>issues@</code> for JIRA activity {% include mailing_list_links.html list="issues" %} </li>
-  <li> <code>github@</code> for all activity on the <a href="https://github.com/apache/arrow">apache/arrow</a> and <a href="https://github.com/apache/arrow-site">apache/arrow-site</a> repositories {% include mailing_list_links.html list="github" %} </li>
-  <li> <code>commits@</code> for just commits to those repositories (typically to <code>master</code> only) {% include mailing_list_links.html list="commits" %} </li>
+  <li> <code>issues@</code> for the creation of JIRA issues {% include mailing_list_links.html list="issues" %} </li>
+  <li> <code>commits@</code> for commits to the <a href="https://github.com/apache/arrow">apache/arrow</a> and <a href="https://github.com/apache/arrow-site">apache/arrow-site</a> repositories (typically to <code>master</code> only) {% include mailing_list_links.html list="commits" %} </li>
+</ul>
+
+In addition, we have some "firehose" lists, which exist so that development
+activity is captured in email form for archival purposes.
+
+<ul>
+  <li> <code>jira@</code> for all activity on JIRA issues {% include mailing_list_links.html list="jira" %} </li>
+  <li> <code>github@</code> for all activity on the GitHub repositories {% include mailing_list_links.html list="github" %} </li>
 </ul>
 
 ### Stack Overflow
