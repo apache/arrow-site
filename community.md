@@ -41,7 +41,7 @@ These arrow.apache.org mailing lists are for project discussion:
 
 When emailing one of the lists, you may want to prefix the subject line with one or more tags, like `[C++] why did this segfault?`, `[Python] trouble with wheels`, etc., so that the appropriate people in the community notice the message.
 
-You may also wish to subscript to these lists, which capture some activity streams:
+You may also wish to subscribe to these lists, which capture some activity streams:
 
 <ul>
   <li> <code>issues@</code> for the creation of JIRA issues {% include mailing_list_links.html list="issues" %} </li>
@@ -70,4 +70,4 @@ If you know your question is actually a bug report or feature request, we encour
 
 ## Contributing
 
-As mentioned above, we use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue tracker and GitHub for source control. See the [contribution guidelines]({{ site.baseurl }}/docs/developers/contributing.html) for more.
+As mentioned above, we use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue tracker and [GitHub](https://github.com/apache/arrow) for source control. See the [contribution guidelines]({{ site.baseurl }}/docs/developers/contributing.html) for more.
