@@ -138,7 +138,7 @@ or asynchronously by first persisting data on storage using the Arrow "file form
 The Arrow IPC mechanism is based on the Arrow in-memory format, such that
 there is no translation necessary between the on-disk representation and
 the in-memory representation.  Therefore, performing analytics on an Arrow
-IPC file can use memory-mapping and pay effectively zero cost.
+IPC file can use memory-mapping, avoiding any deserialization cost and extra copies.
 
 Some things to keep in mind when comparing the Arrow IPC file format and the
 Parquet format:
