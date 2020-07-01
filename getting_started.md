@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: article
 title: Getting started
 description: Links to user guides to help you start using Arrow
 ---

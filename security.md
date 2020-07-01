@@ -10,7 +10,9 @@ Apache Arrow uses the standard process outlined by the [Apache Security Team](ht
 
 To report a possible security vulnerability, please email [private@arrow.apache.org](mailto:private@arrow.apache.org).
 
-## [CVE-2019-12408](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-12408): Uninitialized Memory in C++ ArrayBuilder
+<hr class="my-5">
+
+### [CVE-2019-12408](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-12408): Uninitialized Memory in C++ ArrayBuilder
 
 **Severity**: High
 
@@ -22,7 +24,9 @@ To report a possible security vulnerability, please email [private@arrow.apache.
 
 **Mitigation**: Upgrade to version 0.15.1 or greater.
 
-## [CVE-2019-12410](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-12410): Uninitialized Memory in C++ Reading from Parquet
+<hr class="my-5">
+
+### [CVE-2019-12410](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-12410): Uninitialized Memory in C++ Reading from Parquet
 
 **Severity**: High
 

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: article
 title: Apache Arrow Community
 description: Links and resources for participating in Apache Arrow
 ---
@@ -23,6 +23,8 @@ limitations under the License.
 -->
 
 # Apache Arrow Community
+
+<hr class="mt-4 mb-3">
 
 We welcome participation from everyone and encourage you to join us, ask questions, and get involved.
 

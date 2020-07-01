@@ -22,30 +22,29 @@ limitations under the License.
 {% endcomment %}
 
 <div class="row">
-  <div class="col-md-6">
+  <div class="col-lg-6">
     <h2>Performance Advantage of Columnar In-Memory</h2>
-    <p class="lead">
-      Columnar memory layout allows applications to avoid unnecessary IO and
-      accelerate analytical processing performance on modern CPUs and GPUs.
+    <p class="lead-dark mt-4">
+      Columnar memory layout allows applications to avoid unnecessary IO and accelerate analytical processing performance on modern CPUs and GPUs.
     </p>
   </div>
-  <div class="col-md-6">
+  <div class="col-lg-6">
     <img src="{{ site.baseurl }}/img/simd.png" alt="SIMD" class="img-fluid mx-auto" />
   </div>
 </div>
-<hr />
+<hr class="mb-5 mt-3">
 <h2>Advantages of a Common Data Layer</h2>
-<div class="row">
-  <div class="col-md-6">
-    <img src="{{ site.baseurl }}/img/copy.png" alt="common data layer" class="img-fluid mx-auto" />
+<div class="row pt-4">
+  <div class="col-lg-6">
+    <img src="{{ site.baseurl }}/img/copy.png" alt="common data layer" class="img-fluid mx-auto px-4 pb-4" />
     <ul>
         <li>Each system has its own internal memory format</li>
         <li>70-80% computation wasted on serialization and deserialization</li>
         <li>Similar functionality implemented in multiple projects</li>
     </ul>
   </div>
-  <div class="col-md-6">
-    <img src="{{ site.baseurl }}/img/shared.png" alt="common data layer" class="img-fluid mx-auto" />
+  <div class="col-lg-6">
+    <img src="{{ site.baseurl }}/img/shared.png" alt="common data layer" class="img-fluid mx-auto px-4 pb-4" />
     <ul>
         <li>All systems utilize the same memory format</li>
         <li>No overhead for cross-system communication</li>

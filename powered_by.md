@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: article
 title: Powered by
 description: List of projects powered by Apache Arrow
 ---
