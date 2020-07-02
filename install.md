@@ -28,7 +28,7 @@ limitations under the License.
 
 See the [release notes][10] for more about what's new. For information on previous releases, see [here][19].
 
-This page is a reference listing of release artifacts and package managers. For language-specific user guides, see [Getting Started][21].
+This page is a reference listing of release artifacts and package managers. For language-specific user guides, see the pages listed in the "Documentation" menu above.
 
 ----
 
@@ -223,4 +223,3 @@ install.packages("arrow")
 [18]: https://github.com/Microsoft/vcpkg
 [19]: {{ site.baseurl }}/release/
 [20]: https://cran.r-project.org/
-[21]: {{ site.baseurl }}/getting_started/
