@@ -3,7 +3,7 @@ layout: default
 title: Format
 description: Arrow Format
 ---
-
+<!--
 {% comment %}
 Licensed to the Apache Software Foundation (ASF) under one or more
 contributor license agreements.  See the NOTICE file distributed with
@@ -20,45 +20,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 {% endcomment %}
+-->
 
-<div class="row">
-  <div class="col-lg-6">
-    <h2>Performance Advantage of Columnar In-Memory</h2>
-    <p class="lead-dark mt-4">
-      Columnar memory layout allows applications to avoid unnecessary IO and accelerate analytical processing performance on modern CPUs and GPUs.
-    </p>
-  </div>
-  <div class="col-lg-6">
-    <img src="{{ site.baseurl }}/img/simd.png" alt="SIMD" class="img-fluid mx-auto" />
-  </div>
-</div>
-<hr class="mb-5 mt-3">
-<h2>Advantages of a Common Data Layer</h2>
-<div class="row pt-4">
-  <div class="col-lg-6">
-    <img src="{{ site.baseurl }}/img/copy.png" alt="common data layer" class="img-fluid mx-auto px-4 pb-4" />
-    <ul>
-        <li>Each system has its own internal memory format</li>
-        <li>70-80% computation wasted on serialization and deserialization</li>
-        <li>Similar functionality implemented in multiple projects</li>
-    </ul>
-  </div>
-  <div class="col-lg-6">
-    <img src="{{ site.baseurl }}/img/shared.png" alt="common data layer" class="img-fluid mx-auto px-4 pb-4" />
-    <ul>
-        <li>All systems utilize the same memory format</li>
-        <li>No overhead for cross-system communication</li>
-        <li>Projects can share functionality (eg, Parquet-to-Arrow reader)</li>
-    </ul>
-  </div>
-</div>
+## Apache Arrow Overview
 
+Apache Arrow is a software development platform for building high performance applications that process and transport large data sets. It is designed to both improve the performance of analytical algorithms and the efficiency of moving data from one system (or programming language to another).
 
-<hr class="my-5">
-<h2>Why Arrow?</h2>
+A critical component of Apache Arrow is its **in-memory columnar format**, a standardized, language-agnostic specification for representing structured, table-like datasets in-memory. This data format has a rich data type system (included nested and user-defined data types) designed to support the needs of analytic database systems, data frame libraries, and more.
+
 <div class="row mt-4">
   <div class="col-md-6">
-    <h3>Efficient</h3>
+    <h3>Columnar is Efficient</h3>
     <p>
       The Apache Arrow format allows computational routines and execution engines
       to maximize their efficiency when scanning and iterating large chunks of data.
@@ -78,16 +50,17 @@ limitations under the License.
       <p>Learn more about projects that are <a href="{{ site.baseurl }}/powered_by/">powered by Apache Arrow</a></p>
   </div>
   <div class="offset-md-1 col-md-5 mt-4">
+    <img src="{{ site.baseurl }}/img/copy.png" alt="common data layer" class="img-fluid mx-auto px-4 pb-4" />
+    <ul>
+        <li>Each system has its own internal memory format</li>
+        <li>70-80% computation wasted on serialization and deserialization</li>
+        <li>Similar functionality implemented in multiple projects</li>
+    </ul>
     <img src="{{ site.baseurl }}/img/shared.png" alt="common data layer" class="img-fluid mx-auto" />
-  </div>
-</div>
-<div class="row mt-4">
-  <div class="col-md-6">
-    <h3>Community</h3>
-
-      <p>(Use a different image to the right, or something completely different)</p>
-  </div>
-  <div class="offset-md-1 col-md-5 mt-4">
-    <img src="{{ site.baseurl }}/img/simd.png" alt="SIMD" class="img-fluid mx-auto" />
+    <ul>
+      <li>All systems utilize the same memory format</li>
+      <li>No overhead for cross-system communication</li>
+      <li>Projects can share functionality (eg, Parquet-to-Arrow reader)</li>
+    </ul>
   </div>
 </div>
