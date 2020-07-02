@@ -28,7 +28,7 @@ limitations under the License.
 
 ## General
 
-##### **What *is* Apache Arrow?**
+#### **What *is* Apache Arrow?**
 
 Apache Arrow is a software development platform for building high performance applications that process and transport large data sets. It is designed to both improve the performance of analytical algorithms and the efficiency of moving data from one system (or programming language to another).
 
@@ -45,7 +45,7 @@ The Arrow libraries contain many software components that assist with systems pr
 
 Lastly, alongside software that helps with data access and IO-related issues, there are libraries of algorithms for performing analytical operations or queries against Arrow datasets.
 
-##### **Why define a standard for columnar in-memory?**
+#### **Why define a standard for columnar in-memory?**
 
 Traditionally, data processing engine developers have created custom data structures to represent datasets in-memory while they are being processed. Given the "custom" nature of these data structures, they must also develop serialization interfaces to convert between these data structures and different file formats, network wire protocols, database clients, and other data transport interface. The net result of this is an incredible amount of waste both in developer time and in CPU cycles spend serializing data from one format to another.
 
@@ -61,7 +61,7 @@ The rationale for Arrow's in-memory columnar data format is to provide an out-of
 
 ## Project status
 
-##### **How stable is the Arrow format? Is it safe to use in my application?**
+#### **How stable is the Arrow format? Is it safe to use in my application?**
 
 The Arrow columnar format and protocol is considered stable, and we intend to make only
 backwards-compatible changes, such as additional data types.  It is used by
@@ -69,7 +69,7 @@ many applications already, and you can trust that compatibility will not be
 broken. See [the documentation]({{ site.baseurl }}/docs/format/Versioning.html)
 for details on Arrow format versioning and stability.
 
-##### **How stable are the Arrow libraries?**
+#### **How stable are the Arrow libraries?**
 
 We refer you to the [implementation matrix](https://github.com/apache/arrow/blob/master/docs/source/status.rst).
 
@@ -77,7 +77,7 @@ We refer you to the [implementation matrix](https://github.com/apache/arrow/blob
 
 ## Getting started
 
-##### **Where can I get Arrow libraries?**
+#### **Where can I get Arrow libraries?**
 
 Arrow libraries for many languages are available through the usual package
 managers. See the [install]({{ site.baseurl }}/install/) page for specifics.
@@ -86,19 +86,19 @@ managers. See the [install]({{ site.baseurl }}/install/) page for specifics.
 
 ## Getting involved
 
-##### **I have some questions. How can I get help?**
+#### **I have some questions. How can I get help?**
 
 The [Arrow mailing lists]({{ site.baseurl }}/community/) are the best place
 to ask questions. Don't be shy--we're here to help.
 
-##### **I tried to use Arrow and it didn't work. Can you fix it?**
+#### **I tried to use Arrow and it didn't work. Can you fix it?**
 
 Hopefully! Please make a detailed bug report--that's a valuable contribution
 to the project itself.
 See the [contribution guidelines]({{ site.baseurl }}/docs/developers/contributing.html)
 for how to make a report.
 
-##### **Arrow looks great and I'd totally use it if it only did X. When will it be done?**
+#### **Arrow looks great and I'd totally use it if it only did X. When will it be done?**
 
 We use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue tracker.
 Search for an issue that matches your need. If you find one, feel free to
@@ -110,7 +110,7 @@ see someone else in the community working on your issue, the best way to get
 it done is to pitch in yourself. We're more than willing to help you contribute
 successfully to the project.
 
-##### **How can I report a security vulnerability?**
+#### **How can I report a security vulnerability?**
 
 Please send an email to [private@arrow.apache.org](mailto:private@arrow.apache.org).
 See the [security]({{ site.baseurl }}/security/) page for more.
@@ -119,7 +119,7 @@ See the [security]({{ site.baseurl }}/security/) page for more.
 
 ## Relation to other projects
 
-##### **What is the difference between Apache Arrow and Apache Parquet?**
+#### **What is the difference between Apache Arrow and Apache Parquet?**
 
 Parquet is not a "runtime in-memory format"; in general, file formats almost
 always have to be deserialized into some in-memory data structure for
@@ -142,7 +142,7 @@ and are commonly used together in applications.  Storing your data on disk
 using Parquet and reading it into memory in the Arrow format will allow
 you to make the most of your computing hardware.
 
-##### **What about "Arrow files" then?**
+#### **What about "Arrow files" then?**
 
 Apache Arrow defines an inter-process communication (IPC) mechanism to
 transfer a collection of Arrow columnar arrays (called a "record batch").
@@ -171,14 +171,14 @@ Parquet format:
   columnar data compression strategies that Parquet uses. If your disk storage or network
   is slow, Parquet may be a better choice even for short-term storage or caching.
 
-##### **What about the "Feather" file format?**
+#### **What about the "Feather" file format?**
 
 The Feather v1 format was a simplified custom container for writing a subset of
 the Arrow format to disk prior to the development of the Arrow IPC file format.
 "Feather version 2" is now exactly the Arrow IPC file format and we have
 retained the "Feather" name and APIs for backwards compatibility.
 
-##### **How does Arrow relate to Flatbuffers?**
+#### **How does Arrow relate to Flatbuffers?**
 
 Flatbuffers is a low-level building block for binary data serialization.
 It is not adapted to the representation of large, structured, homogenous
