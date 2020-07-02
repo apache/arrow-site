@@ -52,3 +52,42 @@ limitations under the License.
     </ul>
   </div>
 </div>
+
+
+<hr class="my-5">
+<h2>Why Arrow?</h2>
+<div class="row mt-4">
+  <div class="col-md-6">
+    <h3>Efficient</h3>
+    <p>
+      The Apache Arrow format allows computational routines and execution engines
+      to maximize their efficiency when scanning and iterating large chunks of data.
+      In particular, the contiguous columnar layout enables vectorization using
+      the latest SIMD (Single Instruction, Multiple Data) operations included
+      in modern processors.
+    </p>
+  </div>
+  <div class="offset-md-1 col-md-5 mt-4">
+    <img src="{{ site.baseurl }}/img/simd.png" alt="SIMD" class="img-fluid mx-auto" />
+  </div>
+</div>
+<div class="row mt-4">
+  <div class="col-md-6">
+    <h3>Standard</h3>
+      <p>Apache Arrow is backed by key developers of major open source projects, including Calcite, Cassandra, Drill, Hadoop, HBase, Ibis, Impala, Kudu, Pandas, Parquet, Phoenix, Spark, and Storm, making it the de-facto standard for columnar in-memory analytics.</p>
+      <p>Learn more about projects that are <a href="{{ site.baseurl }}/powered_by/">powered by Apache Arrow</a></p>
+  </div>
+  <div class="offset-md-1 col-md-5 mt-4">
+    <img src="{{ site.baseurl }}/img/shared.png" alt="common data layer" class="img-fluid mx-auto" />
+  </div>
+</div>
+<div class="row mt-4">
+  <div class="col-md-6">
+    <h3>Community</h3>
+
+      <p>(Use a different image to the right, or something completely different)</p>
+  </div>
+  <div class="offset-md-1 col-md-5 mt-4">
+    <img src="{{ site.baseurl }}/img/simd.png" alt="SIMD" class="img-fluid mx-auto" />
+  </div>
+</div>
