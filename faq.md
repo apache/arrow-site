@@ -157,11 +157,12 @@ IPC file can use memory-mapping, avoiding any deserialization cost and extra cop
 Some things to keep in mind when comparing the Arrow IPC file format and the
 Parquet format:
 
-* Parquet is safe for long-term storage and archival purposes, meaning if
+* Parquet is designed for long-term storage and archival purposes, meaning if
   you write a file today, you can expect that any system that says they can
   "read Parquet" will be able to read the file in 5 years or 10 years.
   While the Arrow on-disk format is stable and will be readable by future
-  versions of the libraries, it is not intended for long-term archival storage.
+  versions of the libraries, it does not prioritize the requirements of
+  long-term archival storage.
 
 * Reading Parquet files generally requires efficient yet relatively complex
   decoding, while reading Arrow IPC files does not involve any decoding because
