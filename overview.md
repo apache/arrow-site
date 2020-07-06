@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: overview
 title: Format
 description: Arrow Format
 ---
@@ -24,13 +24,13 @@ limitations under the License.
 
 ## Apache Arrow Overview
 
-Apache Arrow is a software development platform for building high performance applications that process and transport large data sets. It is designed to both improve the performance of analytical algorithms and the efficiency of moving data from one system (or programming language to another).
+Apache Arrow is a software development platform for building high performance applications that process and transport large data sets. It is designed to both improve the performance of analytical algorithms and the efficiency of moving data from one system or programming language to another.
 
 A critical component of Apache Arrow is its **in-memory columnar format**, a standardized, language-agnostic specification for representing structured, table-like datasets in-memory. This data format has a rich data type system (included nested and user-defined data types) designed to support the needs of analytic database systems, data frame libraries, and more.
 
 <div class="row mt-4">
   <div class="col-md-6">
-    <h3>Columnar is Efficient</h3>
+    <h3>Columnar is Fast</h3>
     <p>
       The Apache Arrow format allows computational routines and execution engines
       to maximize their efficiency when scanning and iterating large chunks of data.
@@ -39,28 +39,37 @@ A critical component of Apache Arrow is its **in-memory columnar format**, a sta
       in modern processors.
     </p>
   </div>
-  <div class="offset-md-1 col-md-5 mt-4">
+  <div class="col-md-6">
     <img src="{{ site.baseurl }}/img/simd.png" alt="SIMD" class="img-fluid mx-auto" />
   </div>
 </div>
+
 <div class="row mt-4">
   <div class="col-md-6">
-    <h3>Standard</h3>
-      <p>Apache Arrow is backed by key developers of major open source projects, including Calcite, Cassandra, Drill, Hadoop, HBase, Ibis, Impala, Kudu, Pandas, Parquet, Phoenix, Spark, and Storm, making it the de-facto standard for columnar in-memory analytics.</p>
-      <p>Learn more about projects that are <a href="{{ site.baseurl }}/powered_by/">powered by Apache Arrow</a></p>
-  </div>
-  <div class="offset-md-1 col-md-5 mt-4">
-    <img src="{{ site.baseurl }}/img/copy.png" alt="common data layer" class="img-fluid mx-auto px-4 pb-4" />
-    <ul>
-        <li>Each system has its own internal memory format</li>
-        <li>70-80% computation wasted on serialization and deserialization</li>
-        <li>Similar functionality implemented in multiple projects</li>
-    </ul>
+    <img src="{{ site.baseurl }}/img/copy.png" alt="common data layer" class="img-fluid mx-auto" />
     <img src="{{ site.baseurl }}/img/shared.png" alt="common data layer" class="img-fluid mx-auto" />
-    <ul>
-      <li>All systems utilize the same memory format</li>
-      <li>No overhead for cross-system communication</li>
-      <li>Projects can share functionality (eg, Parquet-to-Arrow reader)</li>
-    </ul>
+  </div>
+  <div class="col-md-6">
+    <h3>Standardization Saves</h3>
+    <p>
+      Without a standard columnar data format, every database and language has to implement its own internal data format. This generates a lot of waste. Moving data from one system to another involves costly serialization and deserialization.
+      In addition, common algorithms must often be rewritten for each data format.
+    </p>
+    <p>
+      Arrow's in-memory columnar data format is an out-of-the-box solution to these problems. Systems that use or support Arrow can transfer data between them at little-to-no cost. Moreover, they don't need to implement custom connectors for every other system. On top of these savings, a standardized memory format facilitates reuse of libraries of algorithms, even across languages.
+    </p>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-12">
+    <h3>Arrow Libraries</h3>
+    <p>
+      The Arrow project contains libraries that enable you to work with data in the Arrow columnar format in many languages. The <a href="{{ site.baseurl }}/docs/cpp/">C++</a>, <a href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>, <a href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>, <a href="{{ site.baseurl }}/docs/java/">Java</a>, <a href="{{ site.baseurl }}/docs/js/">JavaScript</a>, and <a href="https://docs.rs/crate/arrow/">Rust</a> libraries
+      contain distinct implementations of the Arrow format. These libraries are <a href="https://github.com/apache/arrow/blob/master/docs/source/status.rst">integration-tested</a> against each other to ensure their fidelity to the format. In addition, Arrow libraries for <a href="{{ site.baseurl }}/docs/c_glib/">C (Glib)</a>, <a href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>, <a href="{{ site.baseurl }}/docs/python/">Python</a>, <a href="{{ site.baseurl }}/docs/r/">R</a>, and <a href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a> are built on top of the C++ library.
+    </p>
+    <p>
+      These official libraries enable third-party projects to work with Arrow data without having to implement the Arrow columnar format themselves. They also contain many software components that assist with systems problems related to getting data in and out of remote storage systems and moving Arrow-formatted data over network interfaces, among other <a href="{{ site.baseurl }}/use_cases/">use cases</a>. 
+    </p>
   </div>
 </div>
