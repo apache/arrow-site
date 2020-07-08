@@ -32,5 +32,7 @@ Apache Arrow GLib supports [GObject Introspection][gobject-introspection]. It me
 
   * [Apache Arrow GLib](arrow-glib/)
   * [Apache Parquet GLib](parquet-glib/)
+  * [Gandiva GLib](gandiva-glib/)
+  * [Plasma GLib](plasma-glib/)
 
 [gobject-introspection]: https://wiki.gnome.org/action/show/Projects/GObjectIntrospection
