@@ -82,6 +82,6 @@ For more on what’s in the x.y.z R package, see the [R changelog][4].
 
 
 [1]: https://issues.apache.org/jira/issues/?jql=project%20%3D%20ARROW%20AND%20status%20%3D%20Resolved%20AND%20fixVersion%20%3D%20x.y.z
-[2]: https://arrow.apache.org/release/x.y.z.html#contributors
-[3]: https://arrow.apache.org/release/x.y.z.html
-[4]: https://arrow.apache.org/docs/r/news/
+[2]: {{ site.baseurl }}/release/x.y.z.html#contributors
+[3]: {{ site.baseurl }}/release/x.y.z.html
+[4]: {{ site.baseurl }}/docs/r/news/

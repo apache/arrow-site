@@ -104,7 +104,7 @@ stability.
 
 #### **How stable are the Arrow libraries?**
 
-We refer you to the [implementation matrix](https://github.com/apache/arrow/blob/master/docs/source/status.rst).
+We refer you to the [implementation matrix]({{ site.baseurl }}/docs/status.html).
 
 <hr class="my-5">
 

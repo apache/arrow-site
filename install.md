@@ -212,7 +212,7 @@ install.packages("arrow")
 [4]: {{site.data.versions['current'].java-artifacts}}
 [5]: https://conda-forge.github.io
 [6]: {{site.data.versions['current'].mirrors-tar}}
-[10]: {{site.data.versions['current'].release-notes}}
+[10]: {{ site.baseurl }}/release/{{site.data.versions['current'].number}}.html
 [11]: https://downloads.apache.org/arrow/KEYS
 [12]: https://www.apache.org/dyn/closer.cgi#verify
 [13]: {{site.data.versions['current'].asc}}
