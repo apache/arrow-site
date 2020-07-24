@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: article
 title: FAQ
 description: Frequently asked questions about the Apache Arrow project
 ---
@@ -24,32 +24,205 @@ limitations under the License.
 
 # Frequently Asked Questions
 
-### How stable is the Arrow format? Is it safe to use in my application?
+<hr class="mt-4 mb-3">
 
-The Arrow in-memory format is considered stable, and we intend to make only backwards-compatible changes, such as additional data types. We do not yet recommend the Arrow file format for long-term disk persistence of data; that said, it is perfectly acceptable to write Arrow memory to disk for purposes of memory mapping and caching.
+## General
 
-We encourage people to start building Arrow-based in-memory computing applications now, and choose a suitable file format for disk storage if necessary. The Arrow libraries include adapters for several file formats, including Parquet, ORC, CSV, and JSON.
+#### **What *is* Apache Arrow?**
 
-### What is the difference between Apache Arrow and Apache Parquet?
+Apache Arrow is a software development platform for building high performance
+applications that process and transport large data sets. It is designed to both
+improve the performance of analytical algorithms and the efficiency of moving
+data from one system (or programming language to another).
 
-In short, Parquet files are designed for disk storage, while Arrow is designed for in-memory use, but you can put it on disk and then memory-map later. Arrow and Parquet are intended to be compatible with each other and used together in applications.
+A critical component of Apache Arrow is its **in-memory columnar format**, a
+standardized, language-agnostic specification for representing structured,
+table-like datasets in-memory. This data format has a rich data type system
+(included nested and user-defined data types) designed to support the needs of
+analytic database systems, data frame libraries, and more.
 
-Parquet is a columnar file format for data serialization. Reading a Parquet file requires decompressing and decoding its contents into some kind of in-memory data structure. It is designed to be space/IO-efficient at the expensive CPU utilization for decoding. It does not provide any data structures for in-memory computing. Parquet is a streaming format which must be decoded from start-to-end; while some "index page" facilities have been added to the storage format recently, random access operations are generally costly.
+The project also contains implementations of the Arrow columnar format in many
+languages, along with utilities for reading and writing it to many common
+storage formats.  These official libraries enable third-party projects to work
+with Arrow data without having to implement the Arrow columnar format
+themselves.  For those that want to implement a small subset of the format, the
+Arrow project contains some tools, such as a C data interface, to assist with
+interoperability with the official Arrow libraries.
 
-Arrow on the other hand is first and foremost a library providing columnar data structures for *in-memory computing*. When you read a Parquet file, you can decompress and decode the data *into* Arrow columnar data structures so that you can then perform analytics in-memory on the decoded data. The Arrow columnar format has some nice properties: random access is O(1) and each value cell is next to the previous and following one in memory, so it's efficient to iterate over.
+The Arrow libraries contain many software components that assist with systems
+problems related to getting data in and out of remote storage systems and
+moving Arrow-formatted data over network interfaces. Some of these components
+can be used even in scenarios where the columnar format is not used at all.
 
-What about "Arrow files" then? Apache Arrow defines a binary "serialization" protocol for arranging a collection of Arrow columnar arrays (called a "record batch") that can be used for messaging and interprocess communication. You can put the protocol anywhere, including on disk, which can later be memory-mapped or read into memory and sent elsewhere.
+Lastly, alongside software that helps with data access and IO-related issues,
+there are libraries of algorithms for performing analytical operations or
+queries against Arrow datasets.
 
-This Arrow protocol is designed so that you can "map" a blob of Arrow data without doing any deserialization, so performing analytics on Arrow protocol data on disk can use memory-mapping and pay effectively zero cost. The protocol is used for many other things as well, such as streaming data between Spark SQL and Python for running pandas functions against chunks of Spark SQL data (these are called "pandas udfs").
+#### **Why define a standard for columnar in-memory?**
 
-In some applications, Parquet and Arrow can be used interchangeably for on-disk data serialization. Some things to keep in mind:
+Traditionally, data processing engine developers have created custom data
+structures to represent datasets in-memory while they are being
+processed. Given the "custom" nature of these data structures, they must also
+develop serialization interfaces to convert between these data structures and
+different file formats, network wire protocols, database clients, and other
+data transport interface. The net result of this is an incredible amount of
+waste both in developer time and in CPU cycles spend serializing data from one
+format to another.
 
-* Parquet is intended for "archival" purposes, meaning if you write a file today, we expect that any system that says they can "read Parquet" will be able to read the file in 5 years or 7 years. We are not yet making this assertion about long-term stability of the Arrow format.
-* Parquet is generally a lot more expensive to read because it must be decoded into some other data structure. Arrow protocol data can simply be memory-mapped.
-* Parquet files are often much smaller than Arrow-protocol-on-disk because of the data encoding schemes that Parquet uses. If your disk storage or network is slow, Parquet may be a better choice.
+The rationale for Arrow's in-memory columnar data format is to provide an
+out-of-the-box solution to several interrelated problems:
 
-### How does Arrow relate to Flatbuffers?
+* A general purpose tabular data representation that is highly efficient to
+  process on modern hardware while also being suitable for a wide spectrum of
+  use cases. We believe that fewer and fewer systems will create their own data
+  structures and simply use Arrow.
+* Supports both random access and streaming / scan-based workloads.
+* A standardized memory format facilitates reuse of libraries of
+  algorithms. When custom in-memory data formats are used, common algorithms
+  must often be rewritten to target those custom data formats.
+* Systems that both use or support Arrow can transfer data between them at
+  little-to-no cost. This results in a radical reduction in the amount of
+  serialization overhead in analytical workloads that can often represent
+  80-90% of computing costs.
+* The language-agnostic design of the Arrow format enables systems written in
+  different programming languages (even running on the JVM) to communicate
+  datasets without serialization overhead. For example, a Java application can
+  call a C or C++ algorithm on data that originated in the JVM.
 
-Flatbuffers is a domain-agnostic low-level building block for binary data formats. It cannot be used directly for data analysis tasks without a lot of manual scaffolding. Arrow is a data layer aimed directly at the needs of data analysis, providing elaborate data types (including extensible logical types), built-in support for "null" values (a.k.a "N/A"), and an expanding toolbox of I/O and computing facilities.
+<hr class="my-5">
 
-The Arrow file format does use Flatbuffers under the hood to facilitate low-level metadata serialization. However, Arrow data has much richer semantics than Flatbuffers data.
+## Project status
+
+#### **How stable is the Arrow format? Is it safe to use in my application?**
+
+The Arrow columnar format and protocol is considered stable, and we intend to
+make only backwards-compatible changes, such as additional data types.  It is
+used by many applications already, and you can trust that compatibility will
+not be broken. See [the documentation]({{ site.baseurl
+}}/docs/format/Versioning.html) for details on Arrow format versioning and
+stability.
+
+#### **How stable are the Arrow libraries?**
+
+We refer you to the [implementation matrix]({{ site.baseurl }}/docs/status.html).
+
+<hr class="my-5">
+
+## Getting started
+
+#### **Where can I get Arrow libraries?**
+
+Arrow libraries for many languages are available through the usual package
+managers. See the [install]({{ site.baseurl }}/install/) page for specifics.
+
+<hr class="my-5">
+
+## Getting involved
+
+#### **I have some questions. How can I get help?**
+
+The [Arrow mailing lists]({{ site.baseurl }}/community/) are the best place
+to ask questions. Don't be shy--we're here to help.
+
+#### **I tried to use Arrow and it didn't work. Can you fix it?**
+
+Hopefully! Please make a detailed bug report--that's a valuable contribution to
+the project itself.  See the [contribution guidelines]({{ site.baseurl
+}}/docs/developers/contributing.html) for how to make a report.
+
+#### **Arrow looks great and I'd totally use it if it only did X. When will it be done?**
+
+We use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue
+tracker.  Search for an issue that matches your need. If you find one, feel
+free to comment on it and describe your use case--that will help whoever picks
+up the task. If you don't find one, make it.
+
+Ultimately, Arrow is software written by and for the community. If you don't
+see someone else in the community working on your issue, the best way to get it
+done is to pitch in yourself. We're more than willing to help you contribute
+successfully to the project.
+
+#### **How can I report a security vulnerability?**
+
+Please send an email to [private@arrow.apache.org](mailto:private@arrow.apache.org).
+See the [security]({{ site.baseurl }}/security/) page for more.
+
+<hr class="my-5">
+
+## Relation to other projects
+
+#### **What is the difference between Apache Arrow and Apache Parquet?**
+
+Parquet is not a "runtime in-memory format"; in general, file formats almost
+always have to be deserialized into some in-memory data structure for
+processing. We intend for Arrow to be that in-memory data structure.
+
+Parquet is a storage format designed for maximum space efficiency, using
+advanced compression and encoding techniques.  It is ideal when wanting to
+minimize disk usage while storing gigabytes of data, or perhaps more.
+This efficiency comes at the cost of relatively expensive reading into memory,
+as Parquet data cannot be directly operated on but must be decoded in
+large chunks.
+
+Conversely, Arrow is an in-memory format meant for direct and efficient use
+for computational purposes.  Arrow data is not compressed (or only lightly so,
+when using dictionary encoding) but laid out in natural format for the CPU,
+so that data can be accessed at arbitrary places at full speed.
+
+Therefore, Arrow and Parquet complement each other
+and are commonly used together in applications.  Storing your data on disk
+using Parquet and reading it into memory in the Arrow format will allow
+you to make the most of your computing hardware.
+
+#### **What about "Arrow files" then?**
+
+Apache Arrow defines an inter-process communication (IPC) mechanism to
+transfer a collection of Arrow columnar arrays (called a "record batch").
+It can be used synchronously between processes using the Arrow "stream format",
+or asynchronously by first persisting data on storage using the Arrow "file format".
+
+The Arrow IPC mechanism is based on the Arrow in-memory format, such that
+there is no translation necessary between the on-disk representation and
+the in-memory representation.  Therefore, performing analytics on an Arrow
+IPC file can use memory-mapping, avoiding any deserialization cost and extra copies.
+
+Some things to keep in mind when comparing the Arrow IPC file format and the
+Parquet format:
+
+* Parquet is designed for long-term storage and archival purposes, meaning if
+  you write a file today, you can expect that any system that says they can
+  "read Parquet" will be able to read the file in 5 years or 10 years.
+  While the Arrow on-disk format is stable and will be readable by future
+  versions of the libraries, it does not prioritize the requirements of
+  long-term archival storage.
+
+* Reading Parquet files generally requires efficient yet relatively complex
+  decoding, while reading Arrow IPC files does not involve any decoding because
+  the on-disk representation is the same as the in-memory representation.
+
+* Parquet files are often much smaller than Arrow IPC files because of the
+  columnar data compression strategies that Parquet uses. If your disk storage or network
+  is slow, Parquet may be a better choice even for short-term storage or caching.
+
+#### **What about the "Feather" file format?**
+
+The Feather v1 format was a simplified custom container for writing a subset of
+the Arrow format to disk prior to the development of the Arrow IPC file format.
+"Feather version 2" is now exactly the Arrow IPC file format and we have
+retained the "Feather" name and APIs for backwards compatibility.
+
+#### **How does Arrow relate to Flatbuffers?**
+
+Flatbuffers is a low-level building block for binary data serialization.
+It is not adapted to the representation of large, structured, homogenous
+data, and does not sit at the right abstraction layer for data analysis tasks.
+
+Arrow is a data layer aimed directly at the needs of data analysis, providing a
+comprehensive collection of data types required to analytics, built-in support
+for "null" values (representing missing data), and an expanding toolbox of I/O
+and computing facilities.
+
+The Arrow file format does use Flatbuffers under the hood to serialize schemas
+and other metadata needed to implement the Arrow binary IPC protocol,
+but the Arrow data format uses its own representation
+for optimal access and computation.

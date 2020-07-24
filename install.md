@@ -22,11 +22,15 @@ limitations under the License.
 {% endcomment %}
 -->
 
-## Current Version: {{site.data.versions['current'].number}}
+# Install Apache Arrow
 
-### Released: {{site.data.versions['current'].date}}
+## Current Version: {{site.data.versions['current'].number}} ({{site.data.versions['current'].date}})
 
-See the [release notes][10] for more about what's new.
+See the [release notes][10] for more about what's new. For information on previous releases, see [here][19].
+
+This page is a reference listing of release artifacts and package managers. For language-specific user guides, see the pages listed in the "Documentation" menu above.
+
+----
 
 ### Source Release
 
@@ -134,17 +138,18 @@ For convenience, we also provide packages through several package managers. Many
 
 ### C++ and Python Conda Packages
 
-Binary conda packages are on [conda-forge][5] for the following
-platforms:
+Binary conda packages are on [conda-forge][5] for Linux, macOS, and Windows
+for the following versions:
 
-* Linux and macOS (Python 2.7, 3.6 and 3.7)
-* Windows (Python 3.6 and 3.7)
+* Python 3.6, 3.7, 3.8
+* R 3.6, 4.0
 
 Install them with:
 
 ```shell
 conda install arrow-cpp={{site.data.versions['current'].pinned_number}} -c conda-forge
 conda install pyarrow={{site.data.versions['current'].pinned_number}} -c conda-forge
+conda install r-arrow={{site.data.versions['current'].pinned_number}} -c conda-forge
 ```
 
 ### C++ and GLib (C) Packages on Homebrew
@@ -167,13 +172,13 @@ brew install apache-arrow-glib
 The MSYS2 packages include [Apache Arrow C++ and GLib (C)
 package][16]. You can install the package by `pacman`.
 
-64bit version:
+64-bit version:
 
 ```shell
 pacman -S --noconfirm mingw-w64-x86_64-arrow
 ```
 
-32bit version:
+32-bit version:
 
 ```shell
 pacman -S --noconfirm mingw-w64-i686-arrow
@@ -193,13 +198,21 @@ cd vcpkg
 
 The Apache Arrow C++ port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request][18] on the vcpkg repository.
 
+### R Package on CRAN
+
+Install the R package from [CRAN][20] with
+
+```r
+install.packages("arrow")
+```
+
 
 [1]: {{site.data.versions['current'].mirrors}}
 [2]: {{site.data.versions['current'].github-tag-link}}
 [4]: {{site.data.versions['current'].java-artifacts}}
 [5]: https://conda-forge.github.io
 [6]: {{site.data.versions['current'].mirrors-tar}}
-[10]: {{site.data.versions['current'].release-notes}}
+[10]: {{ site.baseurl }}/release/{{site.data.versions['current'].number}}.html
 [11]: https://downloads.apache.org/arrow/KEYS
 [12]: https://www.apache.org/dyn/closer.cgi#verify
 [13]: {{site.data.versions['current'].asc}}
@@ -208,3 +221,5 @@ The Apache Arrow C++ port in vcpkg is kept up to date by Microsoft team members 
 [16]: https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-arrow
 [17]: https://brew.sh/
 [18]: https://github.com/Microsoft/vcpkg
+[19]: {{ site.baseurl }}/release/
+[20]: https://cran.r-project.org/

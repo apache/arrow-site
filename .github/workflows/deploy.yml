@@ -36,7 +36,7 @@ jobs:
       - name: Configure for production
         run: |
           echo "BASE_URL=" >> ../env.sh
-          echo "ORIGIN=$(jq --raw-output .repository.full_name ${GITHUB_EVENT_PATH})" >> ../env.sh
+          echo "ORIGIN=${{ github.repository }}" >> ../env.sh
           echo "TARGET_BRANCH=asf-site" >> ../env.sh
           echo >> _extra_config.yml
         if: |
@@ -45,7 +45,7 @@ jobs:
       - name: Configure for GitHub Pages on master
         run: |
           owner=$(jq --raw-output .repository.owner.login ${GITHUB_EVENT_PATH})
-          repository=$(jq .repository.name ${GITHUB_EVENT_PATH})
+          repository=$(jq --raw-output .repository.name ${GITHUB_EVENT_PATH})
           echo "BASE_URL=/${repository}" >> ../env.sh
           echo "ORIGIN=${owner}/${repository}" >> ../env.sh
           echo "TARGET_BRANCH=gh-pages" >> ../env.sh
@@ -85,6 +85,13 @@ jobs:
           if ! git checkout --track deploy/${TARGET_BRANCH}; then
             git checkout -b ${TARGET_BRANCH} remotes/origin/asf-site
           fi
+          if [ "$ORIGIN" != "apache/arrow-site" ]; then
+            # Pull latest asf-site (for docs etc.) if we're not already on it
+            git remote add apache https://github.com/apache/arrow-site.git
+            git fetch apache
+            git reset --hard apache/asf-site
+            PUSH_ARGS="-f"
+          fi
           rsync \
             -a \
             --delete \
@@ -96,11 +103,12 @@ jobs:
             -a \
             ../build/docs/ \
             docs/
+          touch .nojekyll
           if [ "$(git status --porcelain)" != "" ]; then
             # There are changes to the built site
             git add --all
             git commit -m "Updating built site (build ${GITHUB_SHA})"
-            git push deploy ${TARGET_BRANCH}
+            git push ${PUSH_ARGS} deploy ${TARGET_BRANCH}
           else
             echo "No changes to the built site"
           fi
