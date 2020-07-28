@@ -88,11 +88,9 @@ libraries and build all dependencies together with the Arrow build.
 For each package, the `$Library_SOURCE` CMake option can be set to one of three
 values:
 
-* `SYSTEM`, when the dependency is to be provided externally (such as by a Linux
-* distribution or Homebrew) `BUNDLED`, when you want the dependency to be built
-* from source while building Arrow, and then statically-linked with the
-* resulting libraries `AUTO`, which tries the `SYSTEM` approach but falls back
-* on `BUNDLED` if the dependency cannot be located.
+* `SYSTEM`, when the dependency is to be provided externally (such as by a Linux distribution or Homebrew)
+* `BUNDLED`, when you want the dependency to be built from source while building Arrow, and then statically-linked with the resulting libraries
+* `AUTO`, which tries the `SYSTEM` approach but falls back on `BUNDLED` if the dependency cannot be located
 
 We additionally have provided `CONDA` and `BREW` source types for the common
 scenarios when developers are using the conda or Homebrew package managers.
@@ -162,12 +160,9 @@ would be a significant project, and until we are able to do this, we have
 implemented some changes that have reduced the size (both in .whl form an
 installed on disk) of the wheels by about 75 percent:
 
-* Working around the problems resulting in two copies of each shared library
-* being created in the site-packages directory. Disabling Gandiva, which
-* required the LLVM runtime, the largest statically-linked dependency. Gandiva
-* is still available to conda users now--it's just not included in the
-* wheels--and we hope to package it as a separate `pyarrow-llvm` package in the
-* future. Reducing the size of the C++ shared libraries as discussed above
+* Working around the problems resulting in two copies of each shared library being created in the site-packages directory.
+* Disabling Gandiva, which required the LLVM runtime, the largest statically-linked dependency. Gandiva is still available to conda users now--it's just not included in the wheels--and we hope to package it as a separate `pyarrow-llvm` package in the future.
+* Reducing the size of the C++ shared libraries as discussed above
 
 Now pyarrow is about the size of NumPy and thus much easier for Python projects
 to take on as a hard dependency without worrying about large on-disk size.
@@ -269,7 +264,7 @@ libraries to be plugged together easily in-memory without any shared code
 (except the C interface structure definitions). Most programming languages have
 the ability to manipulate C structures and so this interface can even be used
 without having to write or compile C code. We have used the C interface to
-[transfer data structures between Python and R]({{ site.baseurl }}/docs/r/articles/python.html) 
+[transfer data structures between Python and R]({{ site.baseurl }}/docs/r/articles/python.html)
 in-memory using `reticulate`.
 
 One exciting use case for the Arrow C interface is to add Arrow import and
