@@ -1,7 +1,7 @@
 ---
 layout: post
-title: "INSERT TITLE HERE"
-date: "2020-07-24 00:00:00 -0600"
+title: "Making Arrow C++ Builds Simpler, Smaller, and Faster"
+date: "2020-07-29 00:00:00 -0600"
 author: pmc
 categories: [application]
 ---
@@ -45,8 +45,10 @@ their users. Over the last year, we have undertaken a number of significant
 projects to accommodate the different ways that people want to depend on Arrow
 C++. We've aimed to make the build process simple by default, without requiring
 special environment setup, yet also highly configurable for those who need to
-specialize. And we've worked to make builds faster and more compact, even as we
-continue to add new functionality.
+specialize. This includes a zero-dependency option for projects that wish to use
+the Arrow C++ core but take on no transitive dependencies. We've also worked to
+make builds faster and more compact, even as we continue to add new
+functionality.
 
 This post covers many of the efforts we've made, both in the C++ libraries and
 in the Arrow Python and R packages that depend on them. Compared to a year ago,
