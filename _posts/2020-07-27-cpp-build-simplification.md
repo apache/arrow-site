@@ -87,7 +87,7 @@ provided by an external package manager, such as apt in Debian-based Linux
 distributions. In other cases, developers may want to avoid any quirks of system
 libraries and build all dependencies together with the Arrow build.
 
-For each package, the `$Library_SOURCE` CMake option can be set to one of three
+For each package, the `${Library}_SOURCE` CMake option can be set to one of three
 values:
 
 * `SYSTEM`, when the dependency is to be provided externally (such as by a Linux distribution or Homebrew)
