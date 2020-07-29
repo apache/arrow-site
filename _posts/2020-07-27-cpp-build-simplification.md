@@ -30,14 +30,12 @@ applications in C++. As the scope of the project has grown, we have sometimes
 taken on additional library dependencies to support a wide variety of systems
 and data processing tasks.
 
-While these dependencies give us leverage on hard problems, in some cases their
-addition has caused extra complexity for projects that depend on Arrow, even if
-their use of Arrow is limited to basic interactions with the Arrow columnar
-format. Some projects have therefore been concerned about the implications of
-taking on the Arrow C++ library as a dependency if Arrow's build and runtime
-requirements spill over into their project's requirements. Indeed, in the
-earlier stages of the Arrow project development, dependency management issues
-did cause problems for early adopters.
+While these dependencies give us leverage on hard problems, in some cases they
+have added complexity for projects that depend on Arrow. Some projects have thus
+been concerned about depending on the Arrow C++ library, particularly if their
+use of the Arrow library's features is limited. Indeed, in the earlier stages of
+the Arrow project development, dependency management issues did cause problems
+for early adopters.
 
 We want developers to trust that they can use and depend on our libraries, and
 that doing so doesn't add a burden for their own project maintenance or for
@@ -150,19 +148,14 @@ moving around large datasets. Thus, the "pyarrow" wheel has from the beginning
 of the project been a fairly comprehensive build including as many optional
 components as is practical for us to maintain.
 
-A comprehensive wheel package has some downsides: large installed size.
+A comprehensive wheel package has some downsides: most notably for users, it is large.
 Additionally, through a snafu relating to C++ shared libraries, for several
 releases the wheel packages would create two copies of each C++ library on disk,
 resulting in double the amount of disk usage. This has caused problems for
 people using pyarrow in space-constrained environments like AWS Lambda.
 
-We have discussed [strategies](https://issues.apache.org/jira/browse/ARROW-8518)
-for breaking up pyarrow into multiple wheel packages, sort of a "hub and spoke"
-model where some optional pieces are installed as separate wheels so people only
-needing some "core" functionality only have to install a small package. This
-would be a significant project, and until we are able to do this, we have
-implemented some changes that have reduced the size (both in .whl form an
-installed on disk) of the wheels by about 75 percent:
+In the 1.0.0 release, we have implemented some changes that have reduced the
+size of the wheels (both in `.whl` form and installed on disk) by about 75 percent:
 
 * Working around the problems resulting in two copies of each shared library being created in the site-packages directory.
 * Disabling Gandiva, which required the LLVM runtime, the largest statically-linked dependency. Gandiva is still available to conda users now--it's just not included in the wheels--and we hope to package it as a separate `pyarrow-llvm` package in the future.
@@ -170,6 +163,13 @@ installed on disk) of the wheels by about 75 percent:
 
 Now pyarrow is about the size of NumPy and thus much easier for Python projects
 to take on as a hard dependency without worrying about large on-disk size.
+
+Looking ahead, we have discussed [strategies](https://issues.apache.org/jira/browse/ARROW-8518)
+for breaking up pyarrow into multiple wheel packages, sort of a "hub and spoke"
+model where some optional pieces are installed as separate wheels so people only
+needing some "core" functionality only have to install a small package. This
+would be a significant project, though, so for now we've focused on improvements
+to the comprehensive wheel package.
 
 ## R packaging
 
@@ -211,7 +211,8 @@ either build or otherwise include the C++ library. Within the R package itself,
 we've looked for ways to include just what is needed and nothing more. These
 efforts have resulted in smaller downloads and installed package sizes. From
 0.17.1 to 1.0.0, installed library sizes for macOS and Windows CRAN binaries are
-down 10 percent, despite the addition of many new features.
+down 10 percent, and the prebuilt static C++ libraries for Linux are 33 percent
+smaller compared to 0.16.0, despite the addition of many new features.
 
 
 <!-- macOS build 0.17.1:
@@ -278,4 +279,6 @@ export to database driver libraries which often contain a C API.
 
 As the project grows, we will continue working to make the build process as
 fast and reliable as possible. If you see ways we can improve it further, or if
-you run into trouble, please bring it up on the [mailing list](https://arrow.apache.org/community/#mailing-lists) or [report an issue](https://issues.apache.org/jira/browse/ARROW).
+you run into trouble, please bring it up on our
+[mailing list](https://arrow.apache.org/community/#mailing-lists) or
+[report an issue](https://issues.apache.org/jira/browse/ARROW).
