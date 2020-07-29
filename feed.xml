@@ -1,4 +1,268 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2020-07-24T14:21:28-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow 1.0.0 Release</title><link href="https://arrow.apache.org/blog/2020/07/24/1.0.0-release/" rel="alternate" type="text/html" title="Apache Arrow 1.0.0 Release" /><published>2020-07-24T02:00:00-04:00</published><updated>2020-07-24T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2020/07/24/1.0.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2020/07/24/1.0.0-release/">&lt;!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2020-07-29T12:56:50-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Making Arrow C++ Builds Simpler, Smaller, and Faster</title><link href="https://arrow.apache.org/blog/2020/07/29/cpp-build-simplification/" rel="alternate" type="text/html" title="Making Arrow C++ Builds Simpler, Smaller, and Faster" /><published>2020-07-29T02:00:00-04:00</published><updated>2020-07-29T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2020/07/29/cpp-build-simplification</id><content type="html" xml:base="https://arrow.apache.org/blog/2020/07/29/cpp-build-simplification/">&lt;!--
+
+--&gt;
+
+&lt;p&gt;Over the last four and a half years, we’ve worked to build a
+“batteries-included” development platform for high-performance analytics
+applications in C++. As the scope of the project has grown, we have sometimes
+taken on additional library dependencies to support a wide variety of systems
+and data processing tasks.&lt;/p&gt;
+
+&lt;p&gt;While these dependencies give us leverage on hard problems, in some cases they
+have added complexity for projects that depend on Arrow. Some projects have thus
+been concerned about depending on the Arrow C++ library, particularly if their
+use of the Arrow library’s features is limited. Indeed, in the earlier stages of
+the Arrow project development, dependency management issues did cause problems
+for early adopters.&lt;/p&gt;
+
+&lt;p&gt;We want developers to trust that they can use and depend on our libraries, and
+that doing so doesn’t add a burden for their own project maintenance or for
+their users. Over the last year, we have undertaken a number of significant
+projects to accommodate the different ways that people want to depend on Arrow
+C++. We’ve aimed to make the build process simple by default, without requiring
+special environment setup, yet also highly configurable for those who need to
+specialize. This includes a &lt;em&gt;zero-dependency option&lt;/em&gt; for projects that wish to use
+the Arrow C++ core but take on no transitive dependencies. We’ve also worked to
+make builds faster and more compact, even as we continue to add new
+functionality.&lt;/p&gt;
+
+&lt;p&gt;This post covers many of the efforts we’ve made, both in the C++ libraries and
+in the Arrow Python and R packages that depend on them. Compared to a year ago,
+the build experience is much more reliable on a wider range of platforms,
+requires fewer dependencies, and yields smaller package sizes.&lt;/p&gt;
+
+&lt;h2 id=&quot;minimal-default-build-options&quot;&gt;Minimal default build options&lt;/h2&gt;
+
+&lt;p&gt;One rough edge for people using Arrow as a dependency was that many optional
+project components were enabled in the build by default, thus requiring any
+extra dependencies of those optional components. Rather than expecting users to
+disable optional components one by one, we have made the default for all
+optional components to be &lt;code class=&quot;highlighter-rouge&quot;&gt;OFF&lt;/code&gt; so that the default configuration is a
+dependency-free minimal core build.&lt;/p&gt;
+
+&lt;p&gt;The only third-party library enabled by default is
+&lt;a href=&quot;http://jemalloc.net/&quot;&gt;jemalloc&lt;/a&gt;, the project’s recommended memory allocator
+(except on Windows, where it is also disabled). Given that Arrow applications
+often process large volumes of data, we have found additionally that using
+memory allocators provided by projects like jemalloc and
+&lt;a href=&quot;https://microsoft.github.io/mimalloc/&quot;&gt;mimalloc&lt;/a&gt; yield significantly better
+performance over the default system allocators. Even so, this can also be
+disabled if desired.&lt;/p&gt;
+
+&lt;p&gt;To demonstrate a minimal build, we have provided a
+&lt;a href=&quot;https://github.com/apache/arrow/blob/master/cpp/examples/minimal_build/Dockerfile&quot;&gt;Dockerfile&lt;/a&gt;
+which can be used to build the project requiring only CMake and a C++ compiler
+with zero dependencies. Additionally, we have included an
+&lt;a href=&quot;https://github.com/apache/arrow/tree/master/cpp/examples/minimal_build&quot;&gt;example&lt;/a&gt;
+of including Arrow as an external project dependency in another CMake project.&lt;/p&gt;
+
+&lt;h2 id=&quot;flexible-dependency-configuration-in-cmake&quot;&gt;Flexible dependency configuration in CMake&lt;/h2&gt;
+
+&lt;p&gt;As part of improving our CMake-based build system, we have made the
+configuration of build dependencies both flexible and consistent for different
+users’ needs. In some cases, developers want Arrow to build against dependencies
+provided by an external package manager, such as apt in Debian-based Linux
+distributions. In other cases, developers may want to avoid any quirks of system
+libraries and build all dependencies together with the Arrow build.&lt;/p&gt;
+
+&lt;p&gt;For each package, the &lt;code class=&quot;highlighter-rouge&quot;&gt;${Library}_SOURCE&lt;/code&gt; CMake option can be set to one of three
+values:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;SYSTEM&lt;/code&gt;, when the dependency is to be provided externally (such as by a Linux distribution or Homebrew)&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;BUNDLED&lt;/code&gt;, when you want the dependency to be built from source while building Arrow, and then statically-linked with the resulting libraries&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;AUTO&lt;/code&gt;, which tries the &lt;code class=&quot;highlighter-rouge&quot;&gt;SYSTEM&lt;/code&gt; approach but falls back on &lt;code class=&quot;highlighter-rouge&quot;&gt;BUNDLED&lt;/code&gt; if the dependency cannot be located&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;We additionally have provided &lt;code class=&quot;highlighter-rouge&quot;&gt;CONDA&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;BREW&lt;/code&gt; source types for the common
+scenarios when developers are using the conda or Homebrew package managers.
+These dependency sources can be configured on an individual dependency basis or
+globally using the &lt;code class=&quot;highlighter-rouge&quot;&gt;ARROW_DEPENDENCY_SOURCE&lt;/code&gt; CMake option. &lt;code class=&quot;highlighter-rouge&quot;&gt;AUTO&lt;/code&gt; is default,
+which enables builds to be faster by using pre-built system libraries where
+possible but still succeed even if all dependencies are not available on the
+system.&lt;/p&gt;
+
+&lt;h2 id=&quot;reduced-external-dependencies&quot;&gt;Reduced external dependencies&lt;/h2&gt;
+
+&lt;p&gt;Another area of focus was to audit our dependencies. We went through and found
+places where we could drop external dependencies without losing useful
+functionality and without having to rewrite a lot or copy too much code into our
+codebase.&lt;/p&gt;
+
+&lt;p&gt;We have eliminated Boost as a dependency of the core Arrow library, and in other
+components (Gandiva, Parquet, etc.), the use of Boost has been greatly reduced.
+In addition, when building Boost “bundled” in the Arrow build, we stripped down
+the Boost package we download to the minimum needed, cutting out 90 percent of
+the download size.&lt;/p&gt;
+
+&lt;p&gt;We vendored a few small dependencies, such as the double-conversion and
+uriparser libraries, so that they do not need to be downloaded and built
+separately.&lt;/p&gt;
+
+&lt;p&gt;We also compiled the Flatbuffers and Thrift definitions (which are needed to
+implement the Arrow and Parquet formats, respectively) and checked in the
+resulting C++ code to the Arrow repository. This means that Flatbuffers is no
+longer a build or runtime dependency of Arrow, and we only need the Thrift C++
+library, not the Thrift compiler, which has additional dependencies on flex and
+bison.&lt;/p&gt;
+
+&lt;h2 id=&quot;c-library-size-reductions&quot;&gt;C++ library size reductions&lt;/h2&gt;
+
+&lt;p&gt;As the C++ codebase grows in size, so too does compilation times and the amount
+of binary code generated by the C++ compiler. Over the last several months, we
+have begun analyzing the Arrow libraries both compile times and generated code
+sizes. This has yielded both significant size reductions (more than 30 percent
+code size reduction since 0.17.0). We have also restructured header files to
+avoid including unneeded header files, thus lightening the load on C++ compilers
+and improving compilation times.&lt;/p&gt;
+
+&lt;h2 id=&quot;python-wheels&quot;&gt;Python wheels&lt;/h2&gt;
+
+&lt;p&gt;The expectation for binary wheel packages on the Python Package Index (PyPI) is
+that they are self-contained and have no external dependencies except on other
+Python packages. Additionally, each user of pyarrow may need different things
+from the project. Some users just want to read Parquet files and convert them to
+pandas data frames while others want to use
+&lt;a href=&quot;/blog/2019/10/13/introducing-arrow-flight/&quot;&gt;Flight&lt;/a&gt; for
+moving around large datasets. Thus, the “pyarrow” wheel has from the beginning
+of the project been a fairly comprehensive build including as many optional
+components as is practical for us to maintain.&lt;/p&gt;
+
+&lt;p&gt;A comprehensive wheel package has some downsides: most notably for users, it is large.
+Additionally, through a snafu relating to C++ shared libraries, for several
+releases the wheel packages would create two copies of each C++ library on disk,
+resulting in double the amount of disk usage. This has caused problems for
+people using pyarrow in space-constrained environments like AWS Lambda.&lt;/p&gt;
+
+&lt;p&gt;In the 1.0.0 release, we have implemented some changes that have reduced the
+size of the wheels (both in &lt;code class=&quot;highlighter-rouge&quot;&gt;.whl&lt;/code&gt; form and installed on disk) by about 75 percent:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Working around the problems resulting in two copies of each shared library being created in the site-packages directory.&lt;/li&gt;
+  &lt;li&gt;Disabling Gandiva, which required the LLVM runtime, the largest statically-linked dependency. Gandiva is still available to conda users now–it’s just not included in the wheels–and we hope to package it as a separate &lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow-llvm&lt;/code&gt; package in the future.&lt;/li&gt;
+  &lt;li&gt;Reducing the size of the C++ shared libraries as discussed above&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Now pyarrow is about the size of NumPy and thus much easier for Python projects
+to take on as a hard dependency without worrying about large on-disk size.&lt;/p&gt;
+
+&lt;p&gt;Looking ahead, we have discussed &lt;a href=&quot;https://issues.apache.org/jira/browse/ARROW-8518&quot;&gt;strategies&lt;/a&gt;
+for breaking up pyarrow into multiple wheel packages, sort of a “hub and spoke”
+model where some optional pieces are installed as separate wheels so people only
+needing some “core” functionality only have to install a small package. This
+would be a significant project, though, so for now we’ve focused on improvements
+to the comprehensive wheel package.&lt;/p&gt;
+
+&lt;h2 id=&quot;r-packaging&quot;&gt;R packaging&lt;/h2&gt;
+
+&lt;p&gt;Packaging Arrow for R involves similar challenges to Python wheels, though the
+technical details are unique. Like how &lt;code class=&quot;highlighter-rouge&quot;&gt;pip install pyarrow&lt;/code&gt; should just work
+everywhere, so should &lt;code class=&quot;highlighter-rouge&quot;&gt;install.packages(&quot;arrow&quot;)&lt;/code&gt; in R, and we have invested
+significant effort to get there. Because the R package depends on a C++ library
+in active development, this is not trivial, particularly for all of the
+combinations of C++ compilers and standard libraries on Linux.&lt;/p&gt;
+
+&lt;p&gt;In the initial CRAN release last year, version 0.14.1, only Windows and macOS
+binary packages worked out of the box. For Linux, you had to install the C++
+library separately, before installing the R package. While Python wheels contain
+binary libraries even on Linux, CRAN only hosts source packages that must be
+compiled on the user’s machine at install time. This led to an experience that
+was less than ideal for Linux users.&lt;/p&gt;
+
+&lt;p&gt;Starting in version 0.16, a source package installation on Linux handles its C++
+dependencies automatically. By default, the package executes a &lt;a href=&quot;https://github.com/apache/arrow/blob/master/r/inst/build_arrow_static.sh&quot;&gt;bundled
+script&lt;/a&gt;
+that downloads and builds the Arrow C++ library with no system dependencies
+beyond what R requires. On many common Linux distributions and versions, this
+can be sped up by
+&lt;a href=&quot;/docs/r/articles/install.html&quot;&gt;setting an environment variable&lt;/a&gt;
+to download a prebuilt static C++ library for inclusion in the package.&lt;/p&gt;
+
+&lt;p&gt;To accompany these improvements and to ensure that they succeeded on a wide
+range of platforms, we added
+&lt;a href=&quot;https://github.com/apache/arrow/blob/bebcc5db3cc2890a9c53ebd53bc60863ae5ebb49/dev/tasks/tasks.yml#L1704-L1785&quot;&gt;extensive&lt;/a&gt;
+&lt;a href=&quot;https://github.com/ursa-labs/arrow-r-nightly/blob/master/.github/workflows/test-binary.yml&quot;&gt;nightly builds&lt;/a&gt;
+to our continuous integration system. These are also easily extensible–all we
+need is a Docker image containing R, and we can plug new environments into our
+regular nightly testing.&lt;/p&gt;
+
+&lt;p&gt;Since then, we’ve continued to improve the installation experience and look for
+ways to reduce build time and package size. The C++ library improvements
+discussed above help the R package since most installations of the R package
+either build or otherwise include the C++ library. Within the R package itself,
+we’ve looked for ways to include just what is needed and nothing more. These
+efforts have resulted in smaller downloads and installed package sizes. From
+0.17.1 to 1.0.0, installed library sizes for macOS and Windows CRAN binaries are
+down 10 percent, and the prebuilt static C++ libraries for Linux are 33 percent
+smaller compared to 0.16.0, despite the addition of many new features.&lt;/p&gt;
+
+&lt;!-- macOS build 0.17.1:
+
+checking installed package size ... NOTE
+  installed size is 38.1Mb
+  sub-directories of 1Mb or more:
+    R 3.2Mb
+    libs 34.5Mb
+
+autobrew libs on master: 8.9mb
+
+macOS 1.0.0
+checking installed package size ... NOTE
+  installed size is 35.0Mb
+  sub-directories of 1Mb or more:
+    R 3.2Mb
+    libs 31.3Mb
+
+windows 0.17.1:
+checking installed package size ... NOTE
+  installed size is 27.9Mb
+  sub-directories of 1Mb or more:
+    R 3.2Mb
+    libs 24.3Mb
+
+windows libs on 1.0.0:
+checking installed package size ... NOTE
+  installed size is 24.9Mb
+  sub-directories of 1Mb or more:
+    R 3.2Mb
+    libs 21.2Mb
+
+ubuntu-18.04 libarrow binaries:
+0.16.0.2 18.84 MB
+0.17.0 	  12.81 MB
+1.0.0      12.45 MB --&gt;
+
+&lt;h2 id=&quot;c-interface&quot;&gt;C Interface&lt;/h2&gt;
+
+&lt;p&gt;Finally, we have observed that some projects may wish to produce or consume a
+subset of the Arrow format and do not want to take on any additional code
+dependencies. There are also scenarios where two libraries need to share
+in-memory Arrow data structures but are unable to depend on a common Arrow
+library such as the reference C++ implementation. To address these use cases, we
+designed the &lt;a href=&quot;/docs/format/CDataInterface.html&quot;&gt;C Interface&lt;/a&gt;
+to provide a lightweight way to exchange Arrow data at the C level without any
+memory copying.&lt;/p&gt;
+
+&lt;p&gt;When using the C interface, a developer populates simple C data structures that
+contain the schema (data type) information about an Arrow data structure and the
+addresses of the pieces of memory that constitute the data. This permits
+libraries to be plugged together easily in-memory without any shared code
+(except the C interface structure definitions). Most programming languages have
+the ability to manipulate C structures and so this interface can even be used
+without having to write or compile C code. We have used the C interface to
+&lt;a href=&quot;/docs/r/articles/python.html&quot;&gt;transfer data structures between Python and R&lt;/a&gt;
+in-memory using &lt;code class=&quot;highlighter-rouge&quot;&gt;reticulate&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;One exciting use case for the Arrow C interface is to add Arrow import and
+export to database driver libraries which often contain a C API.&lt;/p&gt;
+
+&lt;h2 id=&quot;looking-ahead&quot;&gt;Looking ahead&lt;/h2&gt;
+
+&lt;p&gt;As the project grows, we will continue working to make the build process as
+fast and reliable as possible. If you see ways we can improve it further, or if
+you run into trouble, please bring it up on our
+&lt;a href=&quot;https://arrow.apache.org/community/#mailing-lists&quot;&gt;mailing list&lt;/a&gt; or
+&lt;a href=&quot;https://issues.apache.org/jira/browse/ARROW&quot;&gt;report an issue&lt;/a&gt;.&lt;/p&gt;</content><author><name>pmc</name></author><category term="application" /><summary type="html">Over the last four and a half years, we’ve worked to build a “batteries-included” development platform for high-performance analytics applications in C++. As the scope of the project has grown, we have sometimes taken on additional library dependencies to support a wide variety of systems and data processing tasks. While these dependencies give us leverage on hard problems, in some cases they have added complexity for projects that depend on Arrow. Some projects have thus been concerned about depending on the Arrow C++ library, particularly if their use of the Arrow library’s features is limited. Indeed, in the earlier stages of the Arrow project development, dependency management issues did cause problems for early adopters. We want developers to trust that they can use and depend on our libraries, and that doing so doesn’t add a burden for their own project maintenance or for their users. Over the last year, we have undertaken a number of significant projects to accommodate the different ways that people want to depend on Arrow C++. We’ve aimed to make the build process simple by default, without requiring special environment setup, yet also highly configurable for those who need to specialize. This includes a zero-dependency option for projects that wish to use the Arrow C++ core but take on no transitive dependencies. We’ve also worked to make builds faster and more compact, even as we continue to add new functionality. This post covers many of the efforts we’ve made, both in the C++ libraries and in the Arrow Python and R packages that depend on them. Compared to a year ago, the build experience is much more reliable on a wider range of platforms, requires fewer dependencies, and yields smaller package sizes. Minimal default build options One rough edge for people using Arrow as a dependency was that many optional project components were enabled in the build by default, thus requiring any extra dependencies of those optional components. Rather than expecting users to disable optional components one by one, we have made the default for all optional components to be OFF so that the default configuration is a dependency-free minimal core build. The only third-party library enabled by default is jemalloc, the project’s recommended memory allocator (except on Windows, where it is also disabled). Given that Arrow applications often process large volumes of data, we have found additionally that using memory allocators provided by projects like jemalloc and mimalloc yield significantly better performance over the default system allocators. Even so, this can also be disabled if desired. To demonstrate a minimal build, we have provided a Dockerfile which can be used to build the project requiring only CMake and a C++ compiler with zero dependencies. Additionally, we have included an example of including Arrow as an external project dependency in another CMake project. Flexible dependency configuration in CMake As part of improving our CMake-based build system, we have made the configuration of build dependencies both flexible and consistent for different users’ needs. In some cases, developers want Arrow to build against dependencies provided by an external package manager, such as apt in Debian-based Linux distributions. In other cases, developers may want to avoid any quirks of system libraries and build all dependencies together with the Arrow build. For each package, the ${Library}_SOURCE CMake option can be set to one of three values: SYSTEM, when the dependency is to be provided externally (such as by a Linux distribution or Homebrew) BUNDLED, when you want the dependency to be built from source while building Arrow, and then statically-linked with the resulting libraries AUTO, which tries the SYSTEM approach but falls back on BUNDLED if the dependency cannot be located We additionally have provided CONDA and BREW source types for the common scenarios when developers are using the conda or Homebrew package managers. These dependency sources can be configured on an individual dependency basis or globally using the ARROW_DEPENDENCY_SOURCE CMake option. AUTO is default, which enables builds to be faster by using pre-built system libraries where possible but still succeed even if all dependencies are not available on the system. Reduced external dependencies Another area of focus was to audit our dependencies. We went through and found places where we could drop external dependencies without losing useful functionality and without having to rewrite a lot or copy too much code into our codebase. We have eliminated Boost as a dependency of the core Arrow library, and in other components (Gandiva, Parquet, etc.), the use of Boost has been greatly reduced. In addition, when building Boost “bundled” in the Arrow build, we stripped down the Boost package we download to the minimum needed, cutting out 90 percent of the download size. We vendored a few small dependencies, such as the double-conversion and uriparser libraries, so that they do not need to be downloaded and built separately. We also compiled the Flatbuffers and Thrift definitions (which are needed to implement the Arrow and Parquet formats, respectively) and checked in the resulting C++ code to the Arrow repository. This means that Flatbuffers is no longer a build or runtime dependency of Arrow, and we only need the Thrift C++ library, not the Thrift compiler, which has additional dependencies on flex and bison. C++ library size reductions As the C++ codebase grows in size, so too does compilation times and the amount of binary code generated by the C++ compiler. Over the last several months, we have begun analyzing the Arrow libraries both compile times and generated code sizes. This has yielded both significant size reductions (more than 30 percent code size reduction since 0.17.0). We have also restructured header files to avoid including unneeded header files, thus lightening the load on C++ compilers and improving compilation times. Python wheels The expectation for binary wheel packages on the Python Package Index (PyPI) is that they are self-contained and have no external dependencies except on other Python packages. Additionally, each user of pyarrow may need different things from the project. Some users just want to read Parquet files and convert them to pandas data frames while others want to use Flight for moving around large datasets. Thus, the “pyarrow” wheel has from the beginning of the project been a fairly comprehensive build including as many optional components as is practical for us to maintain. A comprehensive wheel package has some downsides: most notably for users, it is large. Additionally, through a snafu relating to C++ shared libraries, for several releases the wheel packages would create two copies of each C++ library on disk, resulting in double the amount of disk usage. This has caused problems for people using pyarrow in space-constrained environments like AWS Lambda. In the 1.0.0 release, we have implemented some changes that have reduced the size of the wheels (both in .whl form and installed on disk) by about 75 percent: Working around the problems resulting in two copies of each shared library being created in the site-packages directory. Disabling Gandiva, which required the LLVM runtime, the largest statically-linked dependency. Gandiva is still available to conda users now–it’s just not included in the wheels–and we hope to package it as a separate pyarrow-llvm package in the future. Reducing the size of the C++ shared libraries as discussed above Now pyarrow is about the size of NumPy and thus much easier for Python projects to take on as a hard dependency without worrying about large on-disk size. Looking ahead, we have discussed strategies for breaking up pyarrow into multiple wheel packages, sort of a “hub and spoke” model where some optional pieces are installed as separate wheels so people only needing some “core” functionality only have to install a small package. This would be a significant project, though, so for now we’ve focused on improvements to the comprehensive wheel package. R packaging Packaging Arrow for R involves similar challenges to Python wheels, though the technical details are unique. Like how pip install pyarrow should just work everywhere, so should install.packages(&quot;arrow&quot;) in R, and we have invested significant effort to get there. Because the R package depends on a C++ library in active development, this is not trivial, particularly for all of the combinations of C++ compilers and standard libraries on Linux. In the initial CRAN release last year, version 0.14.1, only Windows and macOS binary packages worked out of the box. For Linux, you had to install the C++ library separately, before installing the R package. While Python wheels contain binary libraries even on Linux, CRAN only hosts source packages that must be compiled on the user’s machine at install time. This led to an experience that was less than ideal for Linux users. Starting in version 0.16, a source package installation on Linux handles its C++ dependencies automatically. By default, the package executes a bundled script that downloads and builds the Arrow C++ library with no system dependencies beyond what R requires. On many common Linux distributions and versions, this can be sped up by setting an environment variable to download a prebuilt static C++ library for inclusion in the package. To accompany these improvements and to ensure that they succeeded on a wide range of platforms, we added extensive nightly builds to our continuous integration system. These are also easily extensible–all we need is a Docker image containing R, and we can plug new environments into our regular nightly testing. Since then, we’ve continued to improve the installation experience and look for ways to reduce build time and package size. The C++ library improvements discussed above help the R package since most installations of the R package either build or otherwise include the C++ library. Within the R package itself, we’ve looked for ways to include just what is needed and nothing more. These efforts have resulted in smaller downloads and installed package sizes. From 0.17.1 to 1.0.0, installed library sizes for macOS and Windows CRAN binaries are down 10 percent, and the prebuilt static C++ libraries for Linux are 33 percent smaller compared to 0.16.0, despite the addition of many new features. C Interface Finally, we have observed that some projects may wish to produce or consume a subset of the Arrow format and do not want to take on any additional code dependencies. There are also scenarios where two libraries need to share in-memory Arrow data structures but are unable to depend on a common Arrow library such as the reference C++ implementation. To address these use cases, we designed the C Interface to provide a lightweight way to exchange Arrow data at the C level without any memory copying. When using the C interface, a developer populates simple C data structures that contain the schema (data type) information about an Arrow data structure and the addresses of the pieces of memory that constitute the data. This permits libraries to be plugged together easily in-memory without any shared code (except the C interface structure definitions). Most programming languages have the ability to manipulate C structures and so this interface can even be used without having to write or compile C code. We have used the C interface to transfer data structures between Python and R in-memory using reticulate. One exciting use case for the Arrow C interface is to add Arrow import and export to database driver libraries which often contain a C API. Looking ahead As the project grows, we will continue working to make the build process as fast and reliable as possible. If you see ways we can improve it further, or if you run into trouble, please bring it up on our mailing list or report an issue.</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 1.0.0 Release</title><link href="https://arrow.apache.org/blog/2020/07/24/1.0.0-release/" rel="alternate" type="text/html" title="Apache Arrow 1.0.0 Release" /><published>2020-07-24T02:00:00-04:00</published><updated>2020-07-24T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2020/07/24/1.0.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2020/07/24/1.0.0-release/">&lt;!--
 
 --&gt;
 
@@ -1855,149 +2119,4 @@ as soon as it comes out.&lt;/p&gt;
 future, but the ones here can be very helpful to people working with
 string-heavy datasets, both in performance and memory use. If you’d like to
 discuss this development work, we’d be glad to hear from you on our developer
-mailing list dev@arrow.apache.org.&lt;/p&gt;</content><author><name>wesm</name></author><category term="application" /><summary type="html">We have been implementing a series of optimizations in the Apache Parquet C++ internals to improve read and write efficiency (both performance and memory use) for Arrow columnar binary and string data, with new “native” support for Arrow’s dictionary types. This should have a big impact on users of the C++, MATLAB, Python, R, and Ruby interfaces to Parquet files. This post reviews work that was done and shows benchmarks comparing Arrow 0.12.1 with the current development version (to be released soon as Arrow 0.15.0). Summary of work One of the largest and most complex optimizations involves encoding and decoding Parquet files’ internal dictionary-encoded data streams to and from Arrow’s in-memory dictionary-encoded DictionaryArray representation. Dictionary encoding is a compression strategy in Parquet, and there is no formal “dictionary” or “categorical” type. I will go into more detail about this below. Some of the particular JIRA issues related to this work include: Vectorize comparators for computing statistics (PARQUET-1523) Read binary directly data directly into dictionary builder (ARROW-3769) Writing Parquet’s dictionary indices directly into dictionary builder (ARROW-3772) Write dense (non-dictionary) Arrow arrays directly into Parquet data encoders (ARROW-6152) Direct writing of arrow::DictionaryArray to Parquet column writers (ARROW-3246) Supporting changing dictionaries (ARROW-3144) Internal IO optimizations and improved raw BYTE_ARRAY encoding performance (ARROW-4398) One of the challenges of developing the Parquet C++ library is that we maintain low-level read and write APIs that do not involve the Arrow columnar data structures. So we have had to take care to implement Arrow-related optimizations without impacting non-Arrow Parquet users, which includes database systems like Clickhouse and Vertica. Background: how Parquet files do dictionary encoding Many direct and indirect users of Apache Arrow use dictionary encoding to improve performance and memory use on binary or string data types that include many repeated values. MATLAB or pandas users will know this as the Categorical type (see MATLAB docs or pandas docs) while in R such encoding is known as factor. In the Arrow C++ library and various bindings we have the DictionaryArray object for representing such data in memory. For example, an array such as ['apple', 'orange', 'apple', NULL, 'orange', 'orange'] has dictionary-encoded form dictionary: ['apple', 'orange'] indices: [0, 1, 0, NULL, 1, 1] The Parquet format uses dictionary encoding to compress data, and it is used for all Parquet data types, not just binary or string data. Parquet further uses bit-packing and run-length encoding (RLE) to compress the dictionary indices, so if you had data like ['apple', 'apple', 'apple', 'apple', 'apple', 'apple', 'orange'] the indices would be encoded like [rle-run=(6, 0), bit-packed-run=[1]] The full details of the rle-bitpacking encoding are found in the Parquet specification. When writing a Parquet file, most implementations will use dictionary encoding to compress a column until the dictionary itself reaches a certain size threshold, usually around 1 megabyte. At this point, the column writer will “fall back” to PLAIN encoding where values are written end-to-end in “data pages” and then usually compressed with Snappy or Gzip. See the following rough diagram: Faster reading and writing of dictionary-encoded data When reading a Parquet file, the dictionary-encoded portions are usually materialized to their non-dictionary-encoded form, causing binary or string values to be duplicated in memory. So an obvious (but not trivial) optimization is to skip this “dense” materialization. There are several issues to deal with: A Parquet file often contains multiple ColumnChunks for each semantic column, and the dictionary values may be different in each ColumnChunk We must gracefully handle the “fall back” portion which is not dictionary-encoded We pursued several avenues to help with this: Allowing each DictionaryArray to have a different dictionary (before, the dictionary was part of the DictionaryType, which caused problems) We enabled the Parquet dictionary indices to be directly written into an Arrow DictionaryBuilder without rehashing the data When decoding a ColumnChunk, we first append the dictionary values and indices into an Arrow DictionaryBuilder, and when we encounter the “fall back” portion we use a hash table to convert those values to dictionary-encoded form We override the “fall back” logic when writing a ColumnChunk from an DictionaryArray so that reading such data back is more efficient All of these things together have produced some excellent performance results that we will detail below. The other class of optimizations we implemented was removing an abstraction layer between the low-level Parquet column data encoder and decoder classes and the Arrow columnar data structures. This involves: Adding ColumnWriter::WriteArrow and Encoder::Put methods that accept arrow::Array objects directly Adding ByteArrayDecoder::DecodeArrow method to decode binary data directly into an arrow::BinaryBuilder. While the performance improvements from this work are less dramatic than for dictionary-encoded data, they are still meaningful in real-world applications. Performance Benchmarks We ran some benchmarks comparing Arrow 0.12.1 with the current master branch. We construct two kinds of Arrow tables with 10 columns each: “Low cardinality” and “high cardinality” variants. The “low cardinality” case has 1,000 unique string values of 32-bytes each. The “high cardinality” has 100,000 unique values “Dense” (non-dictionary) and “Dictionary” variants See the full benchmark script. We show both single-threaded and multithreaded read performance. The test machine is an Intel i9-9960X using gcc 8.3.0 (on Ubuntu 18.04) with 16 physical cores and 32 virtual cores. All time measurements are reported in seconds, but we are most interested in showing the relative performance. First, the writing benchmarks: Writing DictionaryArray is dramatically faster due to the optimizations described above. We have achieved a small improvement in writing dense (non-dictionary) binary arrays. Then, the reading benchmarks: Here, similarly reading DictionaryArray directly is many times faster. These benchmarks show that parallel reads of dense binary data may be slightly slower though single-threaded reads are now faster. We may want to do some profiling and see what we can do to bring read performance back in line. Optimizing the dense read path has not been too much of a priority relative to the dictionary read path in this work. Memory Use Improvements In addition to faster performance, reading columns as dictionary-encoded can yield significantly less memory use. In the dict-random case above, we found that the master branch uses 405 MB of RAM at peak while loading a 152 MB dataset. In v0.12.1, loading the same Parquet file without the accelerated dictionary support uses 1.94 GB of peak memory while the resulting non-dictionary table occupies 1.01 GB. Note that we had a memory overuse bug in versions 0.14.0 and 0.14.1 fixed in ARROW-6060, so if you are hitting this bug you will want to upgrade to 0.15.0 as soon as it comes out. Conclusion There are still many Parquet-related optimizations that we may pursue in the future, but the ones here can be very helpful to people working with string-heavy datasets, both in performance and memory use. If you’d like to discuss this development work, we’d be glad to hear from you on our developer mailing list dev@arrow.apache.org.</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow R Package On CRAN</title><link href="https://arrow.apache.org/blog/2019/08/08/r-package-on-cran/" rel="alternate" type="text/html" title="Apache Arrow R Package On CRAN" /><published>2019-08-08T08:00:00-04:00</published><updated>2019-08-08T08:00:00-04:00</updated><id>https://arrow.apache.org/blog/2019/08/08/r-package-on-cran</id><content type="html" xml:base="https://arrow.apache.org/blog/2019/08/08/r-package-on-cran/">&lt;!--
-
---&gt;
-
-&lt;p&gt;We are very excited to announce that the &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; R package is now available on
-&lt;a href=&quot;https://cran.r-project.org/&quot;&gt;CRAN&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&quot;https://arrow.apache.org/&quot;&gt;Apache Arrow&lt;/a&gt; is a cross-language development
-platform for in-memory data that specifies a standardized columnar memory
-format for flat and hierarchical data, organized for efficient analytic
-operations on modern hardware. The &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; package provides an R interface to
-the Arrow C++ library, including support for working with Parquet and Feather
-files, as well as lower-level access to Arrow memory and messages.&lt;/p&gt;
-
-&lt;p&gt;You can install the package from CRAN with&lt;/p&gt;
-
-&lt;div class=&quot;language-r highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;install.packages&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;arrow&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;On macOS and Windows, installing a binary package from CRAN will generally
-handle Arrow’s C++ dependencies for you. However, the macOS CRAN binaries are
-unfortunately incomplete for this version, so to install 0.14.1, you’ll first
-need to use Homebrew to get the Arrow C++ library (&lt;code class=&quot;highlighter-rouge&quot;&gt;brew install
-apache-arrow&lt;/code&gt;), and then from R you can &lt;code class=&quot;highlighter-rouge&quot;&gt;install.packages(&quot;arrow&quot;, type =
-&quot;source&quot;)&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;Windows binaries are not yet available on CRAN but should be published soon.&lt;/p&gt;
-
-&lt;p&gt;On Linux, you’ll need to first install the C++ library. See the &lt;a href=&quot;https://arrow.apache.org/install/&quot;&gt;Arrow project
-installation page&lt;/a&gt; to find pre-compiled
-binary packages for some common Linux distributions, including Debian, Ubuntu,
-and CentOS. You’ll need to install &lt;code class=&quot;highlighter-rouge&quot;&gt;libparquet-dev&lt;/code&gt; on Debian and Ubuntu, or
-&lt;code class=&quot;highlighter-rouge&quot;&gt;parquet-devel&lt;/code&gt; on CentOS. This will also automatically install the Arrow C++
-library as a dependency. Other Linux distributions must install the C++ library
-from source.&lt;/p&gt;
-
-&lt;p&gt;If you install the &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; R package from source and the C++ library is not
-found, the R package functions will notify you that Arrow is not
-available. Call&lt;/p&gt;
-
-&lt;div class=&quot;language-r highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;arrow&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;install_arrow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;for version- and platform-specific guidance on installing the Arrow C++
-library.&lt;/p&gt;
-
-&lt;h2 id=&quot;parquet-files&quot;&gt;Parquet files&lt;/h2&gt;
-
-&lt;p&gt;This package introduces basic read and write support for the &lt;a href=&quot;https://parquet.apache.org/&quot;&gt;Apache
-Parquet&lt;/a&gt; columnar data file format. Prior to its
-availability, options for accessing Parquet data in R were limited; the most
-common recommendation was to use Apache Spark. The &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; package greatly
-simplifies this access and lets you go from a Parquet file to a &lt;code class=&quot;highlighter-rouge&quot;&gt;data.frame&lt;/code&gt;
-and back easily, without having to set up a database.&lt;/p&gt;
-
-&lt;div class=&quot;language-r highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;library&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;arrow&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;df&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read_parquet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;path/to/file.parquet&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;This function, along with the other readers in the package, takes an optional
-&lt;code class=&quot;highlighter-rouge&quot;&gt;col_select&lt;/code&gt; argument, inspired by the
-&lt;a href=&quot;https://vroom.r-lib.org/reference/vroom.html&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;vroom&lt;/code&gt;&lt;/a&gt; package. This argument
-lets you use the &lt;a href=&quot;https://tidyselect.r-lib.org/reference/select_helpers.html&quot;&gt;“tidyselect” helper
-functions&lt;/a&gt;, as you
-can do in &lt;code class=&quot;highlighter-rouge&quot;&gt;dplyr::select()&lt;/code&gt;, to specify that you only want to keep certain
-columns. By narrowing your selection at read time, you can load a &lt;code class=&quot;highlighter-rouge&quot;&gt;data.frame&lt;/code&gt;
-with less memory overhead.&lt;/p&gt;
-
-&lt;p&gt;For example, suppose you had written the &lt;code class=&quot;highlighter-rouge&quot;&gt;iris&lt;/code&gt; dataset to Parquet. You could
-read a &lt;code class=&quot;highlighter-rouge&quot;&gt;data.frame&lt;/code&gt; with only the columns &lt;code class=&quot;highlighter-rouge&quot;&gt;c(&quot;Sepal.Length&quot;, &quot;Sepal.Width&quot;)&lt;/code&gt; by
-doing&lt;/p&gt;
-
-&lt;div class=&quot;language-r highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;df&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read_parquet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;iris.parquet&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;col_select&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;n&quot;&gt;starts_with&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;Sepal&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;Just as you can read, you can write Parquet files:&lt;/p&gt;
-
-&lt;div class=&quot;language-r highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;write_parquet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;df&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;path/to/different_file.parquet&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
-&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;Note that this read and write support for Parquet files in R is in its early
-stages of development. The Python Arrow library
-(&lt;a href=&quot;https://arrow.apache.org/docs/python/&quot;&gt;pyarrow&lt;/a&gt;) still has much richer
-support for Parquet files, including working with multi-file datasets. We
-intend to reach feature equivalency between the R and Python packages in the
-future.&lt;/p&gt;
-
-&lt;h2 id=&quot;feather-files&quot;&gt;Feather files&lt;/h2&gt;
-
-&lt;p&gt;This package also includes a faster and more robust implementation of the
-Feather file format, providing &lt;code class=&quot;highlighter-rouge&quot;&gt;read_feather()&lt;/code&gt; and
-&lt;code class=&quot;highlighter-rouge&quot;&gt;write_feather()&lt;/code&gt;. &lt;a href=&quot;https://github.com/wesm/feather&quot;&gt;Feather&lt;/a&gt; was one of the
-initial applications of Apache Arrow for Python and R, providing an efficient,
-common file format language-agnostic data frame storage, along with
-implementations in R and Python.&lt;/p&gt;
-
-&lt;p&gt;As Arrow progressed, development of Feather moved to the
-&lt;a href=&quot;https://github.com/apache/arrow&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;apache/arrow&lt;/code&gt;&lt;/a&gt; project, and for the last two
-years, the Python implementation of Feather has just been a wrapper around
-&lt;code class=&quot;highlighter-rouge&quot;&gt;pyarrow&lt;/code&gt;. This meant that as Arrow progressed and bugs were fixed, the Python
-version of Feather got the improvements but sadly R did not.&lt;/p&gt;
-
-&lt;p&gt;With the &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; package, the R implementation of Feather catches up and now
-depends on the same underlying C++ library as the Python version does. This
-should result in more reliable and consistent behavior across the two
-languages, as well as &lt;a href=&quot;https://wesmckinney.com/blog/feather-arrow-future/&quot;&gt;improved
-performance&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;We encourage all R users of &lt;code class=&quot;highlighter-rouge&quot;&gt;feather&lt;/code&gt; to switch to using
-&lt;code class=&quot;highlighter-rouge&quot;&gt;arrow::read_feather()&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow::write_feather()&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;Note that both Feather and Parquet are columnar data formats that allow sharing
-data frames across R, Pandas, and other tools. When should you use Feather and
-when should you use Parquet? Parquet balances space-efficiency with
-deserialization costs, making it an ideal choice for remote storage systems
-like HDFS or Amazon S3. Feather is designed for fast local reads, particularly
-with solid-state drives, and is not intended for use with remote storage
-systems. Feather files can be memory-mapped and accessed as Arrow columnar data
-in-memory without any deserialization while Parquet files always must be
-decompressed and decoded. See the &lt;a href=&quot;https://arrow.apache.org/faq/&quot;&gt;Arrow project
-FAQ&lt;/a&gt; for more.&lt;/p&gt;
-
-&lt;h2 id=&quot;other-capabilities&quot;&gt;Other capabilities&lt;/h2&gt;
-
-&lt;p&gt;In addition to these readers and writers, the &lt;code class=&quot;highlighter-rouge&quot;&gt;arrow&lt;/code&gt; package has wrappers for
-other readers in the C++ library; see &lt;code class=&quot;highlighter-rouge&quot;&gt;?read_csv_arrow&lt;/code&gt; and
-&lt;code class=&quot;highlighter-rouge&quot;&gt;?read_json_arrow&lt;/code&gt;. These readers are being developed to optimize for the
-memory layout of the Arrow columnar format and are not intended as a direct
-replacement for existing R CSV readers (&lt;code class=&quot;highlighter-rouge&quot;&gt;base::read.csv&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;readr::read_csv&lt;/code&gt;,
-&lt;code class=&quot;highlighter-rouge&quot;&gt;data.table::fread&lt;/code&gt;) that return an R &lt;code class=&quot;highlighter-rouge&quot;&gt;data.frame&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;It also provides many lower-level bindings to the C++ library, which enable you
-to access and manipulate Arrow objects. You can use these to build connectors
-to other applications and services that use Arrow. One example is Spark: the
-&lt;a href=&quot;https://spark.rstudio.com/&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;sparklyr&lt;/code&gt;&lt;/a&gt; package has support for using Arrow to
-move data to and from Spark, yielding &lt;a href=&quot;http://arrow.apache.org/blog/2019/01/25/r-spark-improvements/&quot;&gt;significant performance
-gains&lt;/a&gt;.&lt;/p&gt;
-
-&lt;h2 id=&quot;acknowledgements&quot;&gt;Acknowledgements&lt;/h2&gt;
-
-&lt;p&gt;In addition to the work on wiring the R package up to the Arrow Parquet C++
-library, a lot of effort went into building and packaging Arrow for R users,
-ensuring its ease of installation across platforms. We’d like to thank the
-support of Jeroen Ooms, Javier Luraschi, JJ Allaire, Davis Vaughan, the CRAN
-team, and many others in the Apache Arrow community for helping us get to this
-point.&lt;/p&gt;</content><author><name>npr</name></author><category term="application" /><summary type="html">We are very excited to announce that the arrow R package is now available on CRAN. Apache Arrow is a cross-language development platform for in-memory data that specifies a standardized columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. The arrow package provides an R interface to the Arrow C++ library, including support for working with Parquet and Feather files, as well as lower-level access to Arrow memory and messages. You can install the package from CRAN with install.packages(&quot;arrow&quot;) On macOS and Windows, installing a binary package from CRAN will generally handle Arrow’s C++ dependencies for you. However, the macOS CRAN binaries are unfortunately incomplete for this version, so to install 0.14.1, you’ll first need to use Homebrew to get the Arrow C++ library (brew install apache-arrow), and then from R you can install.packages(&quot;arrow&quot;, type = &quot;source&quot;). Windows binaries are not yet available on CRAN but should be published soon. On Linux, you’ll need to first install the C++ library. See the Arrow project installation page to find pre-compiled binary packages for some common Linux distributions, including Debian, Ubuntu, and CentOS. You’ll need to install libparquet-dev on Debian and Ubuntu, or parquet-devel on CentOS. This will also automatically install the Arrow C++ library as a dependency. Other Linux distributions must install the C++ library from source. If you install the arrow R package from source and the C++ library is not found, the R package functions will notify you that Arrow is not available. Call arrow::install_arrow() for version- and platform-specific guidance on installing the Arrow C++ library. Parquet files This package introduces basic read and write support for the Apache Parquet columnar data file format. Prior to its availability, options for accessing Parquet data in R were limited; the most common recommendation was to use Apache Spark. The arrow package greatly simplifies this access and lets you go from a Parquet file to a data.frame and back easily, without having to set up a database. library(arrow) df &amp;lt;- read_parquet(&quot;path/to/file.parquet&quot;) This function, along with the other readers in the package, takes an optional col_select argument, inspired by the vroom package. This argument lets you use the “tidyselect” helper functions, as you can do in dplyr::select(), to specify that you only want to keep certain columns. By narrowing your selection at read time, you can load a data.frame with less memory overhead. For example, suppose you had written the iris dataset to Parquet. You could read a data.frame with only the columns c(&quot;Sepal.Length&quot;, &quot;Sepal.Width&quot;) by doing df &amp;lt;- read_parquet(&quot;iris.parquet&quot;, col_select = starts_with(&quot;Sepal&quot;)) Just as you can read, you can write Parquet files: write_parquet(df, &quot;path/to/different_file.parquet&quot;) Note that this read and write support for Parquet files in R is in its early stages of development. The Python Arrow library (pyarrow) still has much richer support for Parquet files, including working with multi-file datasets. We intend to reach feature equivalency between the R and Python packages in the future. Feather files This package also includes a faster and more robust implementation of the Feather file format, providing read_feather() and write_feather(). Feather was one of the initial applications of Apache Arrow for Python and R, providing an efficient, common file format language-agnostic data frame storage, along with implementations in R and Python. As Arrow progressed, development of Feather moved to the apache/arrow project, and for the last two years, the Python implementation of Feather has just been a wrapper around pyarrow. This meant that as Arrow progressed and bugs were fixed, the Python version of Feather got the improvements but sadly R did not. With the arrow package, the R implementation of Feather catches up and now depends on the same underlying C++ library as the Python version does. This should result in more reliable and consistent behavior across the two languages, as well as improved performance. We encourage all R users of feather to switch to using arrow::read_feather() and arrow::write_feather(). Note that both Feather and Parquet are columnar data formats that allow sharing data frames across R, Pandas, and other tools. When should you use Feather and when should you use Parquet? Parquet balances space-efficiency with deserialization costs, making it an ideal choice for remote storage systems like HDFS or Amazon S3. Feather is designed for fast local reads, particularly with solid-state drives, and is not intended for use with remote storage systems. Feather files can be memory-mapped and accessed as Arrow columnar data in-memory without any deserialization while Parquet files always must be decompressed and decoded. See the Arrow project FAQ for more. Other capabilities In addition to these readers and writers, the arrow package has wrappers for other readers in the C++ library; see ?read_csv_arrow and ?read_json_arrow. These readers are being developed to optimize for the memory layout of the Arrow columnar format and are not intended as a direct replacement for existing R CSV readers (base::read.csv, readr::read_csv, data.table::fread) that return an R data.frame. It also provides many lower-level bindings to the C++ library, which enable you to access and manipulate Arrow objects. You can use these to build connectors to other applications and services that use Arrow. One example is Spark: the sparklyr package has support for using Arrow to move data to and from Spark, yielding significant performance gains. Acknowledgements In addition to the work on wiring the R package up to the Arrow Parquet C++ library, a lot of effort went into building and packaging Arrow for R users, ensuring its ease of installation across platforms. We’d like to thank the support of Jeroen Ooms, Javier Luraschi, JJ Allaire, Davis Vaughan, the CRAN team, and many others in the Apache Arrow community for helping us get to this point.</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+mailing list dev@arrow.apache.org.&lt;/p&gt;</content><author><name>wesm</name></author><category term="application" /><summary type="html">We have been implementing a series of optimizations in the Apache Parquet C++ internals to improve read and write efficiency (both performance and memory use) for Arrow columnar binary and string data, with new “native” support for Arrow’s dictionary types. This should have a big impact on users of the C++, MATLAB, Python, R, and Ruby interfaces to Parquet files. This post reviews work that was done and shows benchmarks comparing Arrow 0.12.1 with the current development version (to be released soon as Arrow 0.15.0). Summary of work One of the largest and most complex optimizations involves encoding and decoding Parquet files’ internal dictionary-encoded data streams to and from Arrow’s in-memory dictionary-encoded DictionaryArray representation. Dictionary encoding is a compression strategy in Parquet, and there is no formal “dictionary” or “categorical” type. I will go into more detail about this below. Some of the particular JIRA issues related to this work include: Vectorize comparators for computing statistics (PARQUET-1523) Read binary directly data directly into dictionary builder (ARROW-3769) Writing Parquet’s dictionary indices directly into dictionary builder (ARROW-3772) Write dense (non-dictionary) Arrow arrays directly into Parquet data encoders (ARROW-6152) Direct writing of arrow::DictionaryArray to Parquet column writers (ARROW-3246) Supporting changing dictionaries (ARROW-3144) Internal IO optimizations and improved raw BYTE_ARRAY encoding performance (ARROW-4398) One of the challenges of developing the Parquet C++ library is that we maintain low-level read and write APIs that do not involve the Arrow columnar data structures. So we have had to take care to implement Arrow-related optimizations without impacting non-Arrow Parquet users, which includes database systems like Clickhouse and Vertica. Background: how Parquet files do dictionary encoding Many direct and indirect users of Apache Arrow use dictionary encoding to improve performance and memory use on binary or string data types that include many repeated values. MATLAB or pandas users will know this as the Categorical type (see MATLAB docs or pandas docs) while in R such encoding is known as factor. In the Arrow C++ library and various bindings we have the DictionaryArray object for representing such data in memory. For example, an array such as ['apple', 'orange', 'apple', NULL, 'orange', 'orange'] has dictionary-encoded form dictionary: ['apple', 'orange'] indices: [0, 1, 0, NULL, 1, 1] The Parquet format uses dictionary encoding to compress data, and it is used for all Parquet data types, not just binary or string data. Parquet further uses bit-packing and run-length encoding (RLE) to compress the dictionary indices, so if you had data like ['apple', 'apple', 'apple', 'apple', 'apple', 'apple', 'orange'] the indices would be encoded like [rle-run=(6, 0), bit-packed-run=[1]] The full details of the rle-bitpacking encoding are found in the Parquet specification. When writing a Parquet file, most implementations will use dictionary encoding to compress a column until the dictionary itself reaches a certain size threshold, usually around 1 megabyte. At this point, the column writer will “fall back” to PLAIN encoding where values are written end-to-end in “data pages” and then usually compressed with Snappy or Gzip. See the following rough diagram: Faster reading and writing of dictionary-encoded data When reading a Parquet file, the dictionary-encoded portions are usually materialized to their non-dictionary-encoded form, causing binary or string values to be duplicated in memory. So an obvious (but not trivial) optimization is to skip this “dense” materialization. There are several issues to deal with: A Parquet file often contains multiple ColumnChunks for each semantic column, and the dictionary values may be different in each ColumnChunk We must gracefully handle the “fall back” portion which is not dictionary-encoded We pursued several avenues to help with this: Allowing each DictionaryArray to have a different dictionary (before, the dictionary was part of the DictionaryType, which caused problems) We enabled the Parquet dictionary indices to be directly written into an Arrow DictionaryBuilder without rehashing the data When decoding a ColumnChunk, we first append the dictionary values and indices into an Arrow DictionaryBuilder, and when we encounter the “fall back” portion we use a hash table to convert those values to dictionary-encoded form We override the “fall back” logic when writing a ColumnChunk from an DictionaryArray so that reading such data back is more efficient All of these things together have produced some excellent performance results that we will detail below. The other class of optimizations we implemented was removing an abstraction layer between the low-level Parquet column data encoder and decoder classes and the Arrow columnar data structures. This involves: Adding ColumnWriter::WriteArrow and Encoder::Put methods that accept arrow::Array objects directly Adding ByteArrayDecoder::DecodeArrow method to decode binary data directly into an arrow::BinaryBuilder. While the performance improvements from this work are less dramatic than for dictionary-encoded data, they are still meaningful in real-world applications. Performance Benchmarks We ran some benchmarks comparing Arrow 0.12.1 with the current master branch. We construct two kinds of Arrow tables with 10 columns each: “Low cardinality” and “high cardinality” variants. The “low cardinality” case has 1,000 unique string values of 32-bytes each. The “high cardinality” has 100,000 unique values “Dense” (non-dictionary) and “Dictionary” variants See the full benchmark script. We show both single-threaded and multithreaded read performance. The test machine is an Intel i9-9960X using gcc 8.3.0 (on Ubuntu 18.04) with 16 physical cores and 32 virtual cores. All time measurements are reported in seconds, but we are most interested in showing the relative performance. First, the writing benchmarks: Writing DictionaryArray is dramatically faster due to the optimizations described above. We have achieved a small improvement in writing dense (non-dictionary) binary arrays. Then, the reading benchmarks: Here, similarly reading DictionaryArray directly is many times faster. These benchmarks show that parallel reads of dense binary data may be slightly slower though single-threaded reads are now faster. We may want to do some profiling and see what we can do to bring read performance back in line. Optimizing the dense read path has not been too much of a priority relative to the dictionary read path in this work. Memory Use Improvements In addition to faster performance, reading columns as dictionary-encoded can yield significantly less memory use. In the dict-random case above, we found that the master branch uses 405 MB of RAM at peak while loading a 152 MB dataset. In v0.12.1, loading the same Parquet file without the accelerated dictionary support uses 1.94 GB of peak memory while the resulting non-dictionary table occupies 1.01 GB. Note that we had a memory overuse bug in versions 0.14.0 and 0.14.1 fixed in ARROW-6060, so if you are hitting this bug you will want to upgrade to 0.15.0 as soon as it comes out. Conclusion There are still many Parquet-related optimizations that we may pursue in the future, but the ones here can be very helpful to people working with string-heavy datasets, both in performance and memory use. If you’d like to discuss this development work, we’d be glad to hear from you on our developer mailing list dev@arrow.apache.org.</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
