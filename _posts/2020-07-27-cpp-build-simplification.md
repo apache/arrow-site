@@ -45,7 +45,7 @@ their users. Over the last year, we have undertaken a number of significant
 projects to accommodate the different ways that people want to depend on Arrow
 C++. We've aimed to make the build process simple by default, without requiring
 special environment setup, yet also highly configurable for those who need to
-specialize. This includes a zero-dependency option for projects that wish to use
+specialize. This includes a *zero-dependency option* for projects that wish to use
 the Arrow C++ core but take on no transitive dependencies. We've also worked to
 make builds faster and more compact, even as we continue to add new
 functionality.
@@ -64,10 +64,12 @@ disable optional components one by one, we have made the default for all
 optional components to be `OFF` so that the default configuration is a
 dependency-free minimal core build.
 
-The only third-party library enabled by default is jemalloc, the project's
-recommended memory allocator. Given that Arrow applications often process large
-volumes of data, we have found additionally that using memory allocators
-provided by projects like jemalloc and mimalloc yield significantly better
+The only third-party library enabled by default is
+[jemalloc](http://jemalloc.net/), the project's recommended memory allocator
+(except on Windows, where it is also disabled). Given that Arrow applications
+often process large volumes of data, we have found additionally that using
+memory allocators provided by projects like jemalloc and
+[mimalloc](https://microsoft.github.io/mimalloc/) yield significantly better
 performance over the default system allocators. Even so, this can also be
 disabled if desired.
 
@@ -271,3 +273,9 @@ in-memory using `reticulate`.
 
 One exciting use case for the Arrow C interface is to add Arrow import and
 export to database driver libraries which often contain a C API.
+
+## Looking ahead
+
+As the project grows, we will continue working to make the build process as
+fast and reliable as possible. If you see ways we can improve it further, or if
+you run into trouble, please bring it up on the [mailing list](https://arrow.apache.org/community/#mailing-lists) or [report an issue](https://issues.apache.org/jira/browse/ARROW).
