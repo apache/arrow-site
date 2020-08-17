@@ -66,6 +66,9 @@ short description of your use case.
 * **[AWS Data Wrangler][34]:** Extends the power of Pandas library to AWS connecting 
   DataFrames and AWS data related services such as Amazon Redshift, AWS Glue, Amazon Athena, 
   Amazon EMR, Amazon QuickSight, etc.
+* **[Cylon][35]:**  An open-source high performance distributed data processing library 
+  that can be seamlessly integrated with existing Big Data and AI/ML frameworks. Cylon
+  uses Arrow memory format and exposes language bindings to C++, Java, and Python.
 * **[Dask][15]:** Python library for parallel and distributed execution of
   dynamic task graphs. Dask supports using pyarrow for accessing Parquet
   files
@@ -192,3 +195,4 @@ short description of your use case.
 [32]: https://github.com/TileDB-Inc/TileDB
 [33]: https://github.com/TileDB-Inc/TileDB-VCF
 [34]: https://github.com/awslabs/aws-data-wrangler
+[35]: https://cylondata.org/ 
