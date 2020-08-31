@@ -66,6 +66,9 @@ short description of your use case.
 * **[AWS Data Wrangler][34]:** Extends the power of Pandas library to AWS connecting 
   DataFrames and AWS data related services such as Amazon Redshift, AWS Glue, Amazon Athena, 
   Amazon EMR, Amazon QuickSight, etc.
+* **[Bodo][36]:** Bodo is a universal Python analytics engine that democratizes High Performance 
+   Computing (HPC) architecture for mainstream enterprises, allowing Python analytics workloads to
+   scale efficiently. Bodo uses Arrow to support I/O for Parquet files, as well as internal support for data operations.
 * **[Cylon][35]:**  An open-source high performance distributed data processing library 
   that can be seamlessly integrated with existing Big Data and AI/ML frameworks. Cylon
   uses Arrow memory format and exposes language bindings to C++, Java, and Python.
@@ -196,3 +199,4 @@ short description of your use case.
 [33]: https://github.com/TileDB-Inc/TileDB-VCF
 [34]: https://github.com/awslabs/aws-data-wrangler
 [35]: https://cylondata.org/ 
+[36]: https://bodo.ai
