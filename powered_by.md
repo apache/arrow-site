@@ -163,6 +163,10 @@ short description of your use case.
   Database Connectivity (ODBC) interface. It provides the ability to return
   Arrow Tables and RecordBatches in addition to the Python Database API
   Specification 2.0.
+* **[VAST][37]:** A network telemetry engine for data-driven security
+  investigations. VAST uses Arrow as standardized data plane to provide a
+  high-bandwidth output path for downstream analytics. This makes it easy and
+  efficient to access security data via pyarrow and other available bindings.
 
 [1]: https://www.apache.org/foundation/marks/
 [2]: https://www.apache.org/foundation/marks/faq/
@@ -200,3 +204,4 @@ short description of your use case.
 [34]: https://github.com/awslabs/aws-data-wrangler
 [35]: https://cylondata.org/ 
 [36]: https://bodo.ai
+[37]: https://github.com/tenzir/vast
