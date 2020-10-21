@@ -83,7 +83,7 @@ This function enables you to write Parquet files from R." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.0.0</span>
       </span>
     </div>
 
@@ -107,6 +107,12 @@ This function enables you to write Parquet files from R." />
   <ul class="dropdown-menu" role="menu">
     <li>
       <a href="../articles/dataset.html">Working with Arrow Datasets and dplyr</a>
+    </li>
+    <li>
+      <a href="../articles/flight.html">Connecting to Flight RPC Servers</a>
+    </li>
+    <li>
+      <a href="../articles/fs.html">Working with Cloud Storage (S3)</a>
     </li>
     <li>
       <a href="../articles/install.html">Installing the Arrow Package on Linux</a>
@@ -180,38 +186,32 @@ This function enables you to write Parquet files from R." />
 This function enables you to write Parquet files from R.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>write_parquet</span>(
-  <span class='no'>x</span>,
-  <span class='no'>sink</span>,
-  <span class='kw'>chunk_size</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>version</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>compression</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>compression_level</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>use_dictionary</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>write_statistics</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>data_page_size</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>properties</span> <span class='kw'>=</span> <span class='no'>ParquetWriterProperties</span>$<span class='fu'>create</span>(<span class='no'>x</span>, <span class='kw'>version</span> <span class='kw'>=</span> <span class='no'>version</span>, <span class='kw'>compression</span> <span class='kw'>=</span>
-    <span class='no'>compression</span>, <span class='kw'>compression_level</span> <span class='kw'>=</span> <span class='no'>compression_level</span>, <span class='kw'>use_dictionary</span> <span class='kw'>=</span> <span class='no'>use_dictionary</span>,
-    <span class='kw'>write_statistics</span> <span class='kw'>=</span> <span class='no'>write_statistics</span>, <span class='kw'>data_page_size</span> <span class='kw'>=</span> <span class='no'>data_page_size</span>),
-  <span class='kw'>use_deprecated_int96_timestamps</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>coerce_timestamps</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>allow_truncated_timestamps</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-
-    <span class='kw'>arrow_properties</span> <span class='kw'>=</span> <span class='no'>ParquetArrowWriterProperties</span>$<span class='fu'>create</span>(<span class='kw'>use_deprecated_int96_timestamps</span>
-    <span class='kw'>=</span> <span class='no'>use_deprecated_int96_timestamps</span>, <span class='kw'>coerce_timestamps</span> <span class='kw'>=</span> <span class='no'>coerce_timestamps</span>,
-    <span class='kw'>allow_truncated_timestamps</span> <span class='kw'>=</span> <span class='no'>allow_truncated_timestamps</span>)
-)</pre>
+    <pre class="usage"><span class='fu'>write_parquet</span><span class='op'>(</span>
+  <span class='va'>x</span>,
+  <span class='va'>sink</span>,
+  chunk_size <span class='op'>=</span> <span class='cn'>NULL</span>,
+  version <span class='op'>=</span> <span class='cn'>NULL</span>,
+  compression <span class='op'>=</span> <span class='fu'>default_parquet_compression</span><span class='op'>(</span><span class='op'>)</span>,
+  compression_level <span class='op'>=</span> <span class='cn'>NULL</span>,
+  use_dictionary <span class='op'>=</span> <span class='cn'>NULL</span>,
+  write_statistics <span class='op'>=</span> <span class='cn'>NULL</span>,
+  data_page_size <span class='op'>=</span> <span class='cn'>NULL</span>,
+  use_deprecated_int96_timestamps <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  coerce_timestamps <span class='op'>=</span> <span class='cn'>NULL</span>,
+  allow_truncated_timestamps <span class='op'>=</span> <span class='cn'>FALSE</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>x</th>
-      <td><p>An <a href='Table.html'>arrow::Table</a>, or an object convertible to it.</p></td>
+      <td><p><code>data.frame</code>, <a href='RecordBatch.html'>RecordBatch</a>, or <a href='Table.html'>Table</a></p></td>
     </tr>
     <tr>
       <th>sink</th>
-      <td><p>an <a href='OutputStream.html'>arrow::io::OutputStream</a> or a string which is interpreted as a file path</p></td>
+      <td><p>A string file path, URI, or <a href='OutputStream.html'>OutputStream</a>, or path in a file
+system (<code>SubTreeFileSystem</code>)</p></td>
     </tr>
     <tr>
       <th>chunk_size</th>
@@ -244,14 +244,6 @@ are coerced to character.</p></td>
 size of data pages within a column chunk (in bytes). Default 1 MiB.</p></td>
     </tr>
     <tr>
-      <th>properties</th>
-      <td><p>properties for parquet writer, derived from arguments
-<code>version</code>, <code>compression</code>, <code>compression_level</code>, <code>use_dictionary</code>,
-<code>write_statistics</code> and <code>data_page_size</code>. You should not specify any of
-these arguments if you also provide a <code>properties</code> argument, as they will
-be ignored.</p></td>
-    </tr>
-    <tr>
       <th>use_deprecated_int96_timestamps</th>
       <td><p>Write timestamps to INT96 Parquet format. Default <code>FALSE</code>.</p></td>
     </tr>
@@ -266,13 +258,6 @@ be ignored.</p></td>
 particular resolution. E.g. if microsecond or nanosecond data is lost when coercing
 to "ms", do not raise an exception</p></td>
     </tr>
-    <tr>
-      <th>arrow_properties</th>
-      <td><p>arrow specific writer properties, derived from arguments
-<code>use_deprecated_int96_timestamps</code>, <code>coerce_timestamps</code> and <code>allow_truncated_timestamps</code>
-You should not specify any of these arguments if you also provide a <code>properties</code>
-argument, as they will be ignored.</p></td>
-    </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
@@ -280,7 +265,12 @@ argument, as they will be ignored.</p></td>
     <p>the input <code>x</code> invisibly.</p>
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
-    <p>The parameters <code>compression</code>, <code>compression_level</code>, <code>use_dictionary</code> and
+    <p>Due to features of the format, Parquet files cannot be appended to.
+If you want to use the Parquet format but also want the ability to extend
+your dataset, you can write to additional Parquet files and then treat
+the whole directory of files as a <a href='Dataset.html'>Dataset</a> you can query.
+See <code><a href='../articles/dataset.html'>vignette("dataset", package = "arrow")</a></code> for examples of this.</p>
+<p>The parameters <code>compression</code>, <code>compression_level</code>, <code>use_dictionary</code> and
 <code>write_statistics</code> support various patterns:</p><ul>
 <li><p>The default <code>NULL</code> leaves the parameter unspecified, and the C++ library
 uses an appropriate default for each column (defaults listed above)</p></li>
@@ -301,15 +291,16 @@ Note that "uncompressed" columns may still have dictionary encoding.</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='co'># \donttest{</span>
-<span class='no'>tf1</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span>(<span class='kw'>fileext</span> <span class='kw'>=</span> <span class='st'>".parquet"</span>)
-<span class='fu'>write_parquet</span>(<span class='fu'><a href='https://rdrr.io/r/base/data.frame.html'>data.frame</a></span>(<span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>1</span>:<span class='fl'>5</span>), <span class='no'>tf1</span>)
+<span class='va'>tf1</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span><span class='op'>(</span>fileext <span class='op'>=</span> <span class='st'>".parquet"</span><span class='op'>)</span>
+<span class='fu'>write_parquet</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/data.frame.html'>data.frame</a></span><span class='op'>(</span>x <span class='op'>=</span> <span class='fl'>1</span><span class='op'>:</span><span class='fl'>5</span><span class='op'>)</span>, <span class='va'>tf1</span><span class='op'>)</span>
 
 <span class='co'># using compression</span>
-<span class='kw'>if</span> (<span class='fu'><a href='codec_is_available.html'>codec_is_available</a></span>(<span class='st'>"gzip"</span>)) {
-  <span class='no'>tf2</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span>(<span class='kw'>fileext</span> <span class='kw'>=</span> <span class='st'>".gz.parquet"</span>)
-  <span class='fu'>write_parquet</span>(<span class='fu'><a href='https://rdrr.io/r/base/data.frame.html'>data.frame</a></span>(<span class='kw'>x</span> <span class='kw'>=</span> <span class='fl'>1</span>:<span class='fl'>5</span>), <span class='no'>tf2</span>, <span class='kw'>compression</span> <span class='kw'>=</span> <span class='st'>"gzip"</span>, <span class='kw'>compression_level</span> <span class='kw'>=</span> <span class='fl'>5</span>)
-}
-<span class='co'># }</span></div></pre>
+<span class='kw'>if</span> <span class='op'>(</span><span class='fu'><a href='codec_is_available.html'>codec_is_available</a></span><span class='op'>(</span><span class='st'>"gzip"</span><span class='op'>)</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='va'>tf2</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span><span class='op'>(</span>fileext <span class='op'>=</span> <span class='st'>".gz.parquet"</span><span class='op'>)</span>
+  <span class='fu'>write_parquet</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/data.frame.html'>data.frame</a></span><span class='op'>(</span>x <span class='op'>=</span> <span class='fl'>1</span><span class='op'>:</span><span class='fl'>5</span><span class='op'>)</span>, <span class='va'>tf2</span>, compression <span class='op'>=</span> <span class='st'>"gzip"</span>, compression_level <span class='op'>=</span> <span class='fl'>5</span><span class='op'>)</span>
+<span class='op'>}</span>
+<span class='co'># }</span>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -325,7 +316,7 @@ Note that "uncompressed" columns may still have dictionary encoding.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

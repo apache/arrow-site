@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow &mdash; Apache Arrow v1.0.1</title>
+  <title>pyarrow &mdash; Apache Arrow v2.0.0</title>
   
 
   
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                1.0.1
+                2.0.0
               </div>
             
           
@@ -92,6 +92,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Integration.html">Integration Testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/CDataInterface.html">The Arrow C data interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/CStreamInterface.html">The Arrow C stream interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Libraries</span></p>
@@ -217,6 +218,7 @@
 <span class="kn">import</span> <span class="nn">gc</span> <span class="k">as</span> <span class="nn">_gc</span>
 <span class="kn">import</span> <span class="nn">os</span> <span class="k">as</span> <span class="nn">_os</span>
 <span class="kn">import</span> <span class="nn">sys</span> <span class="k">as</span> <span class="nn">_sys</span>
+<span class="kn">import</span> <span class="nn">warnings</span> <span class="k">as</span> <span class="nn">_warnings</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">._generated_version</span> <span class="k">import</span> <span class="n">version</span> <span class="k">as</span> <span class="n">__version__</span>
@@ -371,26 +373,79 @@
 <span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="p">(</span><span class="n">deserialize_from</span><span class="p">,</span> <span class="n">deserialize</span><span class="p">,</span>
                          <span class="n">deserialize_components</span><span class="p">,</span>
                          <span class="n">serialize</span><span class="p">,</span> <span class="n">serialize_to</span><span class="p">,</span> <span class="n">read_serialized</span><span class="p">,</span>
-                         <span class="n">SerializedPyObject</span><span class="p">,</span> <span class="n">SerializationContext</span><span class="p">,</span>
                          <span class="n">SerializationCallbackError</span><span class="p">,</span>
                          <span class="n">DeserializationCallbackError</span><span class="p">)</span>
 
-<span class="kn">from</span> <span class="nn">pyarrow.filesystem</span> <span class="k">import</span> <span class="n">FileSystem</span><span class="p">,</span> <span class="n">LocalFileSystem</span>
-
-<span class="kn">from</span> <span class="nn">pyarrow.hdfs</span> <span class="k">import</span> <span class="n">HadoopFileSystem</span>
 <span class="kn">import</span> <span class="nn">pyarrow.hdfs</span> <span class="k">as</span> <span class="nn">hdfs</span>
 
 <span class="kn">from</span> <span class="nn">pyarrow.ipc</span> <span class="k">import</span> <span class="n">serialize_pandas</span><span class="p">,</span> <span class="n">deserialize_pandas</span>
 <span class="kn">import</span> <span class="nn">pyarrow.ipc</span> <span class="k">as</span> <span class="nn">ipc</span>
-
-
-<span class="n">localfs</span> <span class="o">=</span> <span class="n">LocalFileSystem</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span>
 
 <span class="kn">from</span> <span class="nn">pyarrow.serialization</span> <span class="k">import</span> <span class="p">(</span><span class="n">default_serialization_context</span><span class="p">,</span>
                                    <span class="n">register_default_serialization_handlers</span><span class="p">,</span>
                                    <span class="n">register_torch_serialization_handlers</span><span class="p">)</span>
 
 <span class="kn">import</span> <span class="nn">pyarrow.types</span> <span class="k">as</span> <span class="nn">types</span>
+
+
+<span class="c1"># deprecated top-level access</span>
+
+
+<span class="kn">from</span> <span class="nn">pyarrow.filesystem</span> <span class="k">import</span> <span class="n">FileSystem</span> <span class="k">as</span> <span class="n">_FileSystem</span>
+<span class="kn">from</span> <span class="nn">pyarrow.filesystem</span> <span class="k">import</span> <span class="n">LocalFileSystem</span> <span class="k">as</span> <span class="n">_LocalFileSystem</span>
+<span class="kn">from</span> <span class="nn">pyarrow.hdfs</span> <span class="k">import</span> <span class="n">HadoopFileSystem</span> <span class="k">as</span> <span class="n">_HadoopFileSystem</span>
+
+<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">SerializationContext</span> <span class="k">as</span> <span class="n">_SerializationContext</span>
+<span class="kn">from</span> <span class="nn">pyarrow.lib</span> <span class="k">import</span> <span class="n">SerializedPyObject</span> <span class="k">as</span> <span class="n">_SerializedPyObject</span>
+
+
+<span class="n">_localfs</span> <span class="o">=</span> <span class="n">_LocalFileSystem</span><span class="o">.</span><span class="n">_get_instance</span><span class="p">()</span>
+
+
+<span class="n">_msg</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;pyarrow.</span><span class="si">{0}</span><span class="s2"> is deprecated as of 2.0.0, please use pyarrow.fs.</span><span class="si">{1}</span><span class="s2"> instead.&quot;</span>
+<span class="p">)</span>
+
+<span class="n">_serialization_msg</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;&#39;pyarrow.</span><span class="si">{0}</span><span class="s2">&#39; is deprecated and will be removed in a future version. &quot;</span>
+    <span class="s2">&quot;Use pickle or the pyarrow IPC functionality instead.&quot;</span>
+<span class="p">)</span>
+
+<span class="n">_deprecated</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;localfs&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">_localfs</span><span class="p">,</span> <span class="s2">&quot;LocalFileSystem&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;FileSystem&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">_FileSystem</span><span class="p">,</span> <span class="s2">&quot;FileSystem&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;LocalFileSystem&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">_LocalFileSystem</span><span class="p">,</span> <span class="s2">&quot;LocalFileSystem&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;HadoopFileSystem&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">_HadoopFileSystem</span><span class="p">,</span> <span class="s2">&quot;HadoopFileSystem&quot;</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="n">_serialization_deprecatd</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;SerializationContext&quot;</span><span class="p">:</span> <span class="n">_SerializationContext</span><span class="p">,</span>
+    <span class="s2">&quot;SerializedPyObject&quot;</span><span class="p">:</span> <span class="n">_SerializedPyObject</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">if</span> <span class="n">_sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_deprecated</span><span class="p">:</span>
+            <span class="n">obj</span><span class="p">,</span> <span class="n">new_name</span> <span class="o">=</span> <span class="n">_deprecated</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+            <span class="n">_warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">_msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">),</span>
+                           <span class="ne">DeprecationWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">obj</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_serialization_deprecatd</span><span class="p">:</span>
+            <span class="n">_warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">_serialization_msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                           <span class="ne">DeprecationWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">_serialization_deprecatd</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+            <span class="s2">&quot;module &#39;pyarrow&#39; has no attribute &#39;</span><span class="si">{0}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">localfs</span> <span class="o">=</span> <span class="n">_localfs</span>
+    <span class="n">FileSystem</span> <span class="o">=</span> <span class="n">_FileSystem</span>
+    <span class="n">LocalFileSystem</span> <span class="o">=</span> <span class="n">_LocalFileSystem</span>
+    <span class="n">HadoopFileSystem</span> <span class="o">=</span> <span class="n">_HadoopFileSystem</span>
+    <span class="n">SerializationContext</span> <span class="o">=</span> <span class="n">_SerializationContext</span>
+    <span class="n">SerializedPyObject</span> <span class="o">=</span> <span class="n">_SerializedPyObject</span>
+
 
 <span class="c1"># Entry point for starting the plasma store</span>
 

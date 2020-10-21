@@ -37,7 +37,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.0.0</span>
       </span>
     </div>
 
@@ -61,6 +61,12 @@
   <ul class="dropdown-menu" role="menu">
 <li>
       <a href="../articles/dataset.html">Working with Arrow Datasets and dplyr</a>
+    </li>
+    <li>
+      <a href="../articles/flight.html">Connecting to Flight RPC Servers</a>
+    </li>
+    <li>
+      <a href="../articles/fs.html">Working with Cloud Storage (S3)</a>
     </li>
     <li>
       <a href="../articles/install.html">Installing the Arrow Package on Linux</a>
@@ -140,9 +146,11 @@
 <h1 class="hasAnchor">
 <a href="#installation-basics" class="anchor"></a>Installation basics</h1>
 <p>Install the latest release of <code>arrow</code> from CRAN with</p>
-<div class="sourceCode"><html><body><pre class="r"><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span>(<span class="st">"arrow"</span>)</pre></body></html></div>
+<div class="sourceCode"><pre class="downlit">
+<span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span><span class="op">(</span><span class="st">"arrow"</span><span class="op">)</span></pre></div>
 <p>Daily development builds, which are not official releases, can be installed from the Ursa Labs repository:</p>
-<div class="sourceCode"><html><body><pre class="r"><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span>(<span class="st">"arrow"</span>, <span class="kw">repos</span> <span class="kw">=</span> <span class="st">"https://dl.bintray.com/ursalabs/arrow-r"</span>)</pre></body></html></div>
+<div class="sourceCode"><pre class="downlit">
+<span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span><span class="op">(</span><span class="st">"arrow"</span>, repos <span class="op">=</span> <span class="st">"https://arrow-r-nightly.s3.amazonaws.com"</span><span class="op">)</span></pre></div>
 <p>There currently are no daily <code>conda</code> builds.</p>
 <p>You can also install the R package from a git checkout:</p>
 <pre class="shell"><code>git clone https://github.com/apache/arrow
@@ -155,9 +163,22 @@ R CMD INSTALL .</code></pre>
 <p>to build the Arrow libraries with optional features such as compression libraries enabled. This will increase the build time but provides many useful features. Prebuilt binaries are built with this flag enabled, so you get the full functionality by using them as well.</p>
 <p>Both of these variables are also set this way if you have the <code>NOT_CRAN=true</code> environment variable set.</p>
 <p>If you already have <code>arrow</code> installed and want to upgrade to a different version, install a development build, or try to reinstall and fix issues with Linux C++ binaries, you can call <code><a href="../reference/install_arrow.html">install_arrow()</a></code>. This function is part of the <code>arrow</code> package, and it is also available as a standalone script, so you can access it for convenience without first installing the package:</p>
-<div class="sourceCode"><html><body><pre class="r"><span class="fu"><a href="https://rdrr.io/r/base/source.html">source</a></span>(<span class="st">"https://raw.githubusercontent.com/apache/arrow/master/r/R/install-arrow.R"</span>)</pre></body></html></div>
+<div class="sourceCode"><pre class="downlit">
+<span class="kw"><a href="https://rdrr.io/r/base/source.html">source</a></span><span class="op">(</span><span class="st">"https://raw.githubusercontent.com/apache/arrow/master/r/R/install-arrow.R"</span><span class="op">)</span></pre></div>
 <p><code><a href="../reference/install_arrow.html">install_arrow()</a></code> will install from CRAN, while <code><a href="../reference/install_arrow.html">install_arrow(nightly = TRUE)</a></code> will give you a development build. <code><a href="../reference/install_arrow.html">install_arrow()</a></code> does not require environment variables to be set in order to satisfy C++ dependencies.</p>
 <!-- TODO: does remotes::install_github("apache/arrow/r") work now? -->
+<div id="s3-support" class="section level2">
+<h2 class="hasAnchor">
+<a href="#s3-support" class="anchor"></a>S3 support</h2>
+<p>The <code>arrow</code> package allows you to work with data in AWS S3 or in other cloud storage system that emulate S3. However, support for working with S3 is not enabled in the default build, and it has additional system requirements. To enable it, set the environment variable <code>LIBARROW_MINIMAL=false</code> or <code>NOT_CRAN=true</code> to choose the full-featured build, or more selectively set <code>ARROW_S3=ON</code>. You also need the following system dependencies:</p>
+<ul>
+<li>
+<code>gcc</code> &gt;= 4.9 or <code>clang</code> &gt;= 3.3; note that the default compiler on CentOS 7 is gcc 4.8.5, which is not sufficient</li>
+<li>CURL: install <code>libcurl-devel</code> (rpm) or <code>libcurl4-openssl-dev</code> (deb)</li>
+<li>OpenSSL &gt;= 1.0.2: install <code>openssl-devel</code> (rpm) or <code>libssl-dev</code> (deb)</li>
+</ul>
+<p>The prebuilt C++ binaries come with S3 support enabled, so you will need to meet these system requirements in order to use them--the package will not install without them. If you're building everything from source, the install script will check for the presence of these dependencies and turn off S3 support in the build if the prerequisites are not met--installation will succeed but without S3 functionality. If afterwards you install the missing system requirements, you'll need to reinstall the package in order to enable S3 support.</p>
+</div>
 </div>
 <div id="how-dependencies-are-resolved" class="section level1">
 <h1 class="hasAnchor">
@@ -239,7 +260,7 @@ dlopen(/Users/you/R/00LOCK-r/00new/arrow/libs/arrow.so, 6): Library not loaded: 
 <li>
 <code>NOT_CRAN</code>: If this variable is set to <code>true</code>, as the <code>devtools</code> package does, the build script will set <code>LIBARROW_BINARY=true</code> and <code>LIBARROW_MINIMAL=false</code> unless those environment variables are already set. This provides for a more complete and fast installation experience for users who already have <code>NOT_CRAN=true</code> as part of their workflow, without requiring additional environment variables to be set.</li>
 <li>
-<code>ARROW_R_DEV</code>: If set to <code>true</code>, more verbose messaging will be printed in the build script. This variable also is needed if you're modifying <code>Rcpp</code> code in the package: see "Editing Rcpp code" in the README.</li>
+<code>ARROW_R_DEV</code>: If set to <code>true</code>, more verbose messaging will be printed in the build script. This variable also is needed if you're modifying C++ code in the package: see "Editing C++ code" in the README.</li>
 <li>
 <code>LIBARROW_DEBUG_DIR</code>: If the C++ library building from source fails (<code>cmake</code>), there may be messages telling you to check some log file in the build directory. However, when the library is built during R package installation, that location is in a temp directory that is already deleted. To capture those logs, set this variable to an absolute (not relative) path and the log files will be copied there. The directory will be created if it does not exist.</li>
 <li>
@@ -274,7 +295,7 @@ R_ORG=rhub R_IMAGE=ubuntu-gcc-release R_TAG=latest docker-compose run r</code></
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
