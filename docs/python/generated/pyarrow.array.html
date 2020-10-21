@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.array &mdash; Apache Arrow v1.0.1</title>
+  <title>pyarrow.array &mdash; Apache Arrow v2.0.0</title>
   
 
   
@@ -62,7 +62,7 @@
             
             
               <div class="version">
-                1.0.1
+                2.0.0
               </div>
             
           
@@ -94,6 +94,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/CDataInterface.html">The Arrow C data interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/CStreamInterface.html">The Arrow C stream interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Libraries</span></p>
@@ -110,6 +111,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../install.html">Installing PyArrow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../memory.html">Memory and IO Interfaces</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../data.html">Data Types and In-Memory Data Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../compute.html">Compute Functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../ipc.html">Streaming, Serialization, and IPC</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../filesystems.html">Filesystem Interface</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../filesystems_deprecated.html">Filesystem Interface (legacy)</a></li>
@@ -134,6 +136,7 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../api/memory.html">Buffers and Memory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/compute.html">Compute Functions</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/files.html">Streams and File Access</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/tables.html">Tables and Tensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/ipc.html">Serialization and IPC</a></li>
@@ -277,27 +280,52 @@ memory pool.</p></li>
 </dl>
 <p class="rubric">Notes</p>
 <p>Localized timestamps will currently be returned as UTC (pandas’s native
-representation).  Timezone-naive data will be implicitly interpreted as
+representation). Timezone-naive data will be implicitly interpreted as
 UTC.</p>
+<p>Converting to dictionary array will promote to a wider integer type for
+indices if the number of distinct values cannot be represented, even if
+the index type was explicitly set. This means that if there are more than
+127 values the returned dictionary array’s index type will be at least
+pa.int16() even if pa.int8() was passed to the function. Note that an
+explicit index type will not be demoted even if it is wider than required.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]))</span>
-<span class="go">&lt;pyarrow.array.Int64Array object at 0x7f674e4c0e10&gt;</span>
+<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7f674e4c0e10&gt;</span>
 <span class="go">[</span>
 <span class="go">  1,</span>
 <span class="go">  2</span>
 <span class="go">]</span>
 </pre></div>
 </div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="n">pa</span><span class="o">.</span><span class="n">dictionary</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int8</span><span class="p">(),</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()))</span>
+<span class="go">&lt;pyarrow.lib.DictionaryArray object at 0x7feb288d9040&gt;</span>
+<span class="go">-- dictionary:</span>
+<span class="go">[</span>
+<span class="go">  &quot;a&quot;,</span>
+<span class="go">  &quot;b&quot;</span>
+<span class="go">]</span>
+<span class="go">-- indices:</span>
+<span class="go">[</span>
+<span class="go">  0,</span>
+<span class="go">  1,</span>
+<span class="go">  0</span>
+<span class="go">]</span>
+</pre></div>
+</div>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
-<span class="gp">... </span><span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">))</span>
-<span class="go">&lt;pyarrow.array.Int64Array object at 0x7f9019e11208&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">mask</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">))</span>
+<span class="go">&lt;pyarrow.lib.Int64Array object at 0x7f9019e11208&gt;</span>
 <span class="go">[</span>
 <span class="go">  1,</span>
 <span class="go">  null</span>
 <span class="go">]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1024</span><span class="p">),</span> <span class="nb">type</span><span class="o">=</span><span class="n">pa</span><span class="o">.</span><span class="n">dictionary</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int8</span><span class="p">(),</span> <span class="n">pa</span><span class="o">.</span><span class="n">int64</span><span class="p">()))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">index_type</span>
+<span class="go">DataType(int16)</span>
 </pre></div>
 </div>
 </dd></dl>

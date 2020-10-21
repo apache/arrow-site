@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pyarrow.parquet &mdash; Apache Arrow v1.0.1</title>
+  <title>pyarrow.parquet &mdash; Apache Arrow v2.0.0</title>
   
 
   
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                1.0.1
+                2.0.0
               </div>
             
           
@@ -92,6 +92,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../format/Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Integration.html">Integration Testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/CDataInterface.html">The Arrow C data interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../format/CStreamInterface.html">The Arrow C stream interface</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../format/Other.html">Other Data Structures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Libraries</span></p>
@@ -222,8 +223,9 @@
                               <span class="n">FileMetaData</span><span class="p">,</span> <span class="n">RowGroupMetaData</span><span class="p">,</span>
                               <span class="n">ColumnChunkMetaData</span><span class="p">,</span>
                               <span class="n">ParquetSchema</span><span class="p">,</span> <span class="n">ColumnSchema</span><span class="p">)</span>
-<span class="kn">from</span> <span class="nn">pyarrow.filesystem</span> <span class="k">import</span> <span class="p">(</span><span class="n">LocalFileSystem</span><span class="p">,</span> <span class="n">_ensure_filesystem</span><span class="p">,</span>
-                                <span class="n">resolve_filesystem_and_path</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">pyarrow.fs</span> <span class="k">import</span> <span class="p">(</span><span class="n">LocalFileSystem</span><span class="p">,</span> <span class="n">FileSystem</span><span class="p">,</span>
+                        <span class="n">_resolve_filesystem_and_path</span><span class="p">,</span> <span class="n">_ensure_filesystem</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">pyarrow</span> <span class="k">import</span> <span class="n">filesystem</span> <span class="k">as</span> <span class="n">legacyfs</span>
 <span class="kn">from</span> <span class="nn">pyarrow.util</span> <span class="k">import</span> <span class="n">guid</span><span class="p">,</span> <span class="n">_is_path_like</span><span class="p">,</span> <span class="n">_stringify_path</span>
 
 <span class="n">_URI_STRIP_SCHEMES</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;hdfs&#39;</span><span class="p">,)</span>
@@ -242,9 +244,9 @@
 
 <span class="k">def</span> <span class="nf">_get_filesystem_and_path</span><span class="p">(</span><span class="n">passed_filesystem</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">passed_filesystem</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">resolve_filesystem_and_path</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">passed_filesystem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">legacyfs</span><span class="o">.</span><span class="n">resolve_filesystem_and_path</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">passed_filesystem</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">passed_filesystem</span> <span class="o">=</span> <span class="n">_ensure_filesystem</span><span class="p">(</span><span class="n">passed_filesystem</span><span class="p">)</span>
+        <span class="n">passed_filesystem</span> <span class="o">=</span> <span class="n">legacyfs</span><span class="o">.</span><span class="n">_ensure_filesystem</span><span class="p">(</span><span class="n">passed_filesystem</span><span class="p">)</span>
         <span class="n">parsed_path</span> <span class="o">=</span> <span class="n">_parse_uri</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">passed_filesystem</span><span class="p">,</span> <span class="n">parsed_path</span>
 
@@ -667,11 +669,6 @@
 <span class="s2">    enabled, then dictionary is preferred.</span>
 <span class="s2">    The byte_stream_split encoding is valid only for floating-point data types</span>
 <span class="s2">    and should be combined with a compression codec.</span>
-<span class="s2">writer_engine_version: str, default &quot;V2&quot;</span>
-<span class="s2">    The engine version to use when writing out Arrow data.  V2 supports</span>
-<span class="s2">    all nested types. V1 is legacy and will be removed in a future release.</span>
-<span class="s2">    Setting the environment variable ARROW_PARQUET_WRITER_ENGINE will</span>
-<span class="s2">    override the default.</span>
 <span class="s2">data_page_version : {&quot;1.0&quot;, &quot;2.0&quot;}, default &quot;1.0&quot;</span>
 <span class="s2">    The serialized Parquet data page format version to write, defaults to</span>
 <span class="s2">    1.0. This does not impact the file schema logical types and Arrow to</span>
@@ -728,13 +725,20 @@
         <span class="c1"># sure to close it when `self.close` is called.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">file_handle</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="n">filesystem</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">resolve_filesystem_and_path</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">filesystem</span><span class="p">)</span>
+        <span class="n">filesystem</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">_resolve_filesystem_and_path</span><span class="p">(</span>
+            <span class="n">where</span><span class="p">,</span> <span class="n">filesystem</span><span class="p">,</span> <span class="n">allow_legacy_filesystem</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">sink</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_handle</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">legacyfs</span><span class="o">.</span><span class="n">FileSystem</span><span class="p">):</span>
+                <span class="c1"># legacy filesystem (eg custom subclass)</span>
+                <span class="c1"># TODO deprecate</span>
+                <span class="n">sink</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_handle</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sink</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_handle</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open_output_stream</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">sink</span> <span class="o">=</span> <span class="n">where</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_collector</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;metadata_collector&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">engine_version</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ARROW_PARQUET_WRITER_ENGINE&#39;</span><span class="p">,</span> <span class="s1">&#39;V2&#39;</span><span class="p">)</span>
+        <span class="n">engine_version</span> <span class="o">=</span> <span class="s1">&#39;V2&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="o">=</span> <span class="n">_parquet</span><span class="o">.</span><span class="n">ParquetWriter</span><span class="p">(</span>
             <span class="n">sink</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span>
             <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
@@ -1227,7 +1231,8 @@
 
 
 <span class="k">def</span> <span class="nf">_open_dataset_file</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">fs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">fs</span><span class="p">,</span> <span class="n">LocalFileSystem</span><span class="p">):</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">fs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span>
+            <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">fs</span><span class="p">,</span> <span class="n">legacyfs</span><span class="o">.</span><span class="n">LocalFileSystem</span><span class="p">)):</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">ParquetFile</span><span class="p">(</span>
         <span class="n">path</span><span class="p">,</span>
@@ -1309,7 +1314,15 @@
                 <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">split_row_groups</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                 <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span>
-                <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">use_legacy_dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># if a new filesystem is passed -&gt; default to new implementation</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">FileSystem</span><span class="p">):</span>
+                <span class="n">use_legacy_dataset</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="c1"># otherwise the default is still True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">use_legacy_dataset</span> <span class="o">=</span> <span class="kc">True</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="n">use_legacy_dataset</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_ParquetDatasetV2</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span>
                                      <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span>
@@ -1531,7 +1544,7 @@
     <span class="k">if</span> <span class="n">_is_path_like</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="ow">and</span> <span class="n">fs</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
         <span class="n">manifest</span> <span class="o">=</span> <span class="n">ParquetManifest</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span>
                                    <span class="n">open_file_func</span><span class="o">=</span><span class="n">open_file_func</span><span class="p">,</span>
-                                   <span class="n">pathsep</span><span class="o">=</span><span class="n">fs</span><span class="o">.</span><span class="n">pathsep</span><span class="p">,</span>
+                                   <span class="n">pathsep</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="s2">&quot;pathsep&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">),</span>
                                    <span class="n">metadata_nthreads</span><span class="o">=</span><span class="n">metadata_nthreads</span><span class="p">)</span>
         <span class="n">common_metadata_path</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">common_metadata_path</span>
         <span class="n">metadata_path</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">metadata_path</span>
@@ -1565,7 +1578,6 @@
                  <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">ignore_prefixes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="kn">import</span> <span class="nn">pyarrow.dataset</span> <span class="k">as</span> <span class="nn">ds</span>
-        <span class="kn">import</span> <span class="nn">pyarrow.fs</span>
 
         <span class="c1"># Raise error for not supported keywords</span>
         <span class="k">for</span> <span class="n">keyword</span><span class="p">,</span> <span class="n">default</span> <span class="ow">in</span> <span class="p">[</span>
@@ -1584,36 +1596,61 @@
                                 <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">read_dictionary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">read_options</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dictionary_columns</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">)</span>
-        <span class="n">parquet_format</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">ParquetFileFormat</span><span class="p">(</span><span class="n">read_options</span><span class="o">=</span><span class="n">read_options</span><span class="p">)</span>
 
         <span class="c1"># map filters to Expressions</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_filters</span> <span class="o">=</span> <span class="n">filters</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_filter_expression</span> <span class="o">=</span> <span class="n">filters</span> <span class="ow">and</span> <span class="n">_filters_to_expression</span><span class="p">(</span><span class="n">filters</span><span class="p">)</span>
 
-        <span class="c1"># check for single NativeFile dataset</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_path_like</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
-                <span class="n">fragment</span> <span class="o">=</span> <span class="n">parquet_format</span><span class="o">.</span><span class="n">make_fragment</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">FileSystemDataset</span><span class="p">(</span>
-                    <span class="p">[</span><span class="n">fragment</span><span class="p">],</span> <span class="n">schema</span><span class="o">=</span><span class="n">fragment</span><span class="o">.</span><span class="n">physical_schema</span><span class="p">,</span>
-                    <span class="nb">format</span><span class="o">=</span><span class="n">parquet_format</span>
-                <span class="p">)</span>
-                <span class="k">return</span>
-
-        <span class="c1"># check partitioning to enable dictionary encoding</span>
-        <span class="k">if</span> <span class="n">partitioning</span> <span class="o">==</span> <span class="s2">&quot;hive&quot;</span><span class="p">:</span>
-            <span class="n">partitioning</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">HivePartitioning</span><span class="o">.</span><span class="n">discover</span><span class="p">(</span>
-                <span class="n">max_partition_dictionary_size</span><span class="o">=-</span><span class="mi">1</span>
-            <span class="p">)</span>
-
         <span class="c1"># map old filesystems to new one</span>
         <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">filesystem</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">_ensure_filesystem</span><span class="p">(</span>
+            <span class="n">filesystem</span> <span class="o">=</span> <span class="n">_ensure_filesystem</span><span class="p">(</span>
                 <span class="n">filesystem</span><span class="p">,</span> <span class="n">use_mmap</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">memory_map</span><span class="p">:</span>
             <span class="c1"># if memory_map is specified, assume local file system (string</span>
             <span class="c1"># path can in principle be URI for any filesystem)</span>
-            <span class="n">filesystem</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">LocalFileSystem</span><span class="p">(</span><span class="n">use_mmap</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">filesystem</span> <span class="o">=</span> <span class="n">LocalFileSystem</span><span class="p">(</span><span class="n">use_mmap</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
+
+        <span class="c1"># check for single fragment dataset</span>
+        <span class="n">single_file</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">single_file</span> <span class="o">=</span> <span class="n">path_or_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">_is_path_like</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># path might be a URI describing the FileSystem as well</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">filesystem</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">FileSystem</span><span class="o">.</span><span class="n">from_uri</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="n">filesystem</span> <span class="o">=</span> <span class="n">LocalFileSystem</span><span class="p">(</span><span class="n">use_mmap</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">get_file_info</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">:</span>
+                    <span class="n">single_file</span> <span class="o">=</span> <span class="n">path</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">single_file</span> <span class="o">=</span> <span class="n">path_or_paths</span>
+
+        <span class="k">if</span> <span class="n">single_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_enable_parallel_column_conversion</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">read_options</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">enable_parallel_column_conversion</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="n">parquet_format</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">ParquetFileFormat</span><span class="p">(</span><span class="n">read_options</span><span class="o">=</span><span class="n">read_options</span><span class="p">)</span>
+            <span class="n">fragment</span> <span class="o">=</span> <span class="n">parquet_format</span><span class="o">.</span><span class="n">make_fragment</span><span class="p">(</span><span class="n">single_file</span><span class="p">,</span> <span class="n">filesystem</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">FileSystemDataset</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">fragment</span><span class="p">],</span> <span class="n">schema</span><span class="o">=</span><span class="n">fragment</span><span class="o">.</span><span class="n">physical_schema</span><span class="p">,</span>
+                <span class="nb">format</span><span class="o">=</span><span class="n">parquet_format</span><span class="p">,</span>
+                <span class="n">filesystem</span><span class="o">=</span><span class="n">fragment</span><span class="o">.</span><span class="n">filesystem</span>
+            <span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_enable_parallel_column_conversion</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">parquet_format</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">ParquetFileFormat</span><span class="p">(</span><span class="n">read_options</span><span class="o">=</span><span class="n">read_options</span><span class="p">)</span>
+
+        <span class="c1"># check partitioning to enable dictionary encoding</span>
+        <span class="k">if</span> <span class="n">partitioning</span> <span class="o">==</span> <span class="s2">&quot;hive&quot;</span><span class="p">:</span>
+            <span class="n">partitioning</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">HivePartitioning</span><span class="o">.</span><span class="n">discover</span><span class="p">(</span>
+                <span class="n">infer_dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">dataset</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span>
                                    <span class="nb">format</span><span class="o">=</span><span class="n">parquet_format</span><span class="p">,</span>
@@ -1656,6 +1693,12 @@
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
                 <span class="p">]</span>
                 <span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">index_columns</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_enable_parallel_column_conversion</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">use_threads</span><span class="p">:</span>
+                <span class="c1"># Allow per-column parallelism; would otherwise cause</span>
+                <span class="c1"># contention in the presence of per-file parallelism.</span>
+                <span class="n">use_threads</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">to_table</span><span class="p">(</span>
             <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_filter_expression</span><span class="p">,</span>
@@ -1708,7 +1751,7 @@
 <span class="s2">    pyarrow 1.0.0. Among other things, this allows to pass `filters`</span>
 <span class="s2">    for all columns and not only the partition keys, enables</span>
 <span class="s2">    different partitioning schemes, etc.</span>
-<span class="s2">    Set to False to use the legacy behaviour.</span>
+<span class="s2">    Set to True to use the legacy behaviour.</span>
 <span class="s2">ignore_prefixes : list, optional</span>
 <span class="s2">    Files matching any of these prefixes will be ignored by the</span>
 <span class="s2">    discovery process if use_legacy_dataset=False.</span>
@@ -1772,8 +1815,10 @@
                     <span class="s2">&quot;the &#39;partitioning&#39; keyword is not supported when the &quot;</span>
                     <span class="s2">&quot;pyarrow.dataset module is not available&quot;</span>
                 <span class="p">)</span>
+            <span class="n">filesystem</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">_resolve_filesystem_and_path</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">filesystem</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">source</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open_input_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
             <span class="c1"># TODO test that source is not a directory or a list</span>
-            <span class="c1"># TODO check filesystem?</span>
             <span class="n">dataset</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span>
                 <span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">,</span>
                 <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">)</span>
@@ -1905,7 +1950,8 @@
 
 
 <div class="viewcode-block" id="write_to_dataset"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.write_to_dataset.html#pyarrow.parquet.write_to_dataset">[docs]</a><span class="k">def</span> <span class="nf">write_to_dataset</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">root_path</span><span class="p">,</span> <span class="n">partition_cols</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                     <span class="n">partition_filename_cb</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                     <span class="n">partition_filename_cb</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                     <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Wrapper around parquet.write_table for writing a Table to</span>
 <span class="sd">    Parquet format by partitions.</span>
 <span class="sd">    For each combination of partition columns and values,</span>
@@ -1927,7 +1973,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    table : pyarrow.Table</span>
-<span class="sd">    root_path : str,</span>
+<span class="sd">    root_path : str, pathlib.Path</span>
 <span class="sd">        The root directory of the dataset</span>
 <span class="sd">    filesystem : FileSystem, default None</span>
 <span class="sd">        If nothing passed, paths assumed to be found in the local on-disk</span>
@@ -1939,6 +1985,11 @@
 <span class="sd">        A callback function that takes the partition key(s) as an argument</span>
 <span class="sd">        and allow you to override the partition filename. If nothing is</span>
 <span class="sd">        passed, the filename will consist of a uuid.</span>
+<span class="sd">    use_legacy_dataset : bool, default True</span>
+<span class="sd">        Set to False to enable the new code path (experimental, using the</span>
+<span class="sd">        new Arrow Dataset API). This is more efficient when using partition</span>
+<span class="sd">        columns, but does not (yet) support `partition_filename_cb` and</span>
+<span class="sd">        `metadata_collector` keywords.</span>
 <span class="sd">    **kwargs : dict,</span>
 <span class="sd">        Additional kwargs for write_table function. See docstring for</span>
 <span class="sd">        `write_table` or `ParquetWriter` for more information.</span>
@@ -1946,7 +1997,44 @@
 <span class="sd">        file metadata instances of dataset pieces. The file paths in the</span>
 <span class="sd">        ColumnChunkMetaData will be set relative to `root_path`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">fs</span><span class="p">,</span> <span class="n">root_path</span> <span class="o">=</span> <span class="n">_get_filesystem_and_path</span><span class="p">(</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">root_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_legacy_dataset</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">pyarrow.dataset</span> <span class="k">as</span> <span class="nn">ds</span>
+
+        <span class="c1"># extract non-file format options</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;schema&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">use_threads</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;use_threads&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># raise for unsupported keywords</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;The &#39;</span><span class="si">{}</span><span class="s2">&#39; argument is not supported with the new dataset &quot;</span>
+            <span class="s2">&quot;implementation.&quot;</span>
+        <span class="p">)</span>
+        <span class="n">metadata_collector</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;metadata_collector&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">metadata_collector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;metadata_collector&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">partition_filename_cb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;partition_filename_cb&quot;</span><span class="p">))</span>
+
+        <span class="c1"># map format arguments</span>
+        <span class="n">parquet_format</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">ParquetFileFormat</span><span class="p">()</span>
+        <span class="n">write_options</span> <span class="o">=</span> <span class="n">parquet_format</span><span class="o">.</span><span class="n">make_write_options</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># map old filesystems to new one</span>
+        <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">filesystem</span> <span class="o">=</span> <span class="n">_ensure_filesystem</span><span class="p">(</span><span class="n">filesystem</span><span class="p">)</span>
+
+        <span class="n">partitioning</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">partition_cols</span><span class="p">:</span>
+            <span class="n">part_schema</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">partition_cols</span><span class="p">)</span><span class="o">.</span><span class="n">schema</span>
+            <span class="n">partitioning</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">partitioning</span><span class="p">(</span><span class="n">part_schema</span><span class="p">,</span> <span class="n">flavor</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">)</span>
+
+        <span class="n">ds</span><span class="o">.</span><span class="n">write_dataset</span><span class="p">(</span>
+            <span class="n">table</span><span class="p">,</span> <span class="n">root_path</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span>
+            <span class="nb">format</span><span class="o">=</span><span class="n">parquet_format</span><span class="p">,</span> <span class="n">file_options</span><span class="o">=</span><span class="n">write_options</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">,</span>
+            <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="n">fs</span><span class="p">,</span> <span class="n">root_path</span> <span class="o">=</span> <span class="n">legacyfs</span><span class="o">.</span><span class="n">resolve_filesystem_and_path</span><span class="p">(</span><span class="n">root_path</span><span class="p">,</span> <span class="n">filesystem</span><span class="p">)</span>
 
     <span class="n">_mkdir_if_not_exists</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">root_path</span><span class="p">)</span>
 
