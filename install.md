@@ -206,6 +206,13 @@ Install the R package from [CRAN][20] with
 install.packages("arrow")
 ```
 
+### Julia package via General registry
+
+Install the Julia package from the [General registry][21] with
+
+```julia
+using Pkg; Pkg.add("Arrow")
+```
 
 [1]: {{site.data.versions['current'].mirrors}}
 [2]: {{site.data.versions['current'].github-tag-link}}
@@ -223,3 +230,4 @@ install.packages("arrow")
 [18]: https://github.com/Microsoft/vcpkg
 [19]: {{ site.baseurl }}/release/
 [20]: https://cran.r-project.org/
+[21]: https://github.com/JuliaRegistries/General
