@@ -71,6 +71,9 @@ Apache Arrow GLib (C). Here are supported platforms:
 * CentOS 6
 * CentOS 7
 * CentOS 8
+* Red Hat Enterprise Linux 6
+* Red Hat Enterprise Linux 7
+* Red Hat Enterprise Linux 8
 * Amazon Linux 2
 
 Debian GNU/Linux and Ubuntu:
@@ -98,10 +101,11 @@ sudo apt install -y -V libparquet-dev # For Apache Parquet C++
 sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
 ```
 
-CentOS 8:
+CentOS 8 and Red Hat Enterprise Linux 8:
 
 ```shell
-sudo dnf install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
+sudo dnf install -y epel-release || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
+sudo dnf install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-devel # For C++
 sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-glib-devel # For GLib (C)
 sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-dataset-devel # For Arrow Dataset C++
@@ -109,13 +113,10 @@ sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-devel # Fo
 sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-glib-devel # For Parquet GLib (C)
 ```
 
-CentOS 6 and 7:
+CentOS 6, CentOS 7, Red Hat Enterprise Linux 6 and Red Hat Enterprise Linux 7:
 
 ```shell
-RHEL_VERSION=$(cut -d: -f5 /etc/system-release-cpe)
-RHEL_VERSION_MAJOR=$(echo $RHEL_VERSION | cut -d. -f1)
-
-sudo yum install -y https://apache.bintray.com/arrow/centos/$RHEL_VERSION_MAJOR/apache-arrow-release-latest.rpm
+sudo yum install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Arrow Dataset C++
@@ -126,6 +127,7 @@ sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
 Amazon Linux:
 
 ```shell
+sudo yum install -y epel-release || sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | grep -E -o '^[0-9]+').noarch.rpm
 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 sudo yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
