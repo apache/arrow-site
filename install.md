@@ -106,11 +106,15 @@ CentOS 8 and Red Hat Enterprise Linux 8:
 ```shell
 sudo dnf install -y epel-release || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
 sudo dnf install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
-sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-devel # For C++
-sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-glib-devel # For GLib (C)
-sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools arrow-dataset-devel # For Arrow Dataset C++
-sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-devel # For Apache Parquet C++
-sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-glib-devel # For Parquet GLib (C)
+sudo dnf config-manager --set-enabled epel || :
+sudo dnf config-manager --set-enabled powertools || :
+sudo dnf config-manager --set-enabled codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-rhui-rpms || :
+sudo subscription-manager repos --enable codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-$(arch)-rpms || :
+sudo dnf install -y arrow-devel # For C++
+sudo dnf install -y arrow-glib-devel # For GLib (C)
+sudo dnf install -y arrow-dataset-devel # For Arrow Dataset C++
+sudo dnf install -y parquet-devel # For Apache Parquet C++
+sudo dnf install -y parquet-glib-devel # For Parquet GLib (C)
 ```
 
 CentOS 6, CentOS 7, Red Hat Enterprise Linux 6 and Red Hat Enterprise Linux 7:
