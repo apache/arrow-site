@@ -116,6 +116,7 @@ sudo dnf install -y --enablerepo=epel --enablerepo=PowerTools parquet-glib-devel
 CentOS 6, CentOS 7, Red Hat Enterprise Linux 6 and Red Hat Enterprise Linux 7:
 
 ```shell
+sudo yum install -y epel-release || sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
 sudo yum install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
@@ -127,7 +128,6 @@ sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
 Amazon Linux:
 
 ```shell
-sudo yum install -y epel-release || sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | grep -E -o '^[0-9]+').noarch.rpm
 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 sudo yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
