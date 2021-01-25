@@ -62,16 +62,13 @@ with the wheel.
 We have provided APT and Yum repositories for Apache Arrow C++ and
 Apache Arrow GLib (C). Here are supported platforms:
 
-* Debian GNU/Linux stretch
 * Debian GNU/Linux buster
 * Ubuntu 16.04 LTS
 * Ubuntu 18.04 LTS
-* Ubuntu 19.10
 * Ubuntu 20.04 LTS
-* CentOS 6
+* Ubuntu 20.10
 * CentOS 7
 * CentOS 8
-* Red Hat Enterprise Linux 6
 * Red Hat Enterprise Linux 7
 * Red Hat Enterprise Linux 8
 * Amazon Linux 2
@@ -81,11 +78,6 @@ Debian GNU/Linux and Ubuntu:
 ```shell
 sudo apt update
 sudo apt install -y -V ca-certificates lsb-release wget
-if [ $(lsb_release --codename --short) = "stretch" ]; then
-  sudo tee /etc/apt/sources.list.d/backports.list <<APT_LINE
-deb http://deb.debian.org/debian $(lsb_release --codename --short)-backports main
-APT_LINE
-fi
 wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
 sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
 sudo apt update
@@ -121,7 +113,7 @@ sudo dnf install -y parquet-devel # For Apache Parquet C++
 sudo dnf install -y parquet-glib-devel # For Parquet GLib (C)
 ```
 
-CentOS 6, CentOS 7, Red Hat Enterprise Linux 6 and Red Hat Enterprise Linux 7:
+CentOS 7 and Red Hat Enterprise Linux 7:
 
 ```shell
 sudo yum install -y epel-release || sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
@@ -145,6 +137,14 @@ sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
 sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
 ```
 
+### C# Packages
+
+We have provided NuGet packages for Apache Arrow C#:
+
+* [Apache.Arrow][22]
+* [Apache.Arrow.Flight][23]
+* [Apache.Arrow.Flight.AspNetCore][24]
+
 ## Other Installers
 
 For convenience, we also provide packages through several package managers. Many of them are provided as binary, built from the source release. As the Apache Arrow PMC has not explicitly voted on these packages, they are technically considered unofficial releases.
@@ -154,7 +154,7 @@ For convenience, we also provide packages through several package managers. Many
 Binary conda packages are on [conda-forge][5] for Linux, macOS, and Windows
 for the following versions:
 
-* Python 3.6, 3.7, 3.8
+* Python 3.6, 3.7, 3.8, 3.9
 * R 3.6, 4.0
 
 Install them with:
@@ -244,3 +244,6 @@ using Pkg; Pkg.add("Arrow")
 [19]: {{ site.baseurl }}/release/
 [20]: https://cran.r-project.org/
 [21]: https://github.com/JuliaRegistries/General
+[22]: https://www.nuget.org/packages/Apache.Arrow/
+[23]: https://www.nuget.org/packages/Apache.Arrow.Fligth/
+[24]: https://www.nuget.org/packages/Apache.Arrow.Flight.AspNetCore/
