@@ -4,20 +4,24 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>pyarrow.parquet &mdash; Apache Arrow v2.0.0</title>
+  <title>pyarrow.parquet &mdash; Apache Arrow v3.0.0</title>
   
 
   
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/theme_overrides.css" type="text/css" />
 
   
   
+
   
+  
+
   
 
   
@@ -50,7 +54,7 @@
           
 
           
-            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> Apache Arrow
+            <a href="../../index.html" class="icon icon-home"> Apache Arrow
           
 
           
@@ -60,7 +64,7 @@
             
             
               <div class="version">
-                2.0.0
+                3.0.0
               </div>
             
           
@@ -104,6 +108,7 @@
 <li class="toctree-l1"><a class="reference external" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../java/index.html">Java</a></li>
 <li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/apache/arrow/blob/master/julia/Arrow/README.md">Julia</a></li>
 <li class="toctree-l1"><a class="reference external" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../python/index.html">Python</a></li>
 <li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
@@ -145,6 +150,8 @@
         <div class="rst-content">
         
           
+
+
 
 
 
@@ -209,6 +216,7 @@
 <span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">reduce</span>
 
 <span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="k">import</span> <span class="n">Collection</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
@@ -302,7 +310,24 @@
 
 <span class="s2">    Predicates may also be passed as List[Tuple]. This form is interpreted</span>
 <span class="s2">    as a single conjunction. To express OR in predicates, one must</span>
-<span class="s2">    use the (preferred) List[List[Tuple]] notation.&quot;&quot;&quot;</span>
+<span class="s2">    use the (preferred) List[List[Tuple]] notation.</span>
+
+<span class="s2">    Each tuple has format: (``key``, ``op``, ``value``) and compares the</span>
+<span class="s2">    ``key`` with the ``value``.</span>
+<span class="s2">    The supported ``op`` are:  ``=`` or ``==``, ``!=``, ``&lt;``, ``&gt;``, ``&lt;=``,</span>
+<span class="s2">    ``&gt;=``, ``in`` and ``not in``. If the ``op`` is ``in`` or ``not in``, the</span>
+<span class="s2">    ``value`` must be a collection such as a ``list``, a ``set`` or a</span>
+<span class="s2">    ``tuple``.</span>
+
+<span class="s2">    Examples:</span>
+
+<span class="s2">    .. code-block:: python</span>
+
+<span class="s2">        (&#39;x&#39;, &#39;=&#39;, 0)</span>
+<span class="s2">        (&#39;y&#39;, &#39;in&#39;, [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;])</span>
+<span class="s2">        (&#39;z&#39;, &#39;not in&#39;, {&#39;a&#39;,&#39;b&#39;})</span>
+
+<span class="s2">    &quot;&quot;&quot;</span>
 
 
 <span class="k">def</span> <span class="nf">_filters_to_expression</span><span class="p">(</span><span class="n">filters</span><span class="p">):</span>
@@ -489,6 +514,44 @@
                                            <span class="n">column_indices</span><span class="o">=</span><span class="n">column_indices</span><span class="p">,</span>
                                            <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="ParquetFile.iter_batches"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile.iter_batches">[docs]</a>    <span class="k">def</span> <span class="nf">iter_batches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">65536</span><span class="p">,</span> <span class="n">row_groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                     <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read streaming batches from a Parquet file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        batch_size: int, default 64K</span>
+<span class="sd">            Maximum number of records to yield per batch. Batches may be</span>
+<span class="sd">            smaller if there aren&#39;t enough rows in the file.</span>
+<span class="sd">        row_groups: list</span>
+<span class="sd">            Only these row groups will be read from the file.</span>
+<span class="sd">        columns: list</span>
+<span class="sd">            If not None, only these columns will be read from the file. A</span>
+<span class="sd">            column name may be a prefix of a nested field, e.g. &#39;a&#39; will select</span>
+<span class="sd">            &#39;a.b&#39;, &#39;a.c&#39;, and &#39;a.d.e&#39;.</span>
+<span class="sd">        use_threads : boolean, default True</span>
+<span class="sd">            Perform multi-threaded column reads.</span>
+<span class="sd">        use_pandas_metadata : boolean, default False</span>
+<span class="sd">            If True and file has custom pandas schema metadata, ensure that</span>
+<span class="sd">            index columns are also loaded.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        iterator of pyarrow.RecordBatch</span>
+<span class="sd">            Contents of each batch as a record batch</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">row_groups</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">row_groups</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">num_row_groups</span><span class="p">)</span>
+        <span class="n">column_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_indices</span><span class="p">(</span>
+            <span class="n">columns</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="n">use_pandas_metadata</span><span class="p">)</span>
+
+        <span class="n">batches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">iter_batches</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span>
+                                           <span class="n">row_groups</span><span class="o">=</span><span class="n">row_groups</span><span class="p">,</span>
+                                           <span class="n">column_indices</span><span class="o">=</span><span class="n">column_indices</span><span class="p">,</span>
+                                           <span class="n">use_threads</span><span class="o">=</span><span class="n">use_threads</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">batches</span></div>
+
 <div class="viewcode-block" id="ParquetFile.read"><a class="viewcode-back" href="../../python/generated/pyarrow.parquet.ParquetFile.html#pyarrow.parquet.ParquetFile.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Read a Table from Parquet format,</span>
@@ -645,7 +708,7 @@
 <span class="s2">    &#39;ms&#39;, do not raise an exception.</span>
 <span class="s2">compression : str or dict</span>
 <span class="s2">    Specify the compression codec, either on a general basis or per-column.</span>
-<span class="s2">    Valid values: {&#39;NONE&#39;, &#39;SNAPPY&#39;, &#39;GZIP&#39;, &#39;LZO&#39;, &#39;BROTLI&#39;, &#39;LZ4&#39;, &#39;ZSTD&#39;}.</span>
+<span class="s2">    Valid values: {&#39;NONE&#39;, &#39;SNAPPY&#39;, &#39;GZIP&#39;, &#39;BROTLI&#39;, &#39;LZ4&#39;, &#39;ZSTD&#39;}.</span>
 <span class="s2">write_statistics : bool or list</span>
 <span class="s2">    Specify if we should write statistics in general (default is True) or only</span>
 <span class="s2">    for some columns.</span>
@@ -734,7 +797,11 @@
                 <span class="c1"># TODO deprecate</span>
                 <span class="n">sink</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_handle</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">sink</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_handle</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open_output_stream</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="c1"># ARROW-10480: do not auto-detect compression.  While</span>
+                <span class="c1"># a filename like foo.parquet.gz is nonconforming, it</span>
+                <span class="c1"># shouldn&#39;t implicitly apply compression.</span>
+                <span class="n">sink</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_handle</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open_output_stream</span><span class="p">(</span>
+                    <span class="n">path</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">sink</span> <span class="o">=</span> <span class="n">where</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_collector</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;metadata_collector&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -1061,16 +1128,20 @@
 
         <span class="n">f_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">f_value</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f_value</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;in&#39;</span><span class="p">,</span> <span class="s1">&#39;not in&#39;</span><span class="p">}:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f_value</span><span class="p">,</span> <span class="n">Collection</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39; object is not a collection&quot;</span><span class="p">,</span> <span class="n">f_type</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">f_value</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot use empty set as filter value&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">op</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;in&#39;</span><span class="p">,</span> <span class="s1">&#39;not in&#39;</span><span class="p">}:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Op &#39;</span><span class="si">%s</span><span class="s2">&#39; not supported with set value&quot;</span><span class="p">,</span>
-                                 <span class="n">op</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot use empty collection as filter value&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">({</span><span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">f_value</span><span class="p">})</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All elements of set &#39;</span><span class="si">%s</span><span class="s2">&#39; must be of&quot;</span>
-                                 <span class="s2">&quot; same type&quot;</span><span class="p">,</span> <span class="n">f_value</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All elements of the collection &#39;</span><span class="si">%s</span><span class="s2">&#39; must be&quot;</span>
+                                 <span class="s2">&quot; of same type&quot;</span><span class="p">,</span> <span class="n">f_value</span><span class="p">)</span>
             <span class="n">f_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">f_value</span><span class="p">)))</span>
+
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f_value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f_value</span><span class="p">,</span> <span class="n">Collection</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Op &#39;</span><span class="si">%s</span><span class="s2">&#39; not supported with a collection value&quot;</span><span class="p">,</span> <span class="n">op</span><span class="p">)</span>
 
         <span class="n">p_value</span> <span class="o">=</span> <span class="n">f_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">levels</span><span class="p">[</span><span class="n">level</span><span class="p">]</span>
                          <span class="o">.</span><span class="n">dictionary</span><span class="p">[</span><span class="n">p_value_index</span><span class="p">]</span><span class="o">.</span><span class="n">as_py</span><span class="p">())</span>
@@ -1617,15 +1688,16 @@
                 <span class="n">single_file</span> <span class="o">=</span> <span class="n">path_or_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">_is_path_like</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
-                <span class="n">path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span>
+                <span class="n">path_or_paths</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="c1"># path might be a URI describing the FileSystem as well</span>
                     <span class="k">try</span><span class="p">:</span>
-                        <span class="n">filesystem</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">FileSystem</span><span class="o">.</span><span class="n">from_uri</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                        <span class="n">filesystem</span><span class="p">,</span> <span class="n">path_or_paths</span> <span class="o">=</span> <span class="n">FileSystem</span><span class="o">.</span><span class="n">from_uri</span><span class="p">(</span>
+                            <span class="n">path_or_paths</span><span class="p">)</span>
                     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
                         <span class="n">filesystem</span> <span class="o">=</span> <span class="n">LocalFileSystem</span><span class="p">(</span><span class="n">use_mmap</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">get_file_info</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">:</span>
-                    <span class="n">single_file</span> <span class="o">=</span> <span class="n">path</span>
+                <span class="k">if</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">get_file_info</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">:</span>
+                    <span class="n">single_file</span> <span class="o">=</span> <span class="n">path_or_paths</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">single_file</span> <span class="o">=</span> <span class="n">path_or_paths</span>
 
@@ -2175,28 +2247,25 @@
            
           </div>
           <footer>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2016-2019 Apache Software Foundation
+        &#169; Copyright 2016-2019 Apache Software Foundation.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 
