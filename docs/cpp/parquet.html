@@ -4,20 +4,24 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>Reading and writing Parquet files &mdash; Apache Arrow v2.0.0</title>
+  <title>Reading and writing Parquet files &mdash; Apache Arrow v3.0.0</title>
   
 
   
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
 
   
   
+
   
+  
+
   
 
   
@@ -38,7 +42,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Reading CSV files" href="csv.html" />
-    <link rel="prev" title="Input / output and filesystems" href="io.html" /> 
+    <link rel="prev" title="Reading and writing the Arrow IPC format" href="ipc.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -52,7 +56,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> Apache Arrow
+            <a href="../index.html" class="icon icon-home"> Apache Arrow
           
 
           
@@ -62,7 +66,7 @@
             
             
               <div class="version">
-                2.0.0
+                3.0.0
               </div>
             
           
@@ -112,11 +116,11 @@
 <li class="toctree-l3"><a class="reference internal" href="tables.html">Tabular Data</a></li>
 <li class="toctree-l3"><a class="reference internal" href="compute.html">Compute Functions</a></li>
 <li class="toctree-l3"><a class="reference internal" href="io.html">Input / output and filesystems</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ipc.html">Reading and writing the Arrow IPC format</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Reading and writing Parquet files</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#filereader">FileReader</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#writetable">WriteTable</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#streamreader">StreamReader</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#streamwriter">StreamWriter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supported-parquet-features">Supported Parquet features</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#reading-parquet-files">Reading Parquet files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#writing-parquet-files">Writing Parquet files</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="csv.html">Reading CSV files</a></li>
@@ -132,6 +136,7 @@
 <li class="toctree-l1"><a class="reference external" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../java/index.html">Java</a></li>
 <li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/apache/arrow/blob/master/julia/Arrow/README.md">Julia</a></li>
 <li class="toctree-l1"><a class="reference external" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../python/index.html">Python</a></li>
 <li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
@@ -188,6 +193,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -203,7 +210,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="../_sources/cpp/parquet.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -223,12 +230,379 @@
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="api/formats.html#cpp-api-parquet"><span class="std std-ref">Parquet reader and writer API reference</span></a>.</p>
 </div>
-<p>The Parquet C++ library is part of the Apache Arrow project and benefits
-from tight integration with Arrow C++.</p>
+<div class="sidebar">
+<p class="sidebar-title">Contents</p>
+<div class="contents local topic" id="contents">
+<ul class="simple">
+<li><p><a class="reference internal" href="#supported-parquet-features" id="id1">Supported Parquet features</a></p>
+<ul>
+<li><p><a class="reference internal" href="#page-types" id="id2">Page types</a></p></li>
+<li><p><a class="reference internal" href="#compression" id="id3">Compression</a></p></li>
+<li><p><a class="reference internal" href="#encodings" id="id4">Encodings</a></p></li>
+<li><p><a class="reference internal" href="#types" id="id5">Types</a></p>
+<ul>
+<li><p><a class="reference internal" href="#physical-types" id="id6">Physical types</a></p></li>
+<li><p><a class="reference internal" href="#logical-types" id="id7">Logical types</a></p></li>
+<li><p><a class="reference internal" href="#converted-types" id="id8">Converted types</a></p></li>
+<li><p><a class="reference internal" href="#special-cases" id="id9">Special cases</a></p></li>
+<li><p><a class="reference internal" href="#roundtripping-arrow-types" id="id10">Roundtripping Arrow types</a></p>
+<ul>
+<li><p><a class="reference internal" href="#serialization-details" id="id11">Serialization details</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#limitations" id="id12">Limitations</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#encryption" id="id13">Encryption</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#reading-parquet-files" id="id14">Reading Parquet files</a></p>
+<ul>
+<li><p><a class="reference internal" href="#filereader" id="id15">FileReader</a></p></li>
+<li><p><a class="reference internal" href="#streamreader" id="id16">StreamReader</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#writing-parquet-files" id="id17">Writing Parquet files</a></p>
+<ul>
+<li><p><a class="reference internal" href="#writetable" id="id18">WriteTable</a></p></li>
+<li><p><a class="reference internal" href="#streamwriter" id="id19">StreamWriter</a></p></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>The <a class="reference external" href="https://parquet.apache.org/documentation/latest/">Parquet format</a>
+is a space-efficient columnar storage format for complex data.  The Parquet
+C++ implementation is part of the Apache Arrow project and benefits
+from tight integration with the Arrow C++ classes and facilities.</p>
+<div class="section" id="supported-parquet-features">
+<h2><a class="toc-backref" href="#id1">Supported Parquet features</a><a class="headerlink" href="#supported-parquet-features" title="Permalink to this headline">¶</a></h2>
+<p>The Parquet format has many features, and Parquet C++ supports a subset of them.</p>
+<div class="section" id="page-types">
+<h3><a class="toc-backref" href="#id2">Page types</a><a class="headerlink" href="#page-types" title="Permalink to this headline">¶</a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 68%" />
+<col style="width: 32%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Page type</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>DATA_PAGE</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>DATA_PAGE_V2</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>DICTIONARY_PAGE</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><em>Unsupported page type:</em> INDEX_PAGE. When reading a Parquet file, pages of
+this type are ignored.</p>
+</div>
+<div class="section" id="compression">
+<h3><a class="toc-backref" href="#id3">Compression</a><a class="headerlink" href="#compression" title="Permalink to this headline">¶</a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 68%" />
+<col style="width: 32%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Compression codec</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>SNAPPY</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>GZIP</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>BROTLI</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>LZ4</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>ZSTD</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>(1) On the read side, Parquet C++ is able to decompress both the regular
+LZ4 block format and the ad-hoc Hadoop LZ4 format used by the
+<a class="reference external" href="https://github.com/apache/parquet-mr">reference Parquet implementation</a>.
+On the write side, Parquet C++ always generates the ad-hoc Hadoop LZ4 format.</p></li>
+</ul>
+<p><em>Unsupported compression codec:</em> LZO.</p>
+</div>
+<div class="section" id="encodings">
+<h3><a class="toc-backref" href="#id4">Encodings</a><a class="headerlink" href="#encodings" title="Permalink to this headline">¶</a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 74%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Encoding</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>PLAIN</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>PLAIN_DICTIONARY</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>BIT_PACKED</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>RLE</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>RLE_DICTIONARY</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-odd"><td><p>BYTE_STREAM_SPLIT</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>(1) Only supported for encoding definition and repetition levels, not values.</p></li>
+<li><p>(2) On the write path, RLE_DICTIONARY is only enabled if Parquet format version
+2.0 (or potentially greater) is selected in <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">WriterProperties::version()</span></code>.</p></li>
+</ul>
+<p><em>Unsupported encodings:</em> DELTA_BINARY_PACKED, DELTA_LENGTH_BYTE_ARRAY,
+DELTA_BYTE_ARRAY.</p>
+</div>
+<div class="section" id="types">
+<h3><a class="toc-backref" href="#id5">Types</a><a class="headerlink" href="#types" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="physical-types">
+<h4><a class="toc-backref" href="#id6">Physical types</a><a class="headerlink" href="#physical-types" title="Permalink to this headline">¶</a></h4>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 40%" />
+<col style="width: 19%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Physical type</p></th>
+<th class="head"><p>Mapped Arrow type</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>BOOLEAN</p></td>
+<td><p>Boolean</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>INT32</p></td>
+<td><p>Int32 / other</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>INT64</p></td>
+<td><p>Int64 / other</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-odd"><td><p>INT96</p></td>
+<td><p>Timestamp (nanoseconds)</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-even"><td><p>FLOAT</p></td>
+<td><p>Float32</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>DOUBLE</p></td>
+<td><p>Float64</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>BYTE_ARRAY</p></td>
+<td><p>Binary / other</p></td>
+<td><p>(1) (3)</p></td>
+</tr>
+<tr class="row-odd"><td><p>FIXED_LENGTH_BYTE_ARRAY</p></td>
+<td><p>FixedSizeBinary / other</p></td>
+<td><p>(1)</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>(1) Can be mapped to other Arrow types, depending on the logical type
+(see below).</p></li>
+<li><p>(2) On the write side, <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">ArrowWriterProperties::support_deprecated_int96_timestamps()</span></code>
+must be enabled.</p></li>
+<li><p>(3) On the write side, an Arrow LargeBinary can also mapped to BYTE_ARRAY.</p></li>
+</ul>
+</div>
+<div class="section" id="logical-types">
+<h4><a class="toc-backref" href="#id7">Logical types</a><a class="headerlink" href="#logical-types" title="Permalink to this headline">¶</a></h4>
+<p>Specific logical types can override the default Arrow type mapping for a given
+physical type.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 34%" />
+<col style="width: 33%" />
+<col style="width: 11%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Logical type</p></th>
+<th class="head"><p>Physical type</p></th>
+<th class="head"><p>Mapped Arrow type</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>NULL</p></td>
+<td><p>Any</p></td>
+<td><p>Null</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-odd"><td><p>INT</p></td>
+<td><p>INT32</p></td>
+<td><p>Int8 / UInt8 / Int16 /
+UInt16 / Int32 / UInt32</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>INT</p></td>
+<td><p>INT64</p></td>
+<td><p>Int64 / UInt64</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>DECIMAL</p></td>
+<td><p>INT32 / INT64 / BYTE_ARRAY
+/ FIXED_LENGTH_BYTE_ARRAY</p></td>
+<td><p>Decimal128 / Decimal256</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-even"><td><p>DATE</p></td>
+<td><p>INT32</p></td>
+<td><p>Date32</p></td>
+<td><p>(3)</p></td>
+</tr>
+<tr class="row-odd"><td><p>TIME</p></td>
+<td><p>INT32</p></td>
+<td><p>Time32 (milliseconds)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>TIME</p></td>
+<td><p>INT64</p></td>
+<td><p>Time64 (micro- or
+nanoseconds)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TIMESTAMP</p></td>
+<td><p>INT64</p></td>
+<td><p>Timestamp (milli-, micro-
+or nanoseconds)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>STRING</p></td>
+<td><p>BYTE_ARRAY</p></td>
+<td><p>Utf8</p></td>
+<td><p>(4)</p></td>
+</tr>
+<tr class="row-odd"><td><p>LIST</p></td>
+<td><p>Any</p></td>
+<td><p>List</p></td>
+<td><p>(5)</p></td>
+</tr>
+<tr class="row-even"><td><p>MAP</p></td>
+<td><p>Any</p></td>
+<td><p>Map</p></td>
+<td><p>(6)</p></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>(1) On the write side, the Parquet physical type INT32 is generated.</p></li>
+<li><p>(2) On the write side, a FIXED_LENGTH_BYTE_ARRAY is always emitted.</p></li>
+<li><p>(3) On the write side, an Arrow Date64 is also mapped to a Parquet DATE INT32.</p></li>
+<li><p>(4) On the write side, an Arrow LargeUtf8 is also mapped to a Parquet STRING.</p></li>
+<li><p>(5) On the write side, an Arrow LargeList or FixedSizedList is also mapped to
+a Parquet LIST.</p></li>
+<li><p>(6) On the read side, a key with multiple values does not get deduplicated,
+in contradiction with the
+<a class="reference external" href="https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#maps">Parquet specification</a>.</p></li>
+</ul>
+<p><em>Unsupported logical types:</em> JSON, BSON, UUID.  If such a type is encountered
+when reading a Parquet file, the default physical type mapping is used (for
+example, a Parquet JSON column may be read as Arrow Binary or FixedSizeBinary).</p>
+</div>
+<div class="section" id="converted-types">
+<h4><a class="toc-backref" href="#id8">Converted types</a><a class="headerlink" href="#converted-types" title="Permalink to this headline">¶</a></h4>
+<p>While converted types are deprecated in the Parquet format (they are superceded
+by logical types), they are recognized and emitted by the Parquet C++
+implementation so as to maximize compatibility with other Parquet
+implementations.</p>
+</div>
+<div class="section" id="special-cases">
+<h4><a class="toc-backref" href="#id9">Special cases</a><a class="headerlink" href="#special-cases" title="Permalink to this headline">¶</a></h4>
+<p>An Arrow Extension type is written out as its storage type.  It can still
+be recreated at read time using Parquet metadata (see “Roundtripping Arrow
+types” below).</p>
+<p>An Arrow Dictionary type is written out as its value type.  It can still
+be recreated at read time using Parquet metadata (see “Roundtripping Arrow
+types” below).</p>
+</div>
+<div class="section" id="roundtripping-arrow-types">
+<h4><a class="toc-backref" href="#id10">Roundtripping Arrow types</a><a class="headerlink" href="#roundtripping-arrow-types" title="Permalink to this headline">¶</a></h4>
+<p>While there is no bijection between Arrow types and Parquet types, it is
+possible to serialize the Arrow schema as part of the Parquet file metadata.
+This is enabled using <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">ArrowWriterProperties::store_schema()</span></code>.</p>
+<p>On the read path, the serialized schema will be automatically recognized
+and will recreate the original Arrow data, converting the Parquet data as
+required (for example, a LargeList will be recreated from the Parquet LIST
+type).</p>
+<p>As an exemple, when serializing an Arrow LargeList to Parquet:</p>
+<ul class="simple">
+<li><p>The data is written out as a Parquet LIST</p></li>
+<li><p>When read back, the Parquet LIST data is decoded as an Arrow LargeList if
+<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">ArrowWriterProperties::store_schema()</span></code> was enabled when writing the file;
+otherwise, it is decoded as an Arrow List.</p></li>
+</ul>
+<div class="section" id="serialization-details">
+<h5><a class="toc-backref" href="#id11">Serialization details</a><a class="headerlink" href="#serialization-details" title="Permalink to this headline">¶</a></h5>
+<p>The Arrow schema is serialized as a <a class="reference internal" href="../format/Columnar.html#format-ipc"><span class="std std-ref">Arrow IPC</span></a> schema message,
+then base64-encoded and stored under the <code class="docutils literal notranslate"><span class="pre">ARROW:schema</span></code> metadata key in
+the Parquet file metadata.</p>
+</div>
+</div>
+<div class="section" id="limitations">
+<h4><a class="toc-backref" href="#id12">Limitations</a><a class="headerlink" href="#limitations" title="Permalink to this headline">¶</a></h4>
+<p>Writing or reading back FixedSizedList data with null entries is not supported.</p>
+</div>
+</div>
+<div class="section" id="encryption">
+<h3><a class="toc-backref" href="#id13">Encryption</a><a class="headerlink" href="#encryption" title="Permalink to this headline">¶</a></h3>
+<p>Parquet C++ implements all features specified in the
+<a class="reference external" href="https://github.com/apache/parquet-format/blob/master/Encryption.md">encryption specification</a>,
+except for encryption of column index and bloom filter modules.</p>
+<p>More specifically, Parquet C++ supports:</p>
+<ul class="simple">
+<li><p>AES_GCM_V1 and AES_GCM_CTR_V1 encryption algorithms.</p></li>
+<li><p>AAD suffix for Footer, ColumnMetaData, Data Page, Dictionary Page,
+Data PageHeader, Dictionary PageHeader module types. Other module types
+(ColumnIndex, OffsetIndex, BloomFilter Header, BloomFilter Bitset) are not
+supported.</p></li>
+<li><p>EncryptionWithFooterKey and EncryptionWithColumnKey modes.</p></li>
+<li><p>Encrypted Footer and Plaintext Footer modes.</p></li>
+</ul>
+</div>
+</div>
+<div class="section" id="reading-parquet-files">
+<h2><a class="toc-backref" href="#id14">Reading Parquet files</a><a class="headerlink" href="#reading-parquet-files" title="Permalink to this headline">¶</a></h2>
 <p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReaderE" title="parquet::arrow::FileReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReader</span></code></a> class reads data for an entire
 file or row group into an <a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Table</span></code></a>.</p>
-<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10WriteTableERKN5arrow5TableEP10MemoryPoolNSt10shared_ptrIN5arrow2io12OutputStreamEEE7int64_tNSt10shared_ptrI16WriterPropertiesEENSt10shared_ptrI21ArrowWriterPropertiesEE" title="parquet::arrow::WriteTable"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::WriteTable()</span></code></a> function writes an entire
-<a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Table</span></code></a> to an output file.</p>
 <p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> and <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamWriterE" title="parquet::StreamWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamWriter</span></code></a> classes allow for
 data to be written using a C++ input/output streams approach to
 read/write fields column by column and row by row.  This approach is
@@ -239,7 +613,7 @@ incrementally.</p>
 <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamWriterE" title="parquet::StreamWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamWriter</span></code></a> classes will not be as good due to the type
 checking and the fact that column values are processed one at a time.</p>
 <div class="section" id="filereader">
-<h2>FileReader<a class="headerlink" href="#filereader" title="Permalink to this headline">¶</a></h2>
+<h3><a class="toc-backref" href="#id15">FileReader</a><a class="headerlink" href="#filereader" title="Permalink to this headline">¶</a></h3>
 <p>The Parquet <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReaderE" title="parquet::arrow::FileReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReader</span></code></a> requires a
 <a class="reference internal" href="api/io.html#_CPPv4N5arrow2io16RandomAccessFileE" title="arrow::io::RandomAccessFile"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::io::RandomAccessFile</span></code></a> instance representing the input
 file.</p>
@@ -270,26 +644,8 @@ file.</p>
 <p>Finer-grained options are available through the
 <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow17FileReaderBuilderE" title="parquet::arrow::FileReaderBuilder"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReaderBuilder</span></code></a> helper class.</p>
 </div>
-<div class="section" id="writetable">
-<h2>WriteTable<a class="headerlink" href="#writetable" title="Permalink to this headline">¶</a></h2>
-<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10WriteTableERKN5arrow5TableEP10MemoryPoolNSt10shared_ptrIN5arrow2io12OutputStreamEEE7int64_tNSt10shared_ptrI16WriterPropertiesEENSt10shared_ptrI21ArrowWriterPropertiesEE" title="parquet::arrow::WriteTable"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::WriteTable()</span></code></a> function writes an entire
-<a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Table</span></code></a> to an output file.</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;parquet/arrow/writer.h&quot;</span><span class="cp"></span>
-
-<span class="p">{</span>
-   <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span> <span class="n">outfile</span><span class="p">;</span>
-   <span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span>
-      <span class="n">outfile</span><span class="p">,</span>
-      <span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span>
-
-   <span class="n">PARQUET_THROW_NOT_OK</span><span class="p">(</span>
-      <span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">WriteTable</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">(),</span> <span class="n">outfile</span><span class="p">,</span> <span class="mi">3</span><span class="p">));</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</div>
 <div class="section" id="streamreader">
-<h2>StreamReader<a class="headerlink" href="#streamreader" title="Permalink to this headline">¶</a></h2>
+<h3><a class="toc-backref" href="#id16">StreamReader</a><a class="headerlink" href="#streamreader" title="Permalink to this headline">¶</a></h3>
 <p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> allows for Parquet files to be read using
 standard C++ input operators which ensures type-safety.</p>
 <p>Please note that types must match the schema exactly i.e. if the
@@ -327,8 +683,29 @@ thrown in the following circumstances:</p>
 </pre></div>
 </div>
 </div>
+</div>
+<div class="section" id="writing-parquet-files">
+<h2><a class="toc-backref" href="#id17">Writing Parquet files</a><a class="headerlink" href="#writing-parquet-files" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="writetable">
+<h3><a class="toc-backref" href="#id18">WriteTable</a><a class="headerlink" href="#writetable" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10WriteTableERKN5arrow5TableEP10MemoryPoolNSt10shared_ptrIN5arrow2io12OutputStreamEEE7int64_tNSt10shared_ptrI16WriterPropertiesEENSt10shared_ptrI21ArrowWriterPropertiesEE" title="parquet::arrow::WriteTable"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::WriteTable()</span></code></a> function writes an entire
+<a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Table</span></code></a> to an output file.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;parquet/arrow/writer.h&quot;</span><span class="cp"></span>
+
+<span class="p">{</span>
+   <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span> <span class="n">outfile</span><span class="p">;</span>
+   <span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span>
+      <span class="n">outfile</span><span class="p">,</span>
+      <span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span>
+
+   <span class="n">PARQUET_THROW_NOT_OK</span><span class="p">(</span>
+      <span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">WriteTable</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">(),</span> <span class="n">outfile</span><span class="p">,</span> <span class="mi">3</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="streamwriter">
-<h2>StreamWriter<a class="headerlink" href="#streamwriter" title="Permalink to this headline">¶</a></h2>
+<h3><a class="toc-backref" href="#id19">StreamWriter</a><a class="headerlink" href="#streamwriter" title="Permalink to this headline">¶</a></h3>
 <p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamWriterE" title="parquet::StreamWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamWriter</span></code></a> allows for Parquet files to be written using
 standard C++ output operators.  This type-safe approach also ensures
 that rows are written without omitting fields and allows for new row
@@ -372,43 +749,36 @@ thrown in the following circumstances:</p>
 </div>
 </div>
 </div>
+</div>
 
 
            </div>
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="csv.html" class="btn btn-neutral float-right" title="Reading CSV files" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="io.html" class="btn btn-neutral float-left" title="Input / output and filesystems" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="csv.html" class="btn btn-neutral float-right" title="Reading CSV files" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="ipc.html" class="btn btn-neutral float-left" title="Reading and writing the Arrow IPC format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2016-2019 Apache Software Foundation
+        &#169; Copyright 2016-2019 Apache Software Foundation.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 

@@ -37,7 +37,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.0.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">3.0.0</span>
       </span>
     </div>
 
@@ -110,14 +110,7 @@
   </ul>
 </li>
       </ul>
-<ul class="nav navbar-nav navbar-right">
-<li>
-  <a href="https://github.com/apache/arrow/">
-    <span class="fab fa fab fa-github fa-lg"></span>
-     
-  </a>
-</li>
-      </ul>
+<ul class="nav navbar-nav navbar-right"></ul>
 </div>
 <!--/.nav-collapse -->
   </div>
@@ -133,7 +126,7 @@
       <h1 data-toc-skip>Working with Arrow Datasets and dplyr</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/apache/arrow/blob/master/vignettes/dataset.Rmd"><code>vignettes/dataset.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/apache/arrow/blob/master/r/vignettes/dataset.Rmd"><code>vignettes/dataset.Rmd</code></a></small>
       <div class="hidden name"><code>dataset.Rmd</code></div>
 
     </div>
@@ -148,53 +141,48 @@
 <p>The <a href="https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page">New York City taxi trip record data</a> is widely used in big data exercises and competitions. For demonstration purposes, we have hosted a Parquet-formatted version of about 10 years of the trip data in a public AWS S3 bucket.</p>
 <p>The total file size is around 37 gigabytes, even in the efficient Parquet file format. That's bigger than memory on most people's computers, so we can't just read it all in and stack it into a single data frame.</p>
 <p>In Windows and macOS binary packages, S3 support is included. On Linux when installing from source, S3 support is not enabled by default, and it has additional system requirements. See <code><a href="../articles/install.html">vignette("install", package = "arrow")</a></code> for details. To see if your <code>arrow</code> installation has S3 support, run</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="../reference/arrow_available.html">arrow_with_s3</a></span><span class="op">(</span><span class="op">)</span></pre></div>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="../reference/arrow_available.html">arrow_with_s3</a></span><span class="op">(</span><span class="op">)</span></code></pre></div>
 <pre><code>## [1] FALSE</code></pre>
 <p>Even with S3 support enabled network, speed will be a bottleneck unless your machine is located in the same AWS region as the data. So, for this vignette, we assume that the NYC taxi dataset has been downloaded locally in a "nyc-taxi" directory.</p>
 <p>If your <code>arrow</code> build has S3 support, you can sync the data locally with:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="../reference/copy_files.html">copy_files</a></span><span class="op">(</span><span class="st">"s3://ursa-labs-taxi-data"</span>, <span class="st">"nyc-taxi"</span><span class="op">)</span></pre></div>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="../reference/copy_files.html">copy_files</a></span><span class="op">(</span><span class="st">"s3://ursa-labs-taxi-data"</span>, <span class="st">"nyc-taxi"</span><span class="op">)</span></code></pre></div>
 <p>If your <code>arrow</code> build doesn't have S3 support, you can download the files with some additional code:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="va">bucket</span> <span class="op">&lt;-</span> <span class="st">"https://ursa-labs-taxi-data.s3.us-east-2.amazonaws.com"</span>
-<span class="fu"><a href="https://rdrr.io/r/base/files2.html">dir.create</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span><span class="op">)</span>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">bucket</span> <span class="op">&lt;-</span> <span class="st">"https://ursa-labs-taxi-data.s3.us-east-2.amazonaws.com"</span>
 <span class="kw">for</span> <span class="op">(</span><span class="va">year</span> <span class="kw">in</span> <span class="fl">2009</span><span class="op">:</span><span class="fl">2019</span><span class="op">)</span> <span class="op">{</span>
-  <span class="fu"><a href="https://rdrr.io/r/base/files2.html">dir.create</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html">file.path</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span>, <span class="va">year</span><span class="op">)</span><span class="op">)</span>
   <span class="kw">if</span> <span class="op">(</span><span class="va">year</span> <span class="op">==</span> <span class="fl">2019</span><span class="op">)</span> <span class="op">{</span>
     <span class="co"># We only have through June 2019 there</span>
     <span class="va">months</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span>
   <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
     <span class="va">months</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">12</span>
   <span class="op">}</span>
-  <span class="kw">for</span> <span class="op">(</span><span class="va">month</span> <span class="kw">in</span> <span class="va">months</span><span class="op">)</span> <span class="op">{</span>
-    <span class="kw">if</span> <span class="op">(</span><span class="va">month</span> <span class="op">&lt;</span> <span class="fl">10</span><span class="op">)</span> <span class="op">{</span>
-      <span class="va">month</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste0</a></span><span class="op">(</span><span class="st">"0"</span>, <span class="va">month</span><span class="op">)</span>
-    <span class="op">}</span>
-    <span class="fu"><a href="https://rdrr.io/r/base/files2.html">dir.create</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html">file.path</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span>, <span class="va">year</span>, <span class="va">month</span><span class="op">)</span><span class="op">)</span>
-    <span class="fu"><a href="https://rdrr.io/r/utils/download.file.html">download.file</a></span><span class="op">(</span>
+  <span class="kw">for</span> <span class="op">(</span><span class="va">month</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html">sprintf</a></span><span class="op">(</span><span class="st">"%02d"</span>, <span class="va">months</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span>
+    <span class="fu"><a href="https://rdrr.io/r/base/files2.html">dir.create</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html">file.path</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span>, <span class="va">year</span>, <span class="va">month</span><span class="op">)</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>
+    <span class="kw"><a href="https://rdrr.io/r/base/try.html">try</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/download.file.html">download.file</a></span><span class="op">(</span>
       <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="va">bucket</span>, <span class="va">year</span>, <span class="va">month</span>, <span class="st">"data.parquet"</span>, sep <span class="op">=</span> <span class="st">"/"</span><span class="op">)</span>,
       <span class="fu"><a href="https://rdrr.io/r/base/file.path.html">file.path</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span>, <span class="va">year</span>, <span class="va">month</span>, <span class="st">"data.parquet"</span><span class="op">)</span>,
-      mode <span class="op">=</span> <span class="st">'wb'</span>
-    <span class="op">)</span>
+      mode <span class="op">=</span> <span class="st">"wb"</span>
+    <span class="op">)</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>
   <span class="op">}</span>
-<span class="op">}</span></pre></div>
+<span class="op">}</span></code></pre></div>
 <p>Note that these download steps in the vignette are not executed: if you want to run with live data, you'll have to do it yourself separately. Given the size, if you're running this locally and don't have a fast connection, feel free to grab only a year or two of data.</p>
 <p>If you don't have the taxi data downloaded, the vignette will still run and will yield previously cached output for reference. To be explicit about which version is running, let's check whether we're running with live data:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/base/files2.html">dir.exists</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span><span class="op">)</span></pre></div>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/files2.html">dir.exists</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span><span class="op">)</span></code></pre></div>
 <pre><code>## [1] FALSE</code></pre>
 </div>
 <div id="getting-started" class="section level2">
 <h2 class="hasAnchor">
 <a href="#getting-started" class="anchor"></a>Getting started</h2>
 <p>Because <code>dplyr</code> is not necessary for many Arrow workflows, it is an optional (<code>Suggests</code>) dependency. So, to work with Datasets, we need to load both <code>arrow</code> and <code>dplyr</code>.</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/apache/arrow/">arrow</a></span>, warn.conflicts <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org">dplyr</a></span>, warn.conflicts <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></pre></div>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/apache/arrow/">arrow</a></span>, warn.conflicts <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org">dplyr</a></span>, warn.conflicts <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
 <p>The first step is to create our Dataset object, pointing at the directory of data.</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_dataset.html">open_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span>, partitioning <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"year"</span>, <span class="st">"month"</span><span class="op">)</span><span class="op">)</span></pre></div>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_dataset.html">open_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span>, partitioning <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"year"</span>, <span class="st">"month"</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <p>The default file format for <code><a href="../reference/open_dataset.html">open_dataset()</a></code> is Parquet; if we had a directory of Arrow format files, we could include <code>format = "arrow"</code> in the call. Other supported formats include: "feather" (an alias for "arrow", as Feather v2 is the Arrow file format), "csv", "tsv" (for tab-delimited), and "text" for generic text-delimited files. For text files, you can pass any parsing options ("delim", "quote", etc.) to <code><a href="../reference/open_dataset.html">open_dataset()</a></code> that you would otherwise pass to <code><a href="../reference/read_delim_arrow.html">read_csv_arrow()</a></code>.</p>
 <p>The <code>partitioning</code> argument lets us specify how the file paths provide information about how the dataset is chunked into different files. Our files in this example have file paths like</p>
 <pre><code>2009/01/data.parquet
@@ -202,34 +190,34 @@
 ...</code></pre>
 <p>By providing a character vector to <code>partitioning</code>, we're saying that the first path segment gives the value for "year" and the second segment is "month". Every row in <code>2009/01/data.parquet</code> has a value of 2009 for "year" and 1 for "month", even though those columns may not actually be present in the file.</p>
 <p>Indeed, when we look at the dataset, we see that in addition to the columns present in every file, there are also columns "year" and "month".</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="va">ds</span></pre></div>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">ds</span></code></pre></div>
 <pre><code>## 
-## ## FileSystemDataset with 125 Parquet files
-## ## vendor_id: string
-## ## pickup_at: timestamp[us]
-## ## dropoff_at: timestamp[us]
-## ## passenger_count: int8
-## ## trip_distance: float
-## ## pickup_longitude: float
-## ## pickup_latitude: float
-## ## rate_code_id: string
-## ## store_and_fwd_flag: string
-## ## dropoff_longitude: float
-## ## dropoff_latitude: float
-## ## payment_type: string
-## ## fare_amount: float
-## ## extra: float
-## ## mta_tax: float
-## ## tip_amount: float
-## ## tolls_amount: float
-## ## total_amount: float
-## ## improvement_surcharge: float
-## ## pickup_location_id: int32
-## ## dropoff_location_id: int32
-## ## congestion_surcharge: float
-## ## year: int32
-## ## month: int32
+## FileSystemDataset with 125 Parquet files
+## vendor_id: string
+## pickup_at: timestamp[us]
+## dropoff_at: timestamp[us]
+## passenger_count: int8
+## trip_distance: float
+## pickup_longitude: float
+## pickup_latitude: float
+## rate_code_id: string
+## store_and_fwd_flag: string
+## dropoff_longitude: float
+## dropoff_latitude: float
+## payment_type: string
+## fare_amount: float
+## extra: float
+## mta_tax: float
+## tip_amount: float
+## tolls_amount: float
+## total_amount: float
+## improvement_surcharge: float
+## pickup_location_id: int32
+## dropoff_location_id: int32
+## congestion_surcharge: float
+## year: int32
+## month: int32
 ## 
 ## See $metadata for additional Schema metadata</code></pre>
 <p>The other form of partitioning currently supported is <a href="https://hive.apache.org/">Hive</a>-style, in which the partition variable names are included in the path segments. If we had saved our files in paths like</p>
@@ -244,8 +232,8 @@ year=2009/month=02/data.parquet
 <p>Up to this point, we haven't loaded any data: we have walked directories to find files, we've parsed file paths to identify partitions, and we've read the headers of the Parquet files to inspect their schemas so that we can make sure they all line up.</p>
 <p>In the current release, <code>arrow</code> supports methods for selecting a window of data: <code><a href="https://dplyr.tidyverse.org/reference/select.html">select()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/rename.html">rename()</a></code>, and <code><a href="https://dplyr.tidyverse.org/reference/filter.html">filter()</a></code>. Aggregation is not yet supported, nor is deriving or projecting new columns, so before you call <code><a href="https://dplyr.tidyverse.org/reference/summarise.html">summarize()</a></code> or <code><a href="https://dplyr.tidyverse.org/reference/mutate.html">mutate()</a></code>, you'll need to <code><a href="https://dplyr.tidyverse.org/reference/compute.html">collect()</a></code> the data first, which pulls your selected window of data into an in-memory R data frame. While we could have made those methods <code><a href="https://dplyr.tidyverse.org/reference/compute.html">collect()</a></code> the data they needed automatically and invisibly to the end user, we thought it best to make it explicit when you're pulling data into memory so that you can construct your queries most efficiently and not be surprised when some query consumes way more resources than expected.</p>
 <p>Here's an example. Suppose I was curious about tipping behavior among the longest taxi rides. Let's find the median tip percentage for rides with fares greater than $100 in 2015, broken down by the number of passengers:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/base/system.time.html">system.time</a></span><span class="op">(</span><span class="va">ds</span> <span class="op">%&gt;%</span>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/system.time.html">system.time</a></span><span class="op">(</span><span class="va">ds</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html">filter</a></span><span class="op">(</span><span class="va">total_amount</span> <span class="op">&gt;</span> <span class="fl">100</span>, <span class="va">year</span> <span class="op">==</span> <span class="fl">2015</span><span class="op">)</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html">select</a></span><span class="op">(</span><span class="va">tip_amount</span>, <span class="va">total_amount</span>, <span class="va">passenger_count</span><span class="op">)</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html">group_by</a></span><span class="op">(</span><span class="va">passenger_count</span><span class="op">)</span> <span class="op">%&gt;%</span>
@@ -254,40 +242,40 @@ year=2009/month=02/data.parquet
     tip_pct <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/median.html">median</a></span><span class="op">(</span><span class="fl">100</span> <span class="op">*</span> <span class="va">tip_amount</span> <span class="op">/</span> <span class="va">total_amount</span><span class="op">)</span>,
     n <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/context.html">n</a></span><span class="op">(</span><span class="op">)</span>
   <span class="op">)</span> <span class="op">%&gt;%</span>
-  <span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></pre></div>
+  <span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <pre><code>## 
-## ## # A tibble: 10 x 3
-## ##    passenger_count tip_pct      n
-## ##              &lt;int&gt;   &lt;dbl&gt;  &lt;int&gt;
-## ##  1               0    9.84    380
-## ##  2               1   16.7  143087
-## ##  3               2   16.6   34418
-## ##  4               3   14.4    8922
-## ##  5               4   11.4    4771
-## ##  6               5   16.7    5806
-## ##  7               6   16.7    3338
-## ##  8               7   16.7      11
-## ##  9               8   16.7      32
-## ## 10               9   16.7      42
-## ##
-## ##    user  system elapsed
-## ##   4.436   1.012   1.402</code></pre>
+## # A tibble: 10 x 3
+##    passenger_count tip_pct      n
+##              &lt;int&gt;   &lt;dbl&gt;  &lt;int&gt;
+##  1               0    9.84    380
+##  2               1   16.7  143087
+##  3               2   16.6   34418
+##  4               3   14.4    8922
+##  5               4   11.4    4771
+##  6               5   16.7    5806
+##  7               6   16.7    3338
+##  8               7   16.7      11
+##  9               8   16.7      32
+## 10               9   16.7      42
+## 
+##    user  system elapsed
+##   4.436   1.012   1.402</code></pre>
 <p>We just selected a window out of a dataset with around 2 billion rows and aggregated on it in under 2 seconds on my laptop. How does this work?</p>
 <p>First, <code><a href="https://dplyr.tidyverse.org/reference/select.html">select()</a></code>/<code><a href="https://dplyr.tidyverse.org/reference/rename.html">rename()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/filter.html">filter()</a></code>, and <code><a href="https://dplyr.tidyverse.org/reference/group_by.html">group_by()</a></code> record their actions but don't evaluate on the data until you run <code><a href="https://dplyr.tidyverse.org/reference/compute.html">collect()</a></code>.</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="va">ds</span> <span class="op">%&gt;%</span>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">ds</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html">filter</a></span><span class="op">(</span><span class="va">total_amount</span> <span class="op">&gt;</span> <span class="fl">100</span>, <span class="va">year</span> <span class="op">==</span> <span class="fl">2015</span><span class="op">)</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html">select</a></span><span class="op">(</span><span class="va">tip_amount</span>, <span class="va">total_amount</span>, <span class="va">passenger_count</span><span class="op">)</span> <span class="op">%&gt;%</span>
-  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html">group_by</a></span><span class="op">(</span><span class="va">passenger_count</span><span class="op">)</span></pre></div>
+  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html">group_by</a></span><span class="op">(</span><span class="va">passenger_count</span><span class="op">)</span></code></pre></div>
 <pre><code>## 
-## ## FileSystemDataset (query)
-## ## tip_amount: float
-## ## total_amount: float
-## ## passenger_count: int8
-## ##
-## ## * Filter: ((total_amount &gt; 100:double) and (year == 2015:double))
-## ## * Grouped by passenger_count
-## ## See $.data for the source Arrow object</code></pre>
+## FileSystemDataset (query)
+## tip_amount: float
+## total_amount: float
+## passenger_count: int8
+## 
+## * Filter: ((total_amount &gt; 100:double) and (year == 2015:double))
+## * Grouped by passenger_count
+## See $.data for the source Arrow object</code></pre>
 <p>This returns instantly and shows the window selection you've made, without loading data from the files. Because the evaluation of these queries is deferred, you can build up a query that selects down to a small window without generating intermediate datasets that would potentially be large.</p>
 <p>Second, all work is pushed down to the individual data files, and depending on the file format, chunks of data within the files. As a result, we can select a window of data from a much larger dataset by collecting the smaller slices from each file--we don't have to load the whole dataset in memory in order to slice from it.</p>
 <p>Third, because of partitioning, we can ignore some files entirely. In this example, by filtering <code>year == 2015</code>, all files corresponding to other years are immediately excluded: we don't have to load them in order to find that no rows match the filter. Relatedly, since Parquet files contain row groups with statistics on the data within, there may be entire chunks of data we can avoid scanning because they have no rows where <code>total_amount &gt; 100</code>.</p>
@@ -305,37 +293,37 @@ year=2009/month=02/data.parquet
 <p>As you can see, querying a large dataset can be made quite fast by storage in an efficient binary columnar format like Parquet or Feather and partitioning based on columns commonly used for filtering. However, we don't always get our data delivered to us that way. Sometimes we start with one giant CSV. Our first step in analyzing data is cleaning is up and reshaping it into a more usable form.</p>
 <p>The <code><a href="../reference/write_dataset.html">write_dataset()</a></code> function allows you to take a Dataset or other tabular data object---an Arrow <code>Table</code> or <code>RecordBatch</code>, or an R <code>data.frame</code>---and write it to a different file format, partitioned into multiple files.</p>
 <p>Assume we have a version of the NYC Taxi data as CSV:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_dataset.html">open_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/csv/"</span>, format <span class="op">=</span> <span class="st">"csv"</span><span class="op">)</span></pre></div>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_dataset.html">open_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/csv/"</span>, format <span class="op">=</span> <span class="st">"csv"</span><span class="op">)</span></code></pre></div>
 <p>We can write it to a new location and translate the files to the Feather format by calling <code><a href="../reference/write_dataset.html">write_dataset()</a></code> on it:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="va">ds</span>, <span class="st">"nyc-taxi/feather"</span>, format <span class="op">=</span> <span class="st">"feather"</span><span class="op">)</span></pre></div>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="va">ds</span>, <span class="st">"nyc-taxi/feather"</span>, format <span class="op">=</span> <span class="st">"feather"</span><span class="op">)</span></code></pre></div>
 <p>Next, let's imagine that the "payment_type" column is something we often filter on, so we want to partition the data by that variable. By doing so we ensure that a filter like <code>payment_type == 3</code> will touch only a subset of files where payment_type is always 3.</p>
 <p>One natural way to express the columns you want to partition on is to use the <code><a href="https://dplyr.tidyverse.org/reference/group_by.html">group_by()</a></code> method:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="va">ds</span> <span class="op">%&gt;%</span>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">ds</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html">group_by</a></span><span class="op">(</span><span class="va">payment_type</span><span class="op">)</span> <span class="op">%&gt;%</span>
-  <span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/feather"</span>, format <span class="op">=</span> <span class="st">"feather"</span><span class="op">)</span></pre></div>
+  <span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/feather"</span>, format <span class="op">=</span> <span class="st">"feather"</span><span class="op">)</span></code></pre></div>
 <p>This will write files to a directory tree that looks like this:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="fu"><a href="https://rdrr.io/r/base/system.html">system</a></span><span class="op">(</span><span class="st">"tree nyc-taxi/feather"</span><span class="op">)</span>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/system.html">system</a></span><span class="op">(</span><span class="st">"tree nyc-taxi/feather"</span><span class="op">)</span>
 
 <span class="co"># feather</span>
 <span class="co"># &lt;U+251C&gt;&lt;U+2500&gt;&lt;U+2500&gt; payment_type=1</span>NA<span class="co"># &lt;U+2502&gt;   &lt;U+2514&gt;&lt;U+2500&gt;&lt;U+2500&gt; part-5.feather</span>NA<span class="co"># &lt;U+251C&gt;&lt;U+2500&gt;&lt;U+2500&gt; payment_type=2</span>NA<span class="co"># &lt;U+2502&gt;   &lt;U+2514&gt;&lt;U+2500&gt;&lt;U+2500&gt; part-0.feather</span>NA<span class="co"># ...</span>
 <span class="co"># &lt;U+2514&gt;&lt;U+2500&gt;&lt;U+2500&gt; payment_type=5</span>NA<span class="co">#     &lt;U+2514&gt;&lt;U+2500&gt;&lt;U+2500&gt; part-2.feather</span>NA<span class="co">#</span>
-<span class="co"># 5 directories, 25 files</span></pre></div>
+<span class="co"># 5 directories, 25 files</span></code></pre></div>
 <p>Note that the directory names are <code>payment_type=1</code> and similar: this is the Hive-style partitioning described above. This means that when we call <code><a href="../reference/open_dataset.html">open_dataset()</a></code> on this directory, we don't have to declare what the partitions are because they can be read from the file paths. (To instead write bare values for partition segments, i.e. <code>1</code> rather than <code>payment_type=1</code>, call <code><a href="../reference/write_dataset.html">write_dataset()</a></code> with <code>hive_style = FALSE</code>.)</p>
 <p>Perhaps, though, <code>payment_type == 3</code> is the only data we ever care about, and we just want to drop the rest and have a smaller working set. For this, we can <code><a href="https://dplyr.tidyverse.org/reference/filter.html">filter()</a></code> them out when writing:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="va">ds</span> <span class="op">%&gt;%</span>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">ds</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html">filter</a></span><span class="op">(</span><span class="va">payment_type</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span> <span class="op">%&gt;%</span>
-  <span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/feather"</span>, format <span class="op">=</span> <span class="st">"feather"</span><span class="op">)</span></pre></div>
+  <span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/feather"</span>, format <span class="op">=</span> <span class="st">"feather"</span><span class="op">)</span></code></pre></div>
 <p>The other thing we can do when writing datasets is select a subset of and/or reorder columns. Suppose we never care about <code>vendor_id</code>, and being a string column, it can take up a lot of space when we read it in, so let's drop it:</p>
-<div class="sourceCode"><pre class="downlit">
-<span class="va">ds</span> <span class="op">%&gt;%</span>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">ds</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html">group_by</a></span><span class="op">(</span><span class="va">payment_type</span><span class="op">)</span> <span class="op">%&gt;%</span>
   <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html">select</a></span><span class="op">(</span><span class="op">-</span><span class="va">vendor_id</span><span class="op">)</span> <span class="op">%&gt;%</span>
-  <span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/feather"</span>, format <span class="op">=</span> <span class="st">"feather"</span><span class="op">)</span></pre></div>
+  <span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/feather"</span>, format <span class="op">=</span> <span class="st">"feather"</span><span class="op">)</span></code></pre></div>
 <p>Note that while you can select a subset of columns, you cannot currently rename columns when writing.</p>
 </div>
   </div>
