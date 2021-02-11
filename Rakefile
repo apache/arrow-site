@@ -33,12 +33,12 @@ file webpacked_js => ["_webpack/main.js", installed_package_lock_json] do
   sh(*command_line)
 end
 
-desc "Run server"
-task :server => webpacked_js do
-  sh("jekyll", "server", "--incremental", "--livereload")
+desc "Serve site locally"
+task :serve => webpacked_js do
+  sh("jekyll", "serve", "--incremental", "--livereload")
 end
 
-task :default => :server
+task :default => :serve
 
 desc "Generate site"
 task :generate => webpacked_js do

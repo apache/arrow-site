@@ -22,7 +22,7 @@
 ## Overview
 
 [Jekyll](https://jekyllrb.com/) is used to generate HTML files from the
-markdown + templates in this repository. The built version of the site is kept
+Markdown + templates in this repository. The built version of the site is kept
 on the `asf-site` branch, which gets deployed to https://arrow.apache.org.
 
 ## Adding Content
@@ -37,40 +37,45 @@ exists in the ASF; all metadata is local to this project.)
 
 ## Prerequisites
 
-With Ruby >= 2.1 installed, run the following commands to install
-[Jekyll](https://jekyllrb.com/).
+With non-EOL-ed [Ruby](https://www.ruby-lang.org/) installed, run the
+following commands to install [Jekyll](https://jekyllrb.com/).
 
 ```shell
-gem install jekyll bundler
+gem install bundler
 bundle install
 ```
 
-On some platforms, the Ruby `nokogiri` library may fail to build, in
-such cases the following configuration option may help:
+We also need [Node.JS](https://nodejs.org/) to use
+[webpack](https://webpack.js.org/) for maintaining dependent
+JavaScript and CSS libraries.
 
-```
-bundle config build.nokogiri --use-system-libraries
-```
-
-
-`nokogiri` depends on the `libxml2` and `libxslt1` libraries, which can be
-installed on Debian-like systems with
-
-```
-apt-get install libxml2-dev libxslt1-dev
-```
+We can install webpack and dependent JavaScript and CSS libraries
+automatically by following command lines to preview or build the site. So
+we just need to install Node.JS here.
 
 ## Previewing the site
 
-Run the following to generate HTML files and run the web site locally.
+Run the following and open http://localhost:4000/ to preview generated
+site locally:
 
-```
-bundle exec jekyll serve
+```shell
+bundle exec rake
 ```
 
 ## Deployment
 
-On commits to the `master` branch of `apache/arrow-site`, the rendered static site will be published to the `asf-site` branch using GitHub Actions. On a fork, it will deploy to your `gh-pages` branch for deployment via GitHub Pages; this is useful for previewing changes you're proposing. To enable this deployment on your fork, you'll need to sign up for GitHub Actions [here](https://github.com/features/actions/signup).
+On commits to the `master` branch of `apache/arrow-site`, the rendered
+static site will be published to the `asf-site` branch using GitHub
+Actions. On a fork, it will deploy to your `gh-pages` branch for
+deployment via GitHub Pages; this is useful for previewing changes
+you're proposing.
+
+FYI: We can also generate the site for https://arrow.apache.org/
+to `_site/` locally by the following command line:
+
+```shell
+JEKYLL_ENV=production bundle exec rake generate
+```
 
 ## Updating Code Documentation
 
