@@ -10,7 +10,7 @@
     
 
     <!-- Begin Jekyll SEO tag v2.7.1 -->
-<meta name="generator" content="Jekyll v3.8.4" />
+<meta name="generator" content="Jekyll v4.2.0" />
 <meta property="og:title" content="Reducing Python String Memory Use in Apache Arrow 0.12" />
 <meta name="author" content="wesm" />
 <meta property="og:locale" content="en_US" />
@@ -28,7 +28,7 @@
 <meta name="twitter:site" content="@ApacheArrow" />
 <meta name="twitter:creator" content="@wesm" />
 <script type="application/ld+json">
-{"author":{"@type":"Person","name":"wesm"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"wesm"},"datePublished":"2019-02-05T08:00:00-05:00","description":"Python users who upgrade to recently released pyarrow 0.12 may find that their applications use significantly less memory when converting Arrow string data to pandas format. This article details some of what is going on under the hood, and why Python applications dealing with large amounts of strings are prone to memory use problems.","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2019/02/05/python-string-memory-0.12/"},"url":"https://arrow.apache.org/blog/2019/02/05/python-string-memory-0.12/","image":"https://arrow.apache.org/img/arrow.png","@type":"BlogPosting","headline":"Reducing Python String Memory Use in Apache Arrow 0.12","dateModified":"2019-02-05T08:00:00-05:00","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","headline":"Reducing Python String Memory Use in Apache Arrow 0.12","dateModified":"2019-02-05T08:00:00-05:00","datePublished":"2019-02-05T08:00:00-05:00","description":"Python users who upgrade to recently released pyarrow 0.12 may find that their applications use significantly less memory when converting Arrow string data to pandas format. This article details some of what is going on under the hood, and why Python applications dealing with large amounts of strings are prone to memory use problems.","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2019/02/05/python-string-memory-0.12/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"wesm"},"image":"https://arrow.apache.org/img/arrow.png","url":"https://arrow.apache.org/blog/2019/02/05/python-string-memory-0.12/","author":{"@type":"Person","name":"wesm"},"@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 
@@ -101,8 +101,7 @@
 
     <link href="/css/main.css" rel="stylesheet">
     <link href="/css/syntax.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="/javascript/main.js"></script>
     
     <!-- Global Site Tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
@@ -237,27 +236,27 @@
 
 -->
 
-<p>Python users who upgrade to recently released <code class="highlighter-rouge">pyarrow</code> 0.12 may find that
+<p>Python users who upgrade to recently released <code class="language-plaintext highlighter-rouge">pyarrow</code> 0.12 may find that
 their applications use significantly less memory when converting Arrow string
-data to pandas format. This includes using <code class="highlighter-rouge">pyarrow.parquet.read_table</code> and
-<code class="highlighter-rouge">pandas.read_parquet</code>. This article details some of what is going on under the
+data to pandas format. This includes using <code class="language-plaintext highlighter-rouge">pyarrow.parquet.read_table</code> and
+<code class="language-plaintext highlighter-rouge">pandas.read_parquet</code>. This article details some of what is going on under the
 hood, and why Python applications dealing with large amounts of strings are
 prone to memory use problems.</p>
 
 <h2 id="why-python-strings-can-use-a-lot-of-memory">Why Python strings can use a lot of memory</h2>
 
 <p>Let’s start with some possibly surprising facts. I’m going to create an empty
-<code class="highlighter-rouge">bytes</code> object and an empty <code class="highlighter-rouge">str</code> (unicode) object in Python 3.7:</p>
+<code class="language-plaintext highlighter-rouge">bytes</code> object and an empty <code class="language-plaintext highlighter-rouge">str</code> (unicode) object in Python 3.7:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [1]: val = b''
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [1]: val = b''
 
 In [2]: unicode_val = u''
 </code></pre></div></div>
 
-<p>The <code class="highlighter-rouge">sys.getsizeof</code> function accurately reports the number of bytes used by
+<p>The <code class="language-plaintext highlighter-rouge">sys.getsizeof</code> function accurately reports the number of bytes used by
 built-in Python objects. You might be surprised to find that:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [4]: import sys
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [4]: import sys
 In [5]: sys.getsizeof(val)
 Out[5]: 33
 
@@ -267,14 +266,14 @@ Out[6]: 49
 
 <p>Since strings in Python are nul-terminated, we can infer that a bytes object
 has 32 bytes of overhead while unicode has 48 bytes. One must also account for
-<code class="highlighter-rouge">PyObject*</code> pointer references to the objects, so the actual overhead is 40 and
+<code class="language-plaintext highlighter-rouge">PyObject*</code> pointer references to the objects, so the actual overhead is 40 and
 56 bytes, respectively. With large strings and text, this overhead may not
 matter much, but when you have a lot of small strings, such as those arising
 from reading a CSV or Apache Parquet file, they can take up an unexpected
-amount of memory. pandas represents strings in NumPy arrays of <code class="highlighter-rouge">PyObject*</code>
+amount of memory. pandas represents strings in NumPy arrays of <code class="language-plaintext highlighter-rouge">PyObject*</code>
 pointers, so the total memory used by a unique unicode string is</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>8 (PyObject*) + 48 (Python C struct) + string_length + 1
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>8 (PyObject*) + 48 (Python C struct) + string_length + 1
 </code></pre></div></div>
 
 <p>Suppose that we read a CSV file with</p>
@@ -287,7 +286,7 @@ pointers, so the total memory used by a unique unicode string is</p>
 
 <p>On disk this file would take approximately 10MB. Read into memory, however, it
 could take up over 60MB, as a 10 character string object takes up 67 bytes in a
-<code class="highlighter-rouge">pandas.Series</code>.</p>
+<code class="language-plaintext highlighter-rouge">pandas.Series</code>.</p>
 
 <h2 id="how-apache-arrow-represents-strings">How Apache Arrow represents strings</h2>
 
@@ -300,7 +299,7 @@ value in a contiguous chunk of memory:</p>
 <img src="/img/20190205-arrow-string.png" alt="Apache Arrow string memory layout" width="80%" class="img-responsive" />
 </div>
 
-<p>When you call <code class="highlighter-rouge">table.to_pandas()</code> or <code class="highlighter-rouge">array.to_pandas()</code> with <code class="highlighter-rouge">pyarrow</code>, we
+<p>When you call <code class="language-plaintext highlighter-rouge">table.to_pandas()</code> or <code class="language-plaintext highlighter-rouge">array.to_pandas()</code> with <code class="language-plaintext highlighter-rouge">pyarrow</code>, we
 have to convert this compact string representation back to pandas’s
 Python-based strings. This can use a huge amount of memory when we have a large
 number of small strings. It is a quite common occurrence when working with web
@@ -316,9 +315,9 @@ string arrays</a> for improved performance and memory use.</p>
 
 <h2 id="reducing-pandas-memory-use-when-converting-from-arrow">Reducing pandas memory use when converting from Arrow</h2>
 
-<p>For many years, the <code class="highlighter-rouge">pandas.read_csv</code> function has relied on a trick to limit
+<p>For many years, the <code class="language-plaintext highlighter-rouge">pandas.read_csv</code> function has relied on a trick to limit
 the amount of string memory allocated. Because pandas uses arrays of
-<code class="highlighter-rouge">PyObject*</code> pointers to refer to objects in the Python heap, we can avoid
+<code class="language-plaintext highlighter-rouge">PyObject*</code> pointers to refer to objects in the Python heap, we can avoid
 creating multiple strings with the same value, instead reusing existing objects
 and incrementing their reference counts.</p>
 
@@ -328,7 +327,7 @@ and incrementing their reference counts.</p>
 <img src="/img/20190205-numpy-string.png" alt="pandas string memory optimization" width="80%" class="img-responsive" />
 </div>
 
-<p>In <code class="highlighter-rouge">pyarrow</code> 0.12, we have implemented this when calling <code class="highlighter-rouge">to_pandas</code>. It
+<p>In <code class="language-plaintext highlighter-rouge">pyarrow</code> 0.12, we have implemented this when calling <code class="language-plaintext highlighter-rouge">to_pandas</code>. It
 requires using a hash table to deduplicate the Arrow string data as it’s being
 converted to pandas. Hashing data is not free, but counterintuitively it can be
 faster in addition to being vastly more memory efficient in the common case in
@@ -337,7 +336,7 @@ values.</p>
 
 <h2 id="memory-and-performance-benchmarks">Memory and Performance Benchmarks</h2>
 
-<p>We can use the <a href="https://pypi.org/project/memory-profiler/"><code class="highlighter-rouge">memory_profiler</code></a> Python package to easily get process
+<p>We can use the <a href="https://pypi.org/project/memory-profiler/"><code class="language-plaintext highlighter-rouge">memory_profiler</code></a> Python package to easily get process
 memory usage within a running Python application.</p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">memory_profiler</span>
@@ -347,12 +346,12 @@ memory usage within a running Python application.</p>
 
 <p>In a new application I have:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [7]: mem()
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [7]: mem()
 Out[7]: 86.21875
 </code></pre></div></div>
 
 <p>I will generate approximate 1 gigabyte of string data represented as Python
-strings with length 10. The <code class="highlighter-rouge">pandas.util.testing</code> module has a handy <code class="highlighter-rouge">rands</code>
+strings with length 10. The <code class="language-plaintext highlighter-rouge">pandas.util.testing</code> module has a handy <code class="language-plaintext highlighter-rouge">rands</code>
 function for generating random strings. Here is the data generation function:</p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">pandas.util.testing</span> <span class="kn">import</span> <span class="n">rands</span>
@@ -366,46 +365,46 @@ function for generating random strings. Here is the data generation function:</p
 yield the desired number of total strings. So I’m going to create 100 million
 strings with only 10000 unique values:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [8]: values = generate_strings(100000000, 10000)
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [8]: values = generate_strings(100000000, 10000)
 
 In [9]: mem()
 Out[9]: 852.140625
 </code></pre></div></div>
 
-<p>100 million <code class="highlighter-rouge">PyObject*</code> values is only 745 MB, so this increase of a little
+<p>100 million <code class="language-plaintext highlighter-rouge">PyObject*</code> values is only 745 MB, so this increase of a little
 over 770 MB is consistent with what we know so far. Now I’m going to convert
 this to Arrow format:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [11]: arr = pa.array(values)
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [11]: arr = pa.array(values)
 
 In [12]: mem()
 Out[12]: 2276.9609375
 </code></pre></div></div>
 
-<p>Since <code class="highlighter-rouge">pyarrow</code> exactly accounts for all of its memory allocations, we also
+<p>Since <code class="language-plaintext highlighter-rouge">pyarrow</code> exactly accounts for all of its memory allocations, we also
 check that</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [13]: pa.total_allocated_bytes()
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [13]: pa.total_allocated_bytes()
 Out[13]: 1416777280
 </code></pre></div></div>
 
 <p>Since each string takes about 14 bytes (10 bytes plus 4 bytes of overhead),
 this is what we expect.</p>
 
-<p>Now, converting <code class="highlighter-rouge">arr</code> back to pandas is where things get tricky. The <em>minimum</em>
+<p>Now, converting <code class="language-plaintext highlighter-rouge">arr</code> back to pandas is where things get tricky. The <em>minimum</em>
 amount of memory that pandas can use is a little under 800 MB as above as we
-need 100 million <code class="highlighter-rouge">PyObject*</code> values, which are 8 bytes each.</p>
+need 100 million <code class="language-plaintext highlighter-rouge">PyObject*</code> values, which are 8 bytes each.</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [14]: arr_as_pandas = arr.to_pandas()
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [14]: arr_as_pandas = arr.to_pandas()
 
 In [15]: mem()
 Out[15]: 3041.78125
 </code></pre></div></div>
 
 <p>Doing the math, we used 765 MB which seems right. We can disable the string
-deduplication logic by passing <code class="highlighter-rouge">deduplicate_objects=False</code> to <code class="highlighter-rouge">to_pandas</code>:</p>
+deduplication logic by passing <code class="language-plaintext highlighter-rouge">deduplicate_objects=False</code> to <code class="language-plaintext highlighter-rouge">to_pandas</code>:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [16]: arr_as_pandas_no_dedup = arr.to_pandas(deduplicate_objects=False)
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [16]: arr_as_pandas_no_dedup = arr.to_pandas(deduplicate_objects=False)
 
 In [17]: mem()
 Out[17]: 10006.95703125
@@ -417,7 +416,7 @@ computed above.</p>
 
 <p>One of the more surprising results is that the new behavior is about twice as fast:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [18]: %time arr_as_pandas_time = arr.to_pandas()
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [18]: %time arr_as_pandas_time = arr.to_pandas()
 CPU times: user 2.94 s, sys: 213 ms, total: 3.15 s
 Wall time: 3.14 s
 
@@ -448,16 +447,16 @@ popular libraries.</p>
     <hr/>
 <footer class="footer">
   <div class="row">
-  <div class="col-md-9">
-    <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
-    <p>&copy; 2016-2021 The Apache Software Foundation</p>
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2021 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
   </div>
-  <div class="col-md-3">
-    <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
-      <img src="https://www.apache.org/events/current-event-234x60.png"/>
-    </a>
-  </div>
-  <script src="/assets/main-18cd3029557f73c1ee82e41113127b04f6fcd84c56d9db0cb9c40ebe26ef6e33.js" type="text/javascript" integrity="sha256-GM0wKVV/c8HuguQRExJ7BPb82ExW2dsMucQOvibvbjM=" crossorigin="anonymous"></script>
 </footer>
 
   </div>
