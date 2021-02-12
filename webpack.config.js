@@ -15,4 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//= require bootstrap
+const path = require("path");
+
+module.exports = {
+  entry: "./_webpack/main.js",
+  output: {
+    filename: "main.js",
+    path: path.resolve(__dirname, "javascript"),
+  },
+  mode: "development",
+};

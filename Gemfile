@@ -1,3 +1,5 @@
+# -*- ruby -*-
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -12,19 +14,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
 source "https://rubygems.org"
 ruby RUBY_VERSION
-gem "jekyll", "3.8.4"
-gem 'bootstrap', '~> 4.1.3'
+
+gem "jekyll", "4.2.0"
+gem "rake"
+gem "tzinfo-data", platforms: [:mingw, :mswin, :x64_mingw, :jruby]
+gem "webrick"
+
 group :jekyll_plugins do
-  gem "jekyll-assets"
-  # TODO: Remove this when https://github.com/envygeeks/jekyll-assets/pull/620
-  # is merged and a new jekyll-assets version is released.
-  gem "sprockets", "= 4.0.0.beta8"
   gem "jekyll-feed", "~> 0.6"
   gem "jekyll-jupyter-notebook"
   gem "jekyll-seo-tag"
 end
-gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
