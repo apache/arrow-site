@@ -24,11 +24,17 @@ limitations under the License.
 
 ## Apache Arrow Project Governance
 
-The Arrow project is a part of the Apache Software Foundation and follows its [project management guidelines](https://www.apache.org/foundation/how-it-works.html#management), which promote community-led consensus decisionmaking, [independent](https://community.apache.org/projectIndependence.html) of commercial influence.
+The Arrow project is a part of the Apache Software Foundation and follows
+its [project management guidelines](https://www.apache.org/foundation/how-it-works.html#management),
+which promote community-led consensus decisionmaking,
+[independent](https://community.apache.org/projectIndependence.html) of
+commercial influence.
 
 ### Project Management Committee (PMC)
 
-The [PMC](https://www.apache.org/foundation/how-it-works.html#pmc-members) governs the project. Members [vote](https://www.apache.org/foundation/voting.html) on important decisions, including releases and inviting committers to join the PMC.
+The [PMC](https://www.apache.org/foundation/how-it-works.html#pmc-members)
+governs the project. Members [vote](https://www.apache.org/foundation/voting.html)
+on important decisions, including releases and inviting committers to join the PMC.
 
 <table class="table table-striped"><thead>
 <tr>
@@ -57,7 +63,12 @@ The [PMC](https://www.apache.org/foundation/how-it-works.html#pmc-members) gover
 
 ### Committers
 
-Contributors who have demonstrated a sustained commitment to the project, not only authoring code but also reviewing others' patches and exercising good judgment, may be invited by the PMC to become [committers](https://www.apache.org/foundation/how-it-works.html#committers). Committers are authorized to merge code patches to the project and serve as non-voting project maintainers.
+Contributors who have demonstrated a sustained commitment to the project, not
+only authoring code but also reviewing others' patches and exercising good
+judgment, may be invited by the PMC to become
+[committers](https://www.apache.org/foundation/how-it-works.html#committers).
+Committers are authorized to merge code patches to the project and serve as
+non-voting project maintainers.
 
 <table class="table table-striped"><thead>
 <tr>
