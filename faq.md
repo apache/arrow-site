@@ -174,6 +174,30 @@ and are commonly used together in applications.  Storing your data on disk
 using Parquet and reading it into memory in the Arrow format will allow
 you to make the most of your computing hardware.
 
+#### **What is the difference between Apache Arrow and Google Protobuf?**
+
+Google's protocol buffers library (Protobuf) is not a "runtime in-memory
+format."  Similar to Parquet, Protobuf's representation is not suitable for
+processing.  Data must be deserialized into an in-memory representation like
+Arrow for processing.
+
+For example, unsigned integers in Protobuf are encoded as varint where each
+integer could have a different number of bytes and the last three bits
+contain the wire type of the field.  You could not use a CPU to add numbers
+in this format.
+
+Protobuf has libraries to do this deserialization but they do not aim for a
+common in-memory format.  A message that has been deserialized by protoc
+generated C# code is not going to have the same representation as one that has
+been deserialized by protoc generated Java code.  You would need to marshal
+the data from one language to the other.
+
+Arrow avoids this but it comes at the cost of increased space.  This means that
+Protobuf is often a better choice for serializing data on the wire.  Just like
+Parquet this means that Arrow and Protobuf complement each other well.  For
+example, Arrow Flight uses gRPC and Protobuf to transmit data which is then
+deserialized into Arrow format for processing.
+
 #### **What about "Arrow files" then?**
 
 Apache Arrow defines an inter-process communication (IPC) mechanism to
