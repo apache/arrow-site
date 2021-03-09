@@ -163,6 +163,8 @@ short description of your use case.
   Database Connectivity (ODBC) interface. It provides the ability to return
   Arrow Tables and RecordBatches in addition to the Python Database API
   Specification 2.0.
+* **[Vaex][38]:** Out-of-Core hybrid Apache Arrow/NumPy DataFrame for Python,
+  ML, visualize and explore big tabular data at a billion rows per second.
 * **[VAST][37]:** A network telemetry engine for data-driven security
   investigations. VAST uses Arrow as standardized data plane to provide a
   high-bandwidth output path for downstream analytics. This makes it easy and
@@ -205,3 +207,4 @@ short description of your use case.
 [35]: https://cylondata.org/ 
 [36]: https://bodo.ai
 [37]: https://github.com/tenzir/vast
+[38]: https://github.com/vaexio/vaex
