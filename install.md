@@ -34,7 +34,7 @@ This page is a reference listing of release artifacts and package managers. For 
 
 ### Source Release
 
-* **Source Release**: [{{site.data.versions['current'].tarball_name}}][6]
+* **Source Release**: [{{site.data.versions['current'].tarball-name}}][6]
 * **Verification**: [asc signature][13], [sha256 checksum][14], [sha512 checksum][15], ([verification instructions][12])
 * [Git tag {{site.data.versions['current'].git-tag}}][2]
 * [GPG keys for release signatures][11]
@@ -227,11 +227,10 @@ Install the Julia package from the [General registry][21] with
 using Pkg; Pkg.add("Arrow")
 ```
 
-[1]: {{site.data.versions['current'].mirrors}}
 [2]: {{site.data.versions['current'].github-tag-link}}
 [4]: {{site.data.versions['current'].java-artifacts}}
 [5]: https://conda-forge.github.io
-[6]: {{site.data.versions['current'].mirrors-tar}}
+[6]: {{site.data.versions['current'].tarball-url}}
 [10]: {{ site.baseurl }}/release/{{site.data.versions['current'].number}}.html
 [11]: https://downloads.apache.org/arrow/KEYS
 [12]: https://www.apache.org/dyn/closer.cgi#verify
