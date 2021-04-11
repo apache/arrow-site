@@ -47,16 +47,7 @@ redundancy in the case of a scheduler failing.
 ## Status
 
 The Ballista project is at an early stage of development. However, it is capable of running complex analytics queries 
-in a distributed cluster with reasonable performance.
-
-The following chart shows the current performance of Ballista for a number of TPC-H queries at scale factor 100. The 
-current performance at this scale is similar to Apache Spark, and better in some cases. More work is now needed to 
-make Ballista scale with larger data sets.
-
-![Ballista Performance](img/20210412ballistatpch.png)
-
-_Benchmarks were executed on a 24 core desktop with 64 GB RAM and NVMe drives. The 100 GB dataset was converted to 
-Parquet and repartitioned with 8 partitions._
+in a distributed cluster with reasonable performance (comparable to more established distributed query frameworks).
 
 One of the benefits of Ballista being part of the Arrow codebase is that there is now an opportunity to push parts of 
 the scheduler down to DataFusion so that is possible to seamlessly scale across cores in DataFusion, and across nodes 
