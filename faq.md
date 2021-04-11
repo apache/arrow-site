@@ -211,6 +211,31 @@ the Arrow format to disk prior to the development of the Arrow IPC file format.
 "Feather version 2" is now exactly the Arrow IPC file format and we have
 retained the "Feather" name and APIs for backwards compatibility.
 
+#### **How does Arrow relate to Protobuf?**
+
+Google's protocol buffers library (Protobuf) is not a "runtime in-memory
+format."  Similar to Parquet, Protobuf's representation is not suitable for
+processing.  Data must be deserialized into an in-memory representation like
+Arrow for processing.
+
+For example, unsigned integers in Protobuf are encoded as varint where each
+integer could have a different number of bytes and the last three bits
+contain the wire type of the field.  You could not use a CPU to add numbers
+in this format.
+
+Protobuf has libraries to do this deserialization but they do not aim for a
+common in-memory format.  A message that has been deserialized by protoc
+generated C# code is not going to have the same representation as one that has
+been deserialized by protoc generated Java code.  You would need to marshal
+the data from one language to the other.
+
+Arrow avoids this but it comes at the cost of increased space.  Protobuf can
+be a better choice for serializing certain kinds of data on the wire (like
+individual records or sparse data with many optional fields).  Just like
+Parquet this means that Arrow and Protobuf complement each other well.  For
+example, Arrow Flight uses gRPC and Protobuf to transmit data which is then
+deserialized into Arrow format for processing.
+
 #### **How does Arrow relate to Flatbuffers?**
 
 Flatbuffers is a low-level building block for binary data serialization.
