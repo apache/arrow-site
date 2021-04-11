@@ -55,6 +55,9 @@ make Ballista scale with larger data sets.
 
 ![Ballista Performance](img/20210412ballistatpch.png)
 
+_Benchmarks were executed on a 24 core desktop with 64 GB RAM and NVMe drives. The 100 GB dataset was converted to 
+Parquet and repartitioned with 8 partitions._
+
 One of the benefits of Ballista being part of the Arrow codebase is that there is now an opportunity to push parts of 
 the scheduler down to DataFusion so that is possible to seamlessly scale across cores in DataFusion, and across nodes 
 in Ballista, using the same unified query scheduler.
