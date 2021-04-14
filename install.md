@@ -73,6 +73,16 @@ Apache Arrow GLib (C). Here are supported platforms:
 * Red Hat Enterprise Linux 8
 * Amazon Linux 2
 
+Note: We're migrating to Artifactory from Bintray. This instructions
+will be updated once we complete the migration. New instructions will
+have these changes:
+
+* Remove `sed ...`.
+* Rename `apache-arrow-archive-keyring` to `apache-arrow-apt-source`
+  for Debian GNU/Linux and Ubuntu.
+* Change base URL to https://apache.jfrog.io/artifactory/ from
+  https://apache.bintray.com/ .
+
 Debian GNU/Linux and Ubuntu:
 
 ```shell
@@ -80,6 +90,7 @@ sudo apt update
 sudo apt install -y -V ca-certificates lsb-release wget
 wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
 sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+sudo sed -i'' -e 's,https://apache.bintray.com/,https://apache.jfrog.io/artifactory/,g' /etc/apt/sources.list.d/apache-arrow.sources 
 sudo apt update
 sudo apt install -y -V libarrow-dev # For C++
 sudo apt install -y -V libarrow-glib-dev # For GLib (C)
@@ -101,7 +112,7 @@ CentOS 8 and Red Hat Enterprise Linux 8:
 
 ```shell
 sudo dnf install -y epel-release || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
-sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo dnf install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo dnf config-manager --set-enabled epel || :
 sudo dnf config-manager --set-enabled powertools || :
 sudo dnf config-manager --set-enabled codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-rhui-rpms || :
@@ -117,7 +128,7 @@ CentOS 7 and Red Hat Enterprise Linux 7:
 
 ```shell
 sudo yum install -y epel-release || sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
-sudo yum install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo yum install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Arrow Dataset C++
@@ -129,7 +140,7 @@ Amazon Linux:
 
 ```shell
 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-sudo yum install -y https://apache.jfrog.io/artifactory/arrow/centos/7/apache-arrow-release-latest.rpm
+sudo yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Arrow Dataset C++
