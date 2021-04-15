@@ -73,13 +73,24 @@ Apache Arrow GLib (C). Here are supported platforms:
 * Red Hat Enterprise Linux 8
 * Amazon Linux 2
 
+Note: We're migrating to Artifactory from Bintray. This instructions
+will be updated once we complete the migration. New instructions will
+have these changes:
+
+* Remove `sed ...`.
+* Rename `apache-arrow-archive-keyring` to `apache-arrow-apt-source`
+  for Debian GNU/Linux and Ubuntu.
+* Change base URL to https://apache.jfrog.io/artifactory/ from
+  https://apache.bintray.com/ .
+
 Debian GNU/Linux and Ubuntu:
 
 ```shell
 sudo apt update
 sudo apt install -y -V ca-certificates lsb-release wget
-wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
 sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
+sudo sed -i'' -e 's,https://apache.bintray.com/,https://apache.jfrog.io/artifactory/,g' /etc/apt/sources.list.d/apache-arrow.sources 
 sudo apt update
 sudo apt install -y -V libarrow-dev # For C++
 sudo apt install -y -V libarrow-glib-dev # For GLib (C)
