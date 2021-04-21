@@ -229,12 +229,13 @@ generated C# code is not going to have the same representation as one that has
 been deserialized by protoc generated Java code.  You would need to marshal
 the data from one language to the other.
 
-Arrow avoids this but it comes at the cost of increased space.  Protobuf can
-be a better choice for serializing certain kinds of data on the wire (like
-individual records or sparse data with many optional fields).  Just like
-Parquet this means that Arrow and Protobuf complement each other well.  For
-example, Arrow Flight uses gRPC and Protobuf to transmit data which is then
-deserialized into Arrow format for processing.
+Arrow avoids this but it comes at the cost of increased space.
+Protobuf can be a better choice for serializing certain kinds of data
+on the wire (like individual records or sparse data with many optional
+fields).  Just like Parquet this means that Arrow and Protobuf
+complement each other well.  For example, Arrow Flight uses gRPC and
+Protobuf to serialize its commands, while data is serialized using the
+binary Arrow IPC protocol.
 
 #### **How does Arrow relate to Flatbuffers?**
 
