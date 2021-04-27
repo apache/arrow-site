@@ -109,6 +109,10 @@ short description of your use case.
   team uses Arrow in its NodeJS GPU backend and client libraries, and is an
   early contributing member to GOAI and Arrow\[JS\] focused on bringing these
   technologies to the enterprise.
+* **[HASH][39]:** HASH is an open-core platform for building, running, and learning
+  from simulations, with an in-browser IDE. HASH Engine uses Apache Arrow to power
+  the datastore for simulation state during computation, enabling zero-copy data
+  transfer between simulation logic written across Rust, JavaScript, and Python.
 * **[InAccel][29]:** A machine learning acceleration framework which leverages
   FPGAs-as-a-service. InAccel supports dataframes backed by Apache Arrow to
   serve as input for our implemented ML algorithms. Those dataframes can be
@@ -208,3 +212,4 @@ short description of your use case.
 [36]: https://bodo.ai
 [37]: https://github.com/tenzir/vast
 [38]: https://github.com/vaexio/vaex
+[39]: https://hash.ai
