@@ -42,7 +42,7 @@ But why, as a community, have we decided to change our processes? Let's take a s
 ## Project Structure
 The Rust implementation of Arrow actually consists of several distinct projects, or in Rust parlance, ["crates"][3]. In addition to the Arrow crate that contains core functionality such as the in-memory format and inter-process communication, we also maintain:
 - [DataFusion][4]: an extensible in-memory query execution engine using Arrow as its format
-- [Ballista][5]: a distributed compute platform built on DataFusion, with Apache Spark compatibility
+- [Ballista][5]: a distributed compute platform, powered by Apache Arrow and DataFusion
 
 Whilst these projects are all closely related, with many shared contributors, they're very much at different stages in their respective lifecycles. The core Arrow crate, as an implementation of a spec, has strict compatibility requirements with other versions of Arrow, and this is tested via rigorous cross-language integration tests.
 
