@@ -53,10 +53,10 @@ Ultimately, the decision was made to split the Rust crates into two separate rep
 ## Community Participation
 All Apache projects are built on volunteer contribution; it's a core principle of both the ASF and open-source software development more broadly. One point of friction that was observed in the previous workflow for the Rust community in particular was the requirement for issues to be logged in Arrow's Jira project. This step required would-be contributors to first register an account, and then receive a permissions grant to manage tickets.
 
-To streamline this process for new community members, we've taken the decision to migrate to GitHub Issues for tracking both new development work and known bugs that need addressing, and bootstrapped our new repositories by importing their respective tickets from Jira. We hope that this strikes a better balance between organisation and accessibility for prospective contributors.
+To streamline this process for new community members, we've taken the decision to migrate to GitHub Issues for tracking both new development work and known bugs that need addressing, and bootstrapped our new repositories by importing their respective tickets from Jira. We hope that this strikes a better balance between organization and accessibility for prospective contributors.
 
 ## Get Involved
-To further improve the onboarding flow for new Arrow contributors, we've begun the process of labelling select issues as "good first issue" in [arrow-rs][11] and [arrow-datafusion][12]. These issues are typically small in scope, but still serve as valuable contributions to the project, and help acclimatise new community members to our development workflows and tools.
+To further improve the onboarding flow for new Arrow contributors, we have started the process of labeling select issues as "good first issue" in [arrow-rs][11] and [arrow-datafusion][12]. These issues are small in scope but still serve as valuable contributions to the project, and help new community members to get familiar with our development workflows and tools.
 
 Not quite sure where to start with a particular issue, or curious about the status of one of our projects? Join the Arrow [mailing lists][13] or the #arrow-rust channel on the [ASF Slack][14] server.
 
