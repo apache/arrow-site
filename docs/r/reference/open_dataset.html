@@ -38,6 +38,8 @@
 
 
 
+  
+  <script src="../extra.js"></script>
 
 <meta property="og:title" content="Open a multi-file dataset — open_dataset" />
 <meta property="og:description" content="Arrow Datasets allow you to query against data that has been split across
@@ -86,7 +88,7 @@ Dataset, then use dplyr methods to query it." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">3.0.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">4.0.0</span>
       </span>
     </div>
 
@@ -109,19 +111,22 @@ Dataset, then use dplyr methods to query it." />
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="../articles/dataset.html">Working with Arrow Datasets and dplyr</a>
+      <a href="../articles/install.html">Installing the Arrow Package on Linux</a>
     </li>
     <li>
-      <a href="../articles/flight.html">Connecting to Flight RPC Servers</a>
+      <a href="../articles/dataset.html">Working with Arrow Datasets and dplyr</a>
     </li>
     <li>
       <a href="../articles/fs.html">Working with Cloud Storage (S3)</a>
     </li>
     <li>
-      <a href="../articles/install.html">Installing the Arrow Package on Linux</a>
+      <a href="../articles/python.html">Apache Arrow in Python and R with reticulate</a>
     </li>
     <li>
-      <a href="../articles/python.html">Apache Arrow in Python and R with reticulate</a>
+      <a href="../articles/flight.html">Connecting to Flight RPC Servers</a>
+    </li>
+    <li>
+      <a href="../articles/developing.html">Arrow R Developer Guide</a>
     </li>
   </ul>
 </li>
@@ -200,24 +205,31 @@ can accelerate queries that only touch some partitions (files). Call
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>sources</th>
-      <td><p>Either:</p><ul>
-<li><p>a string path to a directory containing data files</p></li>
+      <td><p>One of:</p><ul>
+<li><p>a string path or URI to a directory containing data files</p></li>
+<li><p>a string path or URI to a single file</p></li>
+<li><p>a character vector of paths or URIs to individual data files</p></li>
 <li><p>a list of <code>Dataset</code> objects as created by this function</p></li>
 <li><p>a list of <code>DatasetFactory</code> objects as created by <code><a href='dataset_factory.html'>dataset_factory()</a></code>.</p></li>
-</ul></td>
+</ul>
+
+<p>When <code>sources</code> is a vector of file URIs, they must all use the same protocol
+and point to files located in the same file system and having the same
+format.</p></td>
     </tr>
     <tr>
       <th>schema</th>
-      <td><p><a href='Schema.html'>Schema</a> for the dataset. If <code>NULL</code> (the default), the schema
+      <td><p><a href='Schema.html'>Schema</a> for the <code>Dataset</code>. If <code>NULL</code> (the default), the schema
 will be inferred from the data sources.</p></td>
     </tr>
     <tr>
       <th>partitioning</th>
-      <td><p>When <code>sources</code> is a file path, one of</p><ul>
+      <td><p>When <code>sources</code> is a directory path/URI, one of:</p><ul>
 <li><p>a <code>Schema</code>, in which case the file paths relative to <code>sources</code> will be
 parsed, and path segments will be matched with the schema fields. For
 example, <code><a href='Schema.html'>schema(year = int16(), month = int8())</a></code> would create partitions
-for file paths like "2019/01/file.parquet", "2019/02/file.parquet", etc.</p></li>
+for file paths like <code>"2019/01/file.parquet"</code>, <code>"2019/02/file.parquet"</code>,
+etc.</p></li>
 <li><p>a character vector that defines the field names corresponding to those
 path segments (that is, you're providing the names that would correspond
 to a <code>Schema</code> but the types will be autodetected)</p></li>
@@ -227,24 +239,27 @@ Hive-style path segments</p></li>
 <li><p><code>NULL</code> for no partitioning</p></li>
 </ul>
 
-<p>The default is to autodetect Hive-style partitions.</p></td>
+<p>The default is to autodetect Hive-style partitions. When <code>sources</code> is not a
+directory path/URI, <code>partitioning</code> is ignored.</p></td>
     </tr>
     <tr>
       <th>unify_schemas</th>
       <td><p>logical: should all data fragments (files, <code>Dataset</code>s)
 be scanned in order to create a unified schema from them? If <code>FALSE</code>, only
-the first fragment will be inspected for its schema. Use this
-fast path when you know and trust that all fragments have an identical schema.
-The default is <code>FALSE</code> when creating a dataset from a file path (because
-there may be many files and scanning may be slow) but <code>TRUE</code> when <code>sources</code>
-is a list of <code>Dataset</code>s (because there should be few <code>Dataset</code>s in the list
-and their <code>Schema</code>s are already in memory).</p></td>
+the first fragment will be inspected for its schema. Use this fast path
+when you know and trust that all fragments have an identical schema.
+The default is <code>FALSE</code> when creating a dataset from a directory path/URI or
+vector of file paths/URIs (because there may be many files and scanning may
+be slow) but <code>TRUE</code> when <code>sources</code> is a list of <code>Dataset</code>s (because there
+should be few <code>Dataset</code>s in the list and their <code>Schema</code>s are already in
+memory).</p></td>
     </tr>
     <tr>
       <th>...</th>
-      <td><p>additional arguments passed to <code><a href='dataset_factory.html'>dataset_factory()</a></code> when
-<code>sources</code> is a file path, otherwise ignored. These may include "format" to
-indicate the file format, or other format-specific options.</p></td>
+      <td><p>additional arguments passed to <code><a href='dataset_factory.html'>dataset_factory()</a></code> when <code>sources</code>
+is a directory path/URI or vector of file paths/URIs, otherwise ignored.
+These may include <code>format</code> to indicate the file format, or other
+format-specific options.</p></td>
     </tr>
     </table>
 
@@ -267,7 +282,7 @@ or call <code><a href='Scanner.html'>$NewScan()</a></code> to construct a query 
 
       <footer>
       <div class="copyright">
-  <p>Developed by Romain François, Jeroen Ooms, Neal Richardson, Apache Arrow.</p>
+  <p>Developed by Neal Richardson, Ian Cook, Jonathan Keane, Romain François, Jeroen Ooms, Apache Arrow.</p>
 </div>
 
 <div class="pkgdown">

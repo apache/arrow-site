@@ -54,6 +54,9 @@ If you encounter any importing issues of the pip wheels on Windows, you may
 need to install the `Visual C++ Redistributable for Visual Studio 2015
 <https://www.microsoft.com/en-us/download/details.aspx?id=48145>`_.
 
+.. warning::
+   On Linux, you will need pip >= 19.0 to detect the prebuilt binary packages.
+
 Installing from source
 ----------------------
 
@@ -84,4 +87,4 @@ Install the development version from an `alternative PyPI
 .. code-block:: bash
 
     pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ \
-        --pre pyarrow
+        --prefer-binary --pre pyarrow
