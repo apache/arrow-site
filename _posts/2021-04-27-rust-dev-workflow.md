@@ -35,7 +35,7 @@ If you're just here for the highlights, the major outcomes of these discussions 
 - The Rust projects have moved to separate repositories, outside the main Arrow [monorepo][9]
 	- [arrow-rs][7] for the core Arrow implementation in Rust
 	- [arrow-datafusion][8] for DataFusion and Ballista (more on these projects below!)
-- The Rust community will use GitHub Issues for tracking feature development and issues, replacing the ASF Jira instance
+- The Rust community will use GitHub Issues for tracking feature development and issues, replacing the Jira instance maintained by the Apache Software Foundation (ASF)
 
 But why, as a community, have we decided to change our processes? Let's take a slightly more in-depth look at the Rust implementation's needs.
 
