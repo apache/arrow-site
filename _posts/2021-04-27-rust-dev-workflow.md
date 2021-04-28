@@ -33,14 +33,15 @@ In recent months, members of the community have been working closely with Arrow'
 
 If you're just here for the highlights, the major outcomes of these discussions are as follows:
 - The Rust projects have moved to separate repositories, outside the main Arrow [monorepo][9]
-	- [arrow-rs][7] for the core Arrow implementation in Rust
+	- [arrow-rs][7] for the core Arrow, Arrow Flight, and Parquet implementations in Rust
 	- [arrow-datafusion][8] for DataFusion and Ballista (more on these projects below!)
 - The Rust community will use GitHub Issues for tracking feature development and issues, replacing the Jira instance maintained by the Apache Software Foundation (ASF)
+- DataFusion and Ballista will follow a new release cycle, independent of the main Arrow releases
 
 But why, as a community, have we decided to change our processes? Let's take a slightly more in-depth look at the Rust implementation's needs.
 
 ## Project Structure
-The Rust implementation of Arrow actually consists of several distinct projects, or in Rust parlance, ["crates"][3]. In addition to the Arrow crate that contains core functionality such as the in-memory format and inter-process communication, we also maintain:
+The Rust implementation of Arrow actually consists of several distinct projects, or in Rust parlance, ["crates"][3]. In addition to the core crates, namely `arrow`, `arrow-flight`, and `parquet`, we also maintain:
 - [DataFusion][4]: an extensible in-memory query execution engine using Arrow as its format
 - [Ballista][5]: a distributed compute platform, powered by Apache Arrow and DataFusion
 
