@@ -63,7 +63,7 @@ We have provided APT and Yum repositories for Apache Arrow C++ and
 Apache Arrow GLib (C). Here are supported platforms:
 
 * Debian GNU/Linux buster
-* Ubuntu 16.04 LTS
+* Debian GNU/Linux bullseye
 * Ubuntu 18.04 LTS
 * Ubuntu 20.04 LTS
 * Ubuntu 20.10
@@ -73,29 +73,18 @@ Apache Arrow GLib (C). Here are supported platforms:
 * Red Hat Enterprise Linux 8
 * Amazon Linux 2
 
-Note: We're migrating to Artifactory from Bintray. This instructions
-will be updated once we complete the migration. New instructions will
-have these changes:
-
-* Remove `sed ...`.
-* Rename `apache-arrow-archive-keyring` to `apache-arrow-apt-source`
-  for Debian GNU/Linux and Ubuntu.
-* Change base URL to https://apache.jfrog.io/artifactory/ from
-  https://apache.bintray.com/ .
-
 Debian GNU/Linux and Ubuntu:
 
 ```shell
 sudo apt update
 sudo apt install -y -V ca-certificates lsb-release wget
-wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
-sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb
-sudo sed -i'' -e 's,https://apache.bintray.com/,https://apache.jfrog.io/artifactory/,g' /etc/apt/sources.list.d/apache-arrow.sources 
+wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
 sudo apt update
 sudo apt install -y -V libarrow-dev # For C++
 sudo apt install -y -V libarrow-glib-dev # For GLib (C)
-sudo apt install -y -V libarrow-dataset-dev # For Arrow Dataset C++
-sudo apt install -y -V libarrow-flight-dev # For Flight C++
+sudo apt install -y -V libarrow-dataset-dev # For Apache Arrow Dataset C++
+sudo apt install -y -V libarrow-flight-dev # For Apache Arrow Flight C++
 # Notes for Plasma related packages:
 #   * You need to enable "non-free" component on Debian GNU/Linux
 #   * You need to enable "multiverse" component on Ubuntu
@@ -112,40 +101,40 @@ CentOS 8 and Red Hat Enterprise Linux 8:
 
 ```shell
 sudo dnf install -y epel-release || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
-sudo dnf install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo dnf config-manager --set-enabled epel || :
 sudo dnf config-manager --set-enabled powertools || :
 sudo dnf config-manager --set-enabled codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-rhui-rpms || :
 sudo subscription-manager repos --enable codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-$(arch)-rpms || :
 sudo dnf install -y arrow-devel # For C++
 sudo dnf install -y arrow-glib-devel # For GLib (C)
-sudo dnf install -y arrow-dataset-devel # For Arrow Dataset C++
+sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
 sudo dnf install -y parquet-devel # For Apache Parquet C++
-sudo dnf install -y parquet-glib-devel # For Parquet GLib (C)
+sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
 ```
 
 CentOS 7 and Red Hat Enterprise Linux 7:
 
 ```shell
 sudo yum install -y epel-release || sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
-sudo yum install -y https://apache.bintray.com/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo yum install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
-sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Arrow Dataset C++
+sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
 sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
-sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
+sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
 ```
 
 Amazon Linux:
 
 ```shell
 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-sudo yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-release-latest.rpm
+sudo yum install -y https://apache.jfrog.io/artifactory/arrow/centos/7/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
-sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Arrow Dataset C++
+sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
 sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
-sudo yum install -y --enablerepo=epel parquet-glib-devel # For Parquet GLib (C)
+sudo yum install -y --enablerepo=epel parquet-glib-devel # For APache Parquet GLib (C)
 ```
 
 ### C# Packages
@@ -238,6 +227,19 @@ Install the Julia package from the [General registry][21] with
 using Pkg; Pkg.add("Arrow")
 ```
 
+### Ruby Packages on RubyGems
+
+Install the Ruby packages from [RubyGems][25] with
+
+```shell
+gem install red-arrow
+gem install red-arrow-cuda # For CUDA support
+gem install red-arrow-dataset # For Apache Arrow Dataset support
+gem install red-gandiva # For Gandiva support
+gem install red-parquet # For Apache Parquet support
+gem install red-plasma # For Plasma support
+```
+
 [2]: {{site.data.versions['current'].github-tag-link}}
 [4]: {{site.data.versions['current'].java-artifacts}}
 [5]: https://conda-forge.github.io
@@ -257,3 +259,4 @@ using Pkg; Pkg.add("Arrow")
 [22]: https://www.nuget.org/packages/Apache.Arrow/
 [23]: https://www.nuget.org/packages/Apache.Arrow.Fligth/
 [24]: https://www.nuget.org/packages/Apache.Arrow.Flight.AspNetCore/
+[25]: https://rubygems.org/
