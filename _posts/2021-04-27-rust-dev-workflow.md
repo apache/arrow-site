@@ -27,8 +27,8 @@ limitations under the License.
 The Apache Arrow Rust community is excited to announce that its migration to a new development workflow is now complete! If you're considering Rust as a language for working with columnar data, read on and see how your use case might benefit from our new and improved project setup.
 
 In recent months, members of the community have been working closely with Arrow's [Project Management Committee][1] and other contributors to expand the set of available workflows for Arrow implementations. The goal was to define a new development process that ultimately:
-- Enables a faster release cadence
-- Encourages maximum participation from the wider community
+- Enables a faster release cadence that adheres to [SemVer][15] where appropriate
+- Encourages maximum participation from the wider community with unified tooling
 - Ensures that we continue to uphold the tenets of [The Apache Way][2]
 
 If you're just here for the highlights, the major outcomes of these discussions are as follows:
@@ -77,3 +77,4 @@ As a final note: nothing here is intended as prescriptive advice. As a community
 [12]: https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
 [13]: https://arrow.apache.org/community
 [14]: https://s.apache.org/slack-invite
+[15]: https://semver.org/
