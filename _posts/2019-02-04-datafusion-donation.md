@@ -25,7 +25,7 @@ limitations under the License.
 {% endcomment %}
 -->
 
-We are excited to announce that [DataFusion](https://github.com/apache/arrow/tree/master/rust/datafusion) has been donated to the Apache Arrow project. DataFusion is an in-memory query engine for the Rust implementation of Apache Arrow.
+We are excited to announce that [DataFusion](https://github.com/apache/arrow-datafusion) has been donated to the Apache Arrow project. DataFusion is an in-memory query engine for the Rust implementation of Apache Arrow.
 
 Although DataFusion was started two years ago, it was recently re-implemented to be Arrow-native and currently has limited capabilities but does support SQL queries against iterators of RecordBatch and has support for CSV files. There are plans to [add support for Parquet files](https://issues.apache.org/jira/browse/ARROW-4466).
 
