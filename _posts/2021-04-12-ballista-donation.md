@@ -25,7 +25,7 @@ limitations under the License.
 {% endcomment %}
 -->
 
-We are excited to announce that [Ballista](https://github.com/apache/arrow/tree/master/rust/ballista) has been donated 
+We are excited to announce that [Ballista](https://github.com/apache/arrow-datafusion/tree/master/ballista) has been donated 
 to the Apache Arrow project. 
 
 Ballista is a distributed compute platform primarily implemented in Rust, and powered by Apache Arrow. It is built
@@ -35,7 +35,7 @@ first-class citizens without paying a penalty for serialization costs.
 The foundational technologies in Ballista are:
 
 - [Apache Arrow](https://arrow.apache.org/) memory model and compute kernels for efficient processing of data.
-- [Apache Arrow DataFusion](https://github.com/apache/arrow/tree/master/rust/datafusion) query planning and 
+- [Apache Arrow DataFusion](https://github.com/apache/arrow-datafusion) query planning and 
   execution framework, extended by Ballista to provide distributed planning and execution.
 - [Apache Arrow Flight Protocol](https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/) for efficient
   data transfer between processes.
