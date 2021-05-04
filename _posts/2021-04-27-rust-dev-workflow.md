@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "A New Development Workflow for Arrow's Rust Implementation"
-date: "2021-04-27 00:00:00"
+date: "2021-05-04 00:00:00"
 author: ruanpa
 categories: [application]
 ---
