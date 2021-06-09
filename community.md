@@ -53,6 +53,7 @@ You may also wish to subscribe to these lists, which capture some activity strea
 <ul>
   <li> <code>issues@</code> for the creation of JIRA issues {% include mailing_list_links.html list="issues" %} </li>
   <li> <code>commits@</code> for commits to the <a href="https://github.com/apache/arrow">apache/arrow</a> and <a href="https://github.com/apache/arrow-site">apache/arrow-site</a> repositories (typically to <code>master</code> only) {% include mailing_list_links.html list="commits" %} </li>
+  <li> <code>builds@</code> for nightly build reports {% include mailing_list_links.html list="builds" %} </li>
 </ul>
 
 In addition, we have some "firehose" lists, which exist so that development
