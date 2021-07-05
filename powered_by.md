@@ -137,6 +137,11 @@ short description of your use case.
   Parquet format. Petastorm supports popular Python-based machine learning
   (ML) frameworks such as Tensorflow, Pytorch, and PySpark. It can also be
   used from pure Python code.
+* **[Polars][40]:** Polars is a blazingly fast DataFrame library and query engine 
+  that aims to utilize modern hardware efficiently. 
+  (e.g. multi-threading, SIMD vectorization, hiding memory latencies). 
+  Polars is built upon Apache Arrow and uses its columnar memory, compute kernels,
+  and several IO utilities. Polars is written in Rust and available in Rust and Python.
 * **[Quilt Data][13]:** Quilt is a data package manager, designed to make
   managing data as easy as managing code. It supports Parquet format via
   pyarrow for data access.
@@ -213,3 +218,4 @@ short description of your use case.
 [37]: https://github.com/tenzir/vast
 [38]: https://github.com/vaexio/vaex
 [39]: https://hash.ai
+[40]: https://github.com/pola-rs/polars
