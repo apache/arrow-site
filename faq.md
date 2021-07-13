@@ -106,6 +106,22 @@ stability.
 
 We refer you to the [implementation matrix]({{ site.baseurl }}/docs/status.html).
 
+#### **MIME types (IANA Media types) for Arrow data**
+
+Official IANA Media types (MIME types) have been registered for Apache
+Arrow IPC protocol data, both stream and file variants:
+
+* <https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.stream>
+* <https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.file>
+
+We recommend ".arrow" as the IPC file format file extension:
+
+* <https://arrow.apache.org/docs/format/Columnar.html#ipc-file-format>
+
+and ".arrows" for the IPC streaming format file extension:
+
+* <https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format>
+
 <hr class="my-5">
 
 ## Getting started
