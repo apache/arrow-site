@@ -57,7 +57,7 @@ in `requirements.txt` to install the latest patch release.
 These include the Apache Arrow and Apache Parquet C++ binary libraries bundled
 with the wheel.
 
-### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu and CentOS
+### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu, CentOS and Amazon Linux
 
 We have provided APT and Yum repositories for Apache Arrow C++ and
 Apache Arrow GLib (C). Here are supported platforms:
@@ -66,7 +66,7 @@ Apache Arrow GLib (C). Here are supported platforms:
 * Debian GNU/Linux bullseye
 * Ubuntu 18.04 LTS
 * Ubuntu 20.04 LTS
-* Ubuntu 20.10
+* Ubuntu 21.04
 * CentOS 7
 * CentOS 8
 * Red Hat Enterprise Linux 7
@@ -125,10 +125,10 @@ sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
 sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
 ```
 
-Amazon Linux:
+Amazon Linux 2:
 
 ```shell
-sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo amazon-linux-extras install -y epel
 sudo yum install -y https://apache.jfrog.io/artifactory/arrow/centos/7/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
