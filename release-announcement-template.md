@@ -71,7 +71,6 @@ you to the complete changelogs for the [`apache/arrow`][2] and
 
 ## R notes
 
-
 For more on what’s in the x.y.z R package, see the [R changelog][4].
 
 ## Ruby and C GLib notes
