@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Apache Arrow 5.0.0 Release | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.7.1 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Apache Arrow 5.0.0 Release" />
+<meta name="author" content="pmc" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="The Apache Arrow team is pleased to announce the 5.0.0 release. This covers 3 months of development work and includes 684 commits from 99 distinct contributors in 2 repositories. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelogs for the apache/arrow and apache/arrow-rs repositories. Community Since the 4.0.0 release, Daniël Heres, Kazuaki Ishizaki, Dominik Moritz, and Weston Pace have been invited as committers to Arrow, and Benjamin Kietzman and David Li have joined the Project Management Committee (PMC). Thank you for all of your contributions! Columnar Format Notes Official IANA Media types (MIME types) have been registered for Apache Arrow IPC protocol data, both stream and file variants: https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.stream https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.file We recommend .arrow as the IPC file format file extension and .arrows for the IPC streaming format file extension. Arrow Flight RPC notes The Go implementation now supports custom metadata and middleware, and has been added to integration testing. In Python, some operations can now be interrupted via Control-C. C++ notes MakeArrayFromScalar now works for fixed-size binary types (ARROW-13321). Compute layer The following compute functions were added: aggregations: index scalar arithmetic and math functions: abs, abs_checked, acos, acos_checked, asin, asin_checked, atan, atan2, ceil, cos, cos_checked, floor, ln, ln_checked, log10, log10_checked, log1p, log1p_checked, log2, log2_checked, negate, negate_checked, sign, sin, sin_checked, tan, tan_checked, trunc scalar bitwise functions: bit_wise_and, bit_wise_not, bit_wise_or, bit_wise_xor, shift_left, shift_left_checked, shift_right, shift_right_checked scalar string functions: ascii_center, ascii_lpad, ascii_reverse, ascii_rpad, binary_join, binary_join_element_wise, binary_replace_slice, count_substring, count_substring_regex, ends_with, find_substring, find_substring_regex, match_like, split_pattern_regex, starts_with, utf8_center, utf8_lpad, utf8_replace_slice, utf8_rpad, utf8_reverse, utf8_slice_codepoints scalar temporal functions: day, day_of_week, day_of_year, iso_calendar, iso_week, iso_year, hour, microsecond, millisecond, minute, month, nanosecond, quarter, second, subsecond, year other scalar functions: case_when, coalesce, if_else, is_finite, is_inf, is_nan, max_element_wise, min_element_wise, make_struct vector functions: replace_with_mask Duplicates are now allowed in SetLookupOptions::value_set (ARROW-12554). Decimal types are now supported by some basic arithmetic functions (ARROW-12074). The take function now supports dense unions (ARROW-13005). It is now possible to cast between dictionary types with different index types (ARROW-11673). Sorting is now implemented for boolean input (ARROW-12016). CSV The streaming CSV reader can now take some advantage of multiple threads (ARROW-11889). The CSV reader tries to make its errors more informative by adding the row number when it is known, i.e. when parallel reading is disabled (ARROW-12675). A new option ReaderOptions::skip_rows_after_names allows skipping a number of rows after reading the column names (as opposed to ReaderOptions::skip_rows). Quoted strings can now be treated as always non-null (ARROW-10115). Dataset layer The asynchronous scanner introduced in 4.0.0 has been improved with truly asynchronous readers implemented for CSV, Parquet, and IPC file formats and file-level parallelism added. This mode is controlled by a flag use_async that can be passed into methods which scan a dataset. Setting this flag to True will have significant improvements on filesystems with high latency or parallel reads (e.g. S3). A CountRows method has been added to count rows matching a predicate; where possible, this will use metadata in files instead of reading the data itself. CSV datasets can now be written, and when reading a CSV dataset, explicit types can now be specified for a subset of columns while allowing the rest to still be inferred. IO and Filesystem layer The I/O thread pool size can now be adjusted at runtime (ARROW-12760). The default size remains 8 threads. Streams now can have auxiliary metadata, depending on the backend. This has been implemented for the S3 filesystems, where a couple metadata keys are supported such as Content-Type and ACL (ARROW-11161, ARROW-12719). The HadoopFileSystem implementation now implements the FileSystem abstraction more faithfully (ARROW-12790). Parquet The new LZ4_RAW compression scheme was implemented (PARQUET-1998). Unlike the legacy LZ4 compression scheme, it is defined unambiguously and should provide better portability once other Parquet implementations catch up. Go notes Flight Flight Client and Server now support Custom Metadata through the functions flight.NewClientWithMiddleware and flight.NewServerWithMiddleware. Functions flight.NewFlightClient, flight.NewFlightServer, flight.CreateServerBearerTokenAuthInterceptors have been deprecated in favor of using the new middleware. #10633 Flight Client AuthHandler no longer overwrites outgoing metadata, correctly appending new metadata without overwriting existing metadata #10297 Flight AppMetadata field is now exposed both for Reading and Writing via flight.Reader#LatestAppMetadata() and flight.Writer#WriteWithAppMetadata functions #10142 Other enhancements Map and Extension Datatypes are now implemented for Arrow Arrays Schema package and first part of Encoding package added for Golang Parquet Implementation Java notes Highlighted improvements and fixes: Improved support for extension types using a complex storage type, e.g. struct, map or union. These can now extend the ExtensionTypeVector base class. Union vectors now extend AbstractContainerVector to be consistent with other vectors. Guava dependency updated to 30.1.1 Memory leak fixed if an exception occurs when reading IPC messages from a channel. #10423 Flight error metadata is now propagated to the client. #10370 JDBC adapter now preserves nullability. #10285 The memory rounding policy is respected when allocating vector buffers. This helps saving memory space. #10576 API compatibility changes: Complex vectors now return covariant types from getObject(int). #9964 JavaScript notes Tables do not extend DataFrames anymore. This enables smaller bundles. #10277 Arrow uses closure compiler for all UMD bundles, making them smaller. #10281 The npm package now comes with declaration maps for better navigation from types to source code. #10673 Updated dependencies and improvements to the code. Python notes Datasets can now scan files asynchronously when the use_async=True option is provided to Dataset.scanner, Dataset.to_table, or Dataset.to_batches methods. This should provide better performance in environments where I/O can be slow, such as with remote sources. Arrow now provides builtin support for writing CSV files through pyarrow.csv.write_csv Wheels for Apple M1 Macs are now provided. Many new pyarrow.compute functions are available (see the C++ notes above for more details), and introspection of the functions was improved so that they look more like standard Python functions. It is now possible to access ORC file metadata from Python ORCFile objects Building a StructArray now accepts a mask like other arrays Many updates and fixes for the documentation R notes In this release, we’ve more than doubled the number of functions you can call on Arrow Datasets inside dplyr::filter(), mutate(), and arrange(), including many more string, datetime, and math functions. You can also write Datasets to CSV files, in addition to Parquet and Feather. We’ve also deepened support for the Arrow C interface, which is used in the Python interface and allows integration with other projects, such as DuckDB. For more on what’s in the 5.0.0 R package, see the R changelog. Ruby and C GLib notes Apache Arrow Flight support is started. But ListFlights is only supported for now. More features will be implemented in the next major release. Ruby You need gobject-introspection gem 3.4.5 or later to implement your Apache Arrow Flight server. If you only use Apache Arrow Flight client, gobject-introspection gem 3.4.5 or later isn’t required. Here are highlighted improvements: Compute functions accept raw Ruby objects such as true, Integer, Array and String: add_function = Arrow::Function.find(&quot;add&quot;) # Not shortcut version augend = Arrow::Int8Array.new([1, 2, 3]) addend = Arrow::Int8Scalar.new(5) args = [ Arrow::ArrayDatum.new(augend), Arrow::ScalarDatum.new(addend), ] add_function.execute(args).value.to_a # =&gt; [6, 7, 8] # Shortcut version add_function.execute([[1, 2, 3], 5]).value.to_a # =&gt; [6, 7, 8] Arrow::PrimaryArray and Arrow::Buffer can be used as MemoryView that is added in Ruby 3.0. There are some backward incompatible changes: Arrow::CountOptions and Arrow::CountMode are removed. Use Arrow::ScalarAggregateOptions instead. C GLib There are some backward incompatible changes: GArrowCountOptions and GArrowCountMode are removed. Use GArrowScalarAggregateOptions instead. garrow_array_equal_range() requires GArrowEqualOptions. Prefix in arrow-dataset-glib is changed to gadataset_/GADATASET_ from gad_/GAD_. GADScanOptions, GADScanTask and GADInMemoryScanTask are removed. Use gadataset_begin_scan() or gadataset_to_table() instead. GArrowCompareOptions, GArrowCompareOperator and garrow_*_array_compare() are removed. Use equal, not_equal, less_than, less_than_equal, greater_than and greater_than_equal compute functions directly instead. Rust notes The Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the 5.0.0 release of the Rust implementation, see the Arrow Rust changelog and the Apache Arrow Rust 5.0.0 Release blog post." />
+<meta property="og:description" content="The Apache Arrow team is pleased to announce the 5.0.0 release. This covers 3 months of development work and includes 684 commits from 99 distinct contributors in 2 repositories. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelogs for the apache/arrow and apache/arrow-rs repositories. Community Since the 4.0.0 release, Daniël Heres, Kazuaki Ishizaki, Dominik Moritz, and Weston Pace have been invited as committers to Arrow, and Benjamin Kietzman and David Li have joined the Project Management Committee (PMC). Thank you for all of your contributions! Columnar Format Notes Official IANA Media types (MIME types) have been registered for Apache Arrow IPC protocol data, both stream and file variants: https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.stream https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.file We recommend .arrow as the IPC file format file extension and .arrows for the IPC streaming format file extension. Arrow Flight RPC notes The Go implementation now supports custom metadata and middleware, and has been added to integration testing. In Python, some operations can now be interrupted via Control-C. C++ notes MakeArrayFromScalar now works for fixed-size binary types (ARROW-13321). Compute layer The following compute functions were added: aggregations: index scalar arithmetic and math functions: abs, abs_checked, acos, acos_checked, asin, asin_checked, atan, atan2, ceil, cos, cos_checked, floor, ln, ln_checked, log10, log10_checked, log1p, log1p_checked, log2, log2_checked, negate, negate_checked, sign, sin, sin_checked, tan, tan_checked, trunc scalar bitwise functions: bit_wise_and, bit_wise_not, bit_wise_or, bit_wise_xor, shift_left, shift_left_checked, shift_right, shift_right_checked scalar string functions: ascii_center, ascii_lpad, ascii_reverse, ascii_rpad, binary_join, binary_join_element_wise, binary_replace_slice, count_substring, count_substring_regex, ends_with, find_substring, find_substring_regex, match_like, split_pattern_regex, starts_with, utf8_center, utf8_lpad, utf8_replace_slice, utf8_rpad, utf8_reverse, utf8_slice_codepoints scalar temporal functions: day, day_of_week, day_of_year, iso_calendar, iso_week, iso_year, hour, microsecond, millisecond, minute, month, nanosecond, quarter, second, subsecond, year other scalar functions: case_when, coalesce, if_else, is_finite, is_inf, is_nan, max_element_wise, min_element_wise, make_struct vector functions: replace_with_mask Duplicates are now allowed in SetLookupOptions::value_set (ARROW-12554). Decimal types are now supported by some basic arithmetic functions (ARROW-12074). The take function now supports dense unions (ARROW-13005). It is now possible to cast between dictionary types with different index types (ARROW-11673). Sorting is now implemented for boolean input (ARROW-12016). CSV The streaming CSV reader can now take some advantage of multiple threads (ARROW-11889). The CSV reader tries to make its errors more informative by adding the row number when it is known, i.e. when parallel reading is disabled (ARROW-12675). A new option ReaderOptions::skip_rows_after_names allows skipping a number of rows after reading the column names (as opposed to ReaderOptions::skip_rows). Quoted strings can now be treated as always non-null (ARROW-10115). Dataset layer The asynchronous scanner introduced in 4.0.0 has been improved with truly asynchronous readers implemented for CSV, Parquet, and IPC file formats and file-level parallelism added. This mode is controlled by a flag use_async that can be passed into methods which scan a dataset. Setting this flag to True will have significant improvements on filesystems with high latency or parallel reads (e.g. S3). A CountRows method has been added to count rows matching a predicate; where possible, this will use metadata in files instead of reading the data itself. CSV datasets can now be written, and when reading a CSV dataset, explicit types can now be specified for a subset of columns while allowing the rest to still be inferred. IO and Filesystem layer The I/O thread pool size can now be adjusted at runtime (ARROW-12760). The default size remains 8 threads. Streams now can have auxiliary metadata, depending on the backend. This has been implemented for the S3 filesystems, where a couple metadata keys are supported such as Content-Type and ACL (ARROW-11161, ARROW-12719). The HadoopFileSystem implementation now implements the FileSystem abstraction more faithfully (ARROW-12790). Parquet The new LZ4_RAW compression scheme was implemented (PARQUET-1998). Unlike the legacy LZ4 compression scheme, it is defined unambiguously and should provide better portability once other Parquet implementations catch up. Go notes Flight Flight Client and Server now support Custom Metadata through the functions flight.NewClientWithMiddleware and flight.NewServerWithMiddleware. Functions flight.NewFlightClient, flight.NewFlightServer, flight.CreateServerBearerTokenAuthInterceptors have been deprecated in favor of using the new middleware. #10633 Flight Client AuthHandler no longer overwrites outgoing metadata, correctly appending new metadata without overwriting existing metadata #10297 Flight AppMetadata field is now exposed both for Reading and Writing via flight.Reader#LatestAppMetadata() and flight.Writer#WriteWithAppMetadata functions #10142 Other enhancements Map and Extension Datatypes are now implemented for Arrow Arrays Schema package and first part of Encoding package added for Golang Parquet Implementation Java notes Highlighted improvements and fixes: Improved support for extension types using a complex storage type, e.g. struct, map or union. These can now extend the ExtensionTypeVector base class. Union vectors now extend AbstractContainerVector to be consistent with other vectors. Guava dependency updated to 30.1.1 Memory leak fixed if an exception occurs when reading IPC messages from a channel. #10423 Flight error metadata is now propagated to the client. #10370 JDBC adapter now preserves nullability. #10285 The memory rounding policy is respected when allocating vector buffers. This helps saving memory space. #10576 API compatibility changes: Complex vectors now return covariant types from getObject(int). #9964 JavaScript notes Tables do not extend DataFrames anymore. This enables smaller bundles. #10277 Arrow uses closure compiler for all UMD bundles, making them smaller. #10281 The npm package now comes with declaration maps for better navigation from types to source code. #10673 Updated dependencies and improvements to the code. Python notes Datasets can now scan files asynchronously when the use_async=True option is provided to Dataset.scanner, Dataset.to_table, or Dataset.to_batches methods. This should provide better performance in environments where I/O can be slow, such as with remote sources. Arrow now provides builtin support for writing CSV files through pyarrow.csv.write_csv Wheels for Apple M1 Macs are now provided. Many new pyarrow.compute functions are available (see the C++ notes above for more details), and introspection of the functions was improved so that they look more like standard Python functions. It is now possible to access ORC file metadata from Python ORCFile objects Building a StructArray now accepts a mask like other arrays Many updates and fixes for the documentation R notes In this release, we’ve more than doubled the number of functions you can call on Arrow Datasets inside dplyr::filter(), mutate(), and arrange(), including many more string, datetime, and math functions. You can also write Datasets to CSV files, in addition to Parquet and Feather. We’ve also deepened support for the Arrow C interface, which is used in the Python interface and allows integration with other projects, such as DuckDB. For more on what’s in the 5.0.0 R package, see the R changelog. Ruby and C GLib notes Apache Arrow Flight support is started. But ListFlights is only supported for now. More features will be implemented in the next major release. Ruby You need gobject-introspection gem 3.4.5 or later to implement your Apache Arrow Flight server. If you only use Apache Arrow Flight client, gobject-introspection gem 3.4.5 or later isn’t required. Here are highlighted improvements: Compute functions accept raw Ruby objects such as true, Integer, Array and String: add_function = Arrow::Function.find(&quot;add&quot;) # Not shortcut version augend = Arrow::Int8Array.new([1, 2, 3]) addend = Arrow::Int8Scalar.new(5) args = [ Arrow::ArrayDatum.new(augend), Arrow::ScalarDatum.new(addend), ] add_function.execute(args).value.to_a # =&gt; [6, 7, 8] # Shortcut version add_function.execute([[1, 2, 3], 5]).value.to_a # =&gt; [6, 7, 8] Arrow::PrimaryArray and Arrow::Buffer can be used as MemoryView that is added in Ruby 3.0. There are some backward incompatible changes: Arrow::CountOptions and Arrow::CountMode are removed. Use Arrow::ScalarAggregateOptions instead. C GLib There are some backward incompatible changes: GArrowCountOptions and GArrowCountMode are removed. Use GArrowScalarAggregateOptions instead. garrow_array_equal_range() requires GArrowEqualOptions. Prefix in arrow-dataset-glib is changed to gadataset_/GADATASET_ from gad_/GAD_. GADScanOptions, GADScanTask and GADInMemoryScanTask are removed. Use gadataset_begin_scan() or gadataset_to_table() instead. GArrowCompareOptions, GArrowCompareOperator and garrow_*_array_compare() are removed. Use equal, not_equal, less_than, less_than_equal, greater_than and greater_than_equal compute functions directly instead. Rust notes The Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the 5.0.0 release of the Rust implementation, see the Arrow Rust changelog and the Apache Arrow Rust 5.0.0 Release blog post." />
+<link rel="canonical" href="https://arrow.apache.org/blog/2020/07/29/5.0.0-release/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2020/07/29/5.0.0-release/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-07-29T02:00:00-04:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="twitter:title" content="Apache Arrow 5.0.0 Release" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@pmc" />
+<script type="application/ld+json">
+{"datePublished":"2020-07-29T02:00:00-04:00","headline":"Apache Arrow 5.0.0 Release","dateModified":"2020-07-29T02:00:00-04:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2020/07/29/5.0.0-release/"},"description":"The Apache Arrow team is pleased to announce the 5.0.0 release. This covers 3 months of development work and includes 684 commits from 99 distinct contributors in 2 repositories. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelogs for the apache/arrow and apache/arrow-rs repositories. Community Since the 4.0.0 release, Daniël Heres, Kazuaki Ishizaki, Dominik Moritz, and Weston Pace have been invited as committers to Arrow, and Benjamin Kietzman and David Li have joined the Project Management Committee (PMC). Thank you for all of your contributions! Columnar Format Notes Official IANA Media types (MIME types) have been registered for Apache Arrow IPC protocol data, both stream and file variants: https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.stream https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.file We recommend .arrow as the IPC file format file extension and .arrows for the IPC streaming format file extension. Arrow Flight RPC notes The Go implementation now supports custom metadata and middleware, and has been added to integration testing. In Python, some operations can now be interrupted via Control-C. C++ notes MakeArrayFromScalar now works for fixed-size binary types (ARROW-13321). Compute layer The following compute functions were added: aggregations: index scalar arithmetic and math functions: abs, abs_checked, acos, acos_checked, asin, asin_checked, atan, atan2, ceil, cos, cos_checked, floor, ln, ln_checked, log10, log10_checked, log1p, log1p_checked, log2, log2_checked, negate, negate_checked, sign, sin, sin_checked, tan, tan_checked, trunc scalar bitwise functions: bit_wise_and, bit_wise_not, bit_wise_or, bit_wise_xor, shift_left, shift_left_checked, shift_right, shift_right_checked scalar string functions: ascii_center, ascii_lpad, ascii_reverse, ascii_rpad, binary_join, binary_join_element_wise, binary_replace_slice, count_substring, count_substring_regex, ends_with, find_substring, find_substring_regex, match_like, split_pattern_regex, starts_with, utf8_center, utf8_lpad, utf8_replace_slice, utf8_rpad, utf8_reverse, utf8_slice_codepoints scalar temporal functions: day, day_of_week, day_of_year, iso_calendar, iso_week, iso_year, hour, microsecond, millisecond, minute, month, nanosecond, quarter, second, subsecond, year other scalar functions: case_when, coalesce, if_else, is_finite, is_inf, is_nan, max_element_wise, min_element_wise, make_struct vector functions: replace_with_mask Duplicates are now allowed in SetLookupOptions::value_set (ARROW-12554). Decimal types are now supported by some basic arithmetic functions (ARROW-12074). The take function now supports dense unions (ARROW-13005). It is now possible to cast between dictionary types with different index types (ARROW-11673). Sorting is now implemented for boolean input (ARROW-12016). CSV The streaming CSV reader can now take some advantage of multiple threads (ARROW-11889). The CSV reader tries to make its errors more informative by adding the row number when it is known, i.e. when parallel reading is disabled (ARROW-12675). A new option ReaderOptions::skip_rows_after_names allows skipping a number of rows after reading the column names (as opposed to ReaderOptions::skip_rows). Quoted strings can now be treated as always non-null (ARROW-10115). Dataset layer The asynchronous scanner introduced in 4.0.0 has been improved with truly asynchronous readers implemented for CSV, Parquet, and IPC file formats and file-level parallelism added. This mode is controlled by a flag use_async that can be passed into methods which scan a dataset. Setting this flag to True will have significant improvements on filesystems with high latency or parallel reads (e.g. S3). A CountRows method has been added to count rows matching a predicate; where possible, this will use metadata in files instead of reading the data itself. CSV datasets can now be written, and when reading a CSV dataset, explicit types can now be specified for a subset of columns while allowing the rest to still be inferred. IO and Filesystem layer The I/O thread pool size can now be adjusted at runtime (ARROW-12760). The default size remains 8 threads. Streams now can have auxiliary metadata, depending on the backend. This has been implemented for the S3 filesystems, where a couple metadata keys are supported such as Content-Type and ACL (ARROW-11161, ARROW-12719). The HadoopFileSystem implementation now implements the FileSystem abstraction more faithfully (ARROW-12790). Parquet The new LZ4_RAW compression scheme was implemented (PARQUET-1998). Unlike the legacy LZ4 compression scheme, it is defined unambiguously and should provide better portability once other Parquet implementations catch up. Go notes Flight Flight Client and Server now support Custom Metadata through the functions flight.NewClientWithMiddleware and flight.NewServerWithMiddleware. Functions flight.NewFlightClient, flight.NewFlightServer, flight.CreateServerBearerTokenAuthInterceptors have been deprecated in favor of using the new middleware. #10633 Flight Client AuthHandler no longer overwrites outgoing metadata, correctly appending new metadata without overwriting existing metadata #10297 Flight AppMetadata field is now exposed both for Reading and Writing via flight.Reader#LatestAppMetadata() and flight.Writer#WriteWithAppMetadata functions #10142 Other enhancements Map and Extension Datatypes are now implemented for Arrow Arrays Schema package and first part of Encoding package added for Golang Parquet Implementation Java notes Highlighted improvements and fixes: Improved support for extension types using a complex storage type, e.g. struct, map or union. These can now extend the ExtensionTypeVector base class. Union vectors now extend AbstractContainerVector to be consistent with other vectors. Guava dependency updated to 30.1.1 Memory leak fixed if an exception occurs when reading IPC messages from a channel. #10423 Flight error metadata is now propagated to the client. #10370 JDBC adapter now preserves nullability. #10285 The memory rounding policy is respected when allocating vector buffers. This helps saving memory space. #10576 API compatibility changes: Complex vectors now return covariant types from getObject(int). #9964 JavaScript notes Tables do not extend DataFrames anymore. This enables smaller bundles. #10277 Arrow uses closure compiler for all UMD bundles, making them smaller. #10281 The npm package now comes with declaration maps for better navigation from types to source code. #10673 Updated dependencies and improvements to the code. Python notes Datasets can now scan files asynchronously when the use_async=True option is provided to Dataset.scanner, Dataset.to_table, or Dataset.to_batches methods. This should provide better performance in environments where I/O can be slow, such as with remote sources. Arrow now provides builtin support for writing CSV files through pyarrow.csv.write_csv Wheels for Apple M1 Macs are now provided. Many new pyarrow.compute functions are available (see the C++ notes above for more details), and introspection of the functions was improved so that they look more like standard Python functions. It is now possible to access ORC file metadata from Python ORCFile objects Building a StructArray now accepts a mask like other arrays Many updates and fixes for the documentation R notes In this release, we’ve more than doubled the number of functions you can call on Arrow Datasets inside dplyr::filter(), mutate(), and arrange(), including many more string, datetime, and math functions. You can also write Datasets to CSV files, in addition to Parquet and Feather. We’ve also deepened support for the Arrow C interface, which is used in the Python interface and allows integration with other projects, such as DuckDB. For more on what’s in the 5.0.0 R package, see the R changelog. Ruby and C GLib notes Apache Arrow Flight support is started. But ListFlights is only supported for now. More features will be implemented in the next major release. Ruby You need gobject-introspection gem 3.4.5 or later to implement your Apache Arrow Flight server. If you only use Apache Arrow Flight client, gobject-introspection gem 3.4.5 or later isn’t required. Here are highlighted improvements: Compute functions accept raw Ruby objects such as true, Integer, Array and String: add_function = Arrow::Function.find(&quot;add&quot;) # Not shortcut version augend = Arrow::Int8Array.new([1, 2, 3]) addend = Arrow::Int8Scalar.new(5) args = [ Arrow::ArrayDatum.new(augend), Arrow::ScalarDatum.new(addend), ] add_function.execute(args).value.to_a # =&gt; [6, 7, 8] # Shortcut version add_function.execute([[1, 2, 3], 5]).value.to_a # =&gt; [6, 7, 8] Arrow::PrimaryArray and Arrow::Buffer can be used as MemoryView that is added in Ruby 3.0. There are some backward incompatible changes: Arrow::CountOptions and Arrow::CountMode are removed. Use Arrow::ScalarAggregateOptions instead. C GLib There are some backward incompatible changes: GArrowCountOptions and GArrowCountMode are removed. Use GArrowScalarAggregateOptions instead. garrow_array_equal_range() requires GArrowEqualOptions. Prefix in arrow-dataset-glib is changed to gadataset_/GADATASET_ from gad_/GAD_. GADScanOptions, GADScanTask and GADInMemoryScanTask are removed. Use gadataset_begin_scan() or gadataset_to_table() instead. GArrowCompareOptions, GArrowCompareOperator and garrow_*_array_compare() are removed. Use equal, not_equal, less_than, less_than_equal, greater_than and greater_than_equal compute functions directly instead. Rust notes The Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the 5.0.0 release of the Rust implementation, see the Arrow Rust changelog and the Apache Arrow Rust 5.0.0 Release blog post.","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"pmc"},"image":"https://arrow.apache.org/img/arrow.png","url":"https://arrow.apache.org/blog/2020/07/29/5.0.0-release/","author":{"@type":"Person","name":"pmc"},"@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments)};
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://issues.apache.org/jira/browse/ARROW">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="http://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="http://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="http://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Apache Arrow 5.0.0 Release
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    29 Jul 2020
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a class="mr-3" href="https://arrow.apache.org">The Apache Arrow PMC (pmc) </a>
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p>The Apache Arrow team is pleased to announce the 5.0.0 release. This covers
+3 months of development work and includes <strong>684 commits</strong> from
+<a href="/release/5.0.0.html#contributors"><strong>99 distinct contributors</strong></a> in 2 repositories. See the Install Page to
+learn how to get the libraries for your platform.</p>
+
+<p>The release notes below are not exhaustive and only expose selected highlights
+of the release. Many other bugfixes and improvements have been made: we refer
+you to the complete changelogs for the <a href="/release/5.0.0.html#changelog"><code class="language-plaintext highlighter-rouge">apache/arrow</code></a> and
+<a href="https://github.com/apache/arrow-rs/blob/5.0.0/CHANGELOG.md"><code class="language-plaintext highlighter-rouge">apache/arrow-rs</code></a> repositories.</p>
+
+<h2 id="community">Community</h2>
+
+<p>Since the 4.0.0 release, Daniël Heres, Kazuaki Ishizaki, Dominik Moritz, and Weston Pace
+have been invited as committers to Arrow,
+and Benjamin Kietzman and David Li have joined the Project Management Committee
+(PMC). Thank you for all of your contributions!</p>
+
+<h2 id="columnar-format-notes">Columnar Format Notes</h2>
+
+<p>Official IANA Media types (MIME types) have been registered for Apache
+Arrow IPC protocol data, both <a href="/docs/format/Columnar.html#ipc-streaming-format">stream</a>
+and <a href="/docs/format/Columnar.html#ipc-file-format">file</a> variants:</p>
+
+<ul>
+  <li>https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.stream</li>
+  <li>https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.file</li>
+</ul>
+
+<p>We recommend <code class="language-plaintext highlighter-rouge">.arrow</code> as the IPC file format file extension and <code class="language-plaintext highlighter-rouge">.arrows</code> for
+the IPC streaming format file extension.</p>
+
+<h2 id="arrow-flight-rpc-notes">Arrow Flight RPC notes</h2>
+
+<p>The Go implementation now supports custom metadata and middleware, and has
+been added to integration testing.</p>
+
+<p>In Python, some operations can now be interrupted via Control-C.</p>
+
+<h2 id="c-notes">C++ notes</h2>
+
+<p><code class="language-plaintext highlighter-rouge">MakeArrayFromScalar</code> now works for fixed-size binary types (ARROW-13321).</p>
+
+<h3 id="compute-layer">Compute layer</h3>
+
+<p>The following <a href="/docs/cpp/compute.html">compute functions</a>
+were added:</p>
+
+<ul>
+  <li>
+    <p>aggregations: <code class="language-plaintext highlighter-rouge">index</code></p>
+  </li>
+  <li>
+    <p>scalar arithmetic and math functions: <code class="language-plaintext highlighter-rouge">abs</code>, <code class="language-plaintext highlighter-rouge">abs_checked</code>, <code class="language-plaintext highlighter-rouge">acos</code>,
+<code class="language-plaintext highlighter-rouge">acos_checked</code>, <code class="language-plaintext highlighter-rouge">asin</code>, <code class="language-plaintext highlighter-rouge">asin_checked</code>, <code class="language-plaintext highlighter-rouge">atan</code>, <code class="language-plaintext highlighter-rouge">atan2</code>, <code class="language-plaintext highlighter-rouge">ceil</code>, <code class="language-plaintext highlighter-rouge">cos</code>,
+<code class="language-plaintext highlighter-rouge">cos_checked</code>, <code class="language-plaintext highlighter-rouge">floor</code>, <code class="language-plaintext highlighter-rouge">ln</code>, <code class="language-plaintext highlighter-rouge">ln_checked</code>, <code class="language-plaintext highlighter-rouge">log10</code>, <code class="language-plaintext highlighter-rouge">log10_checked</code>,
+<code class="language-plaintext highlighter-rouge">log1p</code>, <code class="language-plaintext highlighter-rouge">log1p_checked</code>, <code class="language-plaintext highlighter-rouge">log2</code>, <code class="language-plaintext highlighter-rouge">log2_checked</code>, <code class="language-plaintext highlighter-rouge">negate</code>, <code class="language-plaintext highlighter-rouge">negate_checked</code>,
+<code class="language-plaintext highlighter-rouge">sign</code>, <code class="language-plaintext highlighter-rouge">sin</code>, <code class="language-plaintext highlighter-rouge">sin_checked</code>, <code class="language-plaintext highlighter-rouge">tan</code>, <code class="language-plaintext highlighter-rouge">tan_checked</code>, <code class="language-plaintext highlighter-rouge">trunc</code></p>
+  </li>
+  <li>
+    <p>scalar bitwise functions: <code class="language-plaintext highlighter-rouge">bit_wise_and</code>, <code class="language-plaintext highlighter-rouge">bit_wise_not</code>, <code class="language-plaintext highlighter-rouge">bit_wise_or</code>,
+<code class="language-plaintext highlighter-rouge">bit_wise_xor</code>, <code class="language-plaintext highlighter-rouge">shift_left</code>, <code class="language-plaintext highlighter-rouge">shift_left_checked</code>, <code class="language-plaintext highlighter-rouge">shift_right</code>,
+<code class="language-plaintext highlighter-rouge">shift_right_checked</code></p>
+  </li>
+  <li>
+    <p>scalar string functions: <code class="language-plaintext highlighter-rouge">ascii_center</code>, <code class="language-plaintext highlighter-rouge">ascii_lpad</code>, <code class="language-plaintext highlighter-rouge">ascii_reverse</code>,
+<code class="language-plaintext highlighter-rouge">ascii_rpad</code>, <code class="language-plaintext highlighter-rouge">binary_join</code>, <code class="language-plaintext highlighter-rouge">binary_join_element_wise</code>,
+<code class="language-plaintext highlighter-rouge">binary_replace_slice</code>, <code class="language-plaintext highlighter-rouge">count_substring</code>, <code class="language-plaintext highlighter-rouge">count_substring_regex</code>,
+<code class="language-plaintext highlighter-rouge">ends_with</code>, <code class="language-plaintext highlighter-rouge">find_substring</code>, <code class="language-plaintext highlighter-rouge">find_substring_regex</code>, <code class="language-plaintext highlighter-rouge">match_like</code>,
+<code class="language-plaintext highlighter-rouge">split_pattern_regex</code>, <code class="language-plaintext highlighter-rouge">starts_with</code>, <code class="language-plaintext highlighter-rouge">utf8_center</code>, <code class="language-plaintext highlighter-rouge">utf8_lpad</code>,
+<code class="language-plaintext highlighter-rouge">utf8_replace_slice</code>, <code class="language-plaintext highlighter-rouge">utf8_rpad</code>, <code class="language-plaintext highlighter-rouge">utf8_reverse</code>, <code class="language-plaintext highlighter-rouge">utf8_slice_codepoints</code></p>
+  </li>
+  <li>
+    <p>scalar temporal functions: <code class="language-plaintext highlighter-rouge">day</code>, <code class="language-plaintext highlighter-rouge">day_of_week</code>, <code class="language-plaintext highlighter-rouge">day_of_year</code>,
+<code class="language-plaintext highlighter-rouge">iso_calendar</code>, <code class="language-plaintext highlighter-rouge">iso_week</code>, <code class="language-plaintext highlighter-rouge">iso_year</code>, <code class="language-plaintext highlighter-rouge">hour</code>, <code class="language-plaintext highlighter-rouge">microsecond</code>, <code class="language-plaintext highlighter-rouge">millisecond</code>,
+<code class="language-plaintext highlighter-rouge">minute</code>, <code class="language-plaintext highlighter-rouge">month</code>, <code class="language-plaintext highlighter-rouge">nanosecond</code>, <code class="language-plaintext highlighter-rouge">quarter</code>, <code class="language-plaintext highlighter-rouge">second</code>, <code class="language-plaintext highlighter-rouge">subsecond</code>, <code class="language-plaintext highlighter-rouge">year</code></p>
+  </li>
+  <li>
+    <p>other scalar functions: <code class="language-plaintext highlighter-rouge">case_when</code>, <code class="language-plaintext highlighter-rouge">coalesce</code>, <code class="language-plaintext highlighter-rouge">if_else</code>, <code class="language-plaintext highlighter-rouge">is_finite</code>,
+<code class="language-plaintext highlighter-rouge">is_inf</code>, <code class="language-plaintext highlighter-rouge">is_nan</code>, <code class="language-plaintext highlighter-rouge">max_element_wise</code>, <code class="language-plaintext highlighter-rouge">min_element_wise</code>, <code class="language-plaintext highlighter-rouge">make_struct</code></p>
+  </li>
+  <li>
+    <p>vector functions: <code class="language-plaintext highlighter-rouge">replace_with_mask</code></p>
+  </li>
+</ul>
+
+<p>Duplicates are now allowed in <code class="language-plaintext highlighter-rouge">SetLookupOptions::value_set</code> (ARROW-12554).</p>
+
+<p>Decimal types are now supported by some basic arithmetic functions (ARROW-12074).</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">take</code> function now supports dense unions (ARROW-13005).</p>
+
+<p>It is now possible to cast between dictionary types with different index
+types (ARROW-11673).</p>
+
+<p>Sorting is now implemented for boolean input (ARROW-12016).</p>
+
+<h3 id="csv">CSV</h3>
+
+<p>The streaming CSV reader can now take some advantage of multiple threads (ARROW-11889).</p>
+
+<p>The CSV reader tries to make its errors more informative by adding the
+row number when it is known, i.e. when parallel reading is disabled (ARROW-12675).</p>
+
+<p>A new option <code class="language-plaintext highlighter-rouge">ReaderOptions::skip_rows_after_names</code> allows skipping a number
+of rows <em>after</em> reading the column names (as opposed to
+<code class="language-plaintext highlighter-rouge">ReaderOptions::skip_rows</code>).</p>
+
+<p>Quoted strings can now be treated as always non-null (ARROW-10115).</p>
+
+<h3 id="dataset-layer">Dataset layer</h3>
+
+<p>The asynchronous scanner introduced in 4.0.0 has been improved with truly 
+asynchronous readers implemented for CSV, Parquet, and IPC file formats and 
+file-level parallelism added.  This mode is controlled by a flag <code class="language-plaintext highlighter-rouge">use_async</code> that
+can be passed into methods which scan a dataset.  Setting this flag to True
+will have significant improvements on filesystems with high latency or parallel
+reads (e.g. S3).</p>
+
+<p>A CountRows method has been added to count rows matching a predicate; where
+possible, this will use metadata in files instead of reading the data itself.</p>
+
+<p>CSV datasets can now be written, and when reading a CSV dataset, explicit types can
+now be specified for a subset of columns while allowing the rest to still be inferred.</p>
+
+<h3 id="io-and-filesystem-layer">IO and Filesystem layer</h3>
+
+<p>The I/O thread pool size can now be adjusted at runtime (ARROW-12760).
+The default size remains 8 threads.</p>
+
+<p>Streams now can have auxiliary metadata, depending on the backend.  This
+has been implemented for the S3 filesystems, where a couple metadata
+keys are supported such as <code class="language-plaintext highlighter-rouge">Content-Type</code> and <code class="language-plaintext highlighter-rouge">ACL</code> (ARROW-11161, ARROW-12719).</p>
+
+<p>The HadoopFileSystem implementation now implements the FileSystem abstraction
+more faithfully (ARROW-12790).</p>
+
+<h3 id="parquet">Parquet</h3>
+
+<p>The new LZ4_RAW compression scheme was implemented (PARQUET-1998).
+Unlike the legacy LZ4 compression scheme, it is defined unambiguously
+and should provide better portability once other Parquet implementations
+catch up.</p>
+
+<h2 id="go-notes">Go notes</h2>
+
+<h3 id="flight">Flight</h3>
+
+<ul>
+  <li>Flight Client and Server now support Custom Metadata through the functions <code class="language-plaintext highlighter-rouge">flight.NewClientWithMiddleware</code> and <code class="language-plaintext highlighter-rouge">flight.NewServerWithMiddleware</code>. Functions
+<code class="language-plaintext highlighter-rouge">flight.NewFlightClient</code>, <code class="language-plaintext highlighter-rouge">flight.NewFlightServer</code>, <code class="language-plaintext highlighter-rouge">flight.CreateServerBearerTokenAuthInterceptors</code> have been deprecated in favor of using the new middleware. <a href="https://github.com/apache/arrow/pull/10633">#10633</a></li>
+  <li>Flight Client <code class="language-plaintext highlighter-rouge">AuthHandler</code> no longer overwrites outgoing metadata, correctly appending new metadata without overwriting existing metadata <a href="https://github.com/apache/arrow/pull/10297">#10297</a></li>
+  <li>Flight AppMetadata field is now exposed both for Reading and Writing via <code class="language-plaintext highlighter-rouge">flight.Reader#LatestAppMetadata()</code> and <code class="language-plaintext highlighter-rouge">flight.Writer#WriteWithAppMetadata</code> functions <a href="https://github.com/apache/arrow/pull/10142">#10142</a></li>
+</ul>
+
+<h3 id="other-enhancements">Other enhancements</h3>
+
+<ul>
+  <li><a href="https://github.com/apache/arrow/pull/10106">Map</a> and <a href="https://github.com/apache/arrow/pull/10203">Extension</a> Datatypes are now implemented for Arrow Arrays</li>
+  <li><a href="https://github.com/apache/arrow/10071">Schema package</a> and first part of <a href="https://github.com/apache/arrow/10379">Encoding package</a> added for Golang Parquet Implementation</li>
+</ul>
+
+<h2 id="java-notes">Java notes</h2>
+
+<p>Highlighted improvements and fixes:</p>
+
+<ul>
+  <li>Improved support for extension types using a complex storage type, e.g. struct, map or union. These can now extend
+the <code class="language-plaintext highlighter-rouge">ExtensionTypeVector</code> base class.</li>
+  <li>Union vectors now extend <code class="language-plaintext highlighter-rouge">AbstractContainerVector</code> to be consistent with other vectors.</li>
+  <li>Guava dependency updated to 30.1.1</li>
+  <li>Memory leak fixed if an exception occurs when reading IPC messages from a channel. <a href="https://github.com/apache/arrow/pull/10423">#10423</a></li>
+  <li>Flight error metadata is now propagated to the client. <a href="https://github.com/apache/arrow/pull/10370">#10370</a></li>
+  <li>JDBC adapter now preserves nullability. <a href="https://github.com/apache/arrow/pull/10285">#10285</a></li>
+  <li>The memory rounding policy is respected when allocating vector buffers. This helps saving memory space. <a href="https://github.com/apache/arrow/pull/10576">#10576</a></li>
+</ul>
+
+<p>API compatibility changes:</p>
+
+<ul>
+  <li>Complex vectors now return covariant types from <code class="language-plaintext highlighter-rouge">getObject(int)</code>. <a href="https://github.com/apache/arrow/pull/9964">#9964</a></li>
+</ul>
+
+<h2 id="javascript-notes">JavaScript notes</h2>
+
+<ul>
+  <li>Tables do not extend DataFrames anymore. This enables smaller bundles. <a href="https://github.com/apache/arrow/pull/10277">#10277</a></li>
+  <li>Arrow uses closure compiler for all UMD bundles, making them smaller. <a href="https://github.com/apache/arrow/pull/10281">#10281</a></li>
+  <li>The npm package now comes with declaration maps for better navigation from types to source code. <a href="https://github.com/apache/arrow/pull/10673">#10673</a></li>
+  <li>Updated dependencies and improvements to the code.</li>
+</ul>
+
+<h2 id="python-notes">Python notes</h2>
+
+<ul>
+  <li>Datasets can now scan files asynchronously when the <code class="language-plaintext highlighter-rouge">use_async=True</code> option is provided to <code class="language-plaintext highlighter-rouge">Dataset.scanner</code>, <code class="language-plaintext highlighter-rouge">Dataset.to_table</code>, or <code class="language-plaintext highlighter-rouge">Dataset.to_batches</code> methods. This should provide better performance in environments where I/O can be slow, such as with remote sources.</li>
+  <li>Arrow now provides builtin support for writing CSV files through <code class="language-plaintext highlighter-rouge">pyarrow.csv.write_csv</code></li>
+  <li>Wheels for Apple M1 Macs are now provided.</li>
+  <li>Many new <code class="language-plaintext highlighter-rouge">pyarrow.compute</code> functions are available (see the C++ notes above
+for more details), and introspection of the functions was improved so that
+they look more like standard Python functions.</li>
+  <li>It is now possible to access ORC file metadata from Python <code class="language-plaintext highlighter-rouge">ORCFile</code> objects</li>
+  <li>Building a <code class="language-plaintext highlighter-rouge">StructArray</code> now accepts a <code class="language-plaintext highlighter-rouge">mask</code> like other arrays</li>
+  <li>Many updates and fixes for the documentation</li>
+</ul>
+
+<h2 id="r-notes">R notes</h2>
+
+<p>In this release, we’ve more than doubled the number of functions you can call on Arrow Datasets inside <code class="language-plaintext highlighter-rouge">dplyr::filter()</code>, <code class="language-plaintext highlighter-rouge">mutate()</code>, and <code class="language-plaintext highlighter-rouge">arrange()</code>, including many more string, datetime, and math functions. You can also write Datasets to CSV files, in addition to Parquet and Feather. We’ve also deepened support for the Arrow C interface, which is used in the Python interface and allows integration with other projects, such as DuckDB.</p>
+
+<p>For more on what’s in the 5.0.0 R package, see the <a href="/docs/r/news/">R changelog</a>.</p>
+
+<h2 id="ruby-and-c-glib-notes">Ruby and C GLib notes</h2>
+
+<p>Apache Arrow Flight support is started. But <code class="language-plaintext highlighter-rouge">ListFlights</code> is only supported for now. More features will be implemented in the next major release.</p>
+
+<h3 id="ruby">Ruby</h3>
+
+<p>You need gobject-introspection gem 3.4.5 or later to implement your Apache Arrow Flight server. If you only use Apache Arrow Flight client, gobject-introspection gem 3.4.5 or later isn’t required.</p>
+
+<p>Here are highlighted improvements:</p>
+
+<ul>
+  <li>
+    <p>Compute functions accept raw Ruby objects such as <code class="language-plaintext highlighter-rouge">true</code>, <code class="language-plaintext highlighter-rouge">Integer</code>, <code class="language-plaintext highlighter-rouge">Array</code> and <code class="language-plaintext highlighter-rouge">String</code>:</p>
+
+    <div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">add_function</span> <span class="o">=</span> <span class="no">Arrow</span><span class="o">::</span><span class="no">Function</span><span class="p">.</span><span class="nf">find</span><span class="p">(</span><span class="s2">"add"</span><span class="p">)</span>
+<span class="c1"># Not shortcut version</span>
+<span class="n">augend</span> <span class="o">=</span> <span class="no">Arrow</span><span class="o">::</span><span class="no">Int8Array</span><span class="p">.</span><span class="nf">new</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">addend</span> <span class="o">=</span> <span class="no">Arrow</span><span class="o">::</span><span class="no">Int8Scalar</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="no">Arrow</span><span class="o">::</span><span class="no">ArrayDatum</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="n">augend</span><span class="p">),</span>
+  <span class="no">Arrow</span><span class="o">::</span><span class="no">ScalarDatum</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="n">addend</span><span class="p">),</span>
+<span class="p">]</span>
+<span class="n">add_function</span><span class="p">.</span><span class="nf">execute</span><span class="p">(</span><span class="n">args</span><span class="p">).</span><span class="nf">value</span><span class="p">.</span><span class="nf">to_a</span> <span class="c1"># =&gt; [6, 7, 8]</span>
+<span class="c1"># Shortcut version</span>
+<span class="n">add_function</span><span class="p">.</span><span class="nf">execute</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="mi">5</span><span class="p">]).</span><span class="nf">value</span><span class="p">.</span><span class="nf">to_a</span> <span class="c1"># =&gt; [6, 7, 8]</span>
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><code class="language-plaintext highlighter-rouge">Arrow::PrimaryArray</code> and <code class="language-plaintext highlighter-rouge">Arrow::Buffer</code> can be used as MemoryView that is added in Ruby 3.0.</p>
+  </li>
+</ul>
+
+<p>There are some backward incompatible changes:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Arrow::CountOptions</code> and <code class="language-plaintext highlighter-rouge">Arrow::CountMode</code> are removed. Use <code class="language-plaintext highlighter-rouge">Arrow::ScalarAggregateOptions</code> instead.</li>
+</ul>
+
+<h3 id="c-glib">C GLib</h3>
+
+<p>There are some backward incompatible changes:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">GArrowCountOptions</code> and <code class="language-plaintext highlighter-rouge">GArrowCountMode</code> are removed. Use <code class="language-plaintext highlighter-rouge">GArrowScalarAggregateOptions</code> instead.</li>
+  <li><code class="language-plaintext highlighter-rouge">garrow_array_equal_range()</code> requires <code class="language-plaintext highlighter-rouge">GArrowEqualOptions</code>.</li>
+  <li>Prefix in arrow-dataset-glib is changed to <code class="language-plaintext highlighter-rouge">gadataset_</code>/<code class="language-plaintext highlighter-rouge">GADATASET_</code> from <code class="language-plaintext highlighter-rouge">gad_</code>/<code class="language-plaintext highlighter-rouge">GAD_</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">GADScanOptions</code>, <code class="language-plaintext highlighter-rouge">GADScanTask</code>  and <code class="language-plaintext highlighter-rouge">GADInMemoryScanTask</code> are removed. Use <code class="language-plaintext highlighter-rouge">gadataset_begin_scan()</code> or <code class="language-plaintext highlighter-rouge">gadataset_to_table()</code> instead.</li>
+  <li><code class="language-plaintext highlighter-rouge">GArrowCompareOptions</code>, <code class="language-plaintext highlighter-rouge">GArrowCompareOperator</code> and <code class="language-plaintext highlighter-rouge">garrow_*_array_compare()</code> are removed. Use <code class="language-plaintext highlighter-rouge">equal</code>, <code class="language-plaintext highlighter-rouge">not_equal</code>, <code class="language-plaintext highlighter-rouge">less_than</code>, <code class="language-plaintext highlighter-rouge">less_than_equal</code>, <code class="language-plaintext highlighter-rouge">greater_than</code> and <code class="language-plaintext highlighter-rouge">greater_than_equal</code> compute functions directly instead.</li>
+</ul>
+
+<h2 id="rust-notes">Rust notes</h2>
+
+<p>The Rust projects have moved to separate repositories outside the
+main Arrow monorepo. For notes on the 5.0.0 release of the Rust
+implementation, see the <a href="https://github.com/apache/arrow-rs/blob/5.0.0/CHANGELOG.md">Arrow Rust changelog</a> and the
+<a href="/blog/2021/07/29/5.0.0-rs-release/">Apache Arrow Rust 5.0.0 Release blog post</a>.</p>
+
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2021 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
