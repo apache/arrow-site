@@ -1,0 +1,682 @@
+
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Streaming, Serialization, and IPC &mdash; Apache Arrow v2.0.0</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Filesystem Interface" href="filesystems.html" />
+    <link rel="prev" title="Compute Functions" href="compute.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> Apache Arrow
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Specifications and Protocols</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../format/Versioning.html">Format Versioning and Stability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Columnar.html">Arrow Columnar Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Flight.html">Arrow Flight RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Integration.html">Integration Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/CDataInterface.html">The Arrow C data interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/CStreamInterface.html">The Arrow C stream interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../format/Other.html">Other Data Structures</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Libraries</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../status.html">Implementation Status</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/c_glib/">C/GLib</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cpp/index.html">C++</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../java/index.html">Java</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/js/">JavaScript</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="install.html">Installing PyArrow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory.html">Memory and IO Interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data Types and In-Memory Data Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="compute.html">Compute Functions</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Streaming, Serialization, and IPC</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#writing-and-reading-streams">Writing and Reading Streams</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#using-streams">Using streams</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#writing-and-reading-random-access-files">Writing and Reading Random Access Files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#reading-from-stream-and-file-format-for-pandas">Reading from Stream and File Format for pandas</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#arbitrary-object-serialization">Arbitrary Object Serialization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#serializing-custom-data-types">Serializing Custom Data Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#component-based-serialization">Component-based Serialization</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#serializing-pandas-objects">Serializing pandas Objects</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="filesystems.html">Filesystem Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filesystems_deprecated.html">Filesystem Interface (legacy)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plasma.html">The Plasma In-Memory Object Store</a></li>
+<li class="toctree-l2"><a class="reference internal" href="numpy.html">NumPy Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pandas.html">Pandas Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="timestamps.html">Timestamps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="csv.html">Reading CSV files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="feather.html">Feather File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="json.html">Reading JSON files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parquet.html">Reading and Writing the Apache Parquet Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataset.html">Tabular Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cuda.html">CUDA Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending_types.html">Extending pyarrow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending.html">Using pyarrow from C++ and Cython Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_involved.html">Getting Involved</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/docs/r/">R</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/crate/arrow/">Rust</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../developers/contributing.html">Contributing to Apache Arrow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/cpp/index.html">C++ Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/python.html">Python Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/archery.html">Daily Development using Archery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/crossbow.html">Packaging and Testing with Crossbow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/docker.html">Running Docker Builds</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/benchmarks.html">Benchmarks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/documentation.html">Building the Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Apache Arrow</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">Python bindings</a> &raquo;</li>
+        
+      <li>Streaming, Serialization, and IPC</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/python/ipc.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="streaming-serialization-and-ipc">
+<span id="ipc"></span><h1>Streaming, Serialization, and IPC<a class="headerlink" href="#streaming-serialization-and-ipc" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="writing-and-reading-streams">
+<h2>Writing and Reading Streams<a class="headerlink" href="#writing-and-reading-streams" title="Permalink to this headline">¶</a></h2>
+<p>Arrow defines two types of binary formats for serializing record batches:</p>
+<ul class="simple">
+<li><p><strong>Streaming format</strong>: for sending an arbitrary length sequence of record
+batches. The format must be processed from start to end, and does not support
+random access</p></li>
+<li><p><strong>File or Random Access format</strong>: for serializing a fixed number of record
+batches. Supports random access, and thus is very useful when used with
+memory maps</p></li>
+</ul>
+<p>To follow this section, make sure to first read the section on <a class="reference internal" href="memory.html#io"><span class="std std-ref">Memory and
+IO</span></a>.</p>
+<div class="section" id="using-streams">
+<h3>Using streams<a class="headerlink" href="#using-streams" title="Permalink to this headline">¶</a></h3>
+<p>First, let’s create a small record batch:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [1]: </span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="kn">as</span> <span class="nn">pa</span>
+
+<span class="gp">In [2]: </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">   ...: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]),</span>
+<span class="gp">   ...: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="s1">&#39;baz&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">]),</span>
+<span class="gp">   ...: </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">True</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">])</span>
+<span class="gp">   ...: </span><span class="p">]</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [3]: </span><span class="n">batch</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">record_batch</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;f0&#39;</span><span class="p">,</span> <span class="s1">&#39;f1&#39;</span><span class="p">,</span> <span class="s1">&#39;f2&#39;</span><span class="p">])</span>
+
+<span class="gp">In [4]: </span><span class="n">batch</span><span class="o">.</span><span class="n">num_rows</span>
+<span class="gh">Out[4]: </span><span class="go">4</span>
+
+<span class="gp">In [5]: </span><span class="n">batch</span><span class="o">.</span><span class="n">num_columns</span>
+<span class="gh">Out[5]: </span><span class="go">3</span>
+</pre></div>
+</div>
+<p>Now, we can begin writing a stream containing some number of these batches. For
+this we use <code class="xref py py-class docutils literal notranslate"><span class="pre">RecordBatchStreamWriter</span></code>, which can write to a
+writeable <code class="docutils literal notranslate"><span class="pre">NativeFile</span></code> object or a writeable Python object. For convenience,
+this one can be created with <a class="reference internal" href="generated/pyarrow.ipc.new_stream.html#pyarrow.ipc.new_stream" title="pyarrow.ipc.new_stream"><code class="xref py py-func docutils literal notranslate"><span class="pre">new_stream()</span></code></a>:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [6]: </span><span class="n">sink</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">BufferOutputStream</span><span class="p">()</span>
+
+<span class="gp">In [7]: </span><span class="n">writer</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ipc</span><span class="o">.</span><span class="n">new_stream</span><span class="p">(</span><span class="n">sink</span><span class="p">,</span> <span class="n">batch</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here we used an in-memory Arrow buffer stream, but this could have been a
+socket or some other IO sink.</p>
+<p>When creating the <code class="docutils literal notranslate"><span class="pre">StreamWriter</span></code>, we pass the schema, since the schema
+(column names and types) must be the same for all of the batches sent in this
+particular stream. Now we can do:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [8]: </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+<span class="gp">   ...: </span>   <span class="n">writer</span><span class="o">.</span><span class="n">write_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+<span class="gp">   ...: </span>
+
+<span class="gp">In [9]: </span><span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="gp">In [10]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">sink</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+
+<span class="gp">In [11]: </span><span class="n">buf</span><span class="o">.</span><span class="n">size</span>
+<span class="gh">Out[11]: </span><span class="go">1984</span>
+</pre></div>
+</div>
+<p>Now <code class="docutils literal notranslate"><span class="pre">buf</span></code> contains the complete stream as an in-memory byte buffer. We can
+read such a stream with <code class="xref py py-class docutils literal notranslate"><span class="pre">RecordBatchStreamReader</span></code> or the
+convenience function <code class="docutils literal notranslate"><span class="pre">pyarrow.ipc.open_stream</span></code>:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [12]: </span><span class="n">reader</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ipc</span><span class="o">.</span><span class="n">open_stream</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+
+<span class="gp">In [13]: </span><span class="n">reader</span><span class="o">.</span><span class="n">schema</span>
+<span class="gh">Out[13]: </span><span class="go"></span>
+<span class="go">f0: int64</span>
+<span class="go">f1: string</span>
+<span class="go">f2: bool</span>
+
+<span class="gp">In [14]: </span><span class="n">batches</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">]</span>
+
+<span class="gp">In [15]: </span><span class="nb">len</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span>
+<span class="gh">Out[15]: </span><span class="go">5</span>
+</pre></div>
+</div>
+<p>We can check the returned batches are the same as the original input:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [16]: </span><span class="n">batches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+<span class="gh">Out[16]: </span><span class="go">True</span>
+</pre></div>
+</div>
+<p>An important point is that if the input source supports zero-copy reads
+(e.g. like a memory map, or <code class="docutils literal notranslate"><span class="pre">pyarrow.BufferReader</span></code>), then the returned
+batches are also zero-copy and do not allocate any new memory on read.</p>
+</div>
+<div class="section" id="writing-and-reading-random-access-files">
+<h3>Writing and Reading Random Access Files<a class="headerlink" href="#writing-and-reading-random-access-files" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">RecordBatchFileWriter</span></code> has the same API as
+<code class="xref py py-class docutils literal notranslate"><span class="pre">RecordBatchStreamWriter</span></code>. You can create one with
+<a class="reference internal" href="generated/pyarrow.ipc.new_file.html#pyarrow.ipc.new_file" title="pyarrow.ipc.new_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">new_file()</span></code></a>:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [17]: </span><span class="n">sink</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">BufferOutputStream</span><span class="p">()</span>
+
+<span class="gp">In [18]: </span><span class="n">writer</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ipc</span><span class="o">.</span><span class="n">new_file</span><span class="p">(</span><span class="n">sink</span><span class="p">,</span> <span class="n">batch</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
+
+<span class="gp">In [19]: </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+<span class="gp">   ....: </span>   <span class="n">writer</span><span class="o">.</span><span class="n">write_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+<span class="gp">   ....: </span>
+
+<span class="gp">In [20]: </span><span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="gp">In [21]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">sink</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+
+<span class="gp">In [22]: </span><span class="n">buf</span><span class="o">.</span><span class="n">size</span>
+<span class="gh">Out[22]: </span><span class="go">4226</span>
+</pre></div>
+</div>
+<p>The difference between <code class="xref py py-class docutils literal notranslate"><span class="pre">RecordBatchFileReader</span></code> and
+<code class="xref py py-class docutils literal notranslate"><span class="pre">RecordBatchStreamReader</span></code> is that the input source must have a
+<code class="docutils literal notranslate"><span class="pre">seek</span></code> method for random access. The stream reader only requires read
+operations. We can also use the <a class="reference internal" href="generated/pyarrow.ipc.open_file.html#pyarrow.ipc.open_file" title="pyarrow.ipc.open_file"><code class="xref py py-func docutils literal notranslate"><span class="pre">open_file()</span></code></a> method to open a file:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [23]: </span><span class="n">reader</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ipc</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Because we have access to the entire payload, we know the number of record
+batches in the file, and can read any at random:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [24]: </span><span class="n">reader</span><span class="o">.</span><span class="n">num_record_batches</span>
+<span class="gh">Out[24]: </span><span class="go">10</span>
+
+<span class="gp">In [25]: </span><span class="n">b</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">get_batch</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="gp">In [26]: </span><span class="n">b</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+<span class="gh">Out[26]: </span><span class="go">True</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reading-from-stream-and-file-format-for-pandas">
+<h3>Reading from Stream and File Format for pandas<a class="headerlink" href="#reading-from-stream-and-file-format-for-pandas" title="Permalink to this headline">¶</a></h3>
+<p>The stream and file reader classes have a special <code class="docutils literal notranslate"><span class="pre">read_pandas</span></code> method to
+simplify reading multiple record batches and converting them to a single
+DataFrame output:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [27]: </span><span class="n">df</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ipc</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="o">.</span><span class="n">read_pandas</span><span class="p">()</span>
+
+<span class="gp">In [28]: </span><span class="n">df</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
+<span class="gh">Out[28]: </span><span class="go"></span>
+<span class="go">   f0    f1     f2</span>
+<span class="go">0   1   foo   True</span>
+<span class="go">1   2   bar   None</span>
+<span class="go">2   3   baz  False</span>
+<span class="go">3   4  None   True</span>
+<span class="go">4   1   foo   True</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="arbitrary-object-serialization">
+<h2>Arbitrary Object Serialization<a class="headerlink" href="#arbitrary-object-serialization" title="Permalink to this headline">¶</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The custom serialization functionality is deprecated in pyarrow 2.0, and
+will be removed in a future version.</p>
+<p>While the serialization functions in this section utilize the Arrow stream
+protocol internally, they do not produce data that is compatible with the
+above <code class="docutils literal notranslate"><span class="pre">ipc.open_file</span></code> and <code class="docutils literal notranslate"><span class="pre">ipc.open_stream</span></code> functions.</p>
+<p>For arbitrary objects, you can use the standard library <code class="docutils literal notranslate"><span class="pre">pickle</span></code>
+functionality instead. For pyarrow objects, you can use the IPC
+serialization format through the <code class="docutils literal notranslate"><span class="pre">pyarrow.ipc</span></code> module, as explained
+above.</p>
+</div>
+<p>In <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> we are able to serialize and deserialize many kinds of Python
+objects. While not a complete replacement for the <code class="docutils literal notranslate"><span class="pre">pickle</span></code> module, these
+functions can be significantly faster, particular when dealing with collections
+of NumPy arrays.</p>
+<p>As an example, consider a dictionary containing NumPy arrays:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [29]: </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="gp">In [30]: </span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+<span class="gp">   ....: </span>    <span class="n">i</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+<span class="gp">   ....: </span>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+<span class="gp">   ....: </span><span class="p">}</span>
+<span class="gp">   ....: </span>
+</pre></div>
+</div>
+<p>We use the <code class="docutils literal notranslate"><span class="pre">pyarrow.serialize</span></code> function to convert this data to a byte
+buffer:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [31]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
+
+<span class="gp">In [32]: </span><span class="nb">type</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+<span class="gh">Out[32]: </span><span class="go">pyarrow.lib.Buffer</span>
+
+<span class="gp">In [33]: </span><span class="n">buf</span><span class="o">.</span><span class="n">size</span>
+<span class="gh">Out[33]: </span><span class="go">200028928</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">pyarrow.serialize</span></code> creates an intermediate object which can be converted to
+a buffer (the <code class="docutils literal notranslate"><span class="pre">to_buffer</span></code> method) or written directly to an output stream.</p>
+<p><code class="docutils literal notranslate"><span class="pre">pyarrow.deserialize</span></code> converts a buffer-like object back to the original
+Python object:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [34]: </span><span class="n">restored_data</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+
+<span class="gp">In [35]: </span><span class="n">restored_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gh">Out[35]: </span><span class="go"></span>
+<span class="go">array([[ 0.88051977,  0.55272191,  0.10212234, ..., -2.28750868,</span>
+<span class="go">         0.87506778,  0.41497569],</span>
+<span class="go">       [-0.06914791,  1.2891059 , -0.20746828, ..., -0.05183324,</span>
+<span class="go">         0.02896555,  0.11629995],</span>
+<span class="go">       [-0.13707509, -1.03307268, -1.73108249, ..., -0.29438554,</span>
+<span class="go">        -1.31643833,  0.46146448],</span>
+<span class="go">       ...,</span>
+<span class="go">       [ 0.35610601,  0.91661909, -0.44280949, ...,  0.53764271,</span>
+<span class="go">         0.86447821, -0.4745175 ],</span>
+<span class="go">       [-0.08632221, -0.4628601 ,  0.13151095, ..., -1.88586565,</span>
+<span class="go">         0.08840339, -0.86300602],</span>
+<span class="go">       [ 0.09983648, -0.32873005, -0.03006915, ..., -1.23231303,</span>
+<span class="go">         0.70042352,  0.52386661]])</span>
+</pre></div>
+</div>
+<p>When dealing with NumPy arrays, <code class="docutils literal notranslate"><span class="pre">pyarrow.deserialize</span></code> can be significantly
+faster than <code class="docutils literal notranslate"><span class="pre">pickle</span></code> because the resulting arrays are zero-copy references
+into the input buffer. The larger the arrays, the larger the performance
+savings.</p>
+<p>Consider this example, we have for <code class="docutils literal notranslate"><span class="pre">pyarrow.deserialize</span></code></p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [36]: </span><span class="o">%</span><span class="k">timeit</span> restored_data = pa.deserialize(buf)
+<span class="go">8.01 ms +- 12.6 us per loop (mean +- std. dev. of 7 runs, 100 loops each)</span>
+</pre></div>
+</div>
+<p>And for pickle:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [37]: </span><span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="gp">In [38]: </span><span class="n">pickled</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+<span class="gp">In [39]: </span><span class="o">%</span><span class="k">timeit</span> unpickled_data = pickle.loads(pickled)
+<span class="go">77.7 ms +- 111 us per loop (mean +- std. dev. of 7 runs, 10 loops each)</span>
+</pre></div>
+</div>
+<p>We aspire to make these functions a high-speed alternative to pickle for
+transient serialization in Python big data applications.</p>
+<div class="section" id="serializing-custom-data-types">
+<h3>Serializing Custom Data Types<a class="headerlink" href="#serializing-custom-data-types" title="Permalink to this headline">¶</a></h3>
+<p>If an unrecognized data type is encountered when serializing an object,
+<code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> will fall back on using <code class="docutils literal notranslate"><span class="pre">pickle</span></code> for converting that type to a
+byte string. There may be a more efficient way, though.</p>
+<p>Consider a class with two members, one of which is a NumPy array:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyData</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+</pre></div>
+</div>
+<p>We write functions to convert this to and from a dictionary with simpler types:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_serialize_MyData</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">val</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+
+<span class="k">def</span> <span class="nf">_deserialize_MyData</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">MyData</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>then, we must register these functions in a <code class="docutils literal notranslate"><span class="pre">SerializationContext</span></code> so that
+<code class="docutils literal notranslate"><span class="pre">MyData</span></code> can be recognized:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">context</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">SerializationContext</span><span class="p">()</span>
+<span class="n">context</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span><span class="n">MyData</span><span class="p">,</span> <span class="s1">&#39;MyData&#39;</span><span class="p">,</span>
+                      <span class="n">custom_serializer</span><span class="o">=</span><span class="n">_serialize_MyData</span><span class="p">,</span>
+                      <span class="n">custom_deserializer</span><span class="o">=</span><span class="n">_deserialize_MyData</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Lastly, we use this context as an additional argument to <code class="docutils literal notranslate"><span class="pre">pyarrow.serialize</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">buf</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
+<span class="n">restored_val</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">SerializationContext</span></code> also has convenience methods <code class="docutils literal notranslate"><span class="pre">serialize</span></code> and
+<code class="docutils literal notranslate"><span class="pre">deserialize</span></code>, so these are equivalent statements:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">buf</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
+<span class="n">restored_val</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="component-based-serialization">
+<h3>Component-based Serialization<a class="headerlink" href="#component-based-serialization" title="Permalink to this headline">¶</a></h3>
+<p>For serializing Python objects containing some number of NumPy arrays, Arrow
+buffers, or other data types, it may be desirable to transport their serialized
+representation without having to produce an intermediate copy using the
+<code class="docutils literal notranslate"><span class="pre">to_buffer</span></code> method. To motivate this, suppose we have a list of NumPy arrays:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [40]: </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="gp">In [41]: </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>The call <code class="docutils literal notranslate"><span class="pre">pa.serialize(data)</span></code> does not copy the memory inside each of these
+NumPy arrays. This serialized representation can be then decomposed into a
+dictionary containing a sequence of <code class="docutils literal notranslate"><span class="pre">pyarrow.Buffer</span></code> objects containing
+metadata for each array and references to the memory inside the arrays. To do
+this, use the <code class="docutils literal notranslate"><span class="pre">to_components</span></code> method:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [42]: </span><span class="n">serialized</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+<span class="gp">In [43]: </span><span class="n">components</span> <span class="o">=</span> <span class="n">serialized</span><span class="o">.</span><span class="n">to_components</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The particular details of the output of <code class="docutils literal notranslate"><span class="pre">to_components</span></code> are not too
+important. The objects in the <code class="docutils literal notranslate"><span class="pre">'data'</span></code> field are <code class="docutils literal notranslate"><span class="pre">pyarrow.Buffer</span></code> objects,
+which are zero-copy convertible to Python <code class="docutils literal notranslate"><span class="pre">memoryview</span></code> objects:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [44]: </span><span class="n">memoryview</span><span class="p">(</span><span class="n">components</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+<span class="gh">Out[44]: </span><span class="go">&lt;memory at 0x7fea7e36f588&gt;</span>
+</pre></div>
+</div>
+<p>A memoryview can be converted back to a Arrow <code class="docutils literal notranslate"><span class="pre">Buffer</span></code> with
+<code class="docutils literal notranslate"><span class="pre">pyarrow.py_buffer</span></code>:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [45]: </span><span class="n">mv</span> <span class="o">=</span> <span class="n">memoryview</span><span class="p">(</span><span class="n">components</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="gp">In [46]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">py_buffer</span><span class="p">(</span><span class="n">mv</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>An object can be reconstructed from its component-based representation using
+<code class="docutils literal notranslate"><span class="pre">deserialize_components</span></code>:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [47]: </span><span class="n">restored_data</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">deserialize_components</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
+
+<span class="gp">In [48]: </span><span class="n">restored_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gh">Out[48]: </span><span class="go"></span>
+<span class="go">array([[-9.14759119e-01,  8.22531216e-01,  6.19196497e-01,</span>
+<span class="go">         3.36062879e-01, -8.63270232e-01,  1.87095556e-04,</span>
+<span class="go">         1.33073320e+00, -2.55078762e-01,  4.26005337e-01,</span>
+<span class="go">         9.79837876e-01],</span>
+<span class="go">       [-3.72272916e-01,  9.44288936e-01,  1.44571184e+00,</span>
+<span class="go">        -6.81179373e-01, -1.13526919e+00, -1.71378417e+00,</span>
+<span class="go">         8.77443673e-02, -6.63330214e-01,  4.34648788e-01,</span>
+<span class="go">        -5.33136112e-03],</span>
+<span class="go">       [ 4.93206954e-01,  1.57363757e+00,  4.80429045e-01,</span>
+<span class="go">         7.99543226e-01, -1.34740056e+00,  1.73131392e-01,</span>
+<span class="go">         4.08318436e-01, -9.83264701e-01, -5.15108592e-01,</span>
+<span class="go">        -2.51421849e-01],</span>
+<span class="go">       [-2.27694036e-01, -1.31966996e-01, -1.97169052e+00,</span>
+<span class="go">         1.28018067e+00, -2.17894070e-01,  3.68075751e-01,</span>
+<span class="go">         2.47569038e-01, -7.47686355e-01,  1.56570559e+00,</span>
+<span class="go">        -9.30169292e-01],</span>
+<span class="go">       [-1.16160547e+00, -1.60687452e-01, -1.19222093e+00,</span>
+<span class="go">         1.03886084e+00, -6.47160975e-01,  4.44812911e-01,</span>
+<span class="go">         1.83531467e-01, -1.56010330e+00, -1.78361302e+00,</span>
+<span class="go">         1.56711887e+00],</span>
+<span class="go">       [ 8.29678638e-01, -2.76625345e-01, -1.39475599e+00,</span>
+<span class="go">        -1.11105425e+00,  5.36469600e-01, -3.58585224e-01,</span>
+<span class="go">         6.24194328e-01,  2.84876128e+00, -1.25507586e+00,</span>
+<span class="go">         1.08762231e+00],</span>
+<span class="go">       [-4.08995903e-01,  3.15652298e-01,  6.87224280e-01,</span>
+<span class="go">         9.14969610e-01,  9.28179123e-01,  4.70771248e-01,</span>
+<span class="go">        -2.30528020e+00, -8.13865317e-01, -9.37075336e-01,</span>
+<span class="go">         1.48284172e-01],</span>
+<span class="go">       [-4.24746822e-01, -4.84351539e-01, -1.48274864e+00,</span>
+<span class="go">        -7.33787574e-01, -1.07289210e+00,  8.26679927e-01,</span>
+<span class="go">        -1.35221475e+00, -2.16847620e-01,  1.01496159e+00,</span>
+<span class="go">         1.53277643e+00],</span>
+<span class="go">       [ 2.72949922e-01, -2.35721987e+00,  9.45241513e-01,</span>
+<span class="go">        -3.44553200e-01, -1.21805043e+00,  3.43965292e+00,</span>
+<span class="go">        -1.23515448e+00,  6.00958345e-02,  1.00742869e+00,</span>
+<span class="go">         1.21356132e+00],</span>
+<span class="go">       [ 5.71791844e-01,  1.41221910e+00, -1.81831150e+00,</span>
+<span class="go">         5.67694490e-01, -4.91102046e-01,  9.75450988e-01,</span>
+<span class="go">         1.54468233e+00, -9.00342339e-01,  1.72797085e-01,</span>
+<span class="go">         9.22262251e-01]])</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">deserialize_components</span></code> is also available as a method on
+<code class="docutils literal notranslate"><span class="pre">SerializationContext</span></code> objects.</p>
+</div>
+<div class="section" id="serializing-pandas-objects">
+<h3>Serializing pandas Objects<a class="headerlink" href="#serializing-pandas-objects" title="Permalink to this headline">¶</a></h3>
+<p>The default serialization context has optimized handling of pandas
+objects like <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> and <code class="docutils literal notranslate"><span class="pre">Series</span></code>. Combined with component-based
+serialization above, this enables zero-copy transport of pandas DataFrame
+objects not containing any Python objects:</p>
+<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [49]: </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+
+<span class="gp">In [50]: </span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]})</span>
+
+<span class="gp">In [51]: </span><span class="n">context</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">default_serialization_context</span><span class="p">()</span>
+
+<span class="gp">In [52]: </span><span class="n">serialized_df</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+<span class="gp">In [53]: </span><span class="n">df_components</span> <span class="o">=</span> <span class="n">serialized_df</span><span class="o">.</span><span class="n">to_components</span><span class="p">()</span>
+
+<span class="gp">In [54]: </span><span class="n">original_df</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">deserialize_components</span><span class="p">(</span><span class="n">df_components</span><span class="p">)</span>
+
+<span class="gp">In [55]: </span><span class="n">original_df</span>
+<span class="gh">Out[55]: </span><span class="go"></span>
+<span class="go">   a</span>
+<span class="go">0  1</span>
+<span class="go">1  2</span>
+<span class="go">2  3</span>
+<span class="go">3  4</span>
+<span class="go">4  5</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="filesystems.html" class="btn btn-neutral float-right" title="Filesystem Interface" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="compute.html" class="btn btn-neutral float-left" title="Compute Functions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2016-2019 Apache Software Foundation
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
+
+</body>
+</html>
