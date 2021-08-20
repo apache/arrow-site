@@ -69,7 +69,7 @@ $ git log --pretty=oneline 4.0.0..5.0.0 datafusion datafusion-cli datafusion-exa
 
 The release notes below are not exhaustive and only expose selected highlights of the release. Many other bug fixes 
 and improvements have been made: we refer you to the complete 
-[changelog](https://github.com/apache/arrow-datafusion/blob/master/datafusion/CHANGELOG.md).
+[changelog](https://github.com/apache/arrow-datafusion/blob/5.0.0/datafusion/CHANGELOG.md).
 
 # Performance
 
