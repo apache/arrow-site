@@ -105,3 +105,10 @@ We also extended support for more TPC-H queries: q7, q8, q9 and q13 are running 
 - Re-exported arrow and parquet crates in Datafusion
 - General row group pruning logic that’s agnostic to storage format
 
+# How to Get Involved
+
+If you are interested in contributing to DataFusion, we would love to have you! You 
+can help by trying out DataFusion on some of your own data and projects and filing bug reports and helping to 
+improve the documentation, or contribute to the documentation, tests or code. A list of open issues suitable for 
+beginners is [here](https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) 
+and the full list is [here](https://github.com/apache/arrow-datafusion/issues).
