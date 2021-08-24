@@ -23,7 +23,11 @@ webpacked_js = "javascript/main.js"
 installed_package_lock_json = "node_modules/.package-lock.json"
 
 file installed_package_lock_json => ["package.json", "package-lock.json"] do
-  sh("npm", "install", "--no-save")
+  if production?
+    sh("npm", "ci")
+  else
+    sh("npm", "install", "--no-save")
+  end
 end
 
 file webpacked_js => ["_webpack/main.js", installed_package_lock_json] do
