@@ -104,6 +104,7 @@ short description of your use case.
   visualizations and/or further analytics.
 * **[GOAI][19]:** Open GPU-Accelerated Analytics Initiative for Arrow-powered
   analytics across GPU tools and vendors
+* **[graphique][41]** GraphQL service for arrow tables and parquet data sets. The schema for a query API is derived automatically.
 * **[Graphistry][18]:** Supercharged Visual Investigation Platform used by
   teams for security, anti-fraud, and related investigations. The Graphistry
   team uses Arrow in its NodeJS GPU backend and client libraries, and is an
@@ -219,3 +220,4 @@ short description of your use case.
 [38]: https://github.com/vaexio/vaex
 [39]: https://hash.ai
 [40]: https://github.com/pola-rs/polars
+[41]: https://github.com/coady/graphique
