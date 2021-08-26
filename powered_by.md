@@ -120,7 +120,7 @@ short description of your use case.
   accessed from the FPGAs with a single DMA operation by implementing a shared
   memory communication schema.
 * **[InfluxDB IOx][42]:**InfluxDB IOx is an open source time series database
-  written in Rust.  which aims to be the future core of InfluxDB; supporting
+  written in Rust.  It is the future core of InfluxDB; supporting
   industry standard SQL, InfluxQL, and Flux. IOx uses Apache Arrow as its in-memory
   format, Apache Parquet as its persistence format and Apache Arrow Flight for RPC.
 * **[libgdf][14]:** A C library of CUDA-based analytics functions and GPU IPC
