@@ -119,6 +119,10 @@ short description of your use case.
   serve as input for our implemented ML algorithms. Those dataframes can be
   accessed from the FPGAs with a single DMA operation by implementing a shared
   memory communication schema.
+* **[InfluxDB IOx][42]:**InfluxDB IOx is an open source time series database
+  written in Rust.  It is the future core of InfluxDB; supporting
+  industry standard SQL, InfluxQL, and Flux. IOx uses Apache Arrow as its in-memory
+  format, Apache Parquet as its persistence format and Apache Arrow Flight for RPC.
 * **[libgdf][14]:** A C library of CUDA-based analytics functions and GPU IPC
   support for structured data. Uses the Arrow IPC format and targets the Arrow
   memory layout in its analytic functions. This work is part of the [GPU Open
@@ -221,3 +225,4 @@ short description of your use case.
 [39]: https://hash.ai
 [40]: https://github.com/pola-rs/polars
 [41]: https://github.com/coady/graphique
+[42]: https://github.com/influxdata/influxdb_iox
