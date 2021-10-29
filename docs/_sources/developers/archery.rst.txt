@@ -28,11 +28,12 @@ Installation
 
 Archery requires Python 3.6 or later. It is recommended to install archery in
 *editable* mode with the ``-e`` flag to automatically update the installation
-when pulling the Arrow repository.
+when pulling the Arrow repository. After cloning the Arrow repository, from
+the top level directory install Archery by using the command
 
 .. code:: bash
 
-   pip install -e dev/archery
+   pip install -e dev/archery[all]
 
 Usage
 -----
@@ -57,10 +58,13 @@ You can inspect Archery usage by passing the ``--help`` flag:
    Commands:
      benchmark    Arrow benchmarking.
      build        Initialize an Arrow C++ build
+     crossbow     Schedule packaging tasks or nightly builds on CI services.
      docker       Interact with docker-compose based builds.
      integration  Execute protocol and Flight integration tests
+     linking      Quick and dirty utilities for checking library linkage.
      lint         Check Arrow source tree for errors
      numpydoc     Lint python docstring with NumpyDoc
+     release      Release releated commands.
      trigger-bot
 
 Archery exposes independent subcommands, each of which provides dedicated
@@ -81,4 +85,3 @@ help output, for example:
      images  List the available docker-compose images.
      push    Push the generated docker-compose image.
      run     Execute docker-compose builds.
-
