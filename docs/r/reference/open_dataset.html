@@ -88,7 +88,7 @@ Dataset, then use dplyr methods to query it." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">4.0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">6.0.0</span>
       </span>
     </div>
 
@@ -197,6 +197,7 @@ can accelerate queries that only touch some partitions (files). Call
   schema <span class='op'>=</span> <span class='cn'>NULL</span>,
   partitioning <span class='op'>=</span> <span class='fu'><a href='hive_partition.html'>hive_partition</a></span><span class='op'>(</span><span class='op'>)</span>,
   unify_schemas <span class='op'>=</span> <span class='cn'>NULL</span>,
+  format <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"parquet"</span>, <span class='st'>"arrow"</span>, <span class='st'>"ipc"</span>, <span class='st'>"feather"</span>, <span class='st'>"csv"</span>, <span class='st'>"tsv"</span>, <span class='st'>"text"</span><span class='op'>)</span>,
   <span class='va'>...</span>
 <span class='op'>)</span></pre>
 
@@ -255,6 +256,22 @@ should be few <code>Dataset</code>s in the list and their <code>Schema</code>s a
 memory).</p></td>
     </tr>
     <tr>
+      <th>format</th>
+      <td><p>A <a href='FileFormat.html'>FileFormat</a> object, or a string identifier of the format of
+the files in <code>x</code>. This argument is ignored when <code>sources</code> is a list of <code>Dataset</code> objects.
+Currently supported values:</p><ul>
+<li><p>"parquet"</p></li>
+<li><p>"ipc"/"arrow"/"feather", all aliases for each other; for Feather, note that
+only version 2 files are supported</p></li>
+<li><p>"csv"/"text", aliases for the same thing (because comma is the default
+delimiter for text files</p></li>
+<li><p>"tsv", equivalent to passing <code>format = "text", delimiter = "\t"</code></p></li>
+</ul>
+
+<p>Default is "parquet", unless a <code>delimiter</code> is also specified, in which case
+it is assumed to be "text".</p></td>
+    </tr>
+    <tr>
       <th>...</th>
       <td><p>additional arguments passed to <code><a href='dataset_factory.html'>dataset_factory()</a></code> when <code>sources</code>
 is a directory path/URI or vector of file paths/URIs, otherwise ignored.
@@ -271,6 +288,109 @@ or call <code><a href='Scanner.html'>$NewScan()</a></code> to construct a query 
 
     <div class='dont-index'><p><code><a href='../articles/dataset.html'>vignette("dataset", package = "arrow")</a></code></p></div>
 
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='co'># Set up directory for examples</span>
+<span class='va'>tf</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span><span class='op'>(</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/files2.html'>dir.create</a></span><span class='op'>(</span><span class='va'>tf</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/on.exit.html'>on.exit</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/unlink.html'>unlink</a></span><span class='op'>(</span><span class='va'>tf</span><span class='op'>)</span><span class='op'>)</span>
+
+<span class='va'>data</span> <span class='op'>&lt;-</span> <span class='fu'>dplyr</span><span class='fu'>::</span><span class='fu'><a href='https://dplyr.tidyverse.org/reference/group_by.html'>group_by</a></span><span class='op'>(</span><span class='va'>mtcars</span>, <span class='va'>cyl</span><span class='op'>)</span>
+<span class='fu'><a href='write_dataset.html'>write_dataset</a></span><span class='op'>(</span><span class='va'>data</span>, <span class='va'>tf</span><span class='op'>)</span>
+
+<span class='co'># You can specify a directory containing the files for your dataset and</span>
+<span class='co'># open_dataset will scan all files in your directory.</span>
+<span class='fu'>open_dataset</span><span class='op'>(</span><span class='va'>tf</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; FileSystemDataset with 3 Parquet files
+#&gt; mpg: double
+#&gt; disp: double
+#&gt; hp: double
+#&gt; drat: double
+#&gt; wt: double
+#&gt; qsec: double
+#&gt; vs: double
+#&gt; am: double
+#&gt; gear: double
+#&gt; carb: double
+#&gt; cyl: int32</div><div class='input'>
+<span class='co'># You can also supply a vector of paths</span>
+<span class='fu'>open_dataset</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/file.path.html'>file.path</a></span><span class='op'>(</span><span class='va'>tf</span>, <span class='st'>"cyl=4/part-0.parquet"</span><span class='op'>)</span>, <span class='fu'><a href='https://rdrr.io/r/base/file.path.html'>file.path</a></span><span class='op'>(</span><span class='va'>tf</span>, <span class='st'>"cyl=8/part-0.parquet"</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; FileSystemDataset with 2 Parquet files
+#&gt; mpg: double
+#&gt; disp: double
+#&gt; hp: double
+#&gt; drat: double
+#&gt; wt: double
+#&gt; qsec: double
+#&gt; vs: double
+#&gt; am: double
+#&gt; gear: double
+#&gt; carb: double</div><div class='input'>
+<span class='co'>## You must specify the file format if using a format other than parquet.</span>
+<span class='va'>tf2</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span><span class='op'>(</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/files2.html'>dir.create</a></span><span class='op'>(</span><span class='va'>tf2</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/on.exit.html'>on.exit</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/unlink.html'>unlink</a></span><span class='op'>(</span><span class='va'>tf2</span><span class='op'>)</span><span class='op'>)</span>
+<span class='fu'><a href='write_dataset.html'>write_dataset</a></span><span class='op'>(</span><span class='va'>data</span>, <span class='va'>tf2</span>, format <span class='op'>=</span> <span class='st'>"ipc"</span><span class='op'>)</span>
+<span class='co'># This line will results in errors when you try to work with the data</span>
+<span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
+<span class='fu'>open_dataset</span><span class='op'>(</span><span class='va'>tf2</span><span class='op'>)</span>
+<span class='op'>}</span>
+<span class='co'># This line will work</span>
+<span class='fu'>open_dataset</span><span class='op'>(</span><span class='va'>tf2</span>, format <span class='op'>=</span> <span class='st'>"ipc"</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; FileSystemDataset with 3 Feather files
+#&gt; mpg: double
+#&gt; disp: double
+#&gt; hp: double
+#&gt; drat: double
+#&gt; wt: double
+#&gt; qsec: double
+#&gt; vs: double
+#&gt; am: double
+#&gt; gear: double
+#&gt; carb: double
+#&gt; cyl: int32</div><div class='input'>
+<span class='co'>## You can specify file partitioning to include it as a field in your dataset</span>
+<span class='co'># Create a temporary directory and write example dataset</span>
+<span class='va'>tf3</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span><span class='op'>(</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/files2.html'>dir.create</a></span><span class='op'>(</span><span class='va'>tf3</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/on.exit.html'>on.exit</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/unlink.html'>unlink</a></span><span class='op'>(</span><span class='va'>tf3</span><span class='op'>)</span><span class='op'>)</span>
+<span class='fu'><a href='write_dataset.html'>write_dataset</a></span><span class='op'>(</span><span class='va'>airquality</span>, <span class='va'>tf3</span>, partitioning <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"Month"</span>, <span class='st'>"Day"</span><span class='op'>)</span>, hive_style <span class='op'>=</span> <span class='cn'>FALSE</span><span class='op'>)</span>
+
+<span class='co'># View files - you can see the partitioning means that files have been written</span>
+<span class='co'># to folders based on Month/Day values</span>
+<span class='va'>tf3_files</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/list.files.html'>list.files</a></span><span class='op'>(</span><span class='va'>tf3</span>, recursive <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span>
+
+<span class='co'># With no partitioning specified, dataset contains all files but doesn't include</span>
+<span class='co'># directory names as field names</span>
+<span class='fu'>open_dataset</span><span class='op'>(</span><span class='va'>tf3</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; FileSystemDataset with 153 Parquet files
+#&gt; Ozone: int32
+#&gt; Solar.R: int32
+#&gt; Wind: double
+#&gt; Temp: int32
+#&gt; 
+#&gt; See $metadata for additional Schema metadata</div><div class='input'>
+<span class='co'># Now that partitioning has been specified, your dataset contains columns for Month and Day</span>
+<span class='fu'>open_dataset</span><span class='op'>(</span><span class='va'>tf3</span>, partitioning <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"Month"</span>, <span class='st'>"Day"</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; FileSystemDataset with 153 Parquet files
+#&gt; Ozone: int32
+#&gt; Solar.R: int32
+#&gt; Wind: double
+#&gt; Temp: int32
+#&gt; Month: int32
+#&gt; Day: int32
+#&gt; 
+#&gt; See $metadata for additional Schema metadata</div><div class='input'>
+<span class='co'># If you want to specify the data types for your fields, you can pass in a Schema</span>
+<span class='fu'>open_dataset</span><span class='op'>(</span><span class='va'>tf3</span>, partitioning <span class='op'>=</span> <span class='fu'><a href='Schema.html'>schema</a></span><span class='op'>(</span>Month <span class='op'>=</span> <span class='fu'><a href='data-type.html'>int8</a></span><span class='op'>(</span><span class='op'>)</span>, Day <span class='op'>=</span> <span class='fu'><a href='data-type.html'>int8</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; FileSystemDataset with 153 Parquet files
+#&gt; Ozone: int32
+#&gt; Solar.R: int32
+#&gt; Wind: double
+#&gt; Temp: int32
+#&gt; Month: int8
+#&gt; Day: int8
+#&gt; 
+#&gt; See $metadata for additional Schema metadata</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -282,7 +402,7 @@ or call <code><a href='Scanner.html'>$NewScan()</a></code> to construct a query 
 
       <footer>
       <div class="copyright">
-  <p>Developed by Neal Richardson, Ian Cook, Jonathan Keane, Romain François, Jeroen Ooms, Apache Arrow.</p>
+  <p>Developed by Neal Richardson, Ian Cook, Nic Crane, Jonathan Keane, Romain François, Jeroen Ooms, Apache Arrow.</p>
 </div>
 
 <div class="pkgdown">

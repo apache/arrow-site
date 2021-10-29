@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Apply a function to a stream of RecordBatches — map_batches • Arrow R Package</title>
+<title>Create a (virtual) DuckDB table from an Arrow object — to_duckdb • Arrow R Package</title>
 
 
 <!-- jquery -->
@@ -41,12 +41,10 @@
   
   <script src="../extra.js"></script>
 
-<meta property="og:title" content="Apply a function to a stream of RecordBatches — map_batches" />
-<meta property="og:description" content="As an alternative to calling collect() on a Dataset query, you can
-use this function to access the stream of RecordBatches in the Dataset.
-This lets you aggregate on each chunk and pull the intermediate results into
-a data.frame for further aggregation, even if you couldn't fit the whole
-Dataset result in memory." />
+<meta property="og:title" content="Create a (virtual) DuckDB table from an Arrow object — to_duckdb" />
+<meta property="og:description" content="This will do the necessary configuration to create a (virtual) table in DuckDB
+that is backed by the Arrow object given. No data is copied or modified until
+collect() or compute() are called or a query is run against the table." />
 
 
 
@@ -179,49 +177,78 @@ Dataset result in memory." />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Apply a function to a stream of RecordBatches</h1>
-    <small class="dont-index">Source: <a href='https://github.com/apache/arrow/blob/master/r/R/dataset-scan.R'><code>R/dataset-scan.R</code></a></small>
-    <div class="hidden name"><code>map_batches.Rd</code></div>
+    <h1>Create a (virtual) DuckDB table from an Arrow object</h1>
+    <small class="dont-index">Source: <a href='https://github.com/apache/arrow/blob/master/r/R/duckdb.R'><code>R/duckdb.R</code></a></small>
+    <div class="hidden name"><code>to_duckdb.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>As an alternative to calling <code><a href='https://dplyr.tidyverse.org/reference/compute.html'>collect()</a></code> on a <code>Dataset</code> query, you can
-use this function to access the stream of <code>RecordBatch</code>es in the <code>Dataset</code>.
-This lets you aggregate on each chunk and pull the intermediate results into
-a <code>data.frame</code> for further aggregation, even if you couldn't fit the whole
-<code>Dataset</code> result in memory.</p>
+    <p>This will do the necessary configuration to create a (virtual) table in DuckDB
+that is backed by the Arrow object given. No data is copied or modified until
+<code><a href='https://dplyr.tidyverse.org/reference/compute.html'>collect()</a></code> or <code><a href='https://dplyr.tidyverse.org/reference/compute.html'>compute()</a></code> are called or a query is run against the table.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>map_batches</span><span class='op'>(</span><span class='va'>X</span>, <span class='va'>FUN</span>, <span class='va'>...</span>, .data.frame <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>to_duckdb</span><span class='op'>(</span>
+  <span class='va'>.data</span>,
+  con <span class='op'>=</span> <span class='fu'>arrow_duck_connection</span><span class='op'>(</span><span class='op'>)</span>,
+  table_name <span class='op'>=</span> <span class='fu'>unique_arrow_tablename</span><span class='op'>(</span><span class='op'>)</span>,
+  auto_disconnect <span class='op'>=</span> <span class='cn'>FALSE</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>X</th>
-      <td><p>A <code>Dataset</code> or <code>arrow_dplyr_query</code> object, as returned by the
-<code>dplyr</code> methods on <code>Dataset</code>.</p></td>
+      <th>.data</th>
+      <td><p>the Arrow object (e.g. Dataset, Table) to use for the DuckDB table</p></td>
     </tr>
     <tr>
-      <th>FUN</th>
-      <td><p>A function or <code>purrr</code>-style lambda expression to apply to each
-batch</p></td>
+      <th>con</th>
+      <td><p>a DuckDB connection to use (default will create one and store it
+in <code><a href='https://rdrr.io/r/base/options.html'>options("arrow_duck_con")</a></code>)</p></td>
     </tr>
     <tr>
-      <th>...</th>
-      <td><p>Additional arguments passed to <code>FUN</code></p></td>
+      <th>table_name</th>
+      <td><p>a name to use in DuckDB for this object. The default is a
+unique string <code>"arrow_"</code> followed by numbers.</p></td>
     </tr>
     <tr>
-      <th>.data.frame</th>
-      <td><p>logical: collect the resulting chunks into a single
-<code>data.frame</code>? Default <code>TRUE</code></p></td>
+      <th>auto_disconnect</th>
+      <td><p>should the table be automatically cleaned up when the
+resulting object is removed (and garbage collected)? Default: <code>FALSE</code></p></td>
     </tr>
     </table>
 
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>A <code>tbl</code> of the new table in DuckDB</p>
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
-    <p>This is experimental and not recommended for production use.</p>
+    <p>The result is a dbplyr-compatible object that can be used in d(b)plyr pipelines.</p>
+<p>If <code>auto_disconnect = TRUE</code>, the DuckDB table that is created will be configured
+to be unregistered when the <code>tbl</code> object is garbage collected. This is helpful
+if you don't want to have extra table objects in DuckDB after you've finished
+using them. Currently, this cleanup can, however, sometimes lead to hangs if
+tables are created and deleted in quick succession, hence the default value
+of <code>FALSE</code></p>
 
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'><a href='https://dplyr.tidyverse.org'>dplyr</a></span><span class='op'>)</span>
+
+<span class='va'>ds</span> <span class='op'>&lt;-</span> <span class='va'>InMemoryDataset</span><span class='op'>$</span><span class='fu'>create</span><span class='op'>(</span><span class='va'>mtcars</span><span class='op'>)</span>
+
+<span class='va'>ds</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='https://dplyr.tidyverse.org/reference/filter.html'>filter</a></span><span class='op'>(</span><span class='va'>mpg</span> <span class='op'>&lt;</span> <span class='fl'>30</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'>to_duckdb</span><span class='op'>(</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='https://dplyr.tidyverse.org/reference/group_by.html'>group_by</a></span><span class='op'>(</span><span class='va'>cyl</span><span class='op'>)</span> <span class='op'>%&gt;%</span>
+  <span class='fu'><a href='https://dplyr.tidyverse.org/reference/summarise.html'>summarize</a></span><span class='op'>(</span>mean_mpg <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/mean.html'>mean</a></span><span class='op'>(</span><span class='va'>mpg</span>, na.rm <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span style='color: #949494;'># Source:   lazy query [?? x 2]</span>
+#&gt; <span style='color: #949494;'># Database: duckdb_connection</span>
+#&gt;     cyl mean_mpg
+#&gt;   <span style='color: #949494; font-style: italic;'>&lt;dbl&gt;</span>    <span style='color: #949494; font-style: italic;'>&lt;dbl&gt;</span>
+#&gt; <span style='color: #BCBCBC;'>1</span>     6     19.7
+#&gt; <span style='color: #BCBCBC;'>2</span>     4     23.7
+#&gt; <span style='color: #BCBCBC;'>3</span>     8     15.1</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
