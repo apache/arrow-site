@@ -83,7 +83,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">5.0.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">6.0.0</span>
       </span>
     </div>
 
@@ -178,6 +178,93 @@
       <small>Source: <a href='https://github.com/apache/arrow/blob/master/r/NEWS.md'><code>NEWS.md</code></a></small>
     </div>
 
+    <div id="arrow-600" class="section level1">
+<h1 class="page-header" data-toc-text="6.0.0">
+<a href="#arrow-600" class="anchor"></a>arrow 6.0.0<small> Unreleased </small>
+</h1>
+<p>There are now two ways to query Arrow data:</p>
+<div id="1-expanded-arrow-native-queries-aggregation-and-joins" class="section level2">
+<h2 class="hasAnchor">
+<a href="<a href='https://issues.apache.org/jira/browse/1'>#1</a>-expanded-arrow-native-queries-aggregation-and-joins" class="anchor"></a>1. Expanded Arrow-native queries: aggregation and joins</h2>
+<p><code><a href="https://dplyr.tidyverse.org/reference/summarise.html">dplyr::summarize()</a></code>, both grouped and ungrouped, is now implemented for Arrow Datasets, Tables, and RecordBatches. Because data is scanned in chunks, you can aggregate over larger-than-memory datasets backed by many files. Supported aggregation functions include <code><a href="https://dplyr.tidyverse.org/reference/context.html">n()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/n_distinct.html">n_distinct()</a></code>, <code>min(),</code> <code><a href="https://rdrr.io/r/base/Extremes.html">max()</a></code>, <code><a href="https://rdrr.io/r/base/sum.html">sum()</a></code>, <code><a href="https://rdrr.io/r/base/mean.html">mean()</a></code>, <code><a href="https://rdrr.io/r/stats/cor.html">var()</a></code>, <code><a href="https://rdrr.io/r/stats/sd.html">sd()</a></code>, <code><a href="https://rdrr.io/r/base/any.html">any()</a></code>, and <code><a href="https://rdrr.io/r/base/all.html">all()</a></code>. <code><a href="https://rdrr.io/r/stats/median.html">median()</a></code> and <code><a href="https://rdrr.io/r/stats/quantile.html">quantile()</a></code> with one probability are also supported and currently return approximate results using the t-digest algorithm.</p>
+<p>Along with <code><a href="https://dplyr.tidyverse.org/reference/summarise.html">summarize()</a></code>, you can also call <code><a href="https://dplyr.tidyverse.org/reference/count.html">count()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/count.html">tally()</a></code>, and <code><a href="https://dplyr.tidyverse.org/reference/distinct.html">distinct()</a></code>, which effectively wrap <code><a href="https://dplyr.tidyverse.org/reference/summarise.html">summarize()</a></code>.</p>
+<p>This enhancement does change the behavior of <code><a href="https://dplyr.tidyverse.org/reference/summarise.html">summarize()</a></code> and <code><a href="https://dplyr.tidyverse.org/reference/compute.html">collect()</a></code> in some cases: see “Breaking changes” below for details.</p>
+<p>In addition to <code><a href="https://dplyr.tidyverse.org/reference/summarise.html">summarize()</a></code>, mutating and filtering equality joins (<code><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html">inner_join()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html">left_join()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html">right_join()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html">full_join()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/filter-joins.html">semi_join()</a></code>, and <code><a href="https://dplyr.tidyverse.org/reference/filter-joins.html">anti_join()</a></code>) with are also supported natively in Arrow.</p>
+<p>Grouped aggregation and (especially) joins should be considered somewhat experimental in this release. We expect them to work, but they may not be well optimized for all workloads. To help us focus our efforts on improving them in the next release, please let us know if you encounter unexpected behavior or poor performance.</p>
+<p>New non-aggregating compute functions include string functions like <code>str_to_title()</code> and <code><a href="https://rdrr.io/r/base/strptime.html">strftime()</a></code> as well as compute functions for extracting date parts (e.g. <code>year()</code>, <code>month()</code>) from dates. This is not a complete list of additional compute functions; for an exhaustive list of available compute functions see <code><a href="../reference/list_compute_functions.html">list_compute_functions()</a></code>.</p>
+<p>We’ve also worked to fill in support for all data types, such as <code>Decimal</code>, for functions added in previous releases. All type limitations mentioned in previous release notes should be no longer valid, and if you find a function that is not implemented for a certain data type, please <a href="https://issues.apache.org/jira/projects/ARROW/issues">report an issue</a>.</p>
+</div>
+<div id="2-duckdb-integration" class="section level2">
+<h2 class="hasAnchor">
+<a href="<a href='https://issues.apache.org/jira/browse/2'>#2</a>-duckdb-integration" class="anchor"></a>2. DuckDB integration</h2>
+<p>If you have the <a href="https://CRAN.R-project.org/package=duckdb">duckdb package</a> installed, you can hand off an Arrow Dataset or query object to <a href="https://duckdb.org/">DuckDB</a> for further querying using the <code><a href="../reference/to_duckdb.html">to_duckdb()</a></code> function. This allows you to use duckdb’s <code>dbplyr</code> methods, as well as its SQL interface, to aggregate data. Filtering and column projection done before <code><a href="../reference/to_duckdb.html">to_duckdb()</a></code> is evaluated in Arrow, and duckdb can push down some predicates to Arrow as well. This handoff <em>does not</em> copy the data, instead it uses Arrow’s C-interface (just like passing arrow data between R and Python). This means there is no serialization or data copying costs are incurred.</p>
+<p>You can also take a duckdb <code>tbl</code> and call <code><a href="../reference/to_arrow.html">to_arrow()</a></code> to stream data to Arrow’s query engine. This means that in a single dplyr pipeline, you could start with an Arrow Dataset, evaluate some steps in DuckDB, then evaluate the rest in Arrow.</p>
+</div>
+<div id="breaking-changes" class="section level2">
+<h2 class="hasAnchor">
+<a href="#breaking-changes" class="anchor"></a>Breaking changes</h2>
+<ul>
+<li>Row order of data from a Dataset query is no longer deterministic. If you need a stable sort order, you should explicitly <code><a href="https://dplyr.tidyverse.org/reference/arrange.html">arrange()</a></code> the query result. For calls to <code><a href="https://dplyr.tidyverse.org/reference/summarise.html">summarize()</a></code>, you can set <code><a href="https://rdrr.io/r/base/options.html">options(arrow.summarise.sort = TRUE)</a></code> to match the current <code>dplyr</code> behavior of sorting on the grouping columns.</li>
+<li>
+<code><a href="https://dplyr.tidyverse.org/reference/summarise.html">dplyr::summarize()</a></code> on an in-memory Arrow Table or RecordBatch no longer eagerly evaluates. Call <code><a href="https://dplyr.tidyverse.org/reference/compute.html">compute()</a></code> or <code><a href="https://dplyr.tidyverse.org/reference/compute.html">collect()</a></code> to evaluate the query.</li>
+<li>
+<code><a href="https://rdrr.io/r/utils/head.html">head()</a></code> and <code><a href="https://rdrr.io/r/utils/head.html">tail()</a></code> also no longer eagerly evaluate, both for in-memory data and for Datasets. Also, because row order is no longer deterministic, they will effectively give you a random slice of data from somewhere in the dataset unless you <code><a href="https://dplyr.tidyverse.org/reference/arrange.html">arrange()</a></code> to specify sorting.</li>
+<li>Simple Feature (SF) columns no longer save all of their metadata when converting to Arrow tables (and thus when saving to Parquet or Feather). This also includes any dataframe column that has attributes on each element (in other words: row-level metadata). Our previous approach to saving this metadata is both (computationally) inefficient and unreliable with Arrow queries + datasets. This will most impact saving SF columns. For saving these columns we recommend either converting the columns to well-known binary representations (using <code>sf::st_as_binary(col)</code>) or using the <a href="https://CRAN.R-project.org/package=sfarrow">sfarrow package</a> which handles some of the intricacies of this conversion process. We have plans to improve this and re-enable custom metadata like this in the future when we can implement the saving in a safe and efficient way. If you need to preserve the pre-6.0.0 behavior of saving this metadata, you can set <code><a href="https://rdrr.io/r/base/options.html">options(arrow.preserve_row_level_metadata = TRUE)</a></code>. We will be removing this option in a coming release. We strongly recommend avoiding using this workaround if possible since the results will not be supported in the future and can lead to surprising and inaccurate results. If you run into a custom class besides sf columns that are impacted by this please <a href="https://issues.apache.org/jira/projects/ARROW/issues">report an issue</a>.</li>
+<li>Datasets are officially no longer supported on 32-bit Windows on R &lt; 4.0 (Rtools 3.5). 32-bit Windows users should upgrade to a newer version of R in order to use datasets.</li>
+</ul>
+</div>
+<div id="installation-on-linux" class="section level2">
+<h2 class="hasAnchor">
+<a href="#installation-on-linux" class="anchor"></a>Installation on Linux</h2>
+<ul>
+<li>Package installation now fails if the Arrow C++ library does not compile. In previous versions, if the C++ library failed to compile, you would get a successful R package installation that wouldn’t do much useful.</li>
+<li>You can disable all optional C++ components when building from source by setting the environment variable <code>LIBARROW_MINIMAL=true</code>. This will have the core Arrow/Feather components but excludes Parquet, Datasets, compression libraries, and other optional features.</li>
+<li>Source packages now bundle the Arrow C++ source code, so it does not have to be downloaded in order to build the package. Because the source is included, it is now possible to build the package on an offline/airgapped system. By default, the offline build will be minimal because it cannot download third-party C++ dependencies required to support all features. To allow a fully featured offline build, the included <code><a href="../reference/create_package_with_all_dependencies.html">create_package_with_all_dependencies()</a></code> function (also available on GitHub without installing the arrow package) will download all third-party C++ dependencies and bundle them inside the R source package. Run this function on a system connected to the network to produce the “fat” source package, then copy that .tar.gz package to your offline machine and install. Special thanks to @karldw for the huge amount of work on this.</li>
+<li>Source builds can make use of system dependencies (such as <code>libz</code>) by setting <code>ARROW_DEPENDENCY_SOURCE=AUTO</code>. This is not the default in this release (<code>BUNDLED</code>, i.e. download and build all dependencies) but may become the default in the future.</li>
+<li>The JSON library components (<code><a href="../reference/read_json_arrow.html">read_json_arrow()</a></code>) are now optional and still on by default; set <code>ARROW_JSON=OFF</code> before building to disable them.</li>
+</ul>
+</div>
+<div id="other-enhancements-and-fixes" class="section level2">
+<h2 class="hasAnchor">
+<a href="#other-enhancements-and-fixes" class="anchor"></a>Other enhancements and fixes</h2>
+<ul>
+<li>More Arrow data types use ALTREP when converting to and from R. This speeds up some workflows significantly, while for others it merely delays conversion from Arrow to R. ALTREP is used by default, but to disable it, set <code><a href="https://rdrr.io/r/base/options.html">options(arrow.use_altrep = FALSE)</a></code>
+</li>
+<li>
+<code>Field</code> objects can now be created as non-nullable, and <code><a href="../reference/Schema.html">schema()</a></code> now optionally accepts a list of <code>Field</code>s</li>
+<li>Numeric division by zero now matches R’s behavior and no longer raises an error</li>
+<li>
+<code><a href="../reference/write_parquet.html">write_parquet()</a></code> no longer errors when used with a grouped data.frame</li>
+<li>
+<code><a href="https://dplyr.tidyverse.org/reference/case_when.html">case_when()</a></code> now errors cleanly if an expression is not supported in Arrow</li>
+<li>
+<code><a href="../reference/open_dataset.html">open_dataset()</a></code> now works on CSVs without header rows</li>
+<li>Fixed a minor issue where the short readr-style types <code>T</code> and <code>t</code> were reversed in <code><a href="../reference/read_delim_arrow.html">read_csv_arrow()</a></code>
+</li>
+<li>Bindings for <code><a href="https://rdrr.io/r/base/Log.html">log(..., base = b)</a></code> where b is something other than 2, e, or 10</li>
+<li>A number of updates and expansions to our vignettes</li>
+<li>Fix segfaults in converting length-0 ChunkedArrays to R vectors</li>
+<li>
+<code>Table$create()</code> now has alias <code><a href="../reference/Table.html">arrow_table()</a></code>
+</li>
+</ul>
+</div>
+<div id="internals" class="section level2">
+<h2 class="hasAnchor">
+<a href="#internals" class="anchor"></a>Internals</h2>
+<ul>
+<li>We now use testthat 3rd edition as our default</li>
+<li>A number of large test reorganizations</li>
+<li>Style changes to conform with the tidyverse style guide + using lintr</li>
+</ul>
+</div>
+</div>
+    <div id="arrow-5002" class="section level1">
+<h1 class="page-header" data-toc-text="5.0.0.2">
+<a href="#arrow-5002" class="anchor"></a>arrow 5.0.0.2<small> 2021-09-05 </small>
+</h1>
+<p>This patch version contains fixes for some sanitizer and compiler warnings.</p>
+</div>
     <div id="arrow-500" class="section level1">
 <h1 class="page-header" data-toc-text="5.0.0">
 <a href="#arrow-500" class="anchor"></a>arrow 5.0.0<small> 2021-07-29 </small>
@@ -708,9 +795,9 @@
 <h1 class="page-header" data-toc-text="0.15.0">
 <a href="#arrow-0150" class="anchor"></a>arrow 0.15.0<small> 2019-10-07 </small>
 </h1>
-<div id="breaking-changes" class="section level2">
+<div id="breaking-changes-1" class="section level2">
 <h2 class="hasAnchor">
-<a href="#breaking-changes" class="anchor"></a>Breaking changes</h2>
+<a href="#breaking-changes-1" class="anchor"></a>Breaking changes</h2>
 <ul>
 <li>The R6 classes that wrap the C++ classes are now documented and exported and have been renamed to be more R-friendly. Users of the high-level R interface in this package are not affected. Those who want to interact with the Arrow C++ API more directly should work with these objects and methods. As part of this change, many functions that instantiated these R6 objects have been removed in favor of <code>Class$create()</code> methods. Notably, <code><a href="../reference/array.html">arrow::array()</a></code> and <code><a href="https://rdrr.io/r/base/table.html">arrow::table()</a></code> have been removed in favor of <code>Array$create()</code> and <code>Table$create()</code>, eliminating the package startup message about masking <code>base</code> functions. For more information, see the new <code><a href="../articles/arrow.html">vignette("arrow")</a></code>.</li>
 <li>Due to a subtle change in the Arrow message format, data written by the 0.15 version libraries may not be readable by older versions. If you need to send data to a process that uses an older version of Arrow (for example, an Apache Spark server that hasn’t yet updated to Arrow 0.15), you can set the environment variable <code>ARROW_PRE_0_15_IPC_FORMAT=1</code>.</li>

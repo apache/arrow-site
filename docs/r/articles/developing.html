@@ -37,7 +37,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">5.0.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">6.0.0</span>
       </span>
     </div>
 
@@ -136,202 +136,345 @@
 
     
     
-<p>If you’re looking to contribute to <code>arrow</code>, this document can help you set up a development environment that will enable you to write code and run tests locally. It outlines how to build the various components that make up the Arrow project and R package, as well as some common troubleshooting and workflows developers use. Many contributions can be accomplished with the instructions in <a href="#r-only-development">R-only development</a>. But if you’re working on both the C++ library and the R package, the <a href="#-developer-environment-setup">Developer environment setup</a> section will guide you through setting up a developer environment.</p>
-<p>This document is intended only for developers of Apache Arrow or the Arrow R package. Users of the package in R do not need to do any of this setup. If you’re looking for how to install Arrow, see <a href="https://arrow.apache.org/docs/r/#installation">the instructions in the readme</a>; Linux users can find more details on building from source at <code><a href="../articles/install.html">vignette("install", package = "arrow")</a></code>.</p>
-<p>This document is a work in progress and will grow + change as the Apache Arrow project grows and changes. We have tried to make these steps as robust as possible (in fact, we even test exactly these instructions on our nightly CI to ensure they don’t become stale!), but certain custom configurations might conflict with these instructions and there are differences of opinion across developers about if and what the one true way to set up development environments like this is. We also solicit any feedback you have about things that are confusing or additions you would like to see here. Please <a href="https://issues.apache.org/jira/projects/ARROW/issues">report an issue</a> if there you see anything that is confusing, odd, or just plain wrong.</p>
-<div id="r-only-development" class="section level2">
+<p>If you’re looking to contribute to arrow, this vignette can help you set up a development environment that will enable you to write code and run tests locally. It outlines:</p>
+<ul>
+<li>how to build the components that make up the Arrow project and R package</li>
+<li>workflows that developers use</li>
+<li>some common troubleshooting steps and solutions</li>
+</ul>
+<p>This document is intended only for <strong>developers</strong> of Apache Arrow or the Arrow R package. R package users do not need to do any of this setup. If you’re looking for how to install Arrow, see <a href="https://arrow.apache.org/docs/r/#installation">the instructions in the readme</a>.</p>
+<p>This document is a work in progress and will grow and change as the Apache Arrow project grows and changes. We have tried to make these steps as robust as possible (in fact, we even test exactly these instructions on our nightly CI to ensure they don’t become stale!), but custom configurations might conflict with these instructions and there are differences of opinion across developers about how to set up development environments like this.</p>
+<p>We welcome any feedback you have about things that are confusing or additions you would like to see here - please <a href="https://issues.apache.org/jira/projects/ARROW/issues">report an issue</a> if you have any suggestions or requests.</p>
+<div id="developer-environment-setup" class="section level1">
+<h1 class="hasAnchor">
+<a href="#developer-environment-setup" class="anchor"></a>Developer environment setup</h1>
+<div id="r-only" class="section level2 tabset">
 <h2 class="hasAnchor">
-<a href="#r-only-development" class="anchor"></a>R-only development</h2>
-<p>Windows and macOS users who wish to contribute to the R package and don’t need to alter the Arrow C++ library may be able to obtain a recent version of the library without building from source. On macOS, you may install the C++ library using <a href="https://brew.sh/">Homebrew</a>:</p>
-<pre class="shell"><code># For the released version:
-brew install apache-arrow
-# Or for a development version, you can try:
-brew install apache-arrow --HEAD</code></pre>
-<p>On Windows and Linux, you can download a .zip file with the arrow dependencies from the nightly repository. Windows users then can set the <code>RWINLIB_LOCAL</code> environment variable to point to that zip file before installing the <code>arrow</code> R package. On Linux, you’ll need to create a <code>libarrow</code> directory inside the R package directory and unzip that file into it. Version numbers in that repository correspond to dates, and you will likely want the most recent.</p>
-<p>To see what nightlies are available, you can use Arrow’s (or any other S3 client’s) S3 listing functionality to see what is in the bucket <code>s3://arrow-r-nightly/libarrow/bin</code>:</p>
+<a href="#r-only" class="anchor"></a>R-only</h2>
+<p>Windows and macOS users who wish to contribute to the R package and don’t need to alter libarrow (Arrow’s C++ library) may be able to obtain a recent version of the library without building from source.</p>
+<div id="linux" class="section level3">
+<h3 class="hasAnchor">
+<a href="#linux" class="anchor"></a>Linux</h3>
+<p>On Linux, you can download a .zip file containing libarrow from the nightly repository.</p>
+<p>To see what nightlies are available, you can use arrow’s (or any other S3 client’s) S3 listing functionality to see what is in the bucket <code>s3://arrow-r-nightly/libarrow/bin</code>:</p>
 <pre><code>nightly &lt;- s3_bucket("arrow-r-nightly")
 nightly$ls("libarrow/bin")</code></pre>
+<p>Version numbers in that repository correspond to dates.</p>
+<p>You’ll need to create a <code>libarrow</code> directory inside the R package directory and unzip the zip file containing the compiled libarrow binary files into it.</p>
 </div>
-<div id="developer-environment-setup" class="section level2">
-<h2 class="hasAnchor">
-<a href="#developer-environment-setup" class="anchor"></a>Developer environment setup</h2>
-<p>If you need to alter both the Arrow C++ library and the R package code, or if you can’t get a binary version of the latest C++ library elsewhere, you’ll need to build it from source too. This section discusses how to set up a C++ build configured to work with the R package. For more general resources, see the <a href="https://arrow.apache.org/docs/developers/cpp/building.html">Arrow C++ developer guide</a>.</p>
-<p>There are four major steps to the process — the first three are relevant to all Arrow developers, and the last one is specific to the R bindings:</p>
-<ol style="list-style-type: decimal">
-<li>Configuring the Arrow library build (using <code>cmake</code>) — this specifies how you want the build to go, what features to include, etc.</li>
-<li>Building the Arrow library — this actually compiles the Arrow library</li>
-<li>Install the Arrow library — this organizes and moves the compiled Arrow library files into the location specified in the configuration</li>
-<li>Building the R package — this builds the C++ code in the R package, and installs the R package for you</li>
-</ol>
-<div id="install-dependencies" class="section level3 tabset">
+<div id="macos" class="section level3">
 <h3 class="hasAnchor">
-<a href="#install-dependencies" class="anchor"></a>Install dependencies</h3>
-<p>The Arrow C++ library will by default use system dependencies if suitable versions are found; if they are not present, it will build them during its own build process. The only dependencies that one needs to install outside of the build process are <code>cmake</code> (for configuring the build) and <code>openssl</code> if you are building with S3 support.</p>
-<p>For a faster build, you may choose to install on the system more C++ library dependencies (such as <code>lz4</code>, <code>zstd</code>, etc.) so that they don’t need to be built from source in the Arrow build. This is optional.</p>
-<div id="macos" class="section level4">
-<h4 class="hasAnchor">
-<a href="#macos" class="anchor"></a>macOS</h4>
-<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" title="1"><span class="ex">brew</span> install cmake openssl</a></code></pre></div>
+<a href="#macos" class="anchor"></a>macOS</h3>
+<p>On macOS, you can install libarrow using <a href="https://brew.sh/">Homebrew</a>:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" title="1"><span class="co"># For the released version:</span></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="ex">brew</span> install apache-arrow</a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="co"># Or for a development version, you can try:</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="ex">brew</span> install apache-arrow --HEAD</a></code></pre></div>
 </div>
+<div id="windows" class="section level3">
+<h3 class="hasAnchor">
+<a href="#windows" class="anchor"></a>Windows</h3>
+<p>On Windows, you can download a .zip file containing libarrow from the nightly repository.</p>
+<p>To see what nightlies are available, you can use arrow’s (or any other S3 client’s) S3 listing functionality to see what is in the bucket <code>s3://arrow-r-nightly/libarrow/bin</code>:</p>
+<pre><code>nightly &lt;- s3_bucket("arrow-r-nightly")
+nightly$ls("libarrow/bin")</code></pre>
+<p>Version numbers in that repository correspond to dates.</p>
+<p>You can set the <code>RWINLIB_LOCAL</code> environment variable to point to the zip file containing libarrow before installing the arrow R package.</p>
+</div>
+</div>
+<div id="r-and-c" class="section level2">
+<h2 class="hasAnchor">
+<a href="#r-and-c" class="anchor"></a>R and C++</h2>
+<p>If you need to alter both libarrow and the R package code, or if you can’t get a binary version of the latest libarrow elsewhere, you’ll need to build it from source. This section discusses how to set up a C++ libarrow build configured to work with the R package. For more general resources, see the <a href="https://arrow.apache.org/docs/developers/cpp/building.html">Arrow C++ developer guide</a>.</p>
+<p>There are five major steps to the process.</p>
+<div id="step-1---install-dependencies" class="section level3 tabset">
+<h3 class="hasAnchor">
+<a href="#step-1---install-dependencies" class="anchor"></a>Step 1 - Install dependencies</h3>
+<p>When building libarrow, by default, system dependencies will be used if suitable versions are found. If system dependencies are not present, libarrow will build them during its own build process. The only dependencies that you need to install <em>outside</em> of the build process are <a href="https://cmake.org/">cmake</a> (for configuring the build) and <a href="https://www.openssl.org/">openssl</a> if you are building with S3 support.</p>
+<p>For a faster build, you may choose to pre-install more C++ library dependencies (such as <a href="http://lz4.github.io/lz4/">lz4</a>, <a href="https://facebook.github.io/zstd/">zstd</a>, etc.) on the system so that they don’t need to be built from source in the libarrow build.</p>
 <div id="ubuntu" class="section level4">
 <h4 class="hasAnchor">
 <a href="#ubuntu" class="anchor"></a>Ubuntu</h4>
 <div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" title="1"><span class="fu">sudo</span> apt install -y cmake libcurl4-openssl-dev libssl-dev</a></code></pre></div>
 </div>
-</div>
-<div id="configure-the-arrow-build" class="section level3 tabset">
-<h3 class="hasAnchor">
-<a href="#configure-the-arrow-build" class="anchor"></a>Configure the Arrow build</h3>
-<p>You can choose to build and then install the Arrow library into a user-defined directory or into a system-level directory. You only need to do one of these two options.</p>
-<p>It is recommended that you install the arrow library to a user-level directory to be used in development. This is so that the development version you are using doesn’t overwrite a released version of Arrow you may have installed. You are also able to have more than one version of the Arrow library to link to with this approach (by using different <code>ARROW_HOME</code> directories for the different versions). This approach also matches the recommendations for other Arrow bindings like <a href="http://arrow.apache.org/docs/developers/python.html">Python</a>.</p>
-<div id="configure-for-installing-to-a-user-directory" class="section level4">
+<div id="macos-1" class="section level4">
 <h4 class="hasAnchor">
-<a href="#configure-for-installing-to-a-user-directory" class="anchor"></a>Configure for installing to a user directory</h4>
-<p>In this example we will install it to a directory called <code>dist</code> that has the same parent as our <code>arrow</code> checkout, but it could be named or located anywhere you would like. However, note that your installation of the Arrow R package will point to this directory and need it to remain intact for the package to continue to work. This is one reason we recommend <em>not</em> placing it inside of the arrow git checkout.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb5-1" title="1"><span class="bu">export</span> <span class="va">ARROW_HOME=$(</span><span class="bu">pwd</span><span class="va">)</span>/dist</a>
-<a class="sourceLine" id="cb5-2" title="2"><span class="fu">mkdir</span> <span class="va">$ARROW_HOME</span></a></code></pre></div>
-<p><em>Special instructions on Linux:</em> You will need to set <code>LD_LIBRARY_PATH</code> to the <code>lib</code> directory that is under where we set <code>$ARROW_HOME</code>, before launching R and using Arrow. One way to do this is to add it to your profile (we use <code>~/.bash_profile</code> here, but you might need to put this in a different file depending on your setup, e.g. if you use a shell other than <code>bash</code>). On macOS we do not need to do this because the macOS shared library paths are hardcoded to their locations during build time.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb6-1" title="1"><span class="bu">export</span> <span class="va">LD_LIBRARY_PATH=$ARROW_HOME</span>/lib:<span class="va">$LD_LIBRARY_PATH</span></a>
-<a class="sourceLine" id="cb6-2" title="2"><span class="bu">echo</span> <span class="st">"export LD_LIBRARY_PATH=</span><span class="va">$ARROW_HOME</span><span class="st">/lib:</span><span class="va">$LD_LIBRARY_PATH</span><span class="st">"</span> <span class="op">&gt;&gt;</span> ~/.bash_profile</a></code></pre></div>
-<p>Now we can move into the arrow repository to start the build process. You will need to create a directory into which the C++ build will put its contents. It is recommended to make a <code>build</code> directory inside of the <code>cpp</code> directory of the Arrow git repository (it is git-ignored, so you won’t accidentally check it in). And then, change directories to be inside <code>cpp/build</code>:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb7-1" title="1"><span class="bu">pushd</span> arrow</a>
-<a class="sourceLine" id="cb7-2" title="2"><span class="fu">mkdir</span> -p cpp/build</a>
-<a class="sourceLine" id="cb7-3" title="3"><span class="bu">pushd</span> cpp/build</a></code></pre></div>
-<p>You’ll first call <code>cmake</code> to configure the build and then <code>make install</code>. For the R package, you’ll need to enable several features in the C++ library using <code>-D</code> flags:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb8-1" title="1"><span class="fu">cmake</span> \</a>
-<a class="sourceLine" id="cb8-2" title="2">  -DCMAKE_INSTALL_PREFIX=<span class="va">$ARROW_HOME</span> \</a>
-<a class="sourceLine" id="cb8-3" title="3">  -DCMAKE_INSTALL_LIBDIR=lib \</a>
-<a class="sourceLine" id="cb8-4" title="4">  -DARROW_COMPUTE=ON \</a>
-<a class="sourceLine" id="cb8-5" title="5">  -DARROW_CSV=ON \</a>
-<a class="sourceLine" id="cb8-6" title="6">  -DARROW_DATASET=ON \</a>
-<a class="sourceLine" id="cb8-7" title="7">  -DARROW_EXTRA_ERROR_CONTEXT=ON \</a>
-<a class="sourceLine" id="cb8-8" title="8">  -DARROW_FILESYSTEM=ON \</a>
-<a class="sourceLine" id="cb8-9" title="9">  -DARROW_INSTALL_NAME_RPATH=OFF \</a>
-<a class="sourceLine" id="cb8-10" title="10">  -DARROW_JEMALLOC=ON \</a>
-<a class="sourceLine" id="cb8-11" title="11">  -DARROW_JSON=ON \</a>
-<a class="sourceLine" id="cb8-12" title="12">  -DARROW_PARQUET=ON \</a>
-<a class="sourceLine" id="cb8-13" title="13">  -DARROW_WITH_SNAPPY=ON \</a>
-<a class="sourceLine" id="cb8-14" title="14">  -DARROW_WITH_ZLIB=ON \</a>
-<a class="sourceLine" id="cb8-15" title="15">  ..</a></code></pre></div>
-<p><code>..</code> refers to the C++ source directory: we’re in <code>cpp/build</code>, and the source is in <code>cpp</code>.</p>
+<a href="#macos-1" class="anchor"></a>macOS</h4>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb5-1" title="1"><span class="ex">brew</span> install cmake openssl</a></code></pre></div>
 </div>
-<div id="configure-to-install-to-a-system-directory" class="section level4">
+<div id="windows-1" class="section level4">
 <h4 class="hasAnchor">
-<a href="#configure-to-install-to-a-system-directory" class="anchor"></a>Configure to install to a system directory</h4>
-<p>If you would like to install Arrow as a system library you can do that as well. This is in some respects simpler, but if you already have Arrow libraries installed there, it would disrupt them and possibly require <code>sudo</code> permissions.</p>
-<p>Now we can move into the arrow repository to start the build process. You will need to create a directory into which the C++ build will put its contents. It is recommended to make a <code>build</code> directory inside of the <code>cpp</code> directory of the Arrow git repository (it is git-ignored, so you won’t accidentally check it in). And then, change directories to be inside <code>cpp/build</code>:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb9-1" title="1"><span class="bu">pushd</span> arrow</a>
-<a class="sourceLine" id="cb9-2" title="2"><span class="fu">mkdir</span> -p cpp/build</a>
-<a class="sourceLine" id="cb9-3" title="3"><span class="bu">pushd</span> cpp/build</a></code></pre></div>
-<p>You’ll first call <code>cmake</code> to configure the build and then <code>make install</code>. For the R package, you’ll need to enable several features in the C++ library using <code>-D</code> flags:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb10-1" title="1"><span class="fu">cmake</span> \</a>
-<a class="sourceLine" id="cb10-2" title="2">  -DARROW_COMPUTE=ON \</a>
-<a class="sourceLine" id="cb10-3" title="3">  -DARROW_CSV=ON \</a>
-<a class="sourceLine" id="cb10-4" title="4">  -DARROW_DATASET=ON \</a>
-<a class="sourceLine" id="cb10-5" title="5">  -DARROW_EXTRA_ERROR_CONTEXT=ON \</a>
-<a class="sourceLine" id="cb10-6" title="6">  -DARROW_FILESYSTEM=ON \</a>
-<a class="sourceLine" id="cb10-7" title="7">  -DARROW_INSTALL_NAME_RPATH=OFF \</a>
-<a class="sourceLine" id="cb10-8" title="8">  -DARROW_JEMALLOC=ON \</a>
-<a class="sourceLine" id="cb10-9" title="9">  -DARROW_JSON=ON \</a>
-<a class="sourceLine" id="cb10-10" title="10">  -DARROW_PARQUET=ON \</a>
-<a class="sourceLine" id="cb10-11" title="11">  -DARROW_WITH_SNAPPY=ON \</a>
-<a class="sourceLine" id="cb10-12" title="12">  -DARROW_WITH_ZLIB=ON \</a>
-<a class="sourceLine" id="cb10-13" title="13">  ..</a></code></pre></div>
-<p><code>..</code> refers to the C++ source directory: we’re in <code>cpp/build</code>, and the source is in <code>cpp</code>.</p>
+<a href="#windows-1" class="anchor"></a>Windows</h4>
+<p>Currently, the R package cannot be made to work with a local libarrow build. This will be resolved in a future release.</p>
 </div>
 </div>
-<div id="more-arrow-features" class="section level3">
+<div id="step-2---configure-the-libarrow-build" class="section level3">
 <h3 class="hasAnchor">
-<a href="#more-arrow-features" class="anchor"></a>More Arrow features</h3>
-<p>To enable optional features including: S3 support, an alternative memory allocator, and additional compression libraries, add some or all of these flags (the trailing <code>\</code> makes them easier to paste into a bash shell on a new line):</p>
-<pre class="shell"><code>  -DARROW_MIMALLOC=ON \
-  -DARROW_S3=ON \
-  -DARROW_WITH_BROTLI=ON \
-  -DARROW_WITH_BZ2=ON \
-  -DARROW_WITH_LZ4=ON \
-  -DARROW_WITH_SNAPPY=ON \
-  -DARROW_WITH_ZSTD=ON \</code></pre>
+<a href="#step-2---configure-the-libarrow-build" class="anchor"></a>Step 2 - Configure the libarrow build</h3>
+<p>We recommend that you configure libarrow to be built to a user-level directory rather than a system directory for your development work. This is so that the development version you are using doesn’t overwrite a released version of libarrow you may already have installed, and so that you are also able work with more than one version of libarrow (by using different <code>ARROW_HOME</code> directories for the different versions).</p>
+<p>In the example below, libarrow is installed to a directory called <code>dist</code> that has the same parent directory as the <code>arrow</code> checkout. Your installation of the Arrow R package can point to any directory with any name, though we recommend <em>not</em> placing it inside of the <code>arrow</code> git checkout directory as unwanted changes could stop it working properly.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb6-1" title="1"><span class="bu">export</span> <span class="va">ARROW_HOME=$(</span><span class="bu">pwd</span><span class="va">)</span>/dist</a>
+<a class="sourceLine" id="cb6-2" title="2"><span class="fu">mkdir</span> <span class="va">$ARROW_HOME</span></a></code></pre></div>
+<p><em>Special instructions on Linux:</em> You will need to set <code>LD_LIBRARY_PATH</code> to the <code>lib</code> directory that is under where you set <code>$ARROW_HOME</code>, before launching R and using arrow. One way to do this is to add it to your profile (we use <code>~/.bash_profile</code> here, but you might need to put this in a different file depending on your setup, e.g. if you use a shell other than <code>bash</code>). On macOS you do not need to do this because the macOS shared library paths are hardcoded to their locations during build time.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb7-1" title="1"><span class="bu">export</span> <span class="va">LD_LIBRARY_PATH=$ARROW_HOME</span>/lib:<span class="va">$LD_LIBRARY_PATH</span></a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="bu">echo</span> <span class="st">"export LD_LIBRARY_PATH=</span><span class="va">$ARROW_HOME</span><span class="st">/lib:</span><span class="va">$LD_LIBRARY_PATH</span><span class="st">"</span> <span class="op">&gt;&gt;</span> ~/.bash_profile</a></code></pre></div>
+<p>Start by navigating in a terminal to the <code>arrow</code> repository. You will need to create a directory into which the C++ build will put its contents. We recommend that you make a <code>build</code> directory inside of the <code>cpp</code> directory of the Arrow git repository (it is git-ignored, so you won’t accidentally check it in). Next, change directories to be inside <code>cpp/build</code>:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb8-1" title="1"><span class="bu">pushd</span> arrow</a>
+<a class="sourceLine" id="cb8-2" title="2"><span class="fu">mkdir</span> -p cpp/build</a>
+<a class="sourceLine" id="cb8-3" title="3"><span class="bu">pushd</span> cpp/build</a></code></pre></div>
+<p>You’ll first call <code>cmake</code> to configure the build and then <code>make install</code>. For the R package, you’ll need to enable several features in libarrow using <code>-D</code> flags:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb9-1" title="1"><span class="fu">cmake</span> \</a>
+<a class="sourceLine" id="cb9-2" title="2">  -DCMAKE_INSTALL_PREFIX=<span class="va">$ARROW_HOME</span> \</a>
+<a class="sourceLine" id="cb9-3" title="3">  -DCMAKE_INSTALL_LIBDIR=lib \</a>
+<a class="sourceLine" id="cb9-4" title="4">  -DARROW_COMPUTE=ON \</a>
+<a class="sourceLine" id="cb9-5" title="5">  -DARROW_CSV=ON \</a>
+<a class="sourceLine" id="cb9-6" title="6">  -DARROW_DATASET=ON \</a>
+<a class="sourceLine" id="cb9-7" title="7">  -DARROW_EXTRA_ERROR_CONTEXT=ON \</a>
+<a class="sourceLine" id="cb9-8" title="8">  -DARROW_FILESYSTEM=ON \</a>
+<a class="sourceLine" id="cb9-9" title="9">  -DARROW_INSTALL_NAME_RPATH=OFF \</a>
+<a class="sourceLine" id="cb9-10" title="10">  -DARROW_JEMALLOC=ON \</a>
+<a class="sourceLine" id="cb9-11" title="11">  -DARROW_JSON=ON \</a>
+<a class="sourceLine" id="cb9-12" title="12">  -DARROW_PARQUET=ON \</a>
+<a class="sourceLine" id="cb9-13" title="13">  -DARROW_WITH_SNAPPY=ON \</a>
+<a class="sourceLine" id="cb9-14" title="14">  -DARROW_WITH_ZLIB=ON \</a>
+<a class="sourceLine" id="cb9-15" title="15">  ..</a></code></pre></div>
+<p><code>..</code> refers to the C++ source directory: you’re in <code>cpp/build</code> and the source is in <code>cpp</code>.</p>
+<div id="enabling-more-arrow-features" class="section level4">
+<h4 class="hasAnchor">
+<a href="#enabling-more-arrow-features" class="anchor"></a>Enabling more Arrow features</h4>
+<p>To enable optional features including: S3 support, an alternative memory allocator, and additional compression libraries, add some or all of these flags to your call to <code>cmake</code> (the trailing <code>\</code> makes them easier to paste into a bash shell on a new line):</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb10-1" title="1">  <span class="ex">-DARROW_MIMALLOC</span>=ON \</a>
+<a class="sourceLine" id="cb10-2" title="2">  -DARROW_S3=ON \</a>
+<a class="sourceLine" id="cb10-3" title="3">  -DARROW_WITH_BROTLI=ON \</a>
+<a class="sourceLine" id="cb10-4" title="4">  -DARROW_WITH_BZ2=ON \</a>
+<a class="sourceLine" id="cb10-5" title="5">  -DARROW_WITH_LZ4=ON \</a>
+<a class="sourceLine" id="cb10-6" title="6">  -DARROW_WITH_SNAPPY=ON \</a>
+<a class="sourceLine" id="cb10-7" title="7">  -DARROW_WITH_ZSTD=ON \</a></code></pre></div>
 <p>Other flags that may be useful:</p>
 <ul>
-<li>
-<code>-DBoost_SOURCE=BUNDLED</code> and <code>-DThrift_SOURCE=bundled</code>, for example, or any other dependency <code>*_SOURCE</code>, if you have a system version of a C++ dependency that doesn’t work correctly with Arrow. This tells the build to compile its own version of the dependency from source.</li>
-<li>
-<code>-DCMAKE_BUILD_TYPE=debug</code> or <code>-DCMAKE_BUILD_TYPE=relwithdebinfo</code> can be useful for debugging. You probably don’t want to do this generally because a debug build is much slower at runtime than the default <code>release</code> build.</li>
+<li><p><code>-DBoost_SOURCE=BUNDLED</code> and <code>-DThrift_SOURCE=BUNDLED</code>, for example, or any other dependency <code>*_SOURCE</code>, if you have a system version of a C++ dependency that doesn’t work correctly with Arrow. This tells the build to compile its own version of the dependency from source.</p></li>
+<li><p><code>-DCMAKE_BUILD_TYPE=debug</code> or <code>-DCMAKE_BUILD_TYPE=relwithdebinfo</code> can be useful for debugging. You probably don’t want to do this generally because a debug build is much slower at runtime than the default <code>release</code> build.</p></li>
 </ul>
-<p><em>Note</em> <code>cmake</code> is particularly sensitive to whitespacing, if you see errors, check that you don’t have any errant whitespace around</p>
+<p><em>Note</em> <code>cmake</code> is particularly sensitive to whitespacing, if you see errors, check that you don’t have any errant whitespace.</p>
 </div>
-<div id="build-arrow" class="section level3">
+</div>
+<div id="step-3---building-libarrow" class="section level3">
 <h3 class="hasAnchor">
-<a href="#build-arrow" class="anchor"></a>Build Arrow</h3>
+<a href="#step-3---building-libarrow" class="anchor"></a>Step 3 - Building libarrow</h3>
 <p>You can add <code>-j#</code> between <code>make</code> and <code>install</code> here too to speed up compilation by running in parallel (where <code>#</code> is the number of cores you have available).</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb12-1" title="1"><span class="fu">make</span> -j8 install</a></code></pre></div>
-<p>If you are installing on linux, and you are installing to the system, you may need to use <code>sudo</code>:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb13-1" title="1"><span class="fu">sudo</span> make install</a></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb11-1" title="1"><span class="fu">make</span> -j8 install</a></code></pre></div>
 </div>
-<div id="build-the-arrow-r-package" class="section level3">
+<div id="step-4---build-the-arrow-r-package" class="section level3">
 <h3 class="hasAnchor">
-<a href="#build-the-arrow-r-package" class="anchor"></a>Build the Arrow R package</h3>
-<p>Once you’ve built the C++ library, you can install the R package and its dependencies, along with additional dev dependencies, from the git checkout:</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb14-1" title="1"><span class="bu">popd</span> <span class="co"># To go back to the root directory of the project, from cpp/build</span></a>
-<a class="sourceLine" id="cb14-2" title="2"></a>
-<a class="sourceLine" id="cb14-3" title="3"><span class="bu">pushd</span> r</a>
-<a class="sourceLine" id="cb14-4" title="4"><span class="ex">R</span> -e <span class="st">'install.packages("remotes"); remotes::install_deps(dependencies = TRUE)'</span></a>
-<a class="sourceLine" id="cb14-5" title="5"></a>
-<a class="sourceLine" id="cb14-6" title="6"><span class="ex">R</span> CMD INSTALL .</a></code></pre></div>
-</div>
-<div id="compilation-flags" class="section level3">
-<h3 class="hasAnchor">
-<a href="#compilation-flags" class="anchor"></a>Compilation flags</h3>
+<a href="#step-4---build-the-arrow-r-package" class="anchor"></a>Step 4 - Build the Arrow R package</h3>
+<p>Once you’ve built libarrow, you can install the R package and its dependencies, along with additional dev dependencies, from the git checkout:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb12-1" title="1"><span class="bu">popd</span> <span class="co"># To go back to the root directory of the project, from cpp/build</span></a>
+<a class="sourceLine" id="cb12-2" title="2"><span class="bu">pushd</span> r</a>
+<a class="sourceLine" id="cb12-3" title="3"><span class="ex">R</span> -e <span class="st">'install.packages("remotes"); remotes::install_deps(dependencies = TRUE)'</span></a>
+<a class="sourceLine" id="cb12-4" title="4"><span class="ex">R</span> CMD INSTALL .</a></code></pre></div>
+<div id="compilation-flags" class="section level4">
+<h4 class="hasAnchor">
+<a href="#compilation-flags" class="anchor"></a>Compilation flags</h4>
 <p>If you need to set any compilation flags while building the C++ extensions, you can use the <code>ARROW_R_CXXFLAGS</code> environment variable. For example, if you are using <code>perf</code> to profile the R extensions, you may need to set</p>
-<pre class="shell"><code>export ARROW_R_CXXFLAGS=-fno-omit-frame-pointer</code></pre>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb13-1" title="1"><span class="bu">export</span> <span class="va">ARROW_R_CXXFLAGS=</span>-fno-omit-frame-pointer</a></code></pre></div>
 </div>
-<div id="developer-experience" class="section level3">
-<h3 class="hasAnchor">
-<a href="#developer-experience" class="anchor"></a>Developer Experience</h3>
-<p>With the setups described here, you should not need to rebuild the Arrow library or even the C++ source in the R package as you iterated and work on the R package. The only time those should need to be rebuilt is if you have changed the C++ in the R package (and even then, <code>R CMD INSTALL .</code> should only need to recompile the files that have changed) <em>or</em> if the Arrow library C++ has changed and there is a mismatch between the Arrow Library and the R package. If you find yourself rebuilding either or both each time you install the package or run tests, something is probably wrong with your set up.</p>
+<div id="recompiling-the-c-code" class="section level4">
+<h4 class="hasAnchor">
+<a href="#recompiling-the-c-code" class="anchor"></a>Recompiling the C++ code</h4>
+<p>With the setup described here, you should not need to rebuild the Arrow library or even the C++ source in the R package as you iterate and work on the R package. The only time those should need to be rebuilt is if you have changed the C++ in the R package (and even then, <code>R CMD INSTALL .</code> should only need to recompile the files that have changed) <em>or</em> if the libarrow C++ has changed and there is a mismatch between libarrow and the R package. If you find yourself rebuilding either or both each time you install the package or run tests, something is probably wrong with your set up.</p>
 <details><summary>For a full build: a <code>cmake</code> command with all of the R-relevant optional dependencies turned on. Development with other languages might require different flags as well. For example, to develop Python, you would need to also add <code>-DARROW_PYTHON=ON</code> (though all of the other flags used for Python are already included here).</summary><p>
 </p>
-<pre class="shell"><code>cmake \
-  -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
-  -DCMAKE_INSTALL_LIBDIR=lib \
-  -DARROW_COMPUTE=ON \
-  -DARROW_CSV=ON \
-  -DARROW_DATASET=ON \
-  -DARROW_EXTRA_ERROR_CONTEXT=ON \
-  -DARROW_FILESYSTEM=ON \
-  -DARROW_INSTALL_NAME_RPATH=OFF \
-  -DARROW_JEMALLOC=ON \
-  -DARROW_JSON=ON \
-  -DARROW_MIMALLOC=ON \
-  -DARROW_PARQUET=ON \
-  -DARROW_S3=ON \
-  -DARROW_WITH_BROTLI=ON \
-  -DARROW_WITH_BZ2=ON \
-  -DARROW_WITH_LZ4=ON \
-  -DARROW_WITH_SNAPPY=ON \
-  -DARROW_WITH_ZLIB=ON \
-  -DARROW_WITH_ZSTD=ON \
-  ..</code></pre>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb14-1" title="1"><span class="fu">cmake</span> \</a>
+<a class="sourceLine" id="cb14-2" title="2">  -DCMAKE_INSTALL_PREFIX=<span class="va">$ARROW_HOME</span> \</a>
+<a class="sourceLine" id="cb14-3" title="3">  -DCMAKE_INSTALL_LIBDIR=lib \</a>
+<a class="sourceLine" id="cb14-4" title="4">  -DARROW_COMPUTE=ON \</a>
+<a class="sourceLine" id="cb14-5" title="5">  -DARROW_CSV=ON \</a>
+<a class="sourceLine" id="cb14-6" title="6">  -DARROW_DATASET=ON \</a>
+<a class="sourceLine" id="cb14-7" title="7">  -DARROW_EXTRA_ERROR_CONTEXT=ON \</a>
+<a class="sourceLine" id="cb14-8" title="8">  -DARROW_FILESYSTEM=ON \</a>
+<a class="sourceLine" id="cb14-9" title="9">  -DARROW_INSTALL_NAME_RPATH=OFF \</a>
+<a class="sourceLine" id="cb14-10" title="10">  -DARROW_JEMALLOC=ON \</a>
+<a class="sourceLine" id="cb14-11" title="11">  -DARROW_JSON=ON \</a>
+<a class="sourceLine" id="cb14-12" title="12">  -DARROW_MIMALLOC=ON \</a>
+<a class="sourceLine" id="cb14-13" title="13">  -DARROW_PARQUET=ON \</a>
+<a class="sourceLine" id="cb14-14" title="14">  -DARROW_S3=ON \</a>
+<a class="sourceLine" id="cb14-15" title="15">  -DARROW_WITH_BROTLI=ON \</a>
+<a class="sourceLine" id="cb14-16" title="16">  -DARROW_WITH_BZ2=ON \</a>
+<a class="sourceLine" id="cb14-17" title="17">  -DARROW_WITH_LZ4=ON \</a>
+<a class="sourceLine" id="cb14-18" title="18">  -DARROW_WITH_SNAPPY=ON \</a>
+<a class="sourceLine" id="cb14-19" title="19">  -DARROW_WITH_ZLIB=ON \</a>
+<a class="sourceLine" id="cb14-20" title="20">  -DARROW_WITH_ZSTD=ON \</a>
+<a class="sourceLine" id="cb14-21" title="21">  ..</a></code></pre></div>
 
 </details>
 </div>
-<div id="documentation" class="section level3">
-<h3 class="hasAnchor">
-<a href="#documentation" class="anchor"></a>Documentation</h3>
-<p>The documentation for the R package uses features of <code>roxygen2</code> that haven’t yet been released on CRAN, such as conditional inclusion of examples via the <code>@examplesIf</code> tag. If you are making changes which require updating the documentation, please install the development version of <code>roxygen2</code> from GitHub.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span><span class="op">(</span><span class="st">"r-lib/roxygen2"</span><span class="op">)</span></code></pre></div>
 </div>
 </div>
-<div id="troubleshooting" class="section level2">
+<div id="installing-a-version-of-the-r-package-with-a-specific-git-reference" class="section level2">
 <h2 class="hasAnchor">
-<a href="#troubleshooting" class="anchor"></a>Troubleshooting</h2>
-<p>Note that after any change to the C++ library, you must reinstall it and run <code>make clean</code> or <code>git clean -fdx .</code> to remove any cached object code in the <code>r/src/</code> directory before reinstalling the R package. This is only necessary if you make changes to the C++ library source; you do not need to manually purge object files if you are only editing R or C++ code inside <code>r/</code>.</p>
-<div id="arrow-library-r-package-mismatches" class="section level3">
+<a href="#installing-a-version-of-the-r-package-with-a-specific-git-reference" class="anchor"></a>Installing a version of the R package with a specific git reference</h2>
+<p>If you need an arrow installation from a specific repository or git reference, on most platforms except Windows, you can run:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span><span class="op">(</span><span class="st">"apache/arrow/r"</span>, build <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
+<p>The <code>build = FALSE</code> argument is important so that the installation can access the C++ source in the <code>cpp/</code> directory in <code>apache/arrow</code>.</p>
+<p>As with other installation methods, setting the environment variables <code>LIBARROW_MINIMAL=false</code> and <code>ARROW_R_DEV=true</code> will provide a more full-featured version of Arrow and provide more verbose output, respectively.</p>
+<p>For example, to install from the (fictional) branch <code>bugfix</code> from <code>apache/arrow</code> you could run:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html">Sys.setenv</a></span><span class="op">(</span>LIBARROW_MINIMAL<span class="op">=</span><span class="st">"false"</span><span class="op">)</span>
+<span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span><span class="op">(</span><span class="st">"apache/arrow/r@bugfix"</span>, build <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
+<p>Developers may wish to use this method of installing a specific commit separate from another Arrow development environment or system installation (e.g. we use this in <a href="https://github.com/ursacomputing/arrowbench">arrowbench</a> to install development versions of libarrow isolated from the system install). If you already have libarrow installed system-wide, you may need to set some additional variables in order to isolate this build from your system libraries:</p>
+<ul>
+<li><p>Setting the environment variable <code>FORCE_BUNDLED_BUILD</code> to <code>true</code> will skip the <code>pkg-config</code> search for libarrow and attempt to build from the same source at the repository+ref given.</p></li>
+<li><p>You may also need to set the Makevars <code>CPPFLAGS</code> and <code>LDFLAGS</code> to <code>""</code> in order to prevent the installation process from attempting to link to already installed system versions of libarrow. One way to do this temporarily is wrapping your <code><a href="https://remotes.r-lib.org/reference/install_github.html">remotes::install_github()</a></code> call like so:</p></li>
+</ul>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu">withr</span><span class="fu">::</span><span class="fu"><a href="https://withr.r-lib.org/reference/with_makevars.html">with_makevars</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>CPPFLAGS <span class="op">=</span> <span class="st">""</span>, LDFLAGS <span class="op">=</span> <span class="st">""</span><span class="op">)</span>, <span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+</div>
+</div>
+<div id="common-developer-workflow-tasks" class="section level1">
+<h1 class="hasAnchor">
+<a href="#common-developer-workflow-tasks" class="anchor"></a>Common developer workflow tasks</h1>
+<p>The <code>arrow/r</code> directory contains a <code>Makefile</code> to help with some common tasks from the command line (e.g. <code>make test</code>, <code>make doc</code>, <code>make clean</code>, etc.).</p>
+<div id="loading-arrow" class="section level2">
+<h2 class="hasAnchor">
+<a href="#loading-arrow" class="anchor"></a>Loading arrow</h2>
+<p>You can load the R package via <code>devtools::load_all()</code>.</p>
+</div>
+<div id="rebuilding-the-documentation" class="section level2">
+<h2 class="hasAnchor">
+<a href="#rebuilding-the-documentation" class="anchor"></a>Rebuilding the documentation</h2>
+<p>The R documentation uses the <a href="https://roxygen2.r-lib.org/articles/rd.html#functions"><code>@examplesIf</code></a> tag introduced in <code>roxygen2</code> version 7.1.1.9001, which hasn’t yet been released on CRAN at the time of writing. If you are making changes which require updating the documentation, please install the development version of <code>roxygen2</code> from GitHub.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span><span class="op">(</span><span class="st">"r-lib/roxygen2"</span><span class="op">)</span></code></pre></div>
+<p>You can use <code>devtools::document()</code> and <code><a href="https://pkgdown.r-lib.org/reference/build_site.html">pkgdown::build_site()</a></code> to rebuild the documentation and preview the results.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="co"># Update roxygen documentation</span>
+<span class="fu">devtools</span><span class="fu">::</span><span class="fu">document</span><span class="op">(</span><span class="op">)</span>
+
+<span class="co"># To preview the documentation website</span>
+<span class="fu">pkgdown</span><span class="fu">::</span><span class="fu"><a href="https://pkgdown.r-lib.org/reference/build_site.html">build_site</a></span><span class="op">(</span>preview<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+</div>
+<div id="styling-and-linting" class="section level2">
+<h2 class="hasAnchor">
+<a href="#styling-and-linting" class="anchor"></a>Styling and linting</h2>
+<div id="r-code" class="section level3">
 <h3 class="hasAnchor">
-<a href="#arrow-library-r-package-mismatches" class="anchor"></a>Arrow library-R package mismatches</h3>
-<p>If the Arrow library and the R package have diverged, you will see errors like:</p>
-<pre><code>Error: package or namespace load failed for ‘arrow’ in dyn.load(file, DLLpath = DLLpath, ...):
+<a href="#r-code" class="anchor"></a>R code</h3>
+<p>The R code in the package follows <a href="https://style.tidyverse.org/">the tidyverse style</a>. On PR submission (and on pushes) our CI will run linting and will flag possible errors on the pull request with annotations.</p>
+<p>To run the <a href="https://github.com/jimhester/lintr">lintr</a> locally, install the lintr package (note, we currently use a fork that includes fixes not yet accepted upstream, see how lintr is being installed in the file <code>ci/docker/linux-apt-lint.dockerfile</code> for the current status) and then run</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu">lintr</span><span class="fu">::</span><span class="fu">lint_package</span><span class="op">(</span><span class="st">"arrow/r"</span><span class="op">)</span></code></pre></div>
+<p>You can automatically change the formatting of the code in the package using the <a href="https://styler.r-lib.org/">styler</a> package. There are two ways to do this:</p>
+<ol style="list-style-type: decimal">
+<li><p>Use the comment bot to do this automatically with the command <code>@github-actions autotune</code> on a PR, and commit it back to the branch.</p></li>
+<li><p>Run the styler locally either via Makefile commands:</p></li>
+</ol>
+<div class="sourceCode" id="cb21"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb21-1" title="1"><span class="fu">make</span> style <span class="co"># (for only the files changed)</span></a>
+<a class="sourceLine" id="cb21-2" title="2"><span class="fu">make</span> style-all <span class="co"># (for all files)</span></a></code></pre></div>
+<p>or in R:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="co"># note the two excluded files which should not be styled</span>
+<span class="fu">styler</span><span class="fu">::</span><span class="fu">style_pkg</span><span class="op">(</span>exclude_files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"tests/testthat/latin1.R"</span>, <span class="st">"data-raw/codegen.R"</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+<p>The styler package will fix many styling errors, thought not all lintr errors are automatically fixable with styler. The list of files we intentionally do not style is in <code>r/.styler_excludes.R</code>.</p>
+</div>
+<div id="c-code" class="section level3">
+<h3 class="hasAnchor">
+<a href="#c-code" class="anchor"></a>C++ code</h3>
+<p>The arrow package uses some customized tools on top of <a href="https://cpp11.r-lib.org/">cpp11</a> to prepare its C++ code in <code>src/</code>. This is because there are some features that are only enabled and built conditionally during build time. If you change C++ code in the R package, you will need to set the <code>ARROW_R_DEV</code> environment variable to <code>true</code> (optionally, add it to your <code>~/.Renviron</code> file to persist across sessions) so that the <code>data-raw/codegen.R</code> file is used for code generation. The <code>Makefile</code> commands also handles this automatically.</p>
+<p>We use Google C++ style in our C++ code. The easiest way to accomplish this is use an editors/IDE that formats your code for you. Many popular editors/IDEs have support for running <code>clang-format</code> on C++ files when you save them. Installing/enabling the appropriate plugin may save you much frustration.</p>
+<p>Check for style errors with</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb23-1" title="1"><span class="ex">./lint.sh</span></a></code></pre></div>
+<p>Fix any style issues before committing with</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb24-1" title="1"><span class="ex">./lint.sh</span> --fix</a></code></pre></div>
+<p>The lint script requires Python 3 and <code>clang-format-8</code>. If the command isn’t found, you can explicitly provide the path to it like:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb25-1" title="1"><span class="va">CLANG_FORMAT=$(</span><span class="fu">which</span> clang-format-8<span class="va">)</span> <span class="ex">./lint.sh</span></a></code></pre></div>
+<p>On macOS, you can get this by installing LLVM via Homebrew and running the script as:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb26-1" title="1"><span class="va">CLANG_FORMAT=$(</span><span class="ex">brew</span> --prefix llvm@8<span class="va">)</span>/bin/clang-format <span class="ex">./lint.sh</span></a></code></pre></div>
+<p><em>Note</em> that the lint script requires Python 3 and the Python dependencies (note that `cmake_format is pinned to a specific version):</p>
+<ul>
+<li>autopep8</li>
+<li>flake8</li>
+<li>cmake_format==0.5.2</li>
+</ul>
+</div>
+</div>
+<div id="running-tests" class="section level2">
+<h2 class="hasAnchor">
+<a href="#running-tests" class="anchor"></a>Running tests</h2>
+<p>Tests can be run either using <code>devtools::test()</code> or the Makefile alternative.</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb27-1" title="1"><span class="co"># Run the test suite, optionally filtering file names</span></a>
+<a class="sourceLine" id="cb27-2" title="2">devtools<span class="op">::</span><span class="kw">test</span>(<span class="dt">filter=</span><span class="st">"^regexp$"</span>)</a>
+<a class="sourceLine" id="cb27-3" title="3"></a>
+<a class="sourceLine" id="cb27-4" title="4"><span class="co"># or the Makefile alternative from the arrow/r directory in a shell:</span></a>
+<a class="sourceLine" id="cb27-5" title="5">make test file=regexp</a></code></pre></div>
+<p>Some tests are conditionally enabled based on the availability of certain features in the package build (S3 support, compression libraries, etc.). Others are generally skipped by default but can be enabled with environment variables or other settings:</p>
+<ul>
+<li><p>All tests are skipped on Linux if the package builds without the C++ libarrow. To make the build fail if libarrow is not available (as in, to test that the C++ build was successful), set <code>TEST_R_WITH_ARROW=true</code></p></li>
+<li><p>Some tests are disabled unless <code>ARROW_R_DEV=true</code></p></li>
+<li><p>Tests that require allocating &gt;2GB of memory to test Large types are disabled unless <code>ARROW_LARGE_MEMORY_TESTS=true</code></p></li>
+<li><p>Integration tests against a real S3 bucket are disabled unless credentials are set in <code>AWS_ACCESS_KEY_ID</code> and <code>AWS_SECRET_ACCESS_KEY</code>; these are available on request</p></li>
+<li><p>S3 tests using <a href="https://min.io/">MinIO</a> locally are enabled if the <code>minio server</code> process is found running. If you’re running MinIO with custom settings, you can set <code>MINIO_ACCESS_KEY</code>, <code>MINIO_SECRET_KEY</code>, and <code>MINIO_PORT</code> to override the defaults.</p></li>
+</ul>
+</div>
+<div id="running-checks" class="section level2">
+<h2 class="hasAnchor">
+<a href="#running-checks" class="anchor"></a>Running checks</h2>
+<p>You can run package checks by using <code>devtools::check()</code> and check test coverage with <code>covr::package_coverage()</code>.</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="co"># All package checks</span>
+<span class="fu">devtools</span><span class="fu">::</span><span class="fu">check</span><span class="op">(</span><span class="op">)</span>
+
+<span class="co"># See test coverage statistics</span>
+<span class="fu">covr</span><span class="fu">::</span><span class="fu">report</span><span class="op">(</span><span class="op">)</span>
+<span class="fu">covr</span><span class="fu">::</span><span class="fu">package_coverage</span><span class="op">(</span><span class="op">)</span></code></pre></div>
+<p>For full package validation, you can run the following commands from a terminal.</p>
+<pre><code>R CMD build .
+R CMD check arrow_*.tar.gz --as-cran</code></pre>
+</div>
+<div id="running-additional-ci-checks" class="section level2">
+<h2 class="hasAnchor">
+<a href="#running-additional-ci-checks" class="anchor"></a>Running additional CI checks</h2>
+<p>On a pull request, there are some actions you can trigger by commenting on the PR. We have additional CI checks that run nightly and can be requested on demand using an internal tool called <a href="https://arrow.apache.org/docs/developers/crossbow.html">crossbow</a>. A few important GitHub comment commands are shown below.</p>
+<div id="run-all-extended-r-ci-tasks" class="section level4">
+<h4 class="hasAnchor">
+<a href="#run-all-extended-r-ci-tasks" class="anchor"></a>Run all extended R CI tasks</h4>
+<pre><code>@github-actions crossbow submit -g r</code></pre>
+<p>This runs each of the R-related CI tasks.</p>
+</div>
+<div id="run-a-specific-task" class="section level4">
+<h4 class="hasAnchor">
+<a href="#run-a-specific-task" class="anchor"></a>Run a specific task</h4>
+<pre><code>@github-actions crossbow submit {task-name}</code></pre>
+<p>See the <code>r:</code> group definition near the beginning of the <a href="https://github.com/apache/arrow/blob/master/dev/tasks/tasks.yml">crossbow configuration</a> for a list of glob expression patterns that match names of items in the <code>tasks:</code> list below it.</p>
+</div>
+<div id="run-linting-and-documentation-building-tasks" class="section level4">
+<h4 class="hasAnchor">
+<a href="#run-linting-and-documentation-building-tasks" class="anchor"></a>Run linting and documentation building tasks</h4>
+<pre><code>@github-actions autotune</code></pre>
+<p>This will run and fix lint C++ linting errors, run R documentation (among other cleanup tasks), run styler on any changed R code, and commit the resulting updates to the branch.</p>
+</div>
+</div>
+</div>
+<div id="summary-of-environment-variables" class="section level1">
+<h1 class="hasAnchor">
+<a href="#summary-of-environment-variables" class="anchor"></a>Summary of environment variables</h1>
+<ul>
+<li>See the user-facing <a href="install.html">Install vignette</a> for a large number of environment variables that determine how the build works and what features get built.</li>
+<li>
+<code>TEST_OFFLINE_BUILD</code>: When set to <code>true</code>, the build script will not download prebuilt the C++ library binary. It will turn off any features that require a download, unless they’re available in the <code>tools/cpp/thirdparty/download/</code> subfolder of the tar.gz file. <code><a href="../reference/create_package_with_all_dependencies.html">create_package_with_all_dependencies()</a></code> creates that subfolder. Regardless of this flag’s value, <code>cmake</code> will be downloaded if it’s unavailable.</li>
+<li>
+<code>TEST_R_WITHOUT_LIBARROW</code>: When set to <code>true</code>, skip tests that would require the C++ Arrow library (that is, almost everything).</li>
+</ul>
+</div>
+<div id="troubleshooting" class="section level1">
+<h1 class="hasAnchor">
+<a href="#troubleshooting" class="anchor"></a>Troubleshooting</h1>
+<p>Note that after any change to libarrow, you must reinstall it and run <code>make clean</code> or <code>git clean -fdx .</code> to remove any cached object code in the <code>r/src/</code> directory before reinstalling the R package. This is only necessary if you make changes to libarrow source; you do not need to manually purge object files if you are only editing R or C++ code inside <code>r/</code>.</p>
+<div id="arrow-library---r-package-mismatches" class="section level2">
+<h2 class="hasAnchor">
+<a href="#arrow-library---r-package-mismatches" class="anchor"></a>Arrow library - R package mismatches</h2>
+<p>If libarrow and the R package have diverged, you will see errors like:</p>
+<pre><code>Error: package or namespace load failed for ‘arrow' in dyn.load(file, DLLpath = DLLpath, ...):
  unable to load shared object '/Library/Frameworks/R.framework/Versions/4.0/Resources/library/00LOCK-r/00new/arrow/libs/arrow.so':
   dlopen(/Library/Frameworks/R.framework/Versions/4.0/Resources/library/00LOCK-r/00new/arrow/libs/arrow.so, 6): Symbol not found: __ZN5arrow2io16RandomAccessFile9ReadAsyncERKNS0_9IOContextExx
   Referenced from: /Library/Frameworks/R.framework/Versions/4.0/Resources/library/00LOCK-r/00new/arrow/libs/arrow.so
@@ -340,29 +483,29 @@ nightly$ls("libarrow/bin")</code></pre>
 Error: loading failed
 Execution halted
 ERROR: loading failed</code></pre>
-<p>To resolve this, try rebuilding the Arrow library from <a href="#building-arrow">Building Arrow above</a>.</p>
+<p>To resolve this, try <a href="#step-3-building-arrow">rebuilding the Arrow library</a>.</p>
 </div>
-<div id="multiple-versions-of-arrow-library" class="section level3">
-<h3 class="hasAnchor">
-<a href="#multiple-versions-of-arrow-library" class="anchor"></a>Multiple versions of Arrow library</h3>
-<p>If rebuilding the Arrow library doesn’t work and you are <a href="#installing-to-another-directory">installing from a user-level directory</a> and you already have a previous installation of libarrow in a system directory or you get you may get errors like the following when you install the R package:</p>
-<pre><code>Error: package or namespace load failed for ‘arrow’ in dyn.load(file, DLLpath = DLLpath, ...):
+<div id="multiple-versions-of-libarrow" class="section level2">
+<h2 class="hasAnchor">
+<a href="#multiple-versions-of-libarrow" class="anchor"></a>Multiple versions of libarrow</h2>
+<p>If you are installing from a user-level directory, and you already have a previous installation of libarrow in a system directory, you get you may get errors like the following when you install the R package:</p>
+<pre><code>Error: package or namespace load failed for ‘arrow' in dyn.load(file, DLLpath = DLLpath, ...):
  unable to load shared object '/Library/Frameworks/R.framework/Versions/4.0/Resources/library/00LOCK-r/00new/arrow/libs/arrow.so':
   dlopen(/Library/Frameworks/R.framework/Versions/4.0/Resources/library/00LOCK-r/00new/arrow/libs/arrow.so, 6): Library not loaded: /usr/local/lib/libarrow.400.dylib
   Referenced from: /usr/local/lib/libparquet.400.dylib
   Reason: image not found</code></pre>
-<p>You need to make sure that you don’t let R link to your system library when building arrow. You can do this a number of different ways:</p>
+<p>If this happens, you need to make sure that you don’t let R link to your system library when building arrow. You can do this a number of different ways:</p>
 <ul>
 <li>Setting the <code>MAKEFLAGS</code> environment variable to <code>"LDFLAGS="</code> (see below for an example) this is the recommended way to accomplish this</li>
 <li>Using {withr}’s <code>with_makevars(list(LDFLAGS = ""), ...)</code>
 </li>
 <li>adding <code>LDFLAGS=</code> to your <code>~/.R/Makevars</code> file (the least recommended way, though it is a common debugging approach suggested online)</li>
 </ul>
-<div class="sourceCode" id="cb20"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb20-1" title="1"><span class="va">MAKEFLAGS=</span><span class="st">"LDFLAGS="</span> <span class="ex">R</span> CMD INSTALL .</a></code></pre></div>
+<div class="sourceCode" id="cb35"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb35-1" title="1"><span class="va">MAKEFLAGS=</span><span class="st">"LDFLAGS="</span> <span class="ex">R</span> CMD INSTALL .</a></code></pre></div>
 </div>
-<div id="rpath-issues" class="section level3">
-<h3 class="hasAnchor">
-<a href="#rpath-issues" class="anchor"></a><code>rpath</code> issues</h3>
+<div id="rpath-issues" class="section level2">
+<h2 class="hasAnchor">
+<a href="#rpath-issues" class="anchor"></a><code>rpath</code> issues</h2>
 <p>If the package fails to install/load with an error like this:</p>
 <pre><code>  ** testing if installed package can be loaded from temporary location
   Error: package or namespace load failed for 'arrow' in dyn.load(file, DLLpath = DLLpath, ...):
@@ -372,119 +515,10 @@ ERROR: loading failed</code></pre>
 <p>When installing from source, if the R and C++ library versions do not match, installation may fail. If you’ve previously installed the libraries and want to upgrade the R package, you’ll need to update the Arrow C++ library first.</p>
 <p>For any other build/configuration challenges, see the <a href="https://arrow.apache.org/docs/developers/cpp/building.html">C++ developer guide</a>.</p>
 </div>
-</div>
-<div id="using-remotesinstall_github---" class="section level2">
+<div id="other-installation-issues" class="section level2">
 <h2 class="hasAnchor">
-<a href="#using-remotesinstall_github---" class="anchor"></a>Using <code>remotes::install_github(...)</code>
-</h2>
-<p>If you need an Arrow installation from a specific repository or at a specific ref, <code><a href="https://remotes.r-lib.org/reference/install_github.html">remotes::install_github("apache/arrow/r", build = FALSE)</a></code> should work on most platforms (with the notable exception of Windows). The <code>build = FALSE</code> argument is important so that the installation can access the C++ source in the <code>cpp/</code> directory in <code>apache/arrow</code>.</p>
-<p>As with other installation methods, setting the environment variables <code>LIBARROW_MINIMAL=false</code> and <code>ARROW_R_DEV=true</code> will provide a more full-featured version of Arrow and provide more verbose output, respectively.</p>
-<p>For example, to install from the (fictional) branch <code>bugfix</code> from <code>apache/arrow</code> one could:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html">Sys.setenv</a></span><span class="op">(</span>LIBARROW_MINIMAL<span class="op">=</span><span class="st">"false"</span><span class="op">)</span>
-<span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span><span class="op">(</span><span class="st">"apache/arrow/r@bugfix"</span>, build <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
-<p>Developers may wish to use this method of installing a specific commit separate from another Arrow development environment or system installation (e.g. we use this in <a href="https://github.com/ursacomputing/arrowbench">arrowbench</a> to install development versions of arrow isolated from the system install). If you already have Arrow C++ libraries installed system-wide, you may need to set some additional variables in order to isolate this build from your system libraries:</p>
-<ul>
-<li>Setting the environment variable <code>FORCE_BUNDLED_BUILD</code> to <code>true</code> will skip the <code>pkg-config</code> search for Arrow libraries and attempt to build from the same source at the repository+ref given.</li>
-<li>You may also need to set the Makevars <code>CPPFLAGS</code> and <code>LDFLAGS</code> to <code>""</code> in order to prevent the installation process from attempting to link to already installed system versions of Arrow. One way to do this temporarily is wrapping your <code><a href="https://remotes.r-lib.org/reference/install_github.html">remotes::install_github()</a></code> call like so: <code><a href="https://withr.r-lib.org/reference/with_makevars.html">withr::with_makevars(list(CPPFLAGS = "", LDFLAGS = ""), remotes::install_github(...))</a></code>.</li>
-</ul>
-</div>
-<div id="what-happens-when-you-r-cmd-install" class="section level2">
-<h2 class="hasAnchor">
-<a href="#what-happens-when-you-r-cmd-install" class="anchor"></a>What happens when you <code>R CMD INSTALL</code>?</h2>
-<p>There are a number of scripts that are triggered when <code>R CMD INSTALL .</code>. For Arrow users, these should all just work without configuration and pull in the most complete pieces (e.g. official binaries that we host) so the installation process is easy. However knowing about these scripts can help troubleshoot if things go wrong in them or things go wrong in an install:</p>
-<ul>
-<li>
-<code>configure</code> and <code>configure.win</code> These scripts are triggered during <code>R CMD INSTALL .</code> on non-Windows and Windows platforms, respectively. They handle finding the Arrow library, setting up the build variables necessary, and writing the package Makevars file that is used to compile the C++ code in the R package.</li>
-<li>
-<code>tools/nixlibs.R</code> This script is sometimes called by <code>configure</code> on Linux (or on any non-windows OS with the environment variable <code>FORCE_BUNDLED_BUILD=true</code>). This sets up the build process for our bundled builds (which is the default on linux). The operative logic is at the end of the script, but it will do the following (and it will stop with the first one that succeeds and some of the steps are only checked if they are enabled via an environment variable):
-<ul>
-<li>Check if there is an already built libarrow in <code>arrow/r/libarrow-{version}</code>, use that to link against if it exists.</li>
-<li>Check if a binary is available from our hosted unofficial builds.</li>
-<li>Download the Arrow source and build the Arrow Library from source.</li>
-<li>
-<code>*** Proceed without C++</code> dependencies (this is an error and the package will not work, but if you see this message you know the previous steps have not succeeded/were not enabled)</li>
-</ul>
-</li>
-<li>
-<code>inst/build_arrow_static.sh</code> this script builds Arrow for a bundled, static build. It is called by <code>tools/nixlibs.R</code> when the Arrow library is being built. (If you’re looking at this script, and you’ve gotten this far, it should look <em>incredibly</em> familiar: it’s basically the contents of this guide in script form — with a few important changes)</li>
-</ul>
-</div>
-<div id="editing-c-code-in-the-r-package" class="section level2">
-<h2 class="hasAnchor">
-<a href="#editing-c-code-in-the-r-package" class="anchor"></a>Editing C++ code in the R package</h2>
-<p>The <code>arrow</code> package uses some customized tools on top of <code>cpp11</code> to prepare its C++ code in <code>src/</code>. This is because we have some features that are only enabled and built conditionally during build time. If you change C++ code in the R package, you will need to set the <code>ARROW_R_DEV</code> environment variable to <code>true</code> (optionally, add it to your <code>~/.Renviron</code> file to persist across sessions) so that the <code>data-raw/codegen.R</code> file is used for code generation. The <code>Makefile</code> commands also handles this automatically.</p>
-<p>We use Google C++ style in our C++ code. The easiest way to accomplish this is use an editors/IDE that formats your code for you. Many popular editors/IDEs have support for running <code>clang-format</code> on C++ files when you save them. Installing/enabling the appropriate plugin may save you much frustration.</p>
-<p>Check for style errors with</p>
-<pre class="shell"><code>./lint.sh</code></pre>
-<p>Fix any style issues before committing with</p>
-<pre class="shell"><code>./lint.sh --fix</code></pre>
-<p>The lint script requires Python 3 and <code>clang-format-8</code>. If the command isn’t found, you can explicitly provide the path to it like <code>CLANG_FORMAT=$(which clang-format-8) ./lint.sh</code>. On macOS, you can get this by installing LLVM via Homebrew and running the script as <code>CLANG_FORMAT=$(brew --prefix llvm@8)/bin/clang-format ./lint.sh</code></p>
-<p><em>Note</em> that the lint script requires Python 3 and the Python dependencies (note that `cmake_format is pinned to a specific version):</p>
-<ul>
-<li>autopep8</li>
-<li>flake8</li>
-<li>cmake_format==0.5.2</li>
-</ul>
-</div>
-<div id="running-tests" class="section level2">
-<h2 class="hasAnchor">
-<a href="#running-tests" class="anchor"></a>Running tests</h2>
-<p>Some tests are conditionally enabled based on the availability of certain features in the package build (S3 support, compression libraries, etc.). Others are generally skipped by default but can be enabled with environment variables or other settings:</p>
-<ul>
-<li>All tests are skipped on Linux if the package builds without the C++ libarrow. To make the build fail if libarrow is not available (as in, to test that the C++ build was successful), set <code>TEST_R_WITH_ARROW=true</code>
-</li>
-<li>Some tests are disabled unless <code>ARROW_R_DEV=true</code>
-</li>
-<li>Tests that require allocating &gt;2GB of memory to test Large types are disabled unless <code>ARROW_LARGE_MEMORY_TESTS=true</code>
-</li>
-<li>Integration tests against a real S3 bucket are disabled unless credentials are set in <code>AWS_ACCESS_KEY_ID</code> and <code>AWS_SECRET_ACCESS_KEY</code>; these are available on request</li>
-<li>S3 tests using <a href="https://min.io/">MinIO</a> locally are enabled if the <code>minio server</code> process is found running. If you’re running MinIO with custom settings, you can set <code>MINIO_ACCESS_KEY</code>, <code>MINIO_SECRET_KEY</code>, and <code>MINIO_PORT</code> to override the defaults.</li>
-</ul>
-</div>
-<div id="github-workflows" class="section level2">
-<h2 class="hasAnchor">
-<a href="#github-workflows" class="anchor"></a>Github workflows</h2>
-<p>On a pull request, there are some actions you can trigger by commenting on the PR. We have additional CI checks that run nightly and can be requested on demand using an internal tool called <a href="https://arrow.apache.org/docs/developers/crossbow.html">crosssbow</a>. A few important GitHub comment commands include:</p>
-<ul>
-<li>
-<code>@github-actions crossbow submit -g r</code> for all extended R CI tests</li>
-<li>
-<code>@github-actions crossbow submit {task-name}</code> for running a specific task. See the <code>r:</code> group definition near the beginning of the <a href="https://github.com/apache/arrow/blob/master/dev/tasks/tasks.yml">crossbow configuration</a> for a list of glob expression patterns that match names of items in the <code>tasks:</code> list below it.</li>
-<li>
-<code>@github-actions autotune</code> will run and fix lint c++ linting errors + run R documentation (among other cleanup tasks) and commit them to the branch</li>
-</ul>
-</div>
-<div id="useful-functions-for-arrow-developers" class="section level2">
-<h2 class="hasAnchor">
-<a href="#useful-functions-for-arrow-developers" class="anchor"></a>Useful functions for Arrow developers</h2>
-<p>Within an R session, these can help with package development:</p>
-<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb25-1" title="1"><span class="co"># Load the dev package</span></a>
-<a class="sourceLine" id="cb25-2" title="2">devtools<span class="op">::</span><span class="kw">load_all</span>()</a>
-<a class="sourceLine" id="cb25-3" title="3"></a>
-<a class="sourceLine" id="cb25-4" title="4"><span class="co"># Run the test suite, optionally filtering file names</span></a>
-<a class="sourceLine" id="cb25-5" title="5">devtools<span class="op">::</span><span class="kw">test</span>(<span class="dt">filter=</span><span class="st">"^regexp$"</span>)</a>
-<a class="sourceLine" id="cb25-6" title="6"><span class="co"># or the Makefile alternative from the arrow/r directory in a shell:</span></a>
-<a class="sourceLine" id="cb25-7" title="7">make test file=regexp</a>
-<a class="sourceLine" id="cb25-8" title="8"></a>
-<a class="sourceLine" id="cb25-9" title="9"><span class="co"># Update roxygen documentation</span></a>
-<a class="sourceLine" id="cb25-10" title="10">devtools<span class="op">::</span><span class="kw">document</span>()</a>
-<a class="sourceLine" id="cb25-11" title="11"></a>
-<a class="sourceLine" id="cb25-12" title="12"><span class="co"># To preview the documentation website</span></a>
-<a class="sourceLine" id="cb25-13" title="13">pkgdown<span class="op">::</span><span class="kw">build_site</span>()</a>
-<a class="sourceLine" id="cb25-14" title="14"></a>
-<a class="sourceLine" id="cb25-15" title="15"><span class="co"># All package checks; see also below</span></a>
-<a class="sourceLine" id="cb25-16" title="16">devtools<span class="op">::</span><span class="kw">check</span>()</a>
-<a class="sourceLine" id="cb25-17" title="17"></a>
-<a class="sourceLine" id="cb25-18" title="18"><span class="co"># See test coverage statistics</span></a>
-<a class="sourceLine" id="cb25-19" title="19">covr<span class="op">::</span><span class="kw">report</span>()</a>
-<a class="sourceLine" id="cb25-20" title="20">covr<span class="op">::</span><span class="kw">package_coverage</span>()</a></code></pre></div>
-<p>Any of those can be run from the command line by wrapping them in <code>R -e '$COMMAND'</code>. There’s also a <code>Makefile</code> to help with some common tasks from the command line (<code>make test</code>, <code>make doc</code>, <code>make clean</code>, etc.)</p>
-<div id="full-package-validation" class="section level3">
-<h3 class="hasAnchor">
-<a href="#full-package-validation" class="anchor"></a>Full package validation</h3>
-<pre class="shell"><code>R CMD build .
-R CMD check arrow_*.tar.gz --as-cran</code></pre>
+<a href="#other-installation-issues" class="anchor"></a>Other installation issues</h2>
+<p>There are a number of scripts that are triggered when the arrow R package is installed. For package users who are not interacting with the underlying code, these should all just work without configuration and pull in the most complete pieces (e.g. official binaries that we host). However, knowing about these scripts can help package developers troubleshoot if things go wrong in them or things go wrong in an install. See <a href="./install.html#how-dependencies-are-resolved">the installation vignette</a> for more information. &gt;&gt;&gt;&gt;&gt;&gt;&gt; master</p>
 </div>
 </div>
   </div>
