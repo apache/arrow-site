@@ -168,7 +168,7 @@ For convenience, we also provide packages through several package managers. Many
 Binary conda packages are on [conda-forge][5] for Linux, macOS, and Windows
 for the following versions:
 
-* Python 3.6, 3.7, 3.8, 3.9
+* Python 3.6, 3.7, 3.8, 3.9, 3.10
 * R 3.6, 4.0
 
 Install them with:
@@ -243,7 +243,7 @@ using Pkg; Pkg.add("Arrow")
 
 ### Ruby Packages on RubyGems
 
-Install the Ruby packages from [RubyGems][25] with
+Install the Ruby packages for Ruby 2.6, 2.7 and 3.0 from [RubyGems][25] with
 
 ```shell
 gem install red-arrow
