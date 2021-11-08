@@ -168,8 +168,8 @@ For convenience, we also provide packages through several package managers. Many
 Binary conda packages are on [conda-forge][5] for Linux, macOS, and Windows
 for the following versions:
 
-* Python 3.6, 3.7, 3.8, 3.9, 3.10
-* R 3.6, 4.0
+* Python 3.7, 3.8, 3.9, 3.10
+* R 4.0, 4.1
 
 Install them with:
 
