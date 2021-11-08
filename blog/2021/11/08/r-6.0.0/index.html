@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Apache Arrow R 6.0.0 Release | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.7.1 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Apache Arrow R 6.0.0 Release" />
+<meta name="author" content="Nic Crane, Jonathan Keane, Neal Richardson" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="We are excited to announce the recent release of version 6.0.0 of the Arrow R package on CRAN. While we usually don’t write a dedicated release blog post for the R package, this one is special. There are a number of major new features in this version, some of which we’ve been building up to for several years. More dplyr support In version 0.16.0 (February 2020), we released the first version of the Dataset feature, which allowed you to query multi-file datasets using dplyr::select() and filter(). These tools allowed you to find a slice of data in a large dataset that may not fit into memory and pull it into R for further analysis. In version 4.0.0 earlier this year, we added support for mutate() and a number of other dplyr verbs, and all year we’ve been adding hundreds of functions you can use to transform and filter data in Datasets. However, to aggregate, you’d still need to pull the data into R. Grouped aggregation With arrow 6.0.0, you can now summarise() on Arrow data, both with or without group_by(). These are supported both with in-memory Arrow tables as well as across partitioned datasets. Most common aggregation functions are supported: n(), n_distinct(), min(), max(), sum(), mean(), var(), sd(), any(), and all(). median() and quantile() with one probability are also supported and currently return approximate results using the t-digest algorithm. As usual, Arrow will read and process data in chunks and in parallel when possible to produce results much faster than one could by loading it all into memory then processing. This allows for operations that wouldn’t fit into memory on a single machine. For example, using the 1.5-billion row NYC Taxi dataset we use for examples in the package vignette, we can aggregate over the whole dataset even on a laptop: ds &lt;- open_dataset(&quot;nyc-taxi&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) ds %&gt;% filter( passenger_count &gt; 0, passenger_count &lt; 6, grepl(&quot;csh&quot;, payment_type, ignore.case = TRUE) ) %&gt;% group_by(passenger_count) %&gt;% summarize( avg = mean(total_amount, na.rm = TRUE), count = n() ) %&gt;% arrange(desc(count)) %&gt;% collect() #&gt; # A tibble: 5 × 3 #&gt; passenger_count avg count #&gt; &lt;int&gt; &lt;dbl&gt; &lt;int&gt; #&gt; 1 1 11.1 257738064 #&gt; 2 2 12.1 58824482 #&gt; 3 5 11.4 26056438 #&gt; 4 3 12.0 18852606 #&gt; 5 4 12.3 10081632 Joins In addition to aggregation, Arrow also supports all of dplyr’s mutating joins (inner, left, right, and full) and filtering joins (semi and anti). Suppose I want to get a table of all the flights from JFK to Las Vegas Airport on 9th October 2013, with the full name of the airline included. arrow_table(nycflights13::flights) %&gt;% filter( year == 2013, month == 10, day == 9, origin == &quot;JFK&quot;, dest == &quot;LAS&quot; ) %&gt;% select(dep_time, arr_time, carrier) %&gt;% left_join( arrow_table(nycflights13::airlines) ) %&gt;% collect() #&gt; # A tibble: 12 × 4 #&gt; dep_time arr_time carrier name #&gt; &lt;int&gt; &lt;int&gt; &lt;chr&gt; &lt;chr&gt; #&gt; 1 637 853 B6 JetBlue Airways #&gt; 2 648 912 AA American Airlines Inc. #&gt; 3 812 1029 DL Delta Air Lines Inc. #&gt; 4 945 1206 VX Virgin America #&gt; 5 955 1219 B6 JetBlue Airways #&gt; 6 1018 1231 DL Delta Air Lines Inc. #&gt; 7 1120 1338 B6 JetBlue Airways #&gt; 8 1451 1705 DL Delta Air Lines Inc. #&gt; 9 1656 1915 AA American Airlines Inc. #&gt; 10 1755 2001 DL Delta Air Lines Inc. #&gt; 11 1827 2049 B6 JetBlue Airways #&gt; 12 1917 2126 DL Delta Air Lines Inc. In this example, we’re working on an in-memory table, so you wouldn’t need arrow to do this–but the same code would work on a larger-than-memory dataset backed by thousands of Parquet files. Under the hood To support these features, we’ve made some internal changes to how queries are built up and–importantly–when they are evaluated. As a result, there are some changes in behavior compared to past versions of arrow. First, calls to summarise(), head(), and tail() no longer eagerly evaluate: this means you need to call either compute() (to evaluate it and produce an Arrow Table) or collect() (to evaluate and pull the Table into an R data.frame) to see the results. Second, the order of rows in a dataset query is no longer determinisitic due to the way the parallelization of work happens in the C++ library. This means that you can’t assume that the results of a query will be in the same order as the rows of data in the files on disk. If you do need a stable sort order, call arrange() to specify ordering. While these changes are a break from past arrow behavior, they are consistent with many dbplyr backends and are needed to allow queries to scale beyond data-frame workflows that can fit into memory. Integration with DuckDB The Arrow engine is not the only new way to query Arrow Datasets in this release. If you have the duckdb package installed, you can hand off an Arrow Dataset or query object to DuckDB for further querying using the to_duckdb() function. This allows you to use duckdb’s dbplyr methods, as well as its SQL interface, to aggregate data. DuckDB supports filter pushdown, so you can take advantage of Arrow Datasets and Arrow-based optimizations even within a DuckDB SQL query with a where clause. Filtering and column projection specified before the to_duckdb() call in a pipeline is evaluated in Arrow; this can be helpful in some circumstances like complicated dbplyr pipelines. You can also hand off DuckDB data (or the result of a query) to arrow with the to_arrow() call. In the example below, we are looking at flights between NYC and Chicago, and want to avoid the worst-of-the-worst delays. To do this, we can use percent_rank(); however that requires a window function which isn’t yet available in Arrow, so let’s try sending the data to DuckDB to do that, then pull it back into Arrow: library(arrow, warn.conflicts = FALSE) library(dplyr, warn.conflicts = FALSE) flights_filtered &lt;- arrow_table(nycflights13::flights) %&gt;% select(carrier, origin, dest, arr_delay) %&gt;% # arriving early doesn&#39;t matter, so call negative delays 0 mutate(arr_delay = pmax(arr_delay, 0)) %&gt;% to_duckdb() %&gt;% # for each carrier-origin-dest, take the worst 5% of delays group_by(carrier, origin, dest) %&gt;% mutate(arr_delay_rank = percent_rank(arr_delay)) %&gt;% filter(arr_delay_rank &gt; 0.95) head(flights_filtered) #&gt; # Source: lazy query [?? x 5] #&gt; # Database: duckdb_connection #&gt; # Groups: carrier, origin, dest #&gt; carrier origin dest arr_delay arr_delay_rank #&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; #&gt; 1 9E JFK RIC 119 0.952 #&gt; 2 9E JFK RIC 125 0.956 #&gt; 3 9E JFK RIC 137 0.960 #&gt; 4 9E JFK RIC 137 0.960 #&gt; 5 9E JFK RIC 158 0.968 #&gt; 6 9E JFK RIC 163 0.972 Now we have all of the flights filtered to those that are the worst-of-the-worst, and stored as a dbplyr lazy tbl with our DuckDB connection. This is an example of using Arrow -&gt; DuckDB. But we can do more: we can then bring that data back into Arrow just as easily. For the rest of our analysis, we pick up where we left off with the tbl referring to the DuckDB query: # pull data back into arrow to complete analysis flights_filtered %&gt;% to_arrow() %&gt;% # now summarise to get mean/min group_by(carrier, origin, dest) %&gt;% summarise( arr_delay_mean = mean(arr_delay), arr_delay_min = min(arr_delay), num_flights = n() ) %&gt;% filter(dest %in% c(&quot;ORD&quot;, &quot;MDW&quot;)) %&gt;% arrange(desc(arr_delay_mean)) %&gt;% collect() #&gt; # A tibble: 10 × 6 #&gt; # Groups: carrier, origin [10] #&gt; carrier origin dest arr_delay_mean arr_delay_min num_flights #&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt; #&gt; 1 MQ EWR ORD 190. 103 113 #&gt; 2 9E JFK ORD 185. 134 52 #&gt; 3 UA LGA ORD 179. 101 157 #&gt; 4 WN LGA MDW 178. 107 103 #&gt; 5 AA JFK ORD 178. 133 19 #&gt; 6 B6 JFK ORD 174. 129 46 #&gt; 7 WN EWR MDW 167. 107 103 #&gt; 8 UA EWR ORD 149. 87 189 #&gt; 9 AA LGA ORD 135. 78 280 #&gt; 10 EV EWR ORD 35 35 1 And just like that, we’ve passed data back and forth between Arrow and DuckDB without having to write a single file to disk! Expanded use of ALTREP We are continuing our use of R’s ALTREP where possible. In 5.0.0 there were a limited set of circumstances that took advantage of ALTREP, but in 6.0.0 we have expanded types to include strings, as well as vectors with NAs. library(microbenchmark) library(arrow) tbl &lt;- arrow_table(data.frame( x = rnorm(10000000), y = sample(c(letters, NA), 10000000, replace = TRUE) )) with_altrep &lt;- function(data){ options(arrow.use_altrep = TRUE) as.data.frame(data) } without_altrep &lt;- function(data){ options(arrow.use_altrep = FALSE) as.data.frame(data) } microbenchmark( without_altrep(tbl), with_altrep(tbl) ) #&gt; Unit: milliseconds #&gt; expr min lq mean median uq max neval #&gt; without_altrep(tbl) 191.0788 213.82235 249.65076 225.52120 244.26977 512.1652 100 #&gt; with_altrep(tbl) 48.7152 50.97269 65.56832 52.93795 55.24505 338.4602 100 Airgapped installation on Linux With every release, we continue to improve the installation experience on Linux. Unlike macOS and Windows, CRAN does not host binary packages for Linux, and unless you’re using a service like RStudio Package Manger that hosts binaries, you have to build arrow from source. Because Arrow involves a large C++ project, this can be slow and sensitive to differences in build environments. To ensure a reliable installation experience, we work hard to test on a wide range of platforms and configurations and eagerly seek to simplify the process so that install.packages(&quot;arrow&quot;) just works and you don’t have to think about it. A big improvement in 6.0.0 is that arrow can now install in a fully offline mode. The R package now includes the C++ source, so it does not need to be downloaded at build time. This does not include optional dependencies like compression libraries, the AWS SDK for accessing data in S3, and more. For folks who need to install Arrow on an airgapped server with all of those features, we have included a helper function to download and assemble a “fat” pacakge that contains everything that would be downloaded lazily at build time. The function create_package_with_all_dependencies() can be run from a computer that does have access to the internet, and creates a fat-source package which can then be transferred and installed on a server without connectivity. This helper is also available on GitHub without installing the arrow package. For more installation see the docs. Another installation change is that we’ve changed the source build to fail cleanly if the C++ library is not found or cannot be built. Previously, if the C++ library failed to build, you would get a successful R package installation, but the package wouldn’t do anything useful, it would just tell you to reinstall. This was helpful back in the early days of the package when we weren’t confident it would build everywhere that CRAN checked, but we now have much more experience (and extensive testing). In recent months this failure mode caused more confusion than it was worth, and it led many people to think that after you install arrow, you always have to install_arrow() again. Thanks This is a significant milestone for Arrow, and the R package specifically, and there is much gratitude to go around. In the 6.0.0 release, there were 77 individuals who contributed to Arrow, many of whom did the heavy lifting in the C++ library to make the new dataset query features a reality. Specifically in the R package, we wanted to acknowledge Phillip Cloud, Dewey Dunnington, Dragoș Moldovan-Grünfeld, Matt Peterson, and Percy Camilo Triveño Aucahuasi for their their first contributions to the R package. And a special thanks goes to Karl Dunkle Werner for the hard work on the offline package build! We also want to thank you in advance for your help. For this release of the Arrow query engine, we’ve focused our effort on getting the core functionality implemented. (In fact, this first release is something of an R-exclusive: bindings for these features haven’t yet been added to pyarrow, the Python Arrow library!) By focusing on the essentials, it means that there are a number of performance optimizations we plan to do but didn’t have time for in this release–and there are surely more issues to improve that we don’t yet know. We are eager for your feedback: please let us know of any issues you encounter so that we can improve these for our next release." />
+<meta property="og:description" content="We are excited to announce the recent release of version 6.0.0 of the Arrow R package on CRAN. While we usually don’t write a dedicated release blog post for the R package, this one is special. There are a number of major new features in this version, some of which we’ve been building up to for several years. More dplyr support In version 0.16.0 (February 2020), we released the first version of the Dataset feature, which allowed you to query multi-file datasets using dplyr::select() and filter(). These tools allowed you to find a slice of data in a large dataset that may not fit into memory and pull it into R for further analysis. In version 4.0.0 earlier this year, we added support for mutate() and a number of other dplyr verbs, and all year we’ve been adding hundreds of functions you can use to transform and filter data in Datasets. However, to aggregate, you’d still need to pull the data into R. Grouped aggregation With arrow 6.0.0, you can now summarise() on Arrow data, both with or without group_by(). These are supported both with in-memory Arrow tables as well as across partitioned datasets. Most common aggregation functions are supported: n(), n_distinct(), min(), max(), sum(), mean(), var(), sd(), any(), and all(). median() and quantile() with one probability are also supported and currently return approximate results using the t-digest algorithm. As usual, Arrow will read and process data in chunks and in parallel when possible to produce results much faster than one could by loading it all into memory then processing. This allows for operations that wouldn’t fit into memory on a single machine. For example, using the 1.5-billion row NYC Taxi dataset we use for examples in the package vignette, we can aggregate over the whole dataset even on a laptop: ds &lt;- open_dataset(&quot;nyc-taxi&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) ds %&gt;% filter( passenger_count &gt; 0, passenger_count &lt; 6, grepl(&quot;csh&quot;, payment_type, ignore.case = TRUE) ) %&gt;% group_by(passenger_count) %&gt;% summarize( avg = mean(total_amount, na.rm = TRUE), count = n() ) %&gt;% arrange(desc(count)) %&gt;% collect() #&gt; # A tibble: 5 × 3 #&gt; passenger_count avg count #&gt; &lt;int&gt; &lt;dbl&gt; &lt;int&gt; #&gt; 1 1 11.1 257738064 #&gt; 2 2 12.1 58824482 #&gt; 3 5 11.4 26056438 #&gt; 4 3 12.0 18852606 #&gt; 5 4 12.3 10081632 Joins In addition to aggregation, Arrow also supports all of dplyr’s mutating joins (inner, left, right, and full) and filtering joins (semi and anti). Suppose I want to get a table of all the flights from JFK to Las Vegas Airport on 9th October 2013, with the full name of the airline included. arrow_table(nycflights13::flights) %&gt;% filter( year == 2013, month == 10, day == 9, origin == &quot;JFK&quot;, dest == &quot;LAS&quot; ) %&gt;% select(dep_time, arr_time, carrier) %&gt;% left_join( arrow_table(nycflights13::airlines) ) %&gt;% collect() #&gt; # A tibble: 12 × 4 #&gt; dep_time arr_time carrier name #&gt; &lt;int&gt; &lt;int&gt; &lt;chr&gt; &lt;chr&gt; #&gt; 1 637 853 B6 JetBlue Airways #&gt; 2 648 912 AA American Airlines Inc. #&gt; 3 812 1029 DL Delta Air Lines Inc. #&gt; 4 945 1206 VX Virgin America #&gt; 5 955 1219 B6 JetBlue Airways #&gt; 6 1018 1231 DL Delta Air Lines Inc. #&gt; 7 1120 1338 B6 JetBlue Airways #&gt; 8 1451 1705 DL Delta Air Lines Inc. #&gt; 9 1656 1915 AA American Airlines Inc. #&gt; 10 1755 2001 DL Delta Air Lines Inc. #&gt; 11 1827 2049 B6 JetBlue Airways #&gt; 12 1917 2126 DL Delta Air Lines Inc. In this example, we’re working on an in-memory table, so you wouldn’t need arrow to do this–but the same code would work on a larger-than-memory dataset backed by thousands of Parquet files. Under the hood To support these features, we’ve made some internal changes to how queries are built up and–importantly–when they are evaluated. As a result, there are some changes in behavior compared to past versions of arrow. First, calls to summarise(), head(), and tail() no longer eagerly evaluate: this means you need to call either compute() (to evaluate it and produce an Arrow Table) or collect() (to evaluate and pull the Table into an R data.frame) to see the results. Second, the order of rows in a dataset query is no longer determinisitic due to the way the parallelization of work happens in the C++ library. This means that you can’t assume that the results of a query will be in the same order as the rows of data in the files on disk. If you do need a stable sort order, call arrange() to specify ordering. While these changes are a break from past arrow behavior, they are consistent with many dbplyr backends and are needed to allow queries to scale beyond data-frame workflows that can fit into memory. Integration with DuckDB The Arrow engine is not the only new way to query Arrow Datasets in this release. If you have the duckdb package installed, you can hand off an Arrow Dataset or query object to DuckDB for further querying using the to_duckdb() function. This allows you to use duckdb’s dbplyr methods, as well as its SQL interface, to aggregate data. DuckDB supports filter pushdown, so you can take advantage of Arrow Datasets and Arrow-based optimizations even within a DuckDB SQL query with a where clause. Filtering and column projection specified before the to_duckdb() call in a pipeline is evaluated in Arrow; this can be helpful in some circumstances like complicated dbplyr pipelines. You can also hand off DuckDB data (or the result of a query) to arrow with the to_arrow() call. In the example below, we are looking at flights between NYC and Chicago, and want to avoid the worst-of-the-worst delays. To do this, we can use percent_rank(); however that requires a window function which isn’t yet available in Arrow, so let’s try sending the data to DuckDB to do that, then pull it back into Arrow: library(arrow, warn.conflicts = FALSE) library(dplyr, warn.conflicts = FALSE) flights_filtered &lt;- arrow_table(nycflights13::flights) %&gt;% select(carrier, origin, dest, arr_delay) %&gt;% # arriving early doesn&#39;t matter, so call negative delays 0 mutate(arr_delay = pmax(arr_delay, 0)) %&gt;% to_duckdb() %&gt;% # for each carrier-origin-dest, take the worst 5% of delays group_by(carrier, origin, dest) %&gt;% mutate(arr_delay_rank = percent_rank(arr_delay)) %&gt;% filter(arr_delay_rank &gt; 0.95) head(flights_filtered) #&gt; # Source: lazy query [?? x 5] #&gt; # Database: duckdb_connection #&gt; # Groups: carrier, origin, dest #&gt; carrier origin dest arr_delay arr_delay_rank #&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; #&gt; 1 9E JFK RIC 119 0.952 #&gt; 2 9E JFK RIC 125 0.956 #&gt; 3 9E JFK RIC 137 0.960 #&gt; 4 9E JFK RIC 137 0.960 #&gt; 5 9E JFK RIC 158 0.968 #&gt; 6 9E JFK RIC 163 0.972 Now we have all of the flights filtered to those that are the worst-of-the-worst, and stored as a dbplyr lazy tbl with our DuckDB connection. This is an example of using Arrow -&gt; DuckDB. But we can do more: we can then bring that data back into Arrow just as easily. For the rest of our analysis, we pick up where we left off with the tbl referring to the DuckDB query: # pull data back into arrow to complete analysis flights_filtered %&gt;% to_arrow() %&gt;% # now summarise to get mean/min group_by(carrier, origin, dest) %&gt;% summarise( arr_delay_mean = mean(arr_delay), arr_delay_min = min(arr_delay), num_flights = n() ) %&gt;% filter(dest %in% c(&quot;ORD&quot;, &quot;MDW&quot;)) %&gt;% arrange(desc(arr_delay_mean)) %&gt;% collect() #&gt; # A tibble: 10 × 6 #&gt; # Groups: carrier, origin [10] #&gt; carrier origin dest arr_delay_mean arr_delay_min num_flights #&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt; #&gt; 1 MQ EWR ORD 190. 103 113 #&gt; 2 9E JFK ORD 185. 134 52 #&gt; 3 UA LGA ORD 179. 101 157 #&gt; 4 WN LGA MDW 178. 107 103 #&gt; 5 AA JFK ORD 178. 133 19 #&gt; 6 B6 JFK ORD 174. 129 46 #&gt; 7 WN EWR MDW 167. 107 103 #&gt; 8 UA EWR ORD 149. 87 189 #&gt; 9 AA LGA ORD 135. 78 280 #&gt; 10 EV EWR ORD 35 35 1 And just like that, we’ve passed data back and forth between Arrow and DuckDB without having to write a single file to disk! Expanded use of ALTREP We are continuing our use of R’s ALTREP where possible. In 5.0.0 there were a limited set of circumstances that took advantage of ALTREP, but in 6.0.0 we have expanded types to include strings, as well as vectors with NAs. library(microbenchmark) library(arrow) tbl &lt;- arrow_table(data.frame( x = rnorm(10000000), y = sample(c(letters, NA), 10000000, replace = TRUE) )) with_altrep &lt;- function(data){ options(arrow.use_altrep = TRUE) as.data.frame(data) } without_altrep &lt;- function(data){ options(arrow.use_altrep = FALSE) as.data.frame(data) } microbenchmark( without_altrep(tbl), with_altrep(tbl) ) #&gt; Unit: milliseconds #&gt; expr min lq mean median uq max neval #&gt; without_altrep(tbl) 191.0788 213.82235 249.65076 225.52120 244.26977 512.1652 100 #&gt; with_altrep(tbl) 48.7152 50.97269 65.56832 52.93795 55.24505 338.4602 100 Airgapped installation on Linux With every release, we continue to improve the installation experience on Linux. Unlike macOS and Windows, CRAN does not host binary packages for Linux, and unless you’re using a service like RStudio Package Manger that hosts binaries, you have to build arrow from source. Because Arrow involves a large C++ project, this can be slow and sensitive to differences in build environments. To ensure a reliable installation experience, we work hard to test on a wide range of platforms and configurations and eagerly seek to simplify the process so that install.packages(&quot;arrow&quot;) just works and you don’t have to think about it. A big improvement in 6.0.0 is that arrow can now install in a fully offline mode. The R package now includes the C++ source, so it does not need to be downloaded at build time. This does not include optional dependencies like compression libraries, the AWS SDK for accessing data in S3, and more. For folks who need to install Arrow on an airgapped server with all of those features, we have included a helper function to download and assemble a “fat” pacakge that contains everything that would be downloaded lazily at build time. The function create_package_with_all_dependencies() can be run from a computer that does have access to the internet, and creates a fat-source package which can then be transferred and installed on a server without connectivity. This helper is also available on GitHub without installing the arrow package. For more installation see the docs. Another installation change is that we’ve changed the source build to fail cleanly if the C++ library is not found or cannot be built. Previously, if the C++ library failed to build, you would get a successful R package installation, but the package wouldn’t do anything useful, it would just tell you to reinstall. This was helpful back in the early days of the package when we weren’t confident it would build everywhere that CRAN checked, but we now have much more experience (and extensive testing). In recent months this failure mode caused more confusion than it was worth, and it led many people to think that after you install arrow, you always have to install_arrow() again. Thanks This is a significant milestone for Arrow, and the R package specifically, and there is much gratitude to go around. In the 6.0.0 release, there were 77 individuals who contributed to Arrow, many of whom did the heavy lifting in the C++ library to make the new dataset query features a reality. Specifically in the R package, we wanted to acknowledge Phillip Cloud, Dewey Dunnington, Dragoș Moldovan-Grünfeld, Matt Peterson, and Percy Camilo Triveño Aucahuasi for their their first contributions to the R package. And a special thanks goes to Karl Dunkle Werner for the hard work on the offline package build! We also want to thank you in advance for your help. For this release of the Arrow query engine, we’ve focused our effort on getting the core functionality implemented. (In fact, this first release is something of an R-exclusive: bindings for these features haven’t yet been added to pyarrow, the Python Arrow library!) By focusing on the essentials, it means that there are a number of performance optimizations we plan to do but didn’t have time for in this release–and there are surely more issues to improve that we don’t yet know. We are eager for your feedback: please let us know of any issues you encounter so that we can improve these for our next release." />
+<link rel="canonical" href="https://arrow.apache.org/blog/2021/11/08/r-6.0.0/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2021/11/08/r-6.0.0/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-11-08T00:00:00-05:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="twitter:title" content="Apache Arrow R 6.0.0 Release" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@Nic Crane, Jonathan Keane, Neal Richardson" />
+<script type="application/ld+json">
+{"description":"We are excited to announce the recent release of version 6.0.0 of the Arrow R package on CRAN. While we usually don’t write a dedicated release blog post for the R package, this one is special. There are a number of major new features in this version, some of which we’ve been building up to for several years. More dplyr support In version 0.16.0 (February 2020), we released the first version of the Dataset feature, which allowed you to query multi-file datasets using dplyr::select() and filter(). These tools allowed you to find a slice of data in a large dataset that may not fit into memory and pull it into R for further analysis. In version 4.0.0 earlier this year, we added support for mutate() and a number of other dplyr verbs, and all year we’ve been adding hundreds of functions you can use to transform and filter data in Datasets. However, to aggregate, you’d still need to pull the data into R. Grouped aggregation With arrow 6.0.0, you can now summarise() on Arrow data, both with or without group_by(). These are supported both with in-memory Arrow tables as well as across partitioned datasets. Most common aggregation functions are supported: n(), n_distinct(), min(), max(), sum(), mean(), var(), sd(), any(), and all(). median() and quantile() with one probability are also supported and currently return approximate results using the t-digest algorithm. As usual, Arrow will read and process data in chunks and in parallel when possible to produce results much faster than one could by loading it all into memory then processing. This allows for operations that wouldn’t fit into memory on a single machine. For example, using the 1.5-billion row NYC Taxi dataset we use for examples in the package vignette, we can aggregate over the whole dataset even on a laptop: ds &lt;- open_dataset(&quot;nyc-taxi&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) ds %&gt;% filter( passenger_count &gt; 0, passenger_count &lt; 6, grepl(&quot;csh&quot;, payment_type, ignore.case = TRUE) ) %&gt;% group_by(passenger_count) %&gt;% summarize( avg = mean(total_amount, na.rm = TRUE), count = n() ) %&gt;% arrange(desc(count)) %&gt;% collect() #&gt; # A tibble: 5 × 3 #&gt; passenger_count avg count #&gt; &lt;int&gt; &lt;dbl&gt; &lt;int&gt; #&gt; 1 1 11.1 257738064 #&gt; 2 2 12.1 58824482 #&gt; 3 5 11.4 26056438 #&gt; 4 3 12.0 18852606 #&gt; 5 4 12.3 10081632 Joins In addition to aggregation, Arrow also supports all of dplyr’s mutating joins (inner, left, right, and full) and filtering joins (semi and anti). Suppose I want to get a table of all the flights from JFK to Las Vegas Airport on 9th October 2013, with the full name of the airline included. arrow_table(nycflights13::flights) %&gt;% filter( year == 2013, month == 10, day == 9, origin == &quot;JFK&quot;, dest == &quot;LAS&quot; ) %&gt;% select(dep_time, arr_time, carrier) %&gt;% left_join( arrow_table(nycflights13::airlines) ) %&gt;% collect() #&gt; # A tibble: 12 × 4 #&gt; dep_time arr_time carrier name #&gt; &lt;int&gt; &lt;int&gt; &lt;chr&gt; &lt;chr&gt; #&gt; 1 637 853 B6 JetBlue Airways #&gt; 2 648 912 AA American Airlines Inc. #&gt; 3 812 1029 DL Delta Air Lines Inc. #&gt; 4 945 1206 VX Virgin America #&gt; 5 955 1219 B6 JetBlue Airways #&gt; 6 1018 1231 DL Delta Air Lines Inc. #&gt; 7 1120 1338 B6 JetBlue Airways #&gt; 8 1451 1705 DL Delta Air Lines Inc. #&gt; 9 1656 1915 AA American Airlines Inc. #&gt; 10 1755 2001 DL Delta Air Lines Inc. #&gt; 11 1827 2049 B6 JetBlue Airways #&gt; 12 1917 2126 DL Delta Air Lines Inc. In this example, we’re working on an in-memory table, so you wouldn’t need arrow to do this–but the same code would work on a larger-than-memory dataset backed by thousands of Parquet files. Under the hood To support these features, we’ve made some internal changes to how queries are built up and–importantly–when they are evaluated. As a result, there are some changes in behavior compared to past versions of arrow. First, calls to summarise(), head(), and tail() no longer eagerly evaluate: this means you need to call either compute() (to evaluate it and produce an Arrow Table) or collect() (to evaluate and pull the Table into an R data.frame) to see the results. Second, the order of rows in a dataset query is no longer determinisitic due to the way the parallelization of work happens in the C++ library. This means that you can’t assume that the results of a query will be in the same order as the rows of data in the files on disk. If you do need a stable sort order, call arrange() to specify ordering. While these changes are a break from past arrow behavior, they are consistent with many dbplyr backends and are needed to allow queries to scale beyond data-frame workflows that can fit into memory. Integration with DuckDB The Arrow engine is not the only new way to query Arrow Datasets in this release. If you have the duckdb package installed, you can hand off an Arrow Dataset or query object to DuckDB for further querying using the to_duckdb() function. This allows you to use duckdb’s dbplyr methods, as well as its SQL interface, to aggregate data. DuckDB supports filter pushdown, so you can take advantage of Arrow Datasets and Arrow-based optimizations even within a DuckDB SQL query with a where clause. Filtering and column projection specified before the to_duckdb() call in a pipeline is evaluated in Arrow; this can be helpful in some circumstances like complicated dbplyr pipelines. You can also hand off DuckDB data (or the result of a query) to arrow with the to_arrow() call. In the example below, we are looking at flights between NYC and Chicago, and want to avoid the worst-of-the-worst delays. To do this, we can use percent_rank(); however that requires a window function which isn’t yet available in Arrow, so let’s try sending the data to DuckDB to do that, then pull it back into Arrow: library(arrow, warn.conflicts = FALSE) library(dplyr, warn.conflicts = FALSE) flights_filtered &lt;- arrow_table(nycflights13::flights) %&gt;% select(carrier, origin, dest, arr_delay) %&gt;% # arriving early doesn&#39;t matter, so call negative delays 0 mutate(arr_delay = pmax(arr_delay, 0)) %&gt;% to_duckdb() %&gt;% # for each carrier-origin-dest, take the worst 5% of delays group_by(carrier, origin, dest) %&gt;% mutate(arr_delay_rank = percent_rank(arr_delay)) %&gt;% filter(arr_delay_rank &gt; 0.95) head(flights_filtered) #&gt; # Source: lazy query [?? x 5] #&gt; # Database: duckdb_connection #&gt; # Groups: carrier, origin, dest #&gt; carrier origin dest arr_delay arr_delay_rank #&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; #&gt; 1 9E JFK RIC 119 0.952 #&gt; 2 9E JFK RIC 125 0.956 #&gt; 3 9E JFK RIC 137 0.960 #&gt; 4 9E JFK RIC 137 0.960 #&gt; 5 9E JFK RIC 158 0.968 #&gt; 6 9E JFK RIC 163 0.972 Now we have all of the flights filtered to those that are the worst-of-the-worst, and stored as a dbplyr lazy tbl with our DuckDB connection. This is an example of using Arrow -&gt; DuckDB. But we can do more: we can then bring that data back into Arrow just as easily. For the rest of our analysis, we pick up where we left off with the tbl referring to the DuckDB query: # pull data back into arrow to complete analysis flights_filtered %&gt;% to_arrow() %&gt;% # now summarise to get mean/min group_by(carrier, origin, dest) %&gt;% summarise( arr_delay_mean = mean(arr_delay), arr_delay_min = min(arr_delay), num_flights = n() ) %&gt;% filter(dest %in% c(&quot;ORD&quot;, &quot;MDW&quot;)) %&gt;% arrange(desc(arr_delay_mean)) %&gt;% collect() #&gt; # A tibble: 10 × 6 #&gt; # Groups: carrier, origin [10] #&gt; carrier origin dest arr_delay_mean arr_delay_min num_flights #&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt; #&gt; 1 MQ EWR ORD 190. 103 113 #&gt; 2 9E JFK ORD 185. 134 52 #&gt; 3 UA LGA ORD 179. 101 157 #&gt; 4 WN LGA MDW 178. 107 103 #&gt; 5 AA JFK ORD 178. 133 19 #&gt; 6 B6 JFK ORD 174. 129 46 #&gt; 7 WN EWR MDW 167. 107 103 #&gt; 8 UA EWR ORD 149. 87 189 #&gt; 9 AA LGA ORD 135. 78 280 #&gt; 10 EV EWR ORD 35 35 1 And just like that, we’ve passed data back and forth between Arrow and DuckDB without having to write a single file to disk! Expanded use of ALTREP We are continuing our use of R’s ALTREP where possible. In 5.0.0 there were a limited set of circumstances that took advantage of ALTREP, but in 6.0.0 we have expanded types to include strings, as well as vectors with NAs. library(microbenchmark) library(arrow) tbl &lt;- arrow_table(data.frame( x = rnorm(10000000), y = sample(c(letters, NA), 10000000, replace = TRUE) )) with_altrep &lt;- function(data){ options(arrow.use_altrep = TRUE) as.data.frame(data) } without_altrep &lt;- function(data){ options(arrow.use_altrep = FALSE) as.data.frame(data) } microbenchmark( without_altrep(tbl), with_altrep(tbl) ) #&gt; Unit: milliseconds #&gt; expr min lq mean median uq max neval #&gt; without_altrep(tbl) 191.0788 213.82235 249.65076 225.52120 244.26977 512.1652 100 #&gt; with_altrep(tbl) 48.7152 50.97269 65.56832 52.93795 55.24505 338.4602 100 Airgapped installation on Linux With every release, we continue to improve the installation experience on Linux. Unlike macOS and Windows, CRAN does not host binary packages for Linux, and unless you’re using a service like RStudio Package Manger that hosts binaries, you have to build arrow from source. Because Arrow involves a large C++ project, this can be slow and sensitive to differences in build environments. To ensure a reliable installation experience, we work hard to test on a wide range of platforms and configurations and eagerly seek to simplify the process so that install.packages(&quot;arrow&quot;) just works and you don’t have to think about it. A big improvement in 6.0.0 is that arrow can now install in a fully offline mode. The R package now includes the C++ source, so it does not need to be downloaded at build time. This does not include optional dependencies like compression libraries, the AWS SDK for accessing data in S3, and more. For folks who need to install Arrow on an airgapped server with all of those features, we have included a helper function to download and assemble a “fat” pacakge that contains everything that would be downloaded lazily at build time. The function create_package_with_all_dependencies() can be run from a computer that does have access to the internet, and creates a fat-source package which can then be transferred and installed on a server without connectivity. This helper is also available on GitHub without installing the arrow package. For more installation see the docs. Another installation change is that we’ve changed the source build to fail cleanly if the C++ library is not found or cannot be built. Previously, if the C++ library failed to build, you would get a successful R package installation, but the package wouldn’t do anything useful, it would just tell you to reinstall. This was helpful back in the early days of the package when we weren’t confident it would build everywhere that CRAN checked, but we now have much more experience (and extensive testing). In recent months this failure mode caused more confusion than it was worth, and it led many people to think that after you install arrow, you always have to install_arrow() again. Thanks This is a significant milestone for Arrow, and the R package specifically, and there is much gratitude to go around. In the 6.0.0 release, there were 77 individuals who contributed to Arrow, many of whom did the heavy lifting in the C++ library to make the new dataset query features a reality. Specifically in the R package, we wanted to acknowledge Phillip Cloud, Dewey Dunnington, Dragoș Moldovan-Grünfeld, Matt Peterson, and Percy Camilo Triveño Aucahuasi for their their first contributions to the R package. And a special thanks goes to Karl Dunkle Werner for the hard work on the offline package build! We also want to thank you in advance for your help. For this release of the Arrow query engine, we’ve focused our effort on getting the core functionality implemented. (In fact, this first release is something of an R-exclusive: bindings for these features haven’t yet been added to pyarrow, the Python Arrow library!) By focusing on the essentials, it means that there are a number of performance optimizations we plan to do but didn’t have time for in this release–and there are surely more issues to improve that we don’t yet know. We are eager for your feedback: please let us know of any issues you encounter so that we can improve these for our next release.","url":"https://arrow.apache.org/blog/2021/11/08/r-6.0.0/","headline":"Apache Arrow R 6.0.0 Release","dateModified":"2021-11-08T00:00:00-05:00","datePublished":"2021-11-08T00:00:00-05:00","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"Nic Crane, Jonathan Keane, Neal Richardson"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2021/11/08/r-6.0.0/"},"author":{"@type":"Person","name":"Nic Crane, Jonathan Keane, Neal Richardson"},"image":"https://arrow.apache.org/img/arrow.png","@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments)};
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/datafusion">DataFusion</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://issues.apache.org/jira/browse/ARROW">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="http://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="http://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="http://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Apache Arrow R 6.0.0 Release
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    08 Nov 2021
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Nic Crane, Jonathan Keane, Neal Richardson
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p>We are excited to announce the recent release of version 6.0.0 of the Arrow R package on <a href="https://cran.r-project.org/package=arrow">CRAN</a>. While we usually don’t write a dedicated release blog post for the R package, this one is special. There are a number of major new features in this version, some of which we’ve been building up to for several years.</p>
+
+<h1 id="more-dplyr-support">More dplyr support</h1>
+
+<p>In version 0.16.0 (February 2020), we released the first version of the Dataset feature, which allowed you to query multi-file datasets using <code class="language-plaintext highlighter-rouge">dplyr::select()</code> and <code class="language-plaintext highlighter-rouge">filter()</code>. These tools allowed you to find a slice of data in a large dataset that may not fit into memory and pull it into R for further analysis. In version 4.0.0 earlier this year, we added support for <code class="language-plaintext highlighter-rouge">mutate()</code> and a number of other dplyr verbs, and all year we’ve been adding hundreds of functions you can use to transform and filter data in Datasets. However, to aggregate, you’d still need to pull the data into R.</p>
+
+<h2 id="grouped-aggregation">Grouped aggregation</h2>
+
+<p>With <code class="language-plaintext highlighter-rouge">arrow</code> 6.0.0, you can now <code class="language-plaintext highlighter-rouge">summarise()</code> on Arrow data, both with or without <code class="language-plaintext highlighter-rouge">group_by()</code>. These are supported both with in-memory Arrow tables as well as across partitioned datasets. Most common aggregation functions are supported: <code class="language-plaintext highlighter-rouge">n()</code>, <code class="language-plaintext highlighter-rouge">n_distinct()</code>, <code class="language-plaintext highlighter-rouge">min(),</code> <code class="language-plaintext highlighter-rouge">max()</code>, <code class="language-plaintext highlighter-rouge">sum()</code>, <code class="language-plaintext highlighter-rouge">mean()</code>, <code class="language-plaintext highlighter-rouge">var()</code>, <code class="language-plaintext highlighter-rouge">sd()</code>, <code class="language-plaintext highlighter-rouge">any()</code>, and <code class="language-plaintext highlighter-rouge">all()</code>. <code class="language-plaintext highlighter-rouge">median()</code> and <code class="language-plaintext highlighter-rouge">quantile()</code> with one probability are also supported and currently return approximate results using the t-digest algorithm.</p>
+
+<p>As usual, Arrow will read and process data in chunks and in parallel when possible to produce results much faster than one could by loading it all into memory then processing. This allows for operations that wouldn’t fit into memory on a single machine. For example, using the 1.5-billion row NYC Taxi dataset we use for examples in the <a href="https://arrow.apache.org/docs/r/articles/dataset.html">package vignette</a>, we can aggregate over the whole dataset even on a laptop:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">open_dataset</span><span class="p">(</span><span class="s2">"nyc-taxi"</span><span class="p">,</span><span class="w"> </span><span class="n">partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"year"</span><span class="p">,</span><span class="w"> </span><span class="s2">"month"</span><span class="p">))</span><span class="w">
+</span><span class="n">ds</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">filter</span><span class="p">(</span><span class="w">
+    </span><span class="n">passenger_count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w">
+    </span><span class="n">passenger_count</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="m">6</span><span class="p">,</span><span class="w">
+    </span><span class="n">grepl</span><span class="p">(</span><span class="s2">"csh"</span><span class="p">,</span><span class="w"> </span><span class="n">payment_type</span><span class="p">,</span><span class="w"> </span><span class="n">ignore.case</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+  </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">group_by</span><span class="p">(</span><span class="n">passenger_count</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">summarize</span><span class="p">(</span><span class="w">
+    </span><span class="n">avg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">total_amount</span><span class="p">,</span><span class="w"> </span><span class="n">na.rm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">),</span><span class="w">
+    </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="p">()</span><span class="w">
+  </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">arrange</span><span class="p">(</span><span class="n">desc</span><span class="p">(</span><span class="n">count</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">collect</span><span class="p">()</span><span class="w">
+
+</span><span class="c1">#&gt; # A tibble: 5 × 3</span><span class="w">
+</span><span class="c1">#&gt;   passenger_count   avg     count</span><span class="w">
+</span><span class="c1">#&gt;             &lt;int&gt; &lt;dbl&gt;     &lt;int&gt;</span><span class="w">
+</span><span class="c1">#&gt; 1               1  11.1 257738064</span><span class="w">
+</span><span class="c1">#&gt; 2               2  12.1  58824482</span><span class="w">
+</span><span class="c1">#&gt; 3               5  11.4  26056438</span><span class="w">
+</span><span class="c1">#&gt; 4               3  12.0  18852606</span><span class="w">
+</span><span class="c1">#&gt; 5               4  12.3  10081632</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="joins">Joins</h2>
+
+<p>In addition to aggregation, Arrow also supports all of dplyr’s mutating joins (inner, left, right, and full) and filtering joins (semi and anti).</p>
+
+<p>Suppose I want to get a table of all the flights from JFK to Las Vegas Airport on
+9th October 2013, with the full name of the airline included.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">arrow_table</span><span class="p">(</span><span class="n">nycflights13</span><span class="o">::</span><span class="n">flights</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">filter</span><span class="p">(</span><span class="w">
+    </span><span class="n">year</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">2013</span><span class="p">,</span><span class="w">
+    </span><span class="n">month</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">10</span><span class="p">,</span><span class="w">
+    </span><span class="n">day</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">9</span><span class="p">,</span><span class="w">
+    </span><span class="n">origin</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"JFK"</span><span class="p">,</span><span class="w">
+    </span><span class="n">dest</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"LAS"</span><span class="w">
+    </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">select</span><span class="p">(</span><span class="n">dep_time</span><span class="p">,</span><span class="w"> </span><span class="n">arr_time</span><span class="p">,</span><span class="w"> </span><span class="n">carrier</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">left_join</span><span class="p">(</span><span class="w">
+    </span><span class="n">arrow_table</span><span class="p">(</span><span class="n">nycflights13</span><span class="o">::</span><span class="n">airlines</span><span class="p">)</span><span class="w">
+   </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">collect</span><span class="p">()</span><span class="w">
+
+</span><span class="c1">#&gt; # A tibble: 12 × 4</span><span class="w">
+</span><span class="c1">#&gt;    dep_time arr_time carrier name</span><span class="w">
+</span><span class="c1">#&gt;       &lt;int&gt;    &lt;int&gt; &lt;chr&gt;   &lt;chr&gt;</span><span class="w">
+</span><span class="c1">#&gt;  1      637      853 B6      JetBlue Airways</span><span class="w">
+</span><span class="c1">#&gt;  2      648      912 AA      American Airlines Inc.</span><span class="w">
+</span><span class="c1">#&gt;  3      812     1029 DL      Delta Air Lines Inc.</span><span class="w">
+</span><span class="c1">#&gt;  4      945     1206 VX      Virgin America</span><span class="w">
+</span><span class="c1">#&gt;  5      955     1219 B6      JetBlue Airways</span><span class="w">
+</span><span class="c1">#&gt;  6     1018     1231 DL      Delta Air Lines Inc.</span><span class="w">
+</span><span class="c1">#&gt;  7     1120     1338 B6      JetBlue Airways</span><span class="w">
+</span><span class="c1">#&gt;  8     1451     1705 DL      Delta Air Lines Inc.</span><span class="w">
+</span><span class="c1">#&gt;  9     1656     1915 AA      American Airlines Inc.</span><span class="w">
+</span><span class="c1">#&gt; 10     1755     2001 DL      Delta Air Lines Inc.</span><span class="w">
+</span><span class="c1">#&gt; 11     1827     2049 B6      JetBlue Airways</span><span class="w">
+</span><span class="c1">#&gt; 12     1917     2126 DL      Delta Air Lines Inc.</span><span class="w">
+</span></code></pre></div></div>
+
+<p>In this example, we’re working on an in-memory table, so you wouldn’t need <code class="language-plaintext highlighter-rouge">arrow</code> to do this–but the same code would work on a larger-than-memory dataset backed by thousands of Parquet files.</p>
+
+<h2 id="under-the-hood">Under the hood</h2>
+
+<p>To support these features, we’ve made some internal changes to how queries are built up and–importantly–when they are evaluated. As a result, there are some changes in behavior compared to past versions of <code class="language-plaintext highlighter-rouge">arrow</code>.</p>
+
+<p>First, calls to <code class="language-plaintext highlighter-rouge">summarise()</code>, <code class="language-plaintext highlighter-rouge">head()</code>, and <code class="language-plaintext highlighter-rouge">tail()</code> no longer eagerly evaluate: this means you need to call either <code class="language-plaintext highlighter-rouge">compute()</code> (to evaluate it and produce an Arrow Table) or <code class="language-plaintext highlighter-rouge">collect()</code> (to evaluate and pull the Table into an R <code class="language-plaintext highlighter-rouge">data.frame</code>) to see the results.</p>
+
+<p>Second, the order of rows in a dataset query is no longer determinisitic due to the way the parallelization of work happens in the C++ library. This means that you can’t assume that the results of a query will be in the same order as the rows of data in the files on disk. If you do need a stable sort order, call <code class="language-plaintext highlighter-rouge">arrange()</code> to specify ordering.</p>
+
+<p>While these changes are a break from past <code class="language-plaintext highlighter-rouge">arrow</code> behavior, they are consistent with many <code class="language-plaintext highlighter-rouge">dbplyr</code> backends and are needed to allow queries to scale beyond data-frame workflows that can fit into memory.</p>
+
+<h1 id="integration-with-duckdb">Integration with DuckDB</h1>
+
+<p>The Arrow engine is not the only new way to query Arrow Datasets in this release. If you have the <a href="https://cran.r-project.org/package=duckdb">duckdb</a> package installed, you can hand off an Arrow Dataset or query object to <a href="https://duckdb.org/">DuckDB</a> for further querying using the <code class="language-plaintext highlighter-rouge">to_duckdb()</code> function. This allows you to use duckdb’s <code class="language-plaintext highlighter-rouge">dbplyr</code> methods, as well as its SQL interface, to aggregate data. DuckDB supports filter pushdown, so you can take advantage of Arrow Datasets and Arrow-based optimizations even within a DuckDB SQL query with a <code class="language-plaintext highlighter-rouge">where</code> clause. Filtering and column projection specified before the <code class="language-plaintext highlighter-rouge">to_duckdb()</code> call in a pipeline is evaluated in Arrow; this can be helpful in some circumstances like complicated dbplyr pipelines.  You can also hand off DuckDB data (or the result of a query) to arrow with the <code class="language-plaintext highlighter-rouge">to_arrow()</code> call.</p>
+
+<p>In the example below, we are looking at flights between NYC and Chicago, and want to avoid the worst-of-the-worst delays. To do this, we can use <code class="language-plaintext highlighter-rouge">percent_rank()</code>; however that requires a window function which isn’t yet available in Arrow, so let’s try sending the data to DuckDB to do that, then pull it back into Arrow:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">,</span><span class="w"> </span><span class="n">warn.conflicts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">,</span><span class="w"> </span><span class="n">warn.conflicts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+
+</span><span class="n">flights_filtered</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">arrow_table</span><span class="p">(</span><span class="n">nycflights13</span><span class="o">::</span><span class="n">flights</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">select</span><span class="p">(</span><span class="n">carrier</span><span class="p">,</span><span class="w"> </span><span class="n">origin</span><span class="p">,</span><span class="w"> </span><span class="n">dest</span><span class="p">,</span><span class="w"> </span><span class="n">arr_delay</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="c1"># arriving early doesn't matter, so call negative delays 0</span><span class="w">
+  </span><span class="n">mutate</span><span class="p">(</span><span class="n">arr_delay</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pmax</span><span class="p">(</span><span class="n">arr_delay</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">to_duckdb</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="c1"># for each carrier-origin-dest, take the worst 5% of delays</span><span class="w">
+  </span><span class="n">group_by</span><span class="p">(</span><span class="n">carrier</span><span class="p">,</span><span class="w"> </span><span class="n">origin</span><span class="p">,</span><span class="w"> </span><span class="n">dest</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">mutate</span><span class="p">(</span><span class="n">arr_delay_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">percent_rank</span><span class="p">(</span><span class="n">arr_delay</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">filter</span><span class="p">(</span><span class="n">arr_delay_rank</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0.95</span><span class="p">)</span><span class="w">
+
+</span><span class="n">head</span><span class="p">(</span><span class="n">flights_filtered</span><span class="p">)</span><span class="w">
+</span><span class="c1">#&gt; # Source:   lazy query [?? x 5]</span><span class="w">
+</span><span class="c1">#&gt; # Database: duckdb_connection</span><span class="w">
+</span><span class="c1">#&gt; # Groups:   carrier, origin, dest</span><span class="w">
+</span><span class="c1">#&gt;   carrier origin dest  arr_delay arr_delay_rank</span><span class="w">
+</span><span class="c1">#&gt;   &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;     &lt;dbl&gt;          &lt;dbl&gt;</span><span class="w">
+</span><span class="c1">#&gt; 1 9E      JFK    RIC         119          0.952</span><span class="w">
+</span><span class="c1">#&gt; 2 9E      JFK    RIC         125          0.956</span><span class="w">
+</span><span class="c1">#&gt; 3 9E      JFK    RIC         137          0.960</span><span class="w">
+</span><span class="c1">#&gt; 4 9E      JFK    RIC         137          0.960</span><span class="w">
+</span><span class="c1">#&gt; 5 9E      JFK    RIC         158          0.968</span><span class="w">
+</span><span class="c1">#&gt; 6 9E      JFK    RIC         163          0.972</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Now we have all of the flights filtered to those that are the worst-of-the-worst, and stored as a dbplyr lazy <code class="language-plaintext highlighter-rouge">tbl</code> with our DuckDB connection. This is an example of using Arrow -&gt; DuckDB.</p>
+
+<p>But we can do more: we can then bring that data back into Arrow just as easily. For the rest of our analysis, we pick up where we left off with the <code class="language-plaintext highlighter-rouge">tbl</code> referring to the DuckDB query:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># pull data back into arrow to complete analysis</span><span class="w">
+</span><span class="n">flights_filtered</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">to_arrow</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="c1"># now summarise to get mean/min</span><span class="w">
+  </span><span class="n">group_by</span><span class="p">(</span><span class="n">carrier</span><span class="p">,</span><span class="w"> </span><span class="n">origin</span><span class="p">,</span><span class="w"> </span><span class="n">dest</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">summarise</span><span class="p">(</span><span class="w">
+    </span><span class="n">arr_delay_mean</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">arr_delay</span><span class="p">),</span><span class="w">
+    </span><span class="n">arr_delay_min</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">min</span><span class="p">(</span><span class="n">arr_delay</span><span class="p">),</span><span class="w">
+    </span><span class="n">num_flights</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="p">()</span><span class="w">
+  </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">filter</span><span class="p">(</span><span class="n">dest</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"ORD"</span><span class="p">,</span><span class="w"> </span><span class="s2">"MDW"</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">arrange</span><span class="p">(</span><span class="n">desc</span><span class="p">(</span><span class="n">arr_delay_mean</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">collect</span><span class="p">()</span><span class="w">
+</span><span class="c1">#&gt; # A tibble: 10 × 6</span><span class="w">
+</span><span class="c1">#&gt; # Groups:   carrier, origin [10]</span><span class="w">
+</span><span class="c1">#&gt;    carrier origin dest  arr_delay_mean arr_delay_min num_flights</span><span class="w">
+</span><span class="c1">#&gt;    &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;          &lt;dbl&gt;         &lt;dbl&gt;       &lt;int&gt;</span><span class="w">
+</span><span class="c1">#&gt;  1 MQ      EWR    ORD             190.           103         113</span><span class="w">
+</span><span class="c1">#&gt;  2 9E      JFK    ORD             185.           134          52</span><span class="w">
+</span><span class="c1">#&gt;  3 UA      LGA    ORD             179.           101         157</span><span class="w">
+</span><span class="c1">#&gt;  4 WN      LGA    MDW             178.           107         103</span><span class="w">
+</span><span class="c1">#&gt;  5 AA      JFK    ORD             178.           133          19</span><span class="w">
+</span><span class="c1">#&gt;  6 B6      JFK    ORD             174.           129          46</span><span class="w">
+</span><span class="c1">#&gt;  7 WN      EWR    MDW             167.           107         103</span><span class="w">
+</span><span class="c1">#&gt;  8 UA      EWR    ORD             149.            87         189</span><span class="w">
+</span><span class="c1">#&gt;  9 AA      LGA    ORD             135.            78         280</span><span class="w">
+</span><span class="c1">#&gt; 10 EV      EWR    ORD              35             35           1</span><span class="w">
+</span></code></pre></div></div>
+
+<p>And just like that, we’ve passed data back and forth between Arrow and DuckDB without having to write a single file to disk!</p>
+
+<h1 id="expanded-use-of-altrep">Expanded use of ALTREP</h1>
+
+<p>We are continuing our use of R’s <a href="https://svn.r-project.org/R/branches/ALTREP/ALTREP.html">ALTREP</a> where possible. In 5.0.0 there were a limited set of circumstances that took advantage of ALTREP, but in 6.0.0 we have expanded types to include strings, as well as vectors with <code class="language-plaintext highlighter-rouge">NA</code>s.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">microbenchmark</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">)</span><span class="w">
+
+</span><span class="n">tbl</span><span class="w"> </span><span class="o">&lt;-</span><span class="w">
+  </span><span class="n">arrow_table</span><span class="p">(</span><span class="n">data.frame</span><span class="p">(</span><span class="w">
+    </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rnorm</span><span class="p">(</span><span class="m">10000000</span><span class="p">),</span><span class="w">
+    </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sample</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="nb">letters</span><span class="p">,</span><span class="w"> </span><span class="kc">NA</span><span class="p">),</span><span class="w"> </span><span class="m">10000000</span><span class="p">,</span><span class="w"> </span><span class="n">replace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+  </span><span class="p">))</span><span class="w">
+
+</span><span class="n">with_altrep</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">data</span><span class="p">){</span><span class="w">
+  </span><span class="n">options</span><span class="p">(</span><span class="n">arrow.use_altrep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+  </span><span class="n">as.data.frame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="n">without_altrep</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">data</span><span class="p">){</span><span class="w">
+  </span><span class="n">options</span><span class="p">(</span><span class="n">arrow.use_altrep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+  </span><span class="n">as.data.frame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="n">microbenchmark</span><span class="p">(</span><span class="w">
+  </span><span class="n">without_altrep</span><span class="p">(</span><span class="n">tbl</span><span class="p">),</span><span class="w">
+  </span><span class="n">with_altrep</span><span class="p">(</span><span class="n">tbl</span><span class="p">)</span><span class="w">
+</span><span class="p">)</span><span class="w">
+
+</span><span class="c1">#&gt; Unit: milliseconds</span><span class="w">
+</span><span class="c1">#&gt;                 expr      min        lq      mean    median        uq      max neval</span><span class="w">
+</span><span class="c1">#&gt;  without_altrep(tbl) 191.0788 213.82235 249.65076 225.52120 244.26977 512.1652   100</span><span class="w">
+</span><span class="c1">#&gt;     with_altrep(tbl)  48.7152  50.97269  65.56832  52.93795  55.24505 338.4602   100</span><span class="w">
+</span></code></pre></div></div>
+
+<h1 id="airgapped-installation-on-linux">Airgapped installation on Linux</h1>
+
+<p>With every release, we continue to improve the installation experience on Linux. Unlike macOS and Windows, CRAN does not host binary packages for Linux, and unless you’re using a service like RStudio Package Manger that hosts binaries, you have to build <code class="language-plaintext highlighter-rouge">arrow</code> from source. Because Arrow involves a large C++ project, this can be slow and sensitive to differences in build environments. To ensure a reliable installation experience, we work hard to test on a wide range of platforms and configurations and eagerly seek to simplify the process so that <code class="language-plaintext highlighter-rouge">install.packages("arrow")</code> just works and you don’t have to think about it.</p>
+
+<p>A big improvement in 6.0.0 is that <code class="language-plaintext highlighter-rouge">arrow</code> can now install in a fully offline mode. The R package now includes the C++ source, so it does not need to be downloaded at build time. This does not include optional dependencies like compression libraries, the AWS SDK for accessing data in S3, and more. For folks who need to install Arrow on an airgapped server with all of those features, we have included a helper function to download and assemble a “fat” pacakge that contains everything that would be downloaded lazily at build time.
+The function <code class="language-plaintext highlighter-rouge">create_package_with_all_dependencies()</code> can be run from a computer that does have access to the internet, and creates a fat-source package which can then be transferred and installed on a server without connectivity. This helper is also available on GitHub without installing the arrow package. For more installation <a href="https://arrow.apache.org/docs/r/articles/install.html#offline-installation">see the docs</a>.</p>
+
+<p>Another installation change is that we’ve changed the source build to fail cleanly if the C++ library is not found or cannot be built. Previously, if the C++ library failed to build, you would get a successful R package installation, but the package wouldn’t do anything useful, it would just tell you to reinstall. This was helpful back in the early days of the package when we weren’t confident it would build everywhere that CRAN checked, but we now have much more experience (and extensive testing). In recent months this failure mode caused more confusion than it was worth, and it led many people to think that after you install arrow, you always have to <code class="language-plaintext highlighter-rouge">install_arrow()</code> again.</p>
+
+<h1 id="thanks">Thanks</h1>
+
+<p>This is a significant milestone for Arrow, and the R package specifically, and there is much gratitude to go around. In the 6.0.0 release, there were 77 individuals who contributed to Arrow, many of whom did the heavy lifting in the C++ library to make the new dataset query features a reality. Specifically in the R package, we wanted to acknowledge Phillip Cloud, Dewey Dunnington, Dragoș Moldovan-Grünfeld, Matt Peterson, and Percy Camilo Triveño Aucahuasi for their
+their first contributions to the R package. And a special thanks goes to Karl Dunkle Werner for the hard work on the offline package build!</p>
+
+<p>We also want to thank you in advance for your help. For this release of the Arrow query engine, we’ve focused our effort on getting the core functionality implemented. (In fact, this first release is something of an R-exclusive: bindings for these features haven’t yet been added to pyarrow, the Python Arrow library!) By focusing on the essentials, it means that there are a number of performance optimizations we plan to do but didn’t have time for in this release–and there are surely more issues to improve that we don’t yet know. We are eager for your feedback: please <a href="https://issues.apache.org/jira/browse/ARROW">let us know</a> of any issues you encounter so that we can improve these for our next release.</p>
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2021 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
