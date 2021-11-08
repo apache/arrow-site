@@ -165,7 +165,7 @@ For convenience, we also provide packages through several package managers. Many
 
 ### C++ and Python Conda Packages
 
-Binary conda packages are on [conda-forge][5] for Linux, macOS, and Windows
+Binary conda packages are on [conda-forge][5] for Linux (x86_64, aarch64, ppc64le), macOS (x86_64 and arm64), and Windows (x86_64)
 for the following versions:
 
 * Python 3.7, 3.8, 3.9, 3.10
