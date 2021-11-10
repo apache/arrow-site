@@ -118,6 +118,9 @@ code for reading specific file formats (`Parquet`, `Avro`, `CSV`, and
 files into execution partitions, and the process was made
 `async`. This sets up DataFusion and its plug-in ecosystem to
 supporting remote catalogs and various object store implementations.
+You can read more about this change in the
+[design document](https://docs.google.com/document/d/1Bd4-PLLH-pHj0BquMDsJ6cVr_awnxTuvwNJuWsTHxAQ)
+and on the [arrow-datafusion#1010 PR](https://github.com/apache/arrow-datafusion/pull/1010).
 
 
 # How to Get Involved
