@@ -36,36 +36,35 @@ The Apache Arrow team is pleased to announce the DataFusion 6.0.0 release. This 
 and includes 122 commits from the following 28 distinct contributors.
 
 ```
-# TODO update when we have a final 6.0 tag
-git shortlog -sn 5.0.0..87c8eaa datafusion datafusion-cli datafusion-examples
+git shortlog -sn 5.0.0..7824a8d datafusion datafusion-cli datafusion-examples    
     28  Andrew Lamb
-    25  Jiayu Liu
+    26  Jiayu Liu
+    13  xudong963
      9  rdettai
-     8  QP Hou
-     5  carlos
-     4  Daniël Heres
+     9  QP Hou
+     6  Matthew Turner
+     5  Daniël Heres
      4  Guillaume Balaine
-     4  Matthew Turner
-     4  Carlos
      3  Francis Du
+     3  Marco Neumann
      3  Jon Mease
      3  Nga Tran
-     3  Marco Neumann
-     2  Andy Grove
-     2  Ruihang Xia
      2  Yijie Shen
+     2  Ruihang Xia
+     2  Liang-Chi Hsieh
      2  baishen
-     1  Krisztián Szűcs
+     2  Andy Grove
+     2  Jason Tianyi Wang
+     1  Nan Zhu
      1  Antoine Wendlinger
-     1  Qingping Hou
+     1  Krisztián Szűcs
+     1  Mike Seddon
      1  Conner Murphy
+     1  Patrick More
      1  Taehoon Moon
      1  Tiphaine Ruy
-     1  Jason Tianyi Wang
      1  adsharma
-     1  Mike Seddon
-     1  Nan Zhu
-     1  Patrick More
+     1  lichuan6
 ```
 
 <!--
