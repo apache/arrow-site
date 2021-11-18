@@ -57,6 +57,20 @@ in `requirements.txt` to install the latest patch release.
 These include the Apache Arrow and Apache Parquet C++ binary libraries bundled
 with the wheel.
 
+### Go Package
+
+The Go Module is tagged with its version and can be easily installed with `go get`:
+
+```shell
+go get github.com/apache/arrow/go/v{{site.data.versions['current'].major_number}}@v{{site.data.versions['current'].number}}
+```
+
+The Apache Arrow module can then be imported using:
+
+```go
+import "github.com/apache/arrow/go/v{{site.data.version['current'].major_number}}/arrow"
+```
+
 ### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu, CentOS and Amazon Linux
 
 We have provided APT and Yum repositories for Apache Arrow C++ and
