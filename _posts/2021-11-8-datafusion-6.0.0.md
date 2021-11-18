@@ -33,10 +33,19 @@ Arrow](https://arrow.apache.org/) to provide a system that is high
 performance, easy to connect, easy to embed, and high quality.
 
 The Apache Arrow team is pleased to announce the DataFusion 6.0.0 release. This covers 4 months of development work
-and includes 122 commits from the following 28 distinct contributors.
+and includes 134 commits from the following 28 distinct contributors.
+
+<!--
+git log --pretty=oneline 5.0.0..6.0.0 datafusion datafusion-cli datafusion-examples | wc -l
+     122
+
+git shortlog -sn 5.0.0..6.0.0 datafusion datafusion-cli datafusion-examples | wc -l
+      29
+
+      Carlos and xudong963 are same individual
+-->
 
 ```
-git shortlog -sn 5.0.0..7824a8d datafusion datafusion-cli datafusion-examples    
     28  Andrew Lamb
     26  Jiayu Liu
     13  xudong963
@@ -66,11 +75,6 @@ git shortlog -sn 5.0.0..7824a8d datafusion datafusion-cli datafusion-examples
      1  adsharma
      1  lichuan6
 ```
-
-<!--
-git log --pretty=oneline 5.0.0..87c8eaa datafusion datafusion-cli datafusion-examples | wc -l
-     122
--->
 
 The release notes below are not exhaustive and only expose selected highlights of the release. Many other bug fixes
 and improvements have been made: we refer you to the complete
