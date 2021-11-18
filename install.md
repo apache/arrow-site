@@ -57,7 +57,7 @@ in `requirements.txt` to install the latest patch release.
 These include the Apache Arrow and Apache Parquet C++ binary libraries bundled
 with the wheel.
 
-### Go Package
+### Go Module
 
 The Go Module is tagged with its version and can be easily installed with `go get`:
 
