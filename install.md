@@ -71,16 +71,18 @@ The Apache Arrow module can then be imported using:
 import "github.com/apache/arrow/go/v{{site.data.version['current'].major_number}}/arrow"
 ```
 
-### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu, CentOS and Amazon Linux
+### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu, AlmaLinux, CentOS and Amazon Linux
 
 We have provided APT and Yum repositories for Apache Arrow C++ and
 Apache Arrow GLib (C). Here are supported platforms:
 
 * Debian GNU/Linux buster
 * Debian GNU/Linux bullseye
+* Debian GNU/Linux bookworm
 * Ubuntu 18.04 LTS
 * Ubuntu 20.04 LTS
 * Ubuntu 21.04
+* AlmaLinux 8
 * CentOS 7
 * CentOS 8
 * Red Hat Enterprise Linux 7
@@ -111,15 +113,29 @@ sudo apt install -y -V libparquet-dev # For Apache Parquet C++
 sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
 ```
 
-CentOS 8 and Red Hat Enterprise Linux 8:
+AlmaLinux 8 and Red Hat Enterprise Linux 8:
 
 ```shell
 sudo dnf install -y epel-release || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
-sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/almalinux/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo dnf config-manager --set-enabled epel || :
 sudo dnf config-manager --set-enabled powertools || :
 sudo dnf config-manager --set-enabled codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-rhui-rpms || :
 sudo subscription-manager repos --enable codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-$(arch)-rpms || :
+sudo dnf install -y arrow-devel # For C++
+sudo dnf install -y arrow-glib-devel # For GLib (C)
+sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo dnf install -y parquet-devel # For Apache Parquet C++
+sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
+```
+
+CentOS 8:
+
+```shell
+sudo dnf install -y epel-release
+sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo dnf config-manager --set-enabled epel
+sudo dnf config-manager --set-enabled powertools
 sudo dnf install -y arrow-devel # For C++
 sudo dnf install -y arrow-glib-devel # For GLib (C)
 sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
@@ -143,7 +159,7 @@ Amazon Linux 2:
 
 ```shell
 sudo amazon-linux-extras install -y epel
-sudo yum install -y https://apache.jfrog.io/artifactory/arrow/centos/7/apache-arrow-release-latest.rpm
+sudo yum install -y https://apache.jfrog.io/artifactory/arrow/amazon-linux/2/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
@@ -165,11 +181,11 @@ For convenience, we also provide packages through several package managers. Many
 
 ### C++ and Python Conda Packages
 
-Binary conda packages are on [conda-forge][5] for Linux, macOS, and Windows
+Binary conda packages are on [conda-forge][5] for Linux (x86_64, aarch64, ppc64le), macOS (x86_64 and arm64), and Windows (x86_64)
 for the following versions:
 
-* Python 3.6, 3.7, 3.8, 3.9
-* R 3.6, 4.0
+* Python 3.7, 3.8, 3.9, 3.10
+* R 4.0, 4.1
 
 Install them with:
 
@@ -243,12 +259,13 @@ using Pkg; Pkg.add("Arrow")
 
 ### Ruby Packages on RubyGems
 
-Install the Ruby packages from [RubyGems][25] with
+Install the Ruby packages for Ruby 2.6, 2.7 and 3.0 from [RubyGems][25] with
 
 ```shell
 gem install red-arrow
 gem install red-arrow-cuda # For CUDA support
 gem install red-arrow-dataset # For Apache Arrow Dataset support
+gem install red-arrow-flight # For Apache Arrow Flight support
 gem install red-gandiva # For Gandiva support
 gem install red-parquet # For Apache Parquet support
 gem install red-plasma # For Plasma support
