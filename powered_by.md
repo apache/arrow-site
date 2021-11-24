@@ -63,6 +63,10 @@ short description of your use case.
   large-scale data processing. Spark uses Apache Arrow to
   1. improve performance of conversion between Spark DataFrame and pandas DataFrame
   2. enable a set of vectorized user-defined functions (`pandas_udf`) in PySpark.
+* **[ArcPy][43]:** ArcPy is Esri’s comprehensive and powerful API for working within 
+  the ArcGIS suite of products to perform and automate spatial analysis, data management,
+  and conversion tasks (license required). ArcPy supports Arrow Tables as input
+  and output.
 * **[AWS Data Wrangler][34]:** Extends the power of Pandas library to AWS connecting 
   DataFrames and AWS data related services such as Amazon Redshift, AWS Glue, Amazon Athena, 
   Amazon EMR, Amazon QuickSight, etc.
@@ -226,3 +230,4 @@ short description of your use case.
 [40]: https://github.com/pola-rs/polars
 [41]: https://github.com/coady/graphique
 [42]: https://github.com/influxdata/influxdb_iox
+[43]: https://www.esri.com/en-us/arcgis/products/arcgis-python-libraries/libraries/arcpy
