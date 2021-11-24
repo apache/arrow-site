@@ -230,4 +230,4 @@ short description of your use case.
 [40]: https://github.com/pola-rs/polars
 [41]: https://github.com/coady/graphique
 [42]: https://github.com/influxdata/influxdb_iox
-[43]:https://www.esri.com/en-us/arcgis/products/arcgis-python-libraries/libraries/arcpy
+[43]: https://www.esri.com/en-us/arcgis/products/arcgis-python-libraries/libraries/arcpy
