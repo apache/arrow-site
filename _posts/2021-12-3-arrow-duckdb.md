@@ -332,7 +332,7 @@ record_batch_reader = query.fetch_record_batch()
 
 # Retrieve all batch chunks
 chunk = record_batch_reader.read_next_batch()
-while (len(chunk) > 0):
+while len(chunk) > 0:
     chunk = record_batch_reader.read_next_batch()
 ```
 
