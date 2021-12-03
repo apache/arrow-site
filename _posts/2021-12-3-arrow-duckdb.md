@@ -54,7 +54,7 @@ library(arrow)
 library(dplyr)
 
 # Open dataset using year,month folder partition
-ds <- open_dataset("nyc-taxi", partitioning = c("year", "month"))
+ds <- arrow::open_dataset("nyc-taxi", partitioning = c("year", "month"))
 
 ds %>%
   # Look only at 2015 on, where the number of passenger is positive, the trip distance is
