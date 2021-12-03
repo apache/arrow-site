@@ -191,7 +191,7 @@ nyc_dataset = ds.dataset('nyc-taxi/', partitioning=["year", "month"])
 # Gets Database Connection
 con = duckdb.connect()
 
-query = con.execute("SELECT * FROM nyc")
+query = con.execute("SELECT * FROM nyc_dataset")
 # DuckDB's queries can now produce a Record Batch Reader
 record_batch_reader = query.fetch_record_batch()
 # Which means we can stream the whole query per batch.
