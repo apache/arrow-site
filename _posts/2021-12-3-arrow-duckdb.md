@@ -177,7 +177,7 @@ result <- dbSendQuery(con, "SELECT * FROM arrow_table")
 ```
 
 ### Streaming Data from/to Arrow
-In the previous section, we depicted how to interact with Arrow tables. However, Arrow also allows users to interact with the data in a streaming fashion. Either consuming it (e.g., from an Arrow Dataset) or producing it (e.g., Handling out a Record Batch Reader). And of course, DuckDB is able to consume Datasets and produce Record Batch Readers. This example uses the NYC Taxi Dataset, stored in Parquet files partitioned by year and month, which we can download through the Arrow R package:
+In the previous section, we depicted how to interact with Arrow tables. However, Arrow also allows users to interact with the data in a streaming fashion. Either consuming it (e.g., from an Arrow Dataset) or producing it (e.g., returning a RecordBatchReader). And of course, DuckDB is able to consume Datasets and produce RecordBatchReaders. This example uses the NYC Taxi Dataset, stored in Parquet files partitioned by year and month, which we can download through the Arrow R package:
 ```R
 arrow::copy_files("s3://ursa-labs-taxi-data", "nyc-taxi")
 ```
