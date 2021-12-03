@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>DuckDB quacks Arrow: A zero-copy data integration between Arrow and DuckDB | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.7.1 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="DuckDB quacks Arrow: A zero-copy data integration between Arrow and DuckDB" />
+<meta name="author" content="Pedro Holanda, Jonathan Keane" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="TLDR: The zero-copy integration between DuckDB and Apache Arrow allows for rapid analysis of larger than memory datasets in Python and R using either SQL or relational APIs. This post is a collaboration with and cross-posted on the DuckDB blog. Part of Apache Arrow is an in-memory data format optimized for analytical libraries. Like Pandas and R Dataframes, it uses a columnar data model. But the Arrow project contains more than just the format: The Arrow C++ library, which is accessible in Python, R, and Ruby via bindings, has additional features that allow you to compute efficiently on datasets. These additional features are on top of the implementation of the in-memory format described above. The datasets may span multiple files in Parquet, CSV, or other formats, and files may even be on remote or cloud storage like HDFS or Amazon S3. The Arrow C++ query engine supports the streaming of query results, has an efficient implementation of complex data types (e.g., Lists, Structs, Maps), and can perform important scan optimizations like Projection and Filter Pushdown. DuckDB is a new analytical data management system that is designed to run complex SQL queries within other processes. DuckDB has bindings for R and Python, among others. DuckDB can query Arrow datasets directly and stream query results back to Arrow. This integration allows users to query Arrow data using DuckDB’s SQL Interface and API, while taking advantage of DuckDB’s parallel vectorized execution engine, without requiring any extra data copying. Additionally, this integration takes full advantage of Arrow’s predicate and filter pushdown while scanning datasets. This integration is unique because it uses zero-copy streaming of data between DuckDB and Arrow and vice versa so that you can compose a query using both together. This results in three main benefits: Larger Than Memory Analysis: Since both libraries support streaming query results, we are capable of executing on data without fully loading it from disk. Instead, we can execute one batch at a time. This allows us to execute queries on data that is bigger than memory. Complex Data Types: DuckDB can efficiently process complex data types that can be stored in Arrow vectors, including arbitrarily nested structs, lists, and maps. Advanced Optimizer: DuckDB’s state-of-the-art optimizer can push down filters and projections directly into Arrow scans. As a result, only relevant columns and partitions will be read, allowing the system to e.g., take advantage of partition elimination in Parquet files. This significantly accelerates query execution. For those that are just interested in benchmarks, you can jump ahead benchmark section below. Quick Tour Before diving into the details of the integration, in this section we provide a quick motivating example of how powerful and simple to use is the DuckDB-Arrow integration. With a few lines of code, you can already start querying Arrow datasets. Say you want to analyze the infamous NYC Taxi Dataset and figure out if groups tip more or less than single riders. R Both Arrow and DuckDB support dplyr pipelines for people more comfortable with using dplyr for their data analysis. The Arrow package includes two helper functions that allow us to pass data back and forth between Arrow and DuckDB (to_duckdb() and to_arrow()). This is especially useful in cases where something is supported in one of Arrow or DuckDB but not the other. For example, if you find a complex dplyr pipeline where the SQL translation doesn’t work with DuckDB, use to_arrow() before the pipeline to use the Arrow engine. Or, if you have a function (e.g., windowed aggregates) that aren’t yet implemented in Arrow, use to_duckdb() to use the DuckDB engine. All while not paying any cost to (re)serialize the data when you pass it back and forth! library(duckdb) library(arrow) library(dplyr) # Open dataset using year,month folder partition ds &lt;- arrow::open_dataset(&quot;nyc-taxi&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) ds %&gt;% # Look only at 2015 on, where the number of passenger is positive, the trip distance is # greater than a quarter mile, and where the fare amount is positive filter(year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0) %&gt;% # Pass off to DuckDB to_duckdb() %&gt;% group_by(passenger_count) %&gt;% mutate(tip_pct = tip_amount / fare_amount) %&gt;% summarise( fare_amount = mean(fare_amount, na.rm = TRUE), tip_amount = mean(tip_amount, na.rm = TRUE), tip_pct = mean(tip_pct, na.rm = TRUE) ) %&gt;% arrange(passenger_count) %&gt;% collect() Python The workflow in Python is as simple as it is in R. In this example we use DuckDB’s Relational API. import duckdb import pyarrow as pa import pyarrow.dataset as ds # Open dataset using year,month folder partition nyc = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # We transform the nyc dataset into a DuckDB relation nyc = duckdb.arrow(nyc) # Run same query again nyc.filter(&quot;year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0&quot;) .aggregate(&quot;SELECT AVG(fare_amount), AVG(tip_amount), AVG(tip_amount / fare_amount) as tip_pct&quot;,&quot;passenger_count&quot;).arrow() DuckDB and Arrow: The Basics In this section, we will look at some basic examples of the code needed to read and output Arrow tables in both Python and R. Setup First we need to install DuckDB and Arrow. The installation process for both libraries in Python and R is shown below. # Python Install pip install duckdb pip install pyarrow # R Install install.packages(&quot;duckdb&quot;) install.packages(&quot;arrow&quot;) To execute the sample-examples in this section, we need to download the following custom parquet files: https://github.com/duckdb/duckdb-web/blob/master/_posts/data/integers.parquet?raw=true https://github.com/cwida/duckdb-data/releases/download/v1.0/lineitemsf1.snappy.parquet Python There are two ways in Python of querying data from Arrow: Through the Relational API ```py Reads Parquet File to an Arrow Table arrow_table = pq.read_table(‘integers.parquet’) Transforms Arrow Table -&gt; DuckDB Relation rel_from_arrow = duckdb.arrow(arrow_table) we can run a SQL query on this and print the result print(rel_from_arrow.query(‘arrow_table’, ‘SELECT SUM(data) FROM arrow_table WHERE data &gt; 50’).fetchone()) Transforms DuckDB Relation -&gt; Arrow Table arrow_table_from_duckdb = rel_from_arrow.arrow() 2. By using replacement scans and querying the object directly with SQL: ```py # Reads Parquet File to an Arrow Table arrow_table = pq.read_table(&#39;integers.parquet&#39;) # Gets Database Connection con = duckdb.connect() # we can run a SQL query on this and print the result print(con.execute(&#39;SELECT SUM(data) FROM arrow_table WHERE data &gt; 50&#39;).fetchone()) # Transforms Query Result from DuckDB to Arrow Table # We can directly read the arrow object through DuckDB&#39;s replacement scans. con.execute(&quot;SELECT * FROM arrow_table&quot;).fetch_arrow_table() It is possible to transform both DuckDB Relations and Query Results back to Arrow. R In R, you can interact with Arrow data in DuckDB by registering the table as a view (an alternative is to use dplyr as shown above). library(duckdb) library(arrow) library(dplyr) # Reads Parquet File to an Arrow Table arrow_table &lt;- arrow::read_parquet(&quot;integers.parquet&quot;, as_data_frame = FALSE) # Gets Database Connection con &lt;- dbConnect(duckdb::duckdb()) # Registers arrow table as a DuckDB view arrow::to_duckdb(arrow_table, table_name = &quot;arrow_table&quot;, con = con) # we can run a SQL query on this and print the result print(dbGetQuery(con, &quot;SELECT SUM(data) FROM arrow_table WHERE data &gt; 50&quot;)) # Transforms Query Result from DuckDB to Arrow Table result &lt;- dbSendQuery(con, &quot;SELECT * FROM arrow_table&quot;) Streaming Data from/to Arrow In the previous section, we depicted how to interact with Arrow tables. However, Arrow also allows users to interact with the data in a streaming fashion. Either consuming it (e.g., from an Arrow Dataset) or producing it (e.g., returning a RecordBatchReader). And of course, DuckDB is able to consume Datasets and produce RecordBatchReaders. This example uses the NYC Taxi Dataset, stored in Parquet files partitioned by year and month, which we can download through the Arrow R package: arrow::copy_files(&quot;s3://ursa-labs-taxi-data&quot;, &quot;nyc-taxi&quot;) Python # Reads dataset partitioning it in year/month folder nyc_dataset = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Gets Database Connection con = duckdb.connect() query = con.execute(&quot;SELECT * FROM nyc_dataset&quot;) # DuckDB&#39;s queries can now produce a Record Batch Reader record_batch_reader = query.fetch_record_batch() # Which means we can stream the whole query per batch. # This retrieves the first batch chunk = record_batch_reader.read_next_batch() R # Reads dataset partitioning it in year/month folder nyc_dataset = open_dataset(&quot;nyc-taxi/&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) # Gets Database Connection con &lt;- dbConnect(duckdb::duckdb()) # We can use the same function as before to register our arrow dataset duckdb::duckdb_register_arrow(con, &quot;nyc&quot;, nyc_dataset) res &lt;- dbSendQuery(con, &quot;SELECT * FROM nyc&quot;, arrow = TRUE) # DuckDB&#39;s queries can now produce a Record Batch Reader record_batch_reader &lt;- duckdb::duckdb_fetch_record_batch(res) # Which means we can stream the whole query per batch. # This retrieves the first batch cur_batch &lt;- record_batch_reader$read_next_batch() The preceding R code shows in low-level detail how the data is streaming. We provide the helper to_arrow() in the Arrow package which is a wrapper around this that makes it easy to incorporate this streaming into a dplyr pipeline. 1 Benchmark Comparison Here we demonstrate in a simple benchmark the performance difference between querying Arrow datasets with DuckDB and querying Arrow datasets with Pandas. For both the Projection and Filter pushdown comparison, we will use Arrow tables. That is due to Pandas not being capable of consuming Arrow stream objects. For the NYC Taxi benchmarks, we used the scilens diamonds configuration and for the TPC-H benchmarks, we used an m1 MacBook Pro. In both cases, parallelism in DuckDB was used (which is now on by default). For the comparison with Pandas, note that DuckDB runs in parallel, while pandas only support single-threaded execution. Besides that, one should note that we are comparing automatic optimizations. DuckDB’s query optimizer can automatically push down filters and projections. This automatic optimization is not supported in pandas, but it is possible for users to manually perform some of these predicate and filter pushdowns by manually specifying them them in the read_parquet() call. Projection Pushdown In this example we run a simple aggregation on two columns of our lineitem table. # DuckDB lineitem = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) con = duckdb.connect() # Transforms Query Result from DuckDB to Arrow Table con.execute(&quot;&quot;&quot;SELECT sum(l_extendedprice * l_discount) AS revenue FROM lineitem;&quot;&quot;&quot;).fetch_arrow_table() # Pandas arrow_table = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) # Converts an Arrow table to a Dataframe df = arrow_table.to_pandas() # Runs aggregation res = pd.DataFrame({&#39;sum&#39;: [(df.l_extendedprice * df.l_discount).sum()]}) # Creates an Arrow Table from a Dataframe new_table = pa.Table.from_pandas(res) Name Time (s) DuckDB 0.19 Pandas 2.13 The lineitem table is composed of 16 columns, however, to execute this query only two columns l_extendedprice and * l_discount are necessary. Since DuckDB can push down the projection of these columns, it is capable of executing this query about one order of magnitude faster than Pandas. Filter Pushdown For our filter pushdown we repeat the same aggregation used in the previous section, but add filters on 4 more columns. # DuckDB lineitem = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) # Get database connection con = duckdb.connect() # Transforms Query Result from DuckDB to Arrow Table con.execute(&quot;&quot;&quot;SELECT sum(l_extendedprice * l_discount) AS revenue FROM lineitem WHERE l_shipdate &gt;= CAST(&#39;1994-01-01&#39; AS date) AND l_shipdate &lt; CAST(&#39;1995-01-01&#39; AS date) AND l_discount BETWEEN 0.05 AND 0.07 AND l_quantity &lt; 24; &quot;&quot;&quot;).fetch_arrow_table() # Pandas arrow_table = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) df = arrow_table.to_pandas() filtered_df = lineitem[ (lineitem.l_shipdate &gt;= &quot;1994-01-01&quot;) &amp; (lineitem.l_shipdate &lt; &quot;1995-01-01&quot;) &amp; (lineitem.l_discount &gt;= 0.05) &amp; (lineitem.l_discount &lt;= 0.07) &amp; (lineitem.l_quantity &lt; 24)] res = pd.DataFrame({&#39;sum&#39;: [(filtered_df.l_extendedprice * filtered_df.l_discount).sum()]}) new_table = pa.Table.from_pandas(res) Name Time (s) DuckDB 0.04 Pandas 2.29 The difference now between DuckDB and Pandas is more drastic, being two orders of magnitude faster than Pandas. Again, since both the filter and projection are pushed down to Arrow, DuckDB reads less data than Pandas, which can’t automatically perform this optimization. Streaming As demonstrated before, DuckDB is capable of consuming and producing Arrow data in a streaming fashion. In this section we run a simple benchmark, to showcase the benefits in speed and memory usage when comparing it to full materialization and Pandas. This example uses the full NYC taxi dataset which you can download # DuckDB # Open dataset using year,month folder partition nyc = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Get database connection con = duckdb.connect() # Run query that selects part of the data query = con.execute(&quot;SELECT total_amount, passenger_count,year FROM nyc where total_amount &gt; 100 and year &gt; 2014&quot;) # Create Record Batch Reader from Query Result. # &quot;fetch_record_batch()&quot; also accepts an extra parameter related to the desired produced chunk size. record_batch_reader = query.fetch_record_batch() # Retrieve all batch chunks chunk = record_batch_reader.read_next_batch() while len(chunk) &gt; 0: chunk = record_batch_reader.read_next_batch() # Pandas # We must exclude one of the columns of the NYC dataset due to an unimplemented cast in Arrow. working_columns = [&quot;vendor_id&quot;,&quot;pickup_at&quot;,&quot;dropoff_at&quot;,&quot;passenger_count&quot;,&quot;trip_distance&quot;,&quot;pickup_longitude&quot;, &quot;pickup_latitude&quot;,&quot;store_and_fwd_flag&quot;,&quot;dropoff_longitude&quot;,&quot;dropoff_latitude&quot;,&quot;payment_type&quot;, &quot;fare_amount&quot;,&quot;extra&quot;,&quot;mta_tax&quot;,&quot;tip_amount&quot;,&quot;tolls_amount&quot;,&quot;total_amount&quot;,&quot;year&quot;, &quot;month&quot;] # Open dataset using year,month folder partition nyc_dataset = ds.dataset(dir, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Generate a scanner to skip problematic column dataset_scanner = nyc_dataset.scanner(columns=working_columns) # Materialize dataset to an Arrow Table nyc_table = dataset_scanner.to_table() # Generate Dataframe from Arow Table nyc_df = nyc_table.to_pandas() # Apply Filter filtered_df = nyc_df[ (nyc_df.total_amount &gt; 100) &amp; (nyc_df.year &gt;2014)] # Apply Projection res = filtered_df[[&quot;total_amount&quot;, &quot;passenger_count&quot;,&quot;year&quot;]] # Transform Result back to an Arrow Table new_table = pa.Table.from_pandas(res) Name Time (s) Peak Memory Usage (GBs) DuckDB 0.05 0.3 Pandas 146.91 248 The difference in times between DuckDB and Pandas is a combination of all the integration benefits we explored in this article. In DuckDB the filter pushdown is applied to perform partition elimination (i.e., we skip reading the Parquet files where the year is &lt;= 2014). The filter pushdown is also used to eliminate unrelated row_groups (i.e., row groups where the total amount is always &lt;= 100). Due to our projection pushdown, Arrow only has to read the columns of interest from the Parquet files, which allows it to read only 4 out of 20 columns. On the other hand, Pandas is not capable of automatically pushing down any of these optimizations, which means that the full dataset must be read. This results in the 4 orders of magnitude difference in query execution time. In the table above, we also depict the comparison of peak memory usage between DuckDB (Streaming) and Pandas (Fully-Materializing). In DuckDB, we only need to load the row-group of interest into memory. Hence our memory usage is low. We also have constant memory usage since we only have to keep one of these row groups in-memory at a time. Pandas, on the other hand, has to fully materialize all Parquet files when executing the query. Because of this, we see a constant steep increase in its memory consumption. The total difference in memory consumption of the two solutions is around 3 orders of magnitude. Conclusion and Feedback In this blog post, we mainly showcased how to execute queries on Arrow datasets with DuckDB. There are additional libraries that can also consume the Arrow format but they have different purposes and capabilities. As always, we are happy to hear if you want to see benchmarks with different tools for a post in the future! Feel free to drop us an email or share your thoughts directly in the Hacker News post. Last but not least, if you encounter any problems when using our integration, please open an issue in in either DuckDB’s - issue tracker or Arrow’s - issue tracker, depending on which library has a problem. In Arrow 6.0.0, to_arrow() currently returns the full table, but will allow full streaming in our upcoming 7.0.0 release. &#8617;" />
+<meta property="og:description" content="TLDR: The zero-copy integration between DuckDB and Apache Arrow allows for rapid analysis of larger than memory datasets in Python and R using either SQL or relational APIs. This post is a collaboration with and cross-posted on the DuckDB blog. Part of Apache Arrow is an in-memory data format optimized for analytical libraries. Like Pandas and R Dataframes, it uses a columnar data model. But the Arrow project contains more than just the format: The Arrow C++ library, which is accessible in Python, R, and Ruby via bindings, has additional features that allow you to compute efficiently on datasets. These additional features are on top of the implementation of the in-memory format described above. The datasets may span multiple files in Parquet, CSV, or other formats, and files may even be on remote or cloud storage like HDFS or Amazon S3. The Arrow C++ query engine supports the streaming of query results, has an efficient implementation of complex data types (e.g., Lists, Structs, Maps), and can perform important scan optimizations like Projection and Filter Pushdown. DuckDB is a new analytical data management system that is designed to run complex SQL queries within other processes. DuckDB has bindings for R and Python, among others. DuckDB can query Arrow datasets directly and stream query results back to Arrow. This integration allows users to query Arrow data using DuckDB’s SQL Interface and API, while taking advantage of DuckDB’s parallel vectorized execution engine, without requiring any extra data copying. Additionally, this integration takes full advantage of Arrow’s predicate and filter pushdown while scanning datasets. This integration is unique because it uses zero-copy streaming of data between DuckDB and Arrow and vice versa so that you can compose a query using both together. This results in three main benefits: Larger Than Memory Analysis: Since both libraries support streaming query results, we are capable of executing on data without fully loading it from disk. Instead, we can execute one batch at a time. This allows us to execute queries on data that is bigger than memory. Complex Data Types: DuckDB can efficiently process complex data types that can be stored in Arrow vectors, including arbitrarily nested structs, lists, and maps. Advanced Optimizer: DuckDB’s state-of-the-art optimizer can push down filters and projections directly into Arrow scans. As a result, only relevant columns and partitions will be read, allowing the system to e.g., take advantage of partition elimination in Parquet files. This significantly accelerates query execution. For those that are just interested in benchmarks, you can jump ahead benchmark section below. Quick Tour Before diving into the details of the integration, in this section we provide a quick motivating example of how powerful and simple to use is the DuckDB-Arrow integration. With a few lines of code, you can already start querying Arrow datasets. Say you want to analyze the infamous NYC Taxi Dataset and figure out if groups tip more or less than single riders. R Both Arrow and DuckDB support dplyr pipelines for people more comfortable with using dplyr for their data analysis. The Arrow package includes two helper functions that allow us to pass data back and forth between Arrow and DuckDB (to_duckdb() and to_arrow()). This is especially useful in cases where something is supported in one of Arrow or DuckDB but not the other. For example, if you find a complex dplyr pipeline where the SQL translation doesn’t work with DuckDB, use to_arrow() before the pipeline to use the Arrow engine. Or, if you have a function (e.g., windowed aggregates) that aren’t yet implemented in Arrow, use to_duckdb() to use the DuckDB engine. All while not paying any cost to (re)serialize the data when you pass it back and forth! library(duckdb) library(arrow) library(dplyr) # Open dataset using year,month folder partition ds &lt;- arrow::open_dataset(&quot;nyc-taxi&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) ds %&gt;% # Look only at 2015 on, where the number of passenger is positive, the trip distance is # greater than a quarter mile, and where the fare amount is positive filter(year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0) %&gt;% # Pass off to DuckDB to_duckdb() %&gt;% group_by(passenger_count) %&gt;% mutate(tip_pct = tip_amount / fare_amount) %&gt;% summarise( fare_amount = mean(fare_amount, na.rm = TRUE), tip_amount = mean(tip_amount, na.rm = TRUE), tip_pct = mean(tip_pct, na.rm = TRUE) ) %&gt;% arrange(passenger_count) %&gt;% collect() Python The workflow in Python is as simple as it is in R. In this example we use DuckDB’s Relational API. import duckdb import pyarrow as pa import pyarrow.dataset as ds # Open dataset using year,month folder partition nyc = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # We transform the nyc dataset into a DuckDB relation nyc = duckdb.arrow(nyc) # Run same query again nyc.filter(&quot;year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0&quot;) .aggregate(&quot;SELECT AVG(fare_amount), AVG(tip_amount), AVG(tip_amount / fare_amount) as tip_pct&quot;,&quot;passenger_count&quot;).arrow() DuckDB and Arrow: The Basics In this section, we will look at some basic examples of the code needed to read and output Arrow tables in both Python and R. Setup First we need to install DuckDB and Arrow. The installation process for both libraries in Python and R is shown below. # Python Install pip install duckdb pip install pyarrow # R Install install.packages(&quot;duckdb&quot;) install.packages(&quot;arrow&quot;) To execute the sample-examples in this section, we need to download the following custom parquet files: https://github.com/duckdb/duckdb-web/blob/master/_posts/data/integers.parquet?raw=true https://github.com/cwida/duckdb-data/releases/download/v1.0/lineitemsf1.snappy.parquet Python There are two ways in Python of querying data from Arrow: Through the Relational API ```py Reads Parquet File to an Arrow Table arrow_table = pq.read_table(‘integers.parquet’) Transforms Arrow Table -&gt; DuckDB Relation rel_from_arrow = duckdb.arrow(arrow_table) we can run a SQL query on this and print the result print(rel_from_arrow.query(‘arrow_table’, ‘SELECT SUM(data) FROM arrow_table WHERE data &gt; 50’).fetchone()) Transforms DuckDB Relation -&gt; Arrow Table arrow_table_from_duckdb = rel_from_arrow.arrow() 2. By using replacement scans and querying the object directly with SQL: ```py # Reads Parquet File to an Arrow Table arrow_table = pq.read_table(&#39;integers.parquet&#39;) # Gets Database Connection con = duckdb.connect() # we can run a SQL query on this and print the result print(con.execute(&#39;SELECT SUM(data) FROM arrow_table WHERE data &gt; 50&#39;).fetchone()) # Transforms Query Result from DuckDB to Arrow Table # We can directly read the arrow object through DuckDB&#39;s replacement scans. con.execute(&quot;SELECT * FROM arrow_table&quot;).fetch_arrow_table() It is possible to transform both DuckDB Relations and Query Results back to Arrow. R In R, you can interact with Arrow data in DuckDB by registering the table as a view (an alternative is to use dplyr as shown above). library(duckdb) library(arrow) library(dplyr) # Reads Parquet File to an Arrow Table arrow_table &lt;- arrow::read_parquet(&quot;integers.parquet&quot;, as_data_frame = FALSE) # Gets Database Connection con &lt;- dbConnect(duckdb::duckdb()) # Registers arrow table as a DuckDB view arrow::to_duckdb(arrow_table, table_name = &quot;arrow_table&quot;, con = con) # we can run a SQL query on this and print the result print(dbGetQuery(con, &quot;SELECT SUM(data) FROM arrow_table WHERE data &gt; 50&quot;)) # Transforms Query Result from DuckDB to Arrow Table result &lt;- dbSendQuery(con, &quot;SELECT * FROM arrow_table&quot;) Streaming Data from/to Arrow In the previous section, we depicted how to interact with Arrow tables. However, Arrow also allows users to interact with the data in a streaming fashion. Either consuming it (e.g., from an Arrow Dataset) or producing it (e.g., returning a RecordBatchReader). And of course, DuckDB is able to consume Datasets and produce RecordBatchReaders. This example uses the NYC Taxi Dataset, stored in Parquet files partitioned by year and month, which we can download through the Arrow R package: arrow::copy_files(&quot;s3://ursa-labs-taxi-data&quot;, &quot;nyc-taxi&quot;) Python # Reads dataset partitioning it in year/month folder nyc_dataset = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Gets Database Connection con = duckdb.connect() query = con.execute(&quot;SELECT * FROM nyc_dataset&quot;) # DuckDB&#39;s queries can now produce a Record Batch Reader record_batch_reader = query.fetch_record_batch() # Which means we can stream the whole query per batch. # This retrieves the first batch chunk = record_batch_reader.read_next_batch() R # Reads dataset partitioning it in year/month folder nyc_dataset = open_dataset(&quot;nyc-taxi/&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) # Gets Database Connection con &lt;- dbConnect(duckdb::duckdb()) # We can use the same function as before to register our arrow dataset duckdb::duckdb_register_arrow(con, &quot;nyc&quot;, nyc_dataset) res &lt;- dbSendQuery(con, &quot;SELECT * FROM nyc&quot;, arrow = TRUE) # DuckDB&#39;s queries can now produce a Record Batch Reader record_batch_reader &lt;- duckdb::duckdb_fetch_record_batch(res) # Which means we can stream the whole query per batch. # This retrieves the first batch cur_batch &lt;- record_batch_reader$read_next_batch() The preceding R code shows in low-level detail how the data is streaming. We provide the helper to_arrow() in the Arrow package which is a wrapper around this that makes it easy to incorporate this streaming into a dplyr pipeline. 1 Benchmark Comparison Here we demonstrate in a simple benchmark the performance difference between querying Arrow datasets with DuckDB and querying Arrow datasets with Pandas. For both the Projection and Filter pushdown comparison, we will use Arrow tables. That is due to Pandas not being capable of consuming Arrow stream objects. For the NYC Taxi benchmarks, we used the scilens diamonds configuration and for the TPC-H benchmarks, we used an m1 MacBook Pro. In both cases, parallelism in DuckDB was used (which is now on by default). For the comparison with Pandas, note that DuckDB runs in parallel, while pandas only support single-threaded execution. Besides that, one should note that we are comparing automatic optimizations. DuckDB’s query optimizer can automatically push down filters and projections. This automatic optimization is not supported in pandas, but it is possible for users to manually perform some of these predicate and filter pushdowns by manually specifying them them in the read_parquet() call. Projection Pushdown In this example we run a simple aggregation on two columns of our lineitem table. # DuckDB lineitem = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) con = duckdb.connect() # Transforms Query Result from DuckDB to Arrow Table con.execute(&quot;&quot;&quot;SELECT sum(l_extendedprice * l_discount) AS revenue FROM lineitem;&quot;&quot;&quot;).fetch_arrow_table() # Pandas arrow_table = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) # Converts an Arrow table to a Dataframe df = arrow_table.to_pandas() # Runs aggregation res = pd.DataFrame({&#39;sum&#39;: [(df.l_extendedprice * df.l_discount).sum()]}) # Creates an Arrow Table from a Dataframe new_table = pa.Table.from_pandas(res) Name Time (s) DuckDB 0.19 Pandas 2.13 The lineitem table is composed of 16 columns, however, to execute this query only two columns l_extendedprice and * l_discount are necessary. Since DuckDB can push down the projection of these columns, it is capable of executing this query about one order of magnitude faster than Pandas. Filter Pushdown For our filter pushdown we repeat the same aggregation used in the previous section, but add filters on 4 more columns. # DuckDB lineitem = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) # Get database connection con = duckdb.connect() # Transforms Query Result from DuckDB to Arrow Table con.execute(&quot;&quot;&quot;SELECT sum(l_extendedprice * l_discount) AS revenue FROM lineitem WHERE l_shipdate &gt;= CAST(&#39;1994-01-01&#39; AS date) AND l_shipdate &lt; CAST(&#39;1995-01-01&#39; AS date) AND l_discount BETWEEN 0.05 AND 0.07 AND l_quantity &lt; 24; &quot;&quot;&quot;).fetch_arrow_table() # Pandas arrow_table = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) df = arrow_table.to_pandas() filtered_df = lineitem[ (lineitem.l_shipdate &gt;= &quot;1994-01-01&quot;) &amp; (lineitem.l_shipdate &lt; &quot;1995-01-01&quot;) &amp; (lineitem.l_discount &gt;= 0.05) &amp; (lineitem.l_discount &lt;= 0.07) &amp; (lineitem.l_quantity &lt; 24)] res = pd.DataFrame({&#39;sum&#39;: [(filtered_df.l_extendedprice * filtered_df.l_discount).sum()]}) new_table = pa.Table.from_pandas(res) Name Time (s) DuckDB 0.04 Pandas 2.29 The difference now between DuckDB and Pandas is more drastic, being two orders of magnitude faster than Pandas. Again, since both the filter and projection are pushed down to Arrow, DuckDB reads less data than Pandas, which can’t automatically perform this optimization. Streaming As demonstrated before, DuckDB is capable of consuming and producing Arrow data in a streaming fashion. In this section we run a simple benchmark, to showcase the benefits in speed and memory usage when comparing it to full materialization and Pandas. This example uses the full NYC taxi dataset which you can download # DuckDB # Open dataset using year,month folder partition nyc = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Get database connection con = duckdb.connect() # Run query that selects part of the data query = con.execute(&quot;SELECT total_amount, passenger_count,year FROM nyc where total_amount &gt; 100 and year &gt; 2014&quot;) # Create Record Batch Reader from Query Result. # &quot;fetch_record_batch()&quot; also accepts an extra parameter related to the desired produced chunk size. record_batch_reader = query.fetch_record_batch() # Retrieve all batch chunks chunk = record_batch_reader.read_next_batch() while len(chunk) &gt; 0: chunk = record_batch_reader.read_next_batch() # Pandas # We must exclude one of the columns of the NYC dataset due to an unimplemented cast in Arrow. working_columns = [&quot;vendor_id&quot;,&quot;pickup_at&quot;,&quot;dropoff_at&quot;,&quot;passenger_count&quot;,&quot;trip_distance&quot;,&quot;pickup_longitude&quot;, &quot;pickup_latitude&quot;,&quot;store_and_fwd_flag&quot;,&quot;dropoff_longitude&quot;,&quot;dropoff_latitude&quot;,&quot;payment_type&quot;, &quot;fare_amount&quot;,&quot;extra&quot;,&quot;mta_tax&quot;,&quot;tip_amount&quot;,&quot;tolls_amount&quot;,&quot;total_amount&quot;,&quot;year&quot;, &quot;month&quot;] # Open dataset using year,month folder partition nyc_dataset = ds.dataset(dir, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Generate a scanner to skip problematic column dataset_scanner = nyc_dataset.scanner(columns=working_columns) # Materialize dataset to an Arrow Table nyc_table = dataset_scanner.to_table() # Generate Dataframe from Arow Table nyc_df = nyc_table.to_pandas() # Apply Filter filtered_df = nyc_df[ (nyc_df.total_amount &gt; 100) &amp; (nyc_df.year &gt;2014)] # Apply Projection res = filtered_df[[&quot;total_amount&quot;, &quot;passenger_count&quot;,&quot;year&quot;]] # Transform Result back to an Arrow Table new_table = pa.Table.from_pandas(res) Name Time (s) Peak Memory Usage (GBs) DuckDB 0.05 0.3 Pandas 146.91 248 The difference in times between DuckDB and Pandas is a combination of all the integration benefits we explored in this article. In DuckDB the filter pushdown is applied to perform partition elimination (i.e., we skip reading the Parquet files where the year is &lt;= 2014). The filter pushdown is also used to eliminate unrelated row_groups (i.e., row groups where the total amount is always &lt;= 100). Due to our projection pushdown, Arrow only has to read the columns of interest from the Parquet files, which allows it to read only 4 out of 20 columns. On the other hand, Pandas is not capable of automatically pushing down any of these optimizations, which means that the full dataset must be read. This results in the 4 orders of magnitude difference in query execution time. In the table above, we also depict the comparison of peak memory usage between DuckDB (Streaming) and Pandas (Fully-Materializing). In DuckDB, we only need to load the row-group of interest into memory. Hence our memory usage is low. We also have constant memory usage since we only have to keep one of these row groups in-memory at a time. Pandas, on the other hand, has to fully materialize all Parquet files when executing the query. Because of this, we see a constant steep increase in its memory consumption. The total difference in memory consumption of the two solutions is around 3 orders of magnitude. Conclusion and Feedback In this blog post, we mainly showcased how to execute queries on Arrow datasets with DuckDB. There are additional libraries that can also consume the Arrow format but they have different purposes and capabilities. As always, we are happy to hear if you want to see benchmarks with different tools for a post in the future! Feel free to drop us an email or share your thoughts directly in the Hacker News post. Last but not least, if you encounter any problems when using our integration, please open an issue in in either DuckDB’s - issue tracker or Arrow’s - issue tracker, depending on which library has a problem. In Arrow 6.0.0, to_arrow() currently returns the full table, but will allow full streaming in our upcoming 7.0.0 release. &#8617;" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2021/12/03/arrow-duckdb/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2021/12/03/arrow-duckdb/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-12-03T00:00:00-05:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="twitter:title" content="DuckDB quacks Arrow: A zero-copy data integration between Arrow and DuckDB" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@Pedro Holanda, Jonathan Keane" />
+<script type="application/ld+json">
+{"description":"TLDR: The zero-copy integration between DuckDB and Apache Arrow allows for rapid analysis of larger than memory datasets in Python and R using either SQL or relational APIs. This post is a collaboration with and cross-posted on the DuckDB blog. Part of Apache Arrow is an in-memory data format optimized for analytical libraries. Like Pandas and R Dataframes, it uses a columnar data model. But the Arrow project contains more than just the format: The Arrow C++ library, which is accessible in Python, R, and Ruby via bindings, has additional features that allow you to compute efficiently on datasets. These additional features are on top of the implementation of the in-memory format described above. The datasets may span multiple files in Parquet, CSV, or other formats, and files may even be on remote or cloud storage like HDFS or Amazon S3. The Arrow C++ query engine supports the streaming of query results, has an efficient implementation of complex data types (e.g., Lists, Structs, Maps), and can perform important scan optimizations like Projection and Filter Pushdown. DuckDB is a new analytical data management system that is designed to run complex SQL queries within other processes. DuckDB has bindings for R and Python, among others. DuckDB can query Arrow datasets directly and stream query results back to Arrow. This integration allows users to query Arrow data using DuckDB’s SQL Interface and API, while taking advantage of DuckDB’s parallel vectorized execution engine, without requiring any extra data copying. Additionally, this integration takes full advantage of Arrow’s predicate and filter pushdown while scanning datasets. This integration is unique because it uses zero-copy streaming of data between DuckDB and Arrow and vice versa so that you can compose a query using both together. This results in three main benefits: Larger Than Memory Analysis: Since both libraries support streaming query results, we are capable of executing on data without fully loading it from disk. Instead, we can execute one batch at a time. This allows us to execute queries on data that is bigger than memory. Complex Data Types: DuckDB can efficiently process complex data types that can be stored in Arrow vectors, including arbitrarily nested structs, lists, and maps. Advanced Optimizer: DuckDB’s state-of-the-art optimizer can push down filters and projections directly into Arrow scans. As a result, only relevant columns and partitions will be read, allowing the system to e.g., take advantage of partition elimination in Parquet files. This significantly accelerates query execution. For those that are just interested in benchmarks, you can jump ahead benchmark section below. Quick Tour Before diving into the details of the integration, in this section we provide a quick motivating example of how powerful and simple to use is the DuckDB-Arrow integration. With a few lines of code, you can already start querying Arrow datasets. Say you want to analyze the infamous NYC Taxi Dataset and figure out if groups tip more or less than single riders. R Both Arrow and DuckDB support dplyr pipelines for people more comfortable with using dplyr for their data analysis. The Arrow package includes two helper functions that allow us to pass data back and forth between Arrow and DuckDB (to_duckdb() and to_arrow()). This is especially useful in cases where something is supported in one of Arrow or DuckDB but not the other. For example, if you find a complex dplyr pipeline where the SQL translation doesn’t work with DuckDB, use to_arrow() before the pipeline to use the Arrow engine. Or, if you have a function (e.g., windowed aggregates) that aren’t yet implemented in Arrow, use to_duckdb() to use the DuckDB engine. All while not paying any cost to (re)serialize the data when you pass it back and forth! library(duckdb) library(arrow) library(dplyr) # Open dataset using year,month folder partition ds &lt;- arrow::open_dataset(&quot;nyc-taxi&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) ds %&gt;% # Look only at 2015 on, where the number of passenger is positive, the trip distance is # greater than a quarter mile, and where the fare amount is positive filter(year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0) %&gt;% # Pass off to DuckDB to_duckdb() %&gt;% group_by(passenger_count) %&gt;% mutate(tip_pct = tip_amount / fare_amount) %&gt;% summarise( fare_amount = mean(fare_amount, na.rm = TRUE), tip_amount = mean(tip_amount, na.rm = TRUE), tip_pct = mean(tip_pct, na.rm = TRUE) ) %&gt;% arrange(passenger_count) %&gt;% collect() Python The workflow in Python is as simple as it is in R. In this example we use DuckDB’s Relational API. import duckdb import pyarrow as pa import pyarrow.dataset as ds # Open dataset using year,month folder partition nyc = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # We transform the nyc dataset into a DuckDB relation nyc = duckdb.arrow(nyc) # Run same query again nyc.filter(&quot;year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0&quot;) .aggregate(&quot;SELECT AVG(fare_amount), AVG(tip_amount), AVG(tip_amount / fare_amount) as tip_pct&quot;,&quot;passenger_count&quot;).arrow() DuckDB and Arrow: The Basics In this section, we will look at some basic examples of the code needed to read and output Arrow tables in both Python and R. Setup First we need to install DuckDB and Arrow. The installation process for both libraries in Python and R is shown below. # Python Install pip install duckdb pip install pyarrow # R Install install.packages(&quot;duckdb&quot;) install.packages(&quot;arrow&quot;) To execute the sample-examples in this section, we need to download the following custom parquet files: https://github.com/duckdb/duckdb-web/blob/master/_posts/data/integers.parquet?raw=true https://github.com/cwida/duckdb-data/releases/download/v1.0/lineitemsf1.snappy.parquet Python There are two ways in Python of querying data from Arrow: Through the Relational API ```py Reads Parquet File to an Arrow Table arrow_table = pq.read_table(‘integers.parquet’) Transforms Arrow Table -&gt; DuckDB Relation rel_from_arrow = duckdb.arrow(arrow_table) we can run a SQL query on this and print the result print(rel_from_arrow.query(‘arrow_table’, ‘SELECT SUM(data) FROM arrow_table WHERE data &gt; 50’).fetchone()) Transforms DuckDB Relation -&gt; Arrow Table arrow_table_from_duckdb = rel_from_arrow.arrow() 2. By using replacement scans and querying the object directly with SQL: ```py # Reads Parquet File to an Arrow Table arrow_table = pq.read_table(&#39;integers.parquet&#39;) # Gets Database Connection con = duckdb.connect() # we can run a SQL query on this and print the result print(con.execute(&#39;SELECT SUM(data) FROM arrow_table WHERE data &gt; 50&#39;).fetchone()) # Transforms Query Result from DuckDB to Arrow Table # We can directly read the arrow object through DuckDB&#39;s replacement scans. con.execute(&quot;SELECT * FROM arrow_table&quot;).fetch_arrow_table() It is possible to transform both DuckDB Relations and Query Results back to Arrow. R In R, you can interact with Arrow data in DuckDB by registering the table as a view (an alternative is to use dplyr as shown above). library(duckdb) library(arrow) library(dplyr) # Reads Parquet File to an Arrow Table arrow_table &lt;- arrow::read_parquet(&quot;integers.parquet&quot;, as_data_frame = FALSE) # Gets Database Connection con &lt;- dbConnect(duckdb::duckdb()) # Registers arrow table as a DuckDB view arrow::to_duckdb(arrow_table, table_name = &quot;arrow_table&quot;, con = con) # we can run a SQL query on this and print the result print(dbGetQuery(con, &quot;SELECT SUM(data) FROM arrow_table WHERE data &gt; 50&quot;)) # Transforms Query Result from DuckDB to Arrow Table result &lt;- dbSendQuery(con, &quot;SELECT * FROM arrow_table&quot;) Streaming Data from/to Arrow In the previous section, we depicted how to interact with Arrow tables. However, Arrow also allows users to interact with the data in a streaming fashion. Either consuming it (e.g., from an Arrow Dataset) or producing it (e.g., returning a RecordBatchReader). And of course, DuckDB is able to consume Datasets and produce RecordBatchReaders. This example uses the NYC Taxi Dataset, stored in Parquet files partitioned by year and month, which we can download through the Arrow R package: arrow::copy_files(&quot;s3://ursa-labs-taxi-data&quot;, &quot;nyc-taxi&quot;) Python # Reads dataset partitioning it in year/month folder nyc_dataset = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Gets Database Connection con = duckdb.connect() query = con.execute(&quot;SELECT * FROM nyc_dataset&quot;) # DuckDB&#39;s queries can now produce a Record Batch Reader record_batch_reader = query.fetch_record_batch() # Which means we can stream the whole query per batch. # This retrieves the first batch chunk = record_batch_reader.read_next_batch() R # Reads dataset partitioning it in year/month folder nyc_dataset = open_dataset(&quot;nyc-taxi/&quot;, partitioning = c(&quot;year&quot;, &quot;month&quot;)) # Gets Database Connection con &lt;- dbConnect(duckdb::duckdb()) # We can use the same function as before to register our arrow dataset duckdb::duckdb_register_arrow(con, &quot;nyc&quot;, nyc_dataset) res &lt;- dbSendQuery(con, &quot;SELECT * FROM nyc&quot;, arrow = TRUE) # DuckDB&#39;s queries can now produce a Record Batch Reader record_batch_reader &lt;- duckdb::duckdb_fetch_record_batch(res) # Which means we can stream the whole query per batch. # This retrieves the first batch cur_batch &lt;- record_batch_reader$read_next_batch() The preceding R code shows in low-level detail how the data is streaming. We provide the helper to_arrow() in the Arrow package which is a wrapper around this that makes it easy to incorporate this streaming into a dplyr pipeline. 1 Benchmark Comparison Here we demonstrate in a simple benchmark the performance difference between querying Arrow datasets with DuckDB and querying Arrow datasets with Pandas. For both the Projection and Filter pushdown comparison, we will use Arrow tables. That is due to Pandas not being capable of consuming Arrow stream objects. For the NYC Taxi benchmarks, we used the scilens diamonds configuration and for the TPC-H benchmarks, we used an m1 MacBook Pro. In both cases, parallelism in DuckDB was used (which is now on by default). For the comparison with Pandas, note that DuckDB runs in parallel, while pandas only support single-threaded execution. Besides that, one should note that we are comparing automatic optimizations. DuckDB’s query optimizer can automatically push down filters and projections. This automatic optimization is not supported in pandas, but it is possible for users to manually perform some of these predicate and filter pushdowns by manually specifying them them in the read_parquet() call. Projection Pushdown In this example we run a simple aggregation on two columns of our lineitem table. # DuckDB lineitem = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) con = duckdb.connect() # Transforms Query Result from DuckDB to Arrow Table con.execute(&quot;&quot;&quot;SELECT sum(l_extendedprice * l_discount) AS revenue FROM lineitem;&quot;&quot;&quot;).fetch_arrow_table() # Pandas arrow_table = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) # Converts an Arrow table to a Dataframe df = arrow_table.to_pandas() # Runs aggregation res = pd.DataFrame({&#39;sum&#39;: [(df.l_extendedprice * df.l_discount).sum()]}) # Creates an Arrow Table from a Dataframe new_table = pa.Table.from_pandas(res) Name Time (s) DuckDB 0.19 Pandas 2.13 The lineitem table is composed of 16 columns, however, to execute this query only two columns l_extendedprice and * l_discount are necessary. Since DuckDB can push down the projection of these columns, it is capable of executing this query about one order of magnitude faster than Pandas. Filter Pushdown For our filter pushdown we repeat the same aggregation used in the previous section, but add filters on 4 more columns. # DuckDB lineitem = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) # Get database connection con = duckdb.connect() # Transforms Query Result from DuckDB to Arrow Table con.execute(&quot;&quot;&quot;SELECT sum(l_extendedprice * l_discount) AS revenue FROM lineitem WHERE l_shipdate &gt;= CAST(&#39;1994-01-01&#39; AS date) AND l_shipdate &lt; CAST(&#39;1995-01-01&#39; AS date) AND l_discount BETWEEN 0.05 AND 0.07 AND l_quantity &lt; 24; &quot;&quot;&quot;).fetch_arrow_table() # Pandas arrow_table = pq.read_table(&#39;lineitemsf1.snappy.parquet&#39;) df = arrow_table.to_pandas() filtered_df = lineitem[ (lineitem.l_shipdate &gt;= &quot;1994-01-01&quot;) &amp; (lineitem.l_shipdate &lt; &quot;1995-01-01&quot;) &amp; (lineitem.l_discount &gt;= 0.05) &amp; (lineitem.l_discount &lt;= 0.07) &amp; (lineitem.l_quantity &lt; 24)] res = pd.DataFrame({&#39;sum&#39;: [(filtered_df.l_extendedprice * filtered_df.l_discount).sum()]}) new_table = pa.Table.from_pandas(res) Name Time (s) DuckDB 0.04 Pandas 2.29 The difference now between DuckDB and Pandas is more drastic, being two orders of magnitude faster than Pandas. Again, since both the filter and projection are pushed down to Arrow, DuckDB reads less data than Pandas, which can’t automatically perform this optimization. Streaming As demonstrated before, DuckDB is capable of consuming and producing Arrow data in a streaming fashion. In this section we run a simple benchmark, to showcase the benefits in speed and memory usage when comparing it to full materialization and Pandas. This example uses the full NYC taxi dataset which you can download # DuckDB # Open dataset using year,month folder partition nyc = ds.dataset(&#39;nyc-taxi/&#39;, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Get database connection con = duckdb.connect() # Run query that selects part of the data query = con.execute(&quot;SELECT total_amount, passenger_count,year FROM nyc where total_amount &gt; 100 and year &gt; 2014&quot;) # Create Record Batch Reader from Query Result. # &quot;fetch_record_batch()&quot; also accepts an extra parameter related to the desired produced chunk size. record_batch_reader = query.fetch_record_batch() # Retrieve all batch chunks chunk = record_batch_reader.read_next_batch() while len(chunk) &gt; 0: chunk = record_batch_reader.read_next_batch() # Pandas # We must exclude one of the columns of the NYC dataset due to an unimplemented cast in Arrow. working_columns = [&quot;vendor_id&quot;,&quot;pickup_at&quot;,&quot;dropoff_at&quot;,&quot;passenger_count&quot;,&quot;trip_distance&quot;,&quot;pickup_longitude&quot;, &quot;pickup_latitude&quot;,&quot;store_and_fwd_flag&quot;,&quot;dropoff_longitude&quot;,&quot;dropoff_latitude&quot;,&quot;payment_type&quot;, &quot;fare_amount&quot;,&quot;extra&quot;,&quot;mta_tax&quot;,&quot;tip_amount&quot;,&quot;tolls_amount&quot;,&quot;total_amount&quot;,&quot;year&quot;, &quot;month&quot;] # Open dataset using year,month folder partition nyc_dataset = ds.dataset(dir, partitioning=[&quot;year&quot;, &quot;month&quot;]) # Generate a scanner to skip problematic column dataset_scanner = nyc_dataset.scanner(columns=working_columns) # Materialize dataset to an Arrow Table nyc_table = dataset_scanner.to_table() # Generate Dataframe from Arow Table nyc_df = nyc_table.to_pandas() # Apply Filter filtered_df = nyc_df[ (nyc_df.total_amount &gt; 100) &amp; (nyc_df.year &gt;2014)] # Apply Projection res = filtered_df[[&quot;total_amount&quot;, &quot;passenger_count&quot;,&quot;year&quot;]] # Transform Result back to an Arrow Table new_table = pa.Table.from_pandas(res) Name Time (s) Peak Memory Usage (GBs) DuckDB 0.05 0.3 Pandas 146.91 248 The difference in times between DuckDB and Pandas is a combination of all the integration benefits we explored in this article. In DuckDB the filter pushdown is applied to perform partition elimination (i.e., we skip reading the Parquet files where the year is &lt;= 2014). The filter pushdown is also used to eliminate unrelated row_groups (i.e., row groups where the total amount is always &lt;= 100). Due to our projection pushdown, Arrow only has to read the columns of interest from the Parquet files, which allows it to read only 4 out of 20 columns. On the other hand, Pandas is not capable of automatically pushing down any of these optimizations, which means that the full dataset must be read. This results in the 4 orders of magnitude difference in query execution time. In the table above, we also depict the comparison of peak memory usage between DuckDB (Streaming) and Pandas (Fully-Materializing). In DuckDB, we only need to load the row-group of interest into memory. Hence our memory usage is low. We also have constant memory usage since we only have to keep one of these row groups in-memory at a time. Pandas, on the other hand, has to fully materialize all Parquet files when executing the query. Because of this, we see a constant steep increase in its memory consumption. The total difference in memory consumption of the two solutions is around 3 orders of magnitude. Conclusion and Feedback In this blog post, we mainly showcased how to execute queries on Arrow datasets with DuckDB. There are additional libraries that can also consume the Arrow format but they have different purposes and capabilities. As always, we are happy to hear if you want to see benchmarks with different tools for a post in the future! Feel free to drop us an email or share your thoughts directly in the Hacker News post. Last but not least, if you encounter any problems when using our integration, please open an issue in in either DuckDB’s - issue tracker or Arrow’s - issue tracker, depending on which library has a problem. In Arrow 6.0.0, to_arrow() currently returns the full table, but will allow full streaming in our upcoming 7.0.0 release. &#8617;","url":"https://arrow.apache.org/blog/2021/12/03/arrow-duckdb/","headline":"DuckDB quacks Arrow: A zero-copy data integration between Arrow and DuckDB","dateModified":"2021-12-03T00:00:00-05:00","datePublished":"2021-12-03T00:00:00-05:00","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"Pedro Holanda, Jonathan Keane"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2021/12/03/arrow-duckdb/"},"image":"https://arrow.apache.org/img/arrow.png","author":{"@type":"Person","name":"Pedro Holanda, Jonathan Keane"},"@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments)};
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/datafusion">DataFusion</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://issues.apache.org/jira/browse/ARROW">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="http://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="http://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="http://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  DuckDB quacks Arrow: A zero-copy data integration between Arrow and DuckDB
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    03 Dec 2021
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Pedro Holanda, Jonathan Keane
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p><em>TLDR: The zero-copy integration between DuckDB and Apache Arrow allows for rapid analysis of larger than memory datasets in Python and R using either SQL or relational APIs.</em></p>
+
+<p>This post is a collaboration with and cross-posted on <a href="https://duckdb.org/2021/12/03/duck-arrow.html">the DuckDB blog</a>.</p>
+
+<p>Part of <a href="https://arrow.apache.org">Apache Arrow</a> is an in-memory data format optimized for analytical libraries. Like Pandas and R Dataframes, it uses a columnar data model. But the Arrow project contains more than just the format: The Arrow C++ library, which is accessible in Python, R, and Ruby via bindings, has additional features that allow you to compute efficiently on datasets. These additional features are on top of the implementation of the in-memory format described above. The datasets may span multiple files in Parquet, CSV, or other formats, and files may even be on remote or cloud storage like HDFS or Amazon S3. The Arrow C++ query engine supports the streaming of query results, has an efficient implementation of complex data types (e.g., Lists, Structs, Maps), and can perform important scan optimizations like Projection and Filter Pushdown.</p>
+
+<p><a href="https://www.duckdb.org">DuckDB</a> is a new analytical data management system that is designed to run complex SQL queries within other processes. DuckDB has bindings for R and Python, among others. DuckDB can query Arrow datasets directly and stream query results back to Arrow. This integration allows users to query Arrow data using DuckDB’s SQL Interface and API, while taking advantage of DuckDB’s parallel vectorized execution engine, without requiring any extra data copying. Additionally, this integration takes full advantage of Arrow’s predicate and filter pushdown while scanning datasets.</p>
+
+<p>This integration is unique because it uses zero-copy streaming of data between DuckDB and Arrow and vice versa so that you can compose a query using both together. This results in three main benefits:</p>
+
+<ol>
+  <li><strong>Larger Than Memory Analysis:</strong> Since both libraries support streaming query results, we are capable of executing on data without fully loading it from disk. Instead, we can execute one batch at a time. This allows us to execute queries on data that is bigger than memory.</li>
+  <li><strong>Complex Data Types:</strong> DuckDB can efficiently process complex data types that can be stored in Arrow vectors, including arbitrarily nested structs, lists, and maps.</li>
+  <li><strong>Advanced Optimizer:</strong> DuckDB’s state-of-the-art optimizer can push down filters and projections directly into Arrow scans. As a result, only relevant columns and partitions will be read, allowing the system to e.g., take advantage of partition elimination in Parquet files. This significantly accelerates query execution.</li>
+</ol>
+
+<p>For those that are just interested in benchmarks, you can jump ahead <a href="#Benchmark Comparison">benchmark section below</a>.</p>
+
+<h2 id="quick-tour">Quick Tour</h2>
+<p>Before diving into the details of the integration, in this section we provide a quick motivating example of how powerful and simple to use is the DuckDB-Arrow integration. With a few lines of code, you can already start querying Arrow datasets. Say you want to analyze the infamous <a href="https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page">NYC Taxi Dataset</a> and figure out if groups tip more or less than single riders.</p>
+
+<h3 id="r">R</h3>
+<p>Both Arrow and DuckDB support dplyr pipelines for people more comfortable with using dplyr for their data analysis. The Arrow package includes two helper functions that allow us to pass data back and forth between Arrow and DuckDB (<code class="language-plaintext highlighter-rouge">to_duckdb()</code> and <code class="language-plaintext highlighter-rouge">to_arrow()</code>).
+This is especially useful in cases where something is supported in one of Arrow or DuckDB but not the other. For example, if you find a complex dplyr pipeline where the SQL translation doesn’t work with DuckDB, use <code class="language-plaintext highlighter-rouge">to_arrow()</code> before the pipeline to use the Arrow engine. Or, if you have a function (e.g., windowed aggregates) that aren’t yet implemented in Arrow, use <code class="language-plaintext highlighter-rouge">to_duckdb()</code> to use the DuckDB engine. All while not paying any cost to (re)serialize the data when you pass it back and forth!</p>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">duckdb</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">)</span><span class="w">
+
+</span><span class="c1"># Open dataset using year,month folder partition</span><span class="w">
+</span><span class="n">ds</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">open_dataset</span><span class="p">(</span><span class="s2">"nyc-taxi"</span><span class="p">,</span><span class="w"> </span><span class="n">partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"year"</span><span class="p">,</span><span class="w"> </span><span class="s2">"month"</span><span class="p">))</span><span class="w">
+
+</span><span class="n">ds</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="c1"># Look only at 2015 on, where the number of passenger is positive, the trip distance is</span><span class="w">
+  </span><span class="c1"># greater than a quarter mile, and where the fare amount is positive</span><span class="w">
+  </span><span class="n">filter</span><span class="p">(</span><span class="n">year</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">2014</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">passenger_count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">trip_distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0.25</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">fare_amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="c1"># Pass off to DuckDB</span><span class="w">
+  </span><span class="n">to_duckdb</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">group_by</span><span class="p">(</span><span class="n">passenger_count</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">mutate</span><span class="p">(</span><span class="n">tip_pct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tip_amount</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">fare_amount</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">summarise</span><span class="p">(</span><span class="w">
+    </span><span class="n">fare_amount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">fare_amount</span><span class="p">,</span><span class="w"> </span><span class="n">na.rm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">),</span><span class="w">
+    </span><span class="n">tip_amount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">tip_amount</span><span class="p">,</span><span class="w"> </span><span class="n">na.rm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">),</span><span class="w">
+    </span><span class="n">tip_pct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">tip_pct</span><span class="p">,</span><span class="w"> </span><span class="n">na.rm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+  </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">arrange</span><span class="p">(</span><span class="n">passenger_count</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+  </span><span class="n">collect</span><span class="p">()</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="python">Python</h3>
+<p>The workflow in Python is as simple as it is in R. In this example we use DuckDB’s Relational API.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">duckdb</span>
+<span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
+<span class="kn">import</span> <span class="nn">pyarrow.dataset</span> <span class="k">as</span> <span class="n">ds</span>
+
+<span class="c1"># Open dataset using year,month folder partition
+</span><span class="n">nyc</span> <span class="o">=</span> <span class="n">ds</span><span class="p">.</span><span class="n">dataset</span><span class="p">(</span><span class="s">'nyc-taxi/'</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="p">[</span><span class="s">"year"</span><span class="p">,</span> <span class="s">"month"</span><span class="p">])</span>
+
+<span class="c1"># We transform the nyc dataset into a DuckDB relation
+</span><span class="n">nyc</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="n">arrow</span><span class="p">(</span><span class="n">nyc</span><span class="p">)</span>
+
+<span class="c1"># Run same query again
+</span><span class="n">nyc</span><span class="p">.</span><span class="nb">filter</span><span class="p">(</span><span class="s">"year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0"</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">aggregate</span><span class="p">(</span><span class="s">"SELECT AVG(fare_amount), AVG(tip_amount), AVG(tip_amount / fare_amount) as tip_pct"</span><span class="p">,</span><span class="s">"passenger_count"</span><span class="p">).</span><span class="n">arrow</span><span class="p">()</span>
+</code></pre></div></div>
+
+<h2 id="duckdb-and-arrow-the-basics">DuckDB and Arrow: The Basics</h2>
+
+<p>In this section, we will look at some basic examples of the code needed to read and output Arrow tables in both Python and R.</p>
+
+<h4 id="setup">Setup</h4>
+
+<p>First we need to install DuckDB and Arrow. The installation process for both libraries in Python and R is shown below.</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Python Install</span>
+pip <span class="nb">install </span>duckdb
+pip <span class="nb">install </span>pyarrow
+</code></pre></div></div>
+
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># R Install</span><span class="w">
+</span><span class="n">install.packages</span><span class="p">(</span><span class="s2">"duckdb"</span><span class="p">)</span><span class="w">
+</span><span class="n">install.packages</span><span class="p">(</span><span class="s2">"arrow"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>To execute the sample-examples in this section, we need to download the following custom parquet files:</p>
+<ul>
+  <li>https://github.com/duckdb/duckdb-web/blob/master/_posts/data/integers.parquet?raw=true</li>
+  <li>https://github.com/cwida/duckdb-data/releases/download/v1.0/lineitemsf1.snappy.parquet</li>
+</ul>
+
+<h4 id="python-1">Python</h4>
+
+<p>There are two ways in Python of querying data from Arrow:</p>
+<ol>
+  <li>Through the Relational API
+```py
+    <h1 id="reads-parquet-file-to-an-arrow-table">Reads Parquet File to an Arrow Table</h1>
+    <p>arrow_table = pq.read_table(‘integers.parquet’)</p>
+  </li>
+</ol>
+
+<h1 id="transforms-arrow-table---duckdb-relation">Transforms Arrow Table -&gt; DuckDB Relation</h1>
+<p>rel_from_arrow = duckdb.arrow(arrow_table)</p>
+
+<h1 id="we-can-run-a-sql-query-on-this-and-print-the-result">we can run a SQL query on this and print the result</h1>
+<p>print(rel_from_arrow.query(‘arrow_table’, ‘SELECT SUM(data) FROM arrow_table WHERE data &gt; 50’).fetchone())</p>
+
+<h1 id="transforms-duckdb-relation---arrow-table">Transforms DuckDB Relation -&gt; Arrow Table</h1>
+<p>arrow_table_from_duckdb = rel_from_arrow.arrow()</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+2. By using replacement scans and querying the object directly with SQL:
+```py
+# Reads Parquet File to an Arrow Table
+arrow_table = pq.read_table('integers.parquet')
+
+# Gets Database Connection
+con = duckdb.connect()
+
+# we can run a SQL query on this and print the result
+print(con.execute('SELECT SUM(data) FROM arrow_table WHERE data &gt; 50').fetchone())
+
+# Transforms Query Result from DuckDB to Arrow Table
+# We can directly read the arrow object through DuckDB's replacement scans.
+con.execute("SELECT * FROM arrow_table").fetch_arrow_table()
+</code></pre></div></div>
+
+<p>It is possible to transform both DuckDB Relations and Query Results back to Arrow.</p>
+
+<h4 id="r-1">R</h4>
+
+<p>In R, you can interact with Arrow data in DuckDB by registering the table as a view (an alternative is to use dplyr as shown above).</p>
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">duckdb</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">)</span><span class="w">
+
+</span><span class="c1"># Reads Parquet File to an Arrow Table</span><span class="w">
+</span><span class="n">arrow_table</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">"integers.parquet"</span><span class="p">,</span><span class="w"> </span><span class="n">as_data_frame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+
+</span><span class="c1"># Gets Database Connection</span><span class="w">
+</span><span class="n">con</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">dbConnect</span><span class="p">(</span><span class="n">duckdb</span><span class="o">::</span><span class="n">duckdb</span><span class="p">())</span><span class="w">
+
+</span><span class="c1"># Registers arrow table as a DuckDB view</span><span class="w">
+</span><span class="n">arrow</span><span class="o">::</span><span class="n">to_duckdb</span><span class="p">(</span><span class="n">arrow_table</span><span class="p">,</span><span class="w"> </span><span class="n">table_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"arrow_table"</span><span class="p">,</span><span class="w"> </span><span class="n">con</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">con</span><span class="p">)</span><span class="w">
+
+</span><span class="c1"># we can run a SQL query on this and print the result</span><span class="w">
+</span><span class="n">print</span><span class="p">(</span><span class="n">dbGetQuery</span><span class="p">(</span><span class="n">con</span><span class="p">,</span><span class="w"> </span><span class="s2">"SELECT SUM(data) FROM arrow_table WHERE data &gt; 50"</span><span class="p">))</span><span class="w">
+
+</span><span class="c1"># Transforms Query Result from DuckDB to Arrow Table</span><span class="w">
+</span><span class="n">result</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">dbSendQuery</span><span class="p">(</span><span class="n">con</span><span class="p">,</span><span class="w"> </span><span class="s2">"SELECT * FROM arrow_table"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="streaming-data-fromto-arrow">Streaming Data from/to Arrow</h3>
+<p>In the previous section, we depicted how to interact with Arrow tables. However, Arrow also allows users to interact with the data in a streaming fashion. Either consuming it (e.g., from an Arrow Dataset) or producing it (e.g., returning a RecordBatchReader). And of course, DuckDB is able to consume Datasets and produce RecordBatchReaders. This example uses the NYC Taxi Dataset, stored in Parquet files partitioned by year and month, which we can download through the Arrow R package:</p>
+<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">arrow</span><span class="o">::</span><span class="n">copy_files</span><span class="p">(</span><span class="s2">"s3://ursa-labs-taxi-data"</span><span class="p">,</span><span class="w"> </span><span class="s2">"nyc-taxi"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h4 id="python-2">Python</h4>
+<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Reads dataset partitioning it in year/month folder
+</span><span class="n">nyc_dataset</span> <span class="o">=</span> <span class="n">ds</span><span class="p">.</span><span class="n">dataset</span><span class="p">(</span><span class="s">'nyc-taxi/'</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="p">[</span><span class="s">"year"</span><span class="p">,</span> <span class="s">"month"</span><span class="p">])</span>
+
+<span class="c1"># Gets Database Connection
+</span><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="n">connect</span><span class="p">()</span>
+
+<span class="n">query</span> <span class="o">=</span> <span class="n">con</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="s">"SELECT * FROM nyc_dataset"</span><span class="p">)</span>
+<span class="c1"># DuckDB's queries can now produce a Record Batch Reader
+</span><span class="n">record_batch_reader</span> <span class="o">=</span> <span class="n">query</span><span class="p">.</span><span class="n">fetch_record_batch</span><span class="p">()</span>
+<span class="c1"># Which means we can stream the whole query per batch.
+# This retrieves the first batch
+</span><span class="n">chunk</span> <span class="o">=</span> <span class="n">record_batch_reader</span><span class="p">.</span><span class="n">read_next_batch</span><span class="p">()</span>
+</code></pre></div></div>
+<h4 id="r-2">R</h4>
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Reads dataset partitioning it in year/month folder</span><span class="w">
+</span><span class="n">nyc_dataset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">open_dataset</span><span class="p">(</span><span class="s2">"nyc-taxi/"</span><span class="p">,</span><span class="w"> </span><span class="n">partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"year"</span><span class="p">,</span><span class="w"> </span><span class="s2">"month"</span><span class="p">))</span><span class="w">
+
+</span><span class="c1"># Gets Database Connection</span><span class="w">
+</span><span class="n">con</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">dbConnect</span><span class="p">(</span><span class="n">duckdb</span><span class="o">::</span><span class="n">duckdb</span><span class="p">())</span><span class="w">
+
+</span><span class="c1"># We can use the same function as before to register our arrow dataset</span><span class="w">
+</span><span class="n">duckdb</span><span class="o">::</span><span class="n">duckdb_register_arrow</span><span class="p">(</span><span class="n">con</span><span class="p">,</span><span class="w"> </span><span class="s2">"nyc"</span><span class="p">,</span><span class="w"> </span><span class="n">nyc_dataset</span><span class="p">)</span><span class="w">
+
+</span><span class="n">res</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">dbSendQuery</span><span class="p">(</span><span class="n">con</span><span class="p">,</span><span class="w"> </span><span class="s2">"SELECT * FROM nyc"</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+</span><span class="c1"># DuckDB's queries can now produce a Record Batch Reader</span><span class="w">
+</span><span class="n">record_batch_reader</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">duckdb</span><span class="o">::</span><span class="n">duckdb_fetch_record_batch</span><span class="p">(</span><span class="n">res</span><span class="p">)</span><span class="w">
+
+</span><span class="c1"># Which means we can stream the whole query per batch.</span><span class="w">
+</span><span class="c1"># This retrieves the first batch</span><span class="w">
+</span><span class="n">cur_batch</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">record_batch_reader</span><span class="o">$</span><span class="n">read_next_batch</span><span class="p">()</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The preceding R code shows in low-level detail how the data is streaming. We provide the helper <code class="language-plaintext highlighter-rouge">to_arrow()</code> in the Arrow package which is a wrapper around this that makes it easy to incorporate this streaming into a dplyr pipeline. <sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup></p>
+
+<h2 id="benchmark-comparison">Benchmark Comparison</h2>
+
+<p>Here we demonstrate in a simple benchmark the performance difference between querying Arrow datasets with DuckDB and querying Arrow datasets with Pandas.
+For both the Projection and Filter pushdown comparison, we will use Arrow tables. That is due to Pandas not being capable of consuming Arrow stream objects.</p>
+
+<p>For the NYC Taxi benchmarks, we used the <a href="https://www.monetdb.org/wiki/Scilens-configuration-standard">scilens diamonds configuration</a> and for the TPC-H benchmarks, we used an m1 MacBook Pro. In both cases, parallelism in DuckDB was used (which is now on by default).</p>
+
+<p>For the comparison with Pandas, note that DuckDB runs in parallel, while pandas only support single-threaded execution. Besides that, one should note that we are comparing automatic optimizations. DuckDB’s query optimizer can automatically push down filters and projections. This automatic optimization is not supported in pandas, but it is possible for users to manually perform some of these predicate and filter pushdowns by manually specifying them them in the <code class="language-plaintext highlighter-rouge">read_parquet()</code> call.</p>
+
+<h3 id="projection-pushdown">Projection Pushdown</h3>
+
+<p>In this example we run a simple aggregation on two columns of our lineitem table.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># DuckDB
+</span><span class="n">lineitem</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="n">read_table</span><span class="p">(</span><span class="s">'lineitemsf1.snappy.parquet'</span><span class="p">)</span>
+<span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="n">connect</span><span class="p">()</span>
+
+<span class="c1"># Transforms Query Result from DuckDB to Arrow Table
+</span><span class="n">con</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="s">"""SELECT sum(l_extendedprice * l_discount) AS revenue
+                FROM
+                lineitem;"""</span><span class="p">).</span><span class="n">fetch_arrow_table</span><span class="p">()</span>
+
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Pandas
+</span><span class="n">arrow_table</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="n">read_table</span><span class="p">(</span><span class="s">'lineitemsf1.snappy.parquet'</span><span class="p">)</span>
+
+<span class="c1"># Converts an Arrow table to a Dataframe
+</span><span class="n">df</span> <span class="o">=</span> <span class="n">arrow_table</span><span class="p">.</span><span class="n">to_pandas</span><span class="p">()</span>
+
+<span class="c1"># Runs aggregation
+</span><span class="n">res</span> <span class="o">=</span>  <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">'sum'</span><span class="p">:</span> <span class="p">[(</span><span class="n">df</span><span class="p">.</span><span class="n">l_extendedprice</span> <span class="o">*</span> <span class="n">df</span><span class="p">.</span><span class="n">l_discount</span><span class="p">).</span><span class="nb">sum</span><span class="p">()]})</span>
+
+<span class="c1"># Creates an Arrow Table from a Dataframe
+</span><span class="n">new_table</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="n">Table</span><span class="p">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th style="text-align: right">Time (s)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DuckDB</td>
+      <td style="text-align: right">0.19</td>
+    </tr>
+    <tr>
+      <td>Pandas</td>
+      <td style="text-align: right">2.13</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The lineitem table is composed of 16 columns, however, to execute this query only two columns <code class="language-plaintext highlighter-rouge">l_extendedprice</code> and  *  <code class="language-plaintext highlighter-rouge">l_discount</code> are necessary. Since DuckDB can push down the projection of these columns, it is capable of executing this query about one order of magnitude faster than Pandas.</p>
+
+<h3 id="filter-pushdown">Filter Pushdown</h3>
+
+<p>For our filter pushdown we repeat the same aggregation used in the previous section, but add filters on 4 more columns.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># DuckDB
+</span><span class="n">lineitem</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="n">read_table</span><span class="p">(</span><span class="s">'lineitemsf1.snappy.parquet'</span><span class="p">)</span>
+
+<span class="c1"># Get database connection
+</span><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="n">connect</span><span class="p">()</span>
+
+<span class="c1"># Transforms Query Result from DuckDB to Arrow Table
+</span><span class="n">con</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="s">"""SELECT sum(l_extendedprice * l_discount) AS revenue
+        FROM
+            lineitem
+        WHERE
+            l_shipdate &gt;= CAST('1994-01-01' AS date)
+            AND l_shipdate &lt; CAST('1995-01-01' AS date)
+            AND l_discount BETWEEN 0.05
+            AND 0.07
+            AND l_quantity &lt; 24; """</span><span class="p">).</span><span class="n">fetch_arrow_table</span><span class="p">()</span>
+
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Pandas
+</span><span class="n">arrow_table</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="n">read_table</span><span class="p">(</span><span class="s">'lineitemsf1.snappy.parquet'</span><span class="p">)</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">arrow_table</span><span class="p">.</span><span class="n">to_pandas</span><span class="p">()</span>
+<span class="n">filtered_df</span> <span class="o">=</span> <span class="n">lineitem</span><span class="p">[</span>
+        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_shipdate</span> <span class="o">&gt;=</span> <span class="s">"1994-01-01"</span><span class="p">)</span> <span class="o">&amp;</span>
+        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_shipdate</span> <span class="o">&lt;</span> <span class="s">"1995-01-01"</span><span class="p">)</span> <span class="o">&amp;</span>
+        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_discount</span> <span class="o">&gt;=</span> <span class="mf">0.05</span><span class="p">)</span> <span class="o">&amp;</span>
+        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_discount</span> <span class="o">&lt;=</span> <span class="mf">0.07</span><span class="p">)</span> <span class="o">&amp;</span>
+        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_quantity</span> <span class="o">&lt;</span> <span class="mi">24</span><span class="p">)]</span>
+
+<span class="n">res</span> <span class="o">=</span>  <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">'sum'</span><span class="p">:</span> <span class="p">[(</span><span class="n">filtered_df</span><span class="p">.</span><span class="n">l_extendedprice</span> <span class="o">*</span> <span class="n">filtered_df</span><span class="p">.</span><span class="n">l_discount</span><span class="p">).</span><span class="nb">sum</span><span class="p">()]})</span>
+<span class="n">new_table</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="n">Table</span><span class="p">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Time (s)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DuckDB</td>
+      <td>0.04</td>
+    </tr>
+    <tr>
+      <td>Pandas</td>
+      <td>2.29</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The difference now between DuckDB and Pandas is more drastic, being two orders of magnitude faster than Pandas. Again, since both the filter and projection are pushed down to Arrow, DuckDB reads less data than Pandas, which can’t automatically perform this optimization.</p>
+
+<h3 id="streaming">Streaming</h3>
+
+<p>As demonstrated before, DuckDB is capable of consuming and producing Arrow data in a streaming fashion. In this section we run a simple benchmark, to showcase the benefits in speed and memory usage when comparing it to full materialization and Pandas. This example uses the full NYC taxi dataset which you can download</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># DuckDB
+# Open dataset using year,month folder partition
+</span><span class="n">nyc</span> <span class="o">=</span> <span class="n">ds</span><span class="p">.</span><span class="n">dataset</span><span class="p">(</span><span class="s">'nyc-taxi/'</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="p">[</span><span class="s">"year"</span><span class="p">,</span> <span class="s">"month"</span><span class="p">])</span>
+
+<span class="c1"># Get database connection
+</span><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="n">connect</span><span class="p">()</span>
+
+<span class="c1"># Run query that selects part of the data
+</span><span class="n">query</span> <span class="o">=</span> <span class="n">con</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="s">"SELECT total_amount, passenger_count,year FROM nyc where total_amount &gt; 100 and year &gt; 2014"</span><span class="p">)</span>
+
+<span class="c1"># Create Record Batch Reader from Query Result.
+# "fetch_record_batch()" also accepts an extra parameter related to the desired produced chunk size.
+</span><span class="n">record_batch_reader</span> <span class="o">=</span> <span class="n">query</span><span class="p">.</span><span class="n">fetch_record_batch</span><span class="p">()</span>
+
+<span class="c1"># Retrieve all batch chunks
+</span><span class="n">chunk</span> <span class="o">=</span> <span class="n">record_batch_reader</span><span class="p">.</span><span class="n">read_next_batch</span><span class="p">()</span>
+<span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">chunk</span> <span class="o">=</span> <span class="n">record_batch_reader</span><span class="p">.</span><span class="n">read_next_batch</span><span class="p">()</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Pandas
+# We must exclude one of the columns of the NYC dataset due to an unimplemented cast in Arrow.
+</span><span class="n">working_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">"vendor_id"</span><span class="p">,</span><span class="s">"pickup_at"</span><span class="p">,</span><span class="s">"dropoff_at"</span><span class="p">,</span><span class="s">"passenger_count"</span><span class="p">,</span><span class="s">"trip_distance"</span><span class="p">,</span><span class="s">"pickup_longitude"</span><span class="p">,</span>
+    <span class="s">"pickup_latitude"</span><span class="p">,</span><span class="s">"store_and_fwd_flag"</span><span class="p">,</span><span class="s">"dropoff_longitude"</span><span class="p">,</span><span class="s">"dropoff_latitude"</span><span class="p">,</span><span class="s">"payment_type"</span><span class="p">,</span>
+    <span class="s">"fare_amount"</span><span class="p">,</span><span class="s">"extra"</span><span class="p">,</span><span class="s">"mta_tax"</span><span class="p">,</span><span class="s">"tip_amount"</span><span class="p">,</span><span class="s">"tolls_amount"</span><span class="p">,</span><span class="s">"total_amount"</span><span class="p">,</span><span class="s">"year"</span><span class="p">,</span> <span class="s">"month"</span><span class="p">]</span>
+
+<span class="c1"># Open dataset using year,month folder partition
+</span><span class="n">nyc_dataset</span> <span class="o">=</span> <span class="n">ds</span><span class="p">.</span><span class="n">dataset</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="p">[</span><span class="s">"year"</span><span class="p">,</span> <span class="s">"month"</span><span class="p">])</span>
+<span class="c1"># Generate a scanner to skip problematic column
+</span><span class="n">dataset_scanner</span> <span class="o">=</span> <span class="n">nyc_dataset</span><span class="p">.</span><span class="n">scanner</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">working_columns</span><span class="p">)</span>
+
+<span class="c1"># Materialize dataset to an Arrow Table
+</span><span class="n">nyc_table</span> <span class="o">=</span> <span class="n">dataset_scanner</span><span class="p">.</span><span class="n">to_table</span><span class="p">()</span>
+
+<span class="c1"># Generate Dataframe from Arow Table
+</span><span class="n">nyc_df</span> <span class="o">=</span> <span class="n">nyc_table</span><span class="p">.</span><span class="n">to_pandas</span><span class="p">()</span>
+
+<span class="c1"># Apply Filter
+</span><span class="n">filtered_df</span> <span class="o">=</span> <span class="n">nyc_df</span><span class="p">[</span>
+    <span class="p">(</span><span class="n">nyc_df</span><span class="p">.</span><span class="n">total_amount</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span> <span class="o">&amp;</span>
+    <span class="p">(</span><span class="n">nyc_df</span><span class="p">.</span><span class="n">year</span> <span class="o">&gt;</span><span class="mi">2014</span><span class="p">)]</span>
+
+<span class="c1"># Apply Projection
+</span><span class="n">res</span> <span class="o">=</span> <span class="n">filtered_df</span><span class="p">[[</span><span class="s">"total_amount"</span><span class="p">,</span> <span class="s">"passenger_count"</span><span class="p">,</span><span class="s">"year"</span><span class="p">]]</span>
+
+<span class="c1"># Transform Result back to an Arrow Table
+</span><span class="n">new_table</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="n">Table</span><span class="p">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Time (s)</th>
+      <th>Peak Memory Usage (GBs)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DuckDB</td>
+      <td>0.05</td>
+      <td>0.3</td>
+    </tr>
+    <tr>
+      <td>Pandas</td>
+      <td>146.91</td>
+      <td>248</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The difference in times between DuckDB and Pandas is a combination of all the integration benefits we explored in this article. In DuckDB the filter pushdown is applied to perform partition elimination (i.e., we skip reading the Parquet files where the year is &lt;= 2014). The filter pushdown is also used to eliminate unrelated row_groups (i.e., row groups where the total amount is always &lt;= 100). Due to our projection pushdown, Arrow only has to read the columns of interest from the Parquet files, which allows it to read only 4 out of 20 columns. On the other hand, Pandas is not capable of automatically pushing down any of these optimizations, which means that the full dataset must be read. <strong>This results in the 4 orders of magnitude difference in query execution time.</strong></p>
+
+<p>In the table above, we also depict the comparison of peak memory usage between DuckDB (Streaming) and Pandas (Fully-Materializing).  In DuckDB, we only need to load the row-group of interest into memory. Hence our memory usage is low. We also have constant memory usage since we only have to keep one of these row groups in-memory at a time. Pandas, on the other hand, has to fully materialize all Parquet files when executing the query. Because of this, we see a constant steep increase in its memory consumption. <strong>The total difference in memory consumption of the two solutions is around 3 orders of magnitude.</strong></p>
+
+<h2 id="conclusion-and-feedback">Conclusion and Feedback</h2>
+<p>In this blog post, we mainly showcased how to execute queries on Arrow datasets with DuckDB. There are additional libraries that can also consume the Arrow format but they have different purposes and capabilities. As always, we are happy to hear if you want to see benchmarks with different tools for a post in the future! Feel free to drop us an <a href="mailto:pedro@duckdblabs.com;jon@voltrondata.com">email</a> or share your thoughts directly in the Hacker News post.</p>
+
+<p>Last but not least, if you encounter any problems when using our integration, please open an issue in in either <a href="https://github.com/duckdb/duckdb/issues">DuckDB’s - issue tracker</a>  or <a href="https://issues.apache.org/jira/projects/ARROW/">Arrow’s - issue tracker</a>, depending on which library has a problem.</p>
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1" role="doc-endnote">
+      <p>In Arrow 6.0.0, <code class="language-plaintext highlighter-rouge">to_arrow()</code> currently returns the full table, but will allow full streaming in our upcoming 7.0.0 release. <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2021 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
