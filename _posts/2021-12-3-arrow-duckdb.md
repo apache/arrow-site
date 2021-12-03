@@ -120,35 +120,37 @@ To execute the sample-examples in this section, we need to download the followin
 
 There are two ways in Python of querying data from Arrow:
 1. Through the Relational API
-```py
-# Reads Parquet File to an Arrow Table
-arrow_table = pq.read_table('integers.parquet')
 
-# Transforms Arrow Table -> DuckDB Relation
-rel_from_arrow = duckdb.arrow(arrow_table)
+    ```py
+    # Reads Parquet File to an Arrow Table
+    arrow_table = pq.read_table('integers.parquet')
 
-# we can run a SQL query on this and print the result
-print(rel_from_arrow.query('arrow_table', 'SELECT SUM(data) FROM arrow_table WHERE data > 50').fetchone())
+    # Transforms Arrow Table -> DuckDB Relation
+    rel_from_arrow = duckdb.arrow(arrow_table)
 
-# Transforms DuckDB Relation -> Arrow Table
-arrow_table_from_duckdb = rel_from_arrow.arrow()
-```
+    # we can run a SQL query on this and print the result
+    print(rel_from_arrow.query('arrow_table', 'SELECT SUM(data) FROM arrow_table WHERE data > 50').fetchone())
+
+    # Transforms DuckDB Relation -> Arrow Table
+    arrow_table_from_duckdb = rel_from_arrow.arrow()
+    ```
 
 2. By using replacement scans and querying the object directly with SQL:
-```py
-# Reads Parquet File to an Arrow Table
-arrow_table = pq.read_table('integers.parquet')
 
-# Gets Database Connection
-con = duckdb.connect()
+    ```py
+    # Reads Parquet File to an Arrow Table
+    arrow_table = pq.read_table('integers.parquet')
 
-# we can run a SQL query on this and print the result
-print(con.execute('SELECT SUM(data) FROM arrow_table WHERE data > 50').fetchone())
+    # Gets Database Connection
+    con = duckdb.connect()
 
-# Transforms Query Result from DuckDB to Arrow Table
-# We can directly read the arrow object through DuckDB's replacement scans.
-con.execute("SELECT * FROM arrow_table").fetch_arrow_table()
-```
+    # we can run a SQL query on this and print the result
+    print(con.execute('SELECT SUM(data) FROM arrow_table WHERE data > 50').fetchone())
+
+    # Transforms Query Result from DuckDB to Arrow Table
+    # We can directly read the arrow object through DuckDB's replacement scans.
+    con.execute("SELECT * FROM arrow_table").fetch_arrow_table()
+    ```
 
 It is possible to transform both DuckDB Relations and Query Results back to Arrow.
 
@@ -227,7 +229,7 @@ For both the Projection and Filter pushdown comparison, we will use Arrow tables
 
 For the NYC Taxi benchmarks, we used the [scilens diamonds configuration](https://www.monetdb.org/wiki/Scilens-configuration-standard) and for the TPC-H benchmarks, we used an m1 MacBook Pro. In both cases, parallelism in DuckDB was used (which is now on by default).
 
-For the comparison with Pandas, note that DuckDB runs in parallel, while pandas only support single-threaded execution. Besides that, one should note that we are comparing automatic optimizations. DuckDB's query optimizer can automatically push down filters and projections. This automatic optimization is not supported in pandas, but it is possible for users to manually perform some of these predicate and filter pushdowns by manually specifying them them in the `read_parquet()` call. 
+For the comparison with Pandas, note that DuckDB runs in parallel, while pandas only support single-threaded execution. Besides that, one should note that we are comparing automatic optimizations. DuckDB's query optimizer can automatically push down filters and projections. This automatic optimization is not supported in pandas, but it is possible for users to manually perform some of these predicate and filter pushdowns by manually specifying them them in the `read_parquet()` call.
 
 ### Projection Pushdown
 
