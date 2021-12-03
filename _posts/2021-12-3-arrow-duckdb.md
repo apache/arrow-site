@@ -154,7 +154,7 @@ It is possible to transform both DuckDB Relations and Query Results back to Arro
 
 #### R
 
-In R, the primary way to interact with Arrow is by registering the table as a view (an alternative is to use dplyr as shown above).
+In R, you can interact with Arrow data in DuckDB by registering the table as a view (an alternative is to use dplyr as shown above).
 ```r
 library(duckdb)
 library(arrow)
