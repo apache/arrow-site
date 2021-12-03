@@ -63,7 +63,7 @@ ds %>%
   # Pass off to DuckDB
   to_duckdb() %>%
   group_by(passenger_count) %>%
-  mutate(tip_pct = tip_amount / fare_amount ) %>%
+  mutate(tip_pct = tip_amount / fare_amount) %>%
   summarise(
     fare_amount = mean(fare_amount, na.rm = TRUE),
     tip_amount = mean(tip_amount, na.rm = TRUE),
