@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "DuckDB quacks Arrow: A zero-copy data integration between Arrow and DuckDB"
-date: "2021-12-9 00:00:00"
+date: "2021-12-3 00:00:00"
 author: Pedro Holanda, Jonathan Keane
 categories: [application]
 ---
