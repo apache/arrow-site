@@ -263,7 +263,7 @@ new_table = pa.Table.from_pandas(res)
 | DuckDB  | 0.19    |
 | Pandas      | 2.13    |
 
-The lineitem table is composed of 16 columns, however, to execute this query only two columns ```l_extendedprice ``` and  *  ``` l_discount ```are necessary. Since DuckDB can push down the projection of these columns, it is capable of executing this query about one order of magnitude faster than Pandas.
+The lineitem table is composed of 16 columns, however, to execute this query only two columns ```l_extendedprice``` and  *  ```l_discount``` are necessary. Since DuckDB can push down the projection of these columns, it is capable of executing this query about one order of magnitude faster than Pandas.
 
 ### Filter Pushdown
 
