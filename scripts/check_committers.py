@@ -22,7 +22,7 @@
 # the Governance page is up-to-date with the authoritative ASF roster.
 #
 
-from collections import namedtuple
+from collections import namedtuple, Counter
 import json
 import os
 import sys
@@ -32,7 +32,6 @@ import yaml
 
 
 git_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-
 committers_yaml = os.path.join(git_root, "_data", "committers.yml")
 
 # See https://home.apache.org/phonebook-about.html
@@ -40,7 +39,6 @@ committers_yaml = os.path.join(git_root, "_data", "committers.yml")
 committers_url = "https://whimsy.apache.org/public/public_ldap_projects.json"
 
 Roster = namedtuple('Roster', ('committers', 'pmcs'))
-
 
 def get_asf_roster():
     r = requests.get(committers_url)
@@ -50,6 +48,18 @@ def get_asf_roster():
     committers = set(proj['members']) - pmcs
     return Roster(committers, pmcs)
 
+def get_duplicates():
+    with open(committers_yaml, "r") as f:
+        d = yaml.safe_load(f)
+    aliases = []
+    duplicates = set()
+    for member in d:
+        aliases.append(member['alias'])
+    alias_counts = Counter(aliases)
+    for alias in alias_counts:
+        if alias_counts[alias] > 1:
+            duplicates.add(alias)
+    return duplicates
 
 def get_local_roster():
     with open(committers_yaml, "r") as f:
@@ -67,8 +77,11 @@ def get_local_roster():
             raise ValueError(f"Invalid role {role!r} for {uid}")
     return Roster(committers, pmcs)
 
-
 if __name__ == "__main__":
+    duplicate_members = get_duplicates()
+    if duplicate_members:
+       print("Duplicate members in local list:", sorted(duplicate_members))
+       sys.exit(1)
     local_roster = get_local_roster()
     asf_roster = get_asf_roster()
     if local_roster == asf_roster:
@@ -76,6 +89,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     missing_pmcs = asf_roster.pmcs - local_roster.pmcs
+
     if missing_pmcs:
         print("Missing PMCs in local list:", sorted(missing_pmcs))
     missing_committers = asf_roster.committers - local_roster.committers
