@@ -28,21 +28,26 @@ jobs:
     name: Fetch and upload dev docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        with:
-          path: main
 
-      - name: Set the date  
+      - name: Checkout Arrow
+        uses: actions/checkout@v2
+        with:
+          repository: apache/arrow
+          path: arrow
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install archery
         run: |
-          echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+          pip install arrow/dev/archery[crossbow]
 
       - name: Download the crossbow docs artifact
-        uses: ./main/.github/actions/fetch-gh-release-asset
-        with:
-          repo: "ursacomputing/crossbow"
-          version: "tags/nightly-2021-12-14-0-azure-test-ubuntu-default-docs"
-          file: "docs.tar.gz"
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          archery crossbow -qr https://github.com/ursacomputing/crossbow.git download-artifacts --task-filter "*docs" --target-dir downloads nightly-2021-12-14-0
 
       - uses: actions/checkout@v2
         with:
@@ -56,7 +61,7 @@ jobs:
           git config user.name "$(git log -1 --pretty=format:%an)"
           git config user.email "$(git log -1 --pretty=format:%ae)"
           mkdir -p docs/dev
-          tar -xvzf ../docs.tar.gz -C docs/dev --strip-components=1
+          tar -xvzf ../downloads/nightly-2021-12-14-0/test-ubuntu-default-docs/docs.tar.gz -C docs/dev --strip-components=1
           if [ "$(git status --porcelain)" != "" ]; then
             # There are changes to the dev docs
             git add docs/dev --all
