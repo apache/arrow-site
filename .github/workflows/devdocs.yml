@@ -56,9 +56,14 @@ jobs:
         run: |
           pip install -e arrow/dev/archery[crossbow]
 
+      - name: Identify latest doc build
+        run: |
+          echo "::set-output name=LATEST::$(archery crossbow latest-prefix --no-fetch nightly)"
+        id: build
+
       - name: Download the crossbow docs artifact
         run: |
-          archery crossbow --queue-path ./crossbow download-artifacts --no-fetch --task-filter "*docs" --target-dir downloads nightly-2021-12-14-0
+          archery crossbow --queue-path ./crossbow download-artifacts --no-fetch --task-filter "*docs" --target-dir downloads ${{ steps.build.outputs.LATEST }}
 
       - uses: actions/checkout@v2
         with:
@@ -72,7 +77,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p docs/dev
-          tar -xvzf ../downloads/nightly-2021-12-14-0/test-ubuntu-default-docs/docs.tar.gz -C docs/dev --strip-components=1
+          tar -xvzf ../downloads/${{ steps.build.outputs.LATEST }}/test-ubuntu-default-docs/docs.tar.gz -C docs/dev --strip-components=1
           cp docs/c_glib/index.html docs/dev/c_glib/index.html
           if [ "$(git status --porcelain)" != "" ]; then
             # There are changes to the dev docs
