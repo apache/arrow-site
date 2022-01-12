@@ -1,0 +1,84 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: Upload dev docs
+
+on:
+  schedule:
+    - cron:  '0 0 * * *'
+
+jobs:
+  devdocs:
+    name: Fetch and upload dev docs
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Arrow
+        uses: actions/checkout@v2
+        with:
+          repository: apache/arrow
+          path: arrow
+
+      - name: Checkout Crossbow
+        uses: actions/checkout@v2
+        with:
+          repository: ursacomputing/crossbow
+          path: crossbow
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install archery
+        run: |
+          pip install -e arrow/dev/archery[crossbow]
+
+      - name: Identify latest doc build
+        run: |
+          echo "::set-output name=LATEST::$(archery crossbow latest-prefix --no-fetch nightly)"
+        id: build
+
+      - name: Download the crossbow docs artifact
+        run: |
+          archery crossbow --queue-path ./crossbow download-artifacts --no-fetch --task-filter "*docs" --target-dir downloads ${{ steps.build.outputs.LATEST }}
+
+      - uses: actions/checkout@v2
+        with:
+          ref: asf-site
+          path: asf-site
+
+      - name: Add docs
+        run: |
+          cd asf-site
+          echo "$(git log -1)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p docs/dev
+          tar -xvzf ../downloads/${{ steps.build.outputs.LATEST }}/test-ubuntu-default-docs/docs.tar.gz -C docs/dev --strip-components=1
+          cp docs/c_glib/index.html docs/dev/c_glib/index.html
+          if [ "$(git status --porcelain)" != "" ]; then
+            # There are changes to the dev docs
+            git add docs/dev
+            git commit -m "Updating dev docs (build ${{ steps.build.outputs.LATEST }})"
+            echo "git push"
+            git push
+          else
+            echo "No changes to the built site"
+          fi
