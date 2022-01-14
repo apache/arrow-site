@@ -67,8 +67,9 @@ The record batches use Arrow’s compression support to further save bandwidth.
   <img src="{{ site.baseurl }}/img/20220121-skyhook-architecture.png"
        alt="Skyhook Architecture"
        width="100%" class="img-responsive">
-  <figcaption>
-    Skyhook extends Ceph and Arrow Datasets to push queries down to Ceph, reducing the client workload and network traffic.
+  <figcaption markdown="1">
+Skyhook extends Ceph and Arrow Datasets to push queries down to Ceph, reducing the client workload and network traffic.
+(Figure sourced from [“SkyhookDM is now a part of Apache Arrow!”][medium].)
   </figcaption>
 </figure>
 
@@ -83,13 +84,14 @@ In benchmarks, Skyhook has minimal storage-side CPU overhead and virtually elimi
 And scaling the storage cluster decreases query latency commensurately.
 For systems like Dask that use the Arrow Datasets API, this means that just by switching to the Skyhook file format, we can speed up dataset scans, reduce the amount of data that needs to be transferred, and free up CPU resources for computations.
 
-<!-- TODO: add the updated figure from Jayjeet -->
 <figure>
-  <img src="{{ site.baseurl }}/img/20220121-skyhook-architecture.png"
+  <img src="{{ site.baseurl }}/img/20220121-skyhook-cpu.png"
        alt="In benchmarks, Skyhook reduces client CPU usage while minimally impacting storage cluster CPU usage."
        width="100%" class="img-responsive">
   <figcaption>
-    Skyhook frees the client CPU to do useful work, while minimally impacting the work done by the storage machines. Figure sourced from TODO.
+    Skyhook frees the client CPU to do useful work, while minimally impacting the work done by the storage machines.
+    The client still does some work in decompressing the LZ4-compressed record batches sent by Skyhook.
+    (Note that the storage cluster plot is cumulative.)
   </figcaption>
 </figure>
 
@@ -99,11 +101,9 @@ Additionally, in-memory SQL-based query engines like [DuckDB][duckdb], which int
 
 ## Summary and Acknowledgements
 
-<!-- TODO: is there documentation on how to deploy the plugin? Can't find anything on ceph.io -->
-
 Skyhook, available in Arrow 7.0, builds on research into programmable storage systems.
 By pushing filters and projections to the storage layer, we can speed up dataset scans by freeing precious CPU resources on the client, reducing the amount of data sent across the network, and better utilizing the scalability of systems like Ceph.
-To get started, just [build Arrow][arrow-build] with Skyhook enabled, deploy the Skyhook object class extensions to Ceph, and then use the `SkyhookFileFormat` to construct an Arrow dataset.
+To get started, just [build Arrow][arrow-build] with Skyhook enabled, deploy the Skyhook object class extensions to Ceph (see “Usage” in the [announcement post][medium]), and then use the `SkyhookFileFormat` to construct an Arrow dataset.
 A small code example is shown here.
 
 ```cpp
