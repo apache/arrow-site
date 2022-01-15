@@ -145,6 +145,7 @@ can accelerate queries that only touch some partitions (files). Call
   <span class="va">sources</span>,
   schema <span class="op">=</span> <span class="cn">NULL</span>,
   partitioning <span class="op">=</span> <span class="fu"><a href="hive_partition.html">hive_partition</a></span><span class="op">(</span><span class="op">)</span>,
+  hive_style <span class="op">=</span> <span class="cn">NA</span>,
   unify_schemas <span class="op">=</span> <span class="cn">NULL</span>,
   format <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"parquet"</span>, <span class="st">"arrow"</span>, <span class="st">"ipc"</span>, <span class="st">"feather"</span>, <span class="st">"csv"</span>, <span class="st">"tsv"</span>, <span class="st">"text"</span><span class="op">)</span>,
   <span class="va">...</span>
@@ -155,6 +156,8 @@ can accelerate queries that only touch some partitions (files). Call
     <h2>Arguments</h2>
     <dl><dt>sources</dt>
 <dd><p>One of:</p><ul><li><p>a string path or URI to a directory containing data files</p></li>
+<li><p>a <a href="FileSystem.html">FileSystem</a> that references a directory containing data files
+(such as what is returned by <code><a href="s3_bucket.html">s3_bucket()</a></code>)</p></li>
 <li><p>a string path or URI to a single file</p></li>
 <li><p>a character vector of paths or URIs to individual data files</p></li>
 <li><p>a list of <code>Dataset</code> objects as created by this function</p></li>
@@ -167,19 +170,20 @@ format.</p></dd>
 will be inferred from the data sources.</p></dd>
 <dt>partitioning</dt>
 <dd><p>When <code>sources</code> is a directory path/URI, one of:</p><ul><li><p>a <code>Schema</code>, in which case the file paths relative to <code>sources</code> will be
-parsed, and path segments will be matched with the schema fields. For
-example, <code>schema(year = int16(), month = int8())</code> would create partitions
-for file paths like <code>"2019/01/file.parquet"</code>, <code>"2019/02/file.parquet"</code>,
-etc.</p></li>
+parsed, and path segments will be matched with the schema fields.</p></li>
 <li><p>a character vector that defines the field names corresponding to those
 path segments (that is, you're providing the names that would correspond
 to a <code>Schema</code> but the types will be autodetected)</p></li>
-<li><p>a <code>HivePartitioning</code> or <code>HivePartitioningFactory</code>, as returned
-by <code><a href="hive_partition.html">hive_partition()</a></code> which parses explicit or autodetected fields from
-Hive-style path segments</p></li>
+<li><p>a <code>Partitioning</code> or <code>PartitioningFactory</code>, such as returned
+by <code><a href="hive_partition.html">hive_partition()</a></code></p></li>
 <li><p><code>NULL</code> for no partitioning</p></li>
-</ul><p>The default is to autodetect Hive-style partitions. When <code>sources</code> is not a
-directory path/URI, <code>partitioning</code> is ignored.</p></dd>
+</ul><p>The default is to autodetect Hive-style partitions unless
+<code>hive_style = FALSE</code>. See the "Partitioning" section for details.
+When <code>sources</code> is not a directory path/URI, <code>partitioning</code> is ignored.</p></dd>
+<dt>hive_style</dt>
+<dd><p>Logical: should <code>partitioning</code> be interpreted as
+Hive-style? Default is <code>NA</code>, which means to inspect the file paths for
+Hive-style partitioning and behave accordingly.</p></dd>
 <dt>unify_schemas</dt>
 <dd><p>logical: should all data fragments (files, <code>Dataset</code>s)
 be scanned in order to create a unified schema from them? If <code>FALSE</code>, only
@@ -211,6 +215,45 @@ format-specific options.</p></dd>
     <h2>Value</h2>
     <p>A <a href="Dataset.html">Dataset</a> R6 object. Use <code>dplyr</code> methods on it to query the data,
 or call <code><a href="Scanner.html">$NewScan()</a></code> to construct a query directly.</p>
+    </div>
+    <div id="partitioning">
+    <h2>Partitioning</h2>
+    
+
+
+<p>Data is often split into multiple files and nested in subdirectories based on the value of one or more
+columns in the data. It may be a column that is commonly referenced in
+queries, or it may be time-based, for some examples. Data that is divided
+this way is "partitioned," and the values for those partitioning columns are
+encoded into the file path segments.
+These path segments are effectively virtual columns in the dataset, and
+because their values are known prior to reading the files themselves, we can
+greatly speed up filtered queries by skipping some files entirely.</p>
+<p>Arrow supports reading partition information from file paths in two forms:</p><ul><li><p>"Hive-style", deriving from the Apache Hive project and common to some
+database systems. Partitions are encoded as "key=value" in path segments,
+such as <code>"year=2019/month=1/file.parquet"</code>. While they may be awkward as
+file names, they have the advantage of being self-describing.</p></li>
+<li><p>"Directory" partitioning, which is Hive without the key names, like
+<code>"2019/01/file.parquet"</code>. In order to use these, we need know at least
+what names to give the virtual columns that come from the path segments.</p></li>
+</ul><p>The default behavior in <code>open_dataset()</code> is to inspect the file paths
+contained in the provided directory, and if they look like Hive-style, parse
+them as Hive. If your dataset has Hive-style partioning in the file paths,
+you do not need to provide anything in the <code>partitioning</code> argument to
+<code>open_dataset()</code> to use them. If you do provide a character vector of
+partition column names, they will be ignored if they match what is detected,
+and if they don't match, you'll get an error. (If you want to rename
+partition columns, do that using <code><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select()</a></code> or <code><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename()</a></code> after opening the
+dataset.). If you provide a <code>Schema</code> and the names match what is detected,
+it will use the types defined by the Schema. In the example file path above,
+you could provide a Schema to specify that "month" should be <code><a href="data-type.html">int8()</a></code>
+instead of the <code><a href="data-type.html">int32()</a></code> it will be parsed as by default.</p>
+<p>If your file paths do not appear to be Hive-style, or if you pass
+<code>hive_style = FALSE</code>, the <code>partitioning</code> argument will be used to create
+Directory partitioning. A character vector of names is required to create
+partitions; you may instead provide a <code>Schema</code> to map those names to desired
+column types, as described above. If neither are provided, no partitioning
+information will be taken from the file paths.</p>
     </div>
     <div id="see-also">
     <h2>See also</h2>
@@ -340,7 +383,7 @@ or call <code><a href="Scanner.html">$NewScan()</a></code> to construct a query 
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.1.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
 </div>
 
       </footer></div>

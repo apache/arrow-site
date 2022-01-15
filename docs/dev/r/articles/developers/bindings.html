@@ -161,9 +161,9 @@
 
     
     
-<div class="section level1">
-<h1 id="writing-bindings">Writing Bindings<a class="anchor" aria-label="anchor" href="#writing-bindings"></a>
-</h1>
+<div class="section level2">
+<h2 id="writing-bindings">Writing Bindings<a class="anchor" aria-label="anchor" href="#writing-bindings"></a>
+</h2>
 <p>When writing bindings between C++ compute functions and R functions, the aim is to expose the C++ functionality via the same interface as existing R functions. The syntax and functionality should match that of the existing R functions (though there are some exceptions) so that users are able to use existing tidyverse or base R syntax, whilst taking advantage of the speed and functionality of the underlying arrow package.</p>
 <p>One of main ways in which users interact with arrow is via <a href="https://dplyr.tidyverse.org/" class="external-link">dplyr</a> syntax called on Arrow objects. For example, when a user calls <code><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">dplyr::mutate()</a></code> on an Arrow Tabular, Dataset, or arrow data query object, the Arrow implementation of <code><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate()</a></code> is used and under the hood, translates the dplyr code into Arrow C++ code.</p>
 <p>When using <code><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">dplyr::mutate()</a></code> or <code><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">dplyr::filter()</a></code>, you may want to use functions from other packages. The example below uses <code><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">stringr::str_detect()</a></code>.</p>
@@ -217,21 +217,21 @@
 <span class="co">## See $.data for the source Arrow object</span></code></pre>
 <p>In the following sections, we’ll walk through how to create a binding between an R function and an Arrow C++ function.</p>
 </div>
-<div class="section level1">
-<h1 id="walkthrough">Walkthrough<a class="anchor" aria-label="anchor" href="#walkthrough"></a>
-</h1>
+<div class="section level2">
+<h2 id="walkthrough">Walkthrough<a class="anchor" aria-label="anchor" href="#walkthrough"></a>
+</h2>
 <p>Imagine you are writing the bindings for the C++ function <a href="https://arrow.apache.org/docs/cpp/compute.html#containment-tests" class="external-link"><code>starts_with()</code></a> and want to bind it to the (base) R function <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code>.</p>
 <p>First, take a look at the docs for both of those functions.</p>
-<div class="section level2">
-<h2 id="examining-the-r-function">Examining the R function<a class="anchor" aria-label="anchor" href="#examining-the-r-function"></a>
-</h2>
+<div class="section level3">
+<h3 id="examining-the-r-function">Examining the R function<a class="anchor" aria-label="anchor" href="#examining-the-r-function"></a>
+</h3>
 <p>Here are the docs for R’s <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code> (also available at <a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/startsWith.html" class="external-link uri">https://stat.ethz.ch/R-manual/R-devel/library/base/html/startsWith.html</a>)</p>
 <p><img src="startswithdocs.png" width="50%"></p>
 <p>It takes 2 parameters; <code>x</code> - the input, and <code>prefix</code> - the characters to check if <code>x</code> starts with.</p>
 </div>
-<div class="section level2">
-<h2 id="examining-the-c-function">Examining the C++ function<a class="anchor" aria-label="anchor" href="#examining-the-c-function"></a>
-</h2>
+<div class="section level3">
+<h3 id="examining-the-c-function">Examining the C++ function<a class="anchor" aria-label="anchor" href="#examining-the-c-function"></a>
+</h3>
 <p>Now, go to <a href="https://arrow.apache.org/docs/cpp/compute.html#containment-tests" class="external-link">the compute function documentation</a> and look for the Arrow C++ library’s <code><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with()</a></code> function:</p>
 <p><img src="starts_with_docs.png" width="100%"></p>
 <p>The docs show that <code><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with()</a></code> is a unary function, which means that it takes a single data input. The data input must be a string-like class, and the returned value is boolean, both of which match up to R’s <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code>.</p>
@@ -239,18 +239,18 @@
 <p><img src="matchsubstringoptions.png" width="100%"></p>
 <p>Options classes allow the user to control the behaviour of the function. In this case, there are two possible options which can be supplied - <code>pattern</code> and <code>ignore_case</code>, which are described in the docs shown above.</p>
 </div>
-<div class="section level2">
-<h2 id="comparing-the-r-and-c-functions">Comparing the R and C++ functions<a class="anchor" aria-label="anchor" href="#comparing-the-r-and-c-functions"></a>
-</h2>
+<div class="section level3">
+<h3 id="comparing-the-r-and-c-functions">Comparing the R and C++ functions<a class="anchor" aria-label="anchor" href="#comparing-the-r-and-c-functions"></a>
+</h3>
 <p>What conclusions can be drawn from what you’ve seen so far?</p>
 <p>Base R’s <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code> and Arrow’s <code><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with()</a></code> operate on equivalent data types, return equivalent data types, and as there are no options implemented in R that Arrow doesn’t have, this should be fairly simple to map without a great deal of extra work.</p>
 <p>As <code><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with()</a></code> has an options class associated with it, we’ll need to make sure that it’s linked up with this in the R code.</p>
 <p>In case you’re wondering about the difference between arguments in R and options in Arrow, in R, arguments to functions can include the actual data to be analysed as well as options governing how the function works, whereas in the C++ compute functions, the arguments are the data to be analysed and the options are for specifying how exactly the function works.</p>
 <p>So let’s get started.</p>
 </div>
-<div class="section level2">
-<h2 id="step-1---add-unit-tests">Step 1 - add unit tests<a class="anchor" aria-label="anchor" href="#step-1---add-unit-tests"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-1---add-unit-tests">Step 1 - add unit tests<a class="anchor" aria-label="anchor" href="#step-1---add-unit-tests"></a>
+</h3>
 <p>We recommend a test-driven-development approach - write failing tests first, then check that they fail, and then write the code needed to make them pass. Thinking up-front about the behavior which needs testing can make it easier to reason about the code which needs writing later.</p>
 <p>Look up the R function that you want to bind the compute kernel to, and write a set of unit tests that use a dplyr pipeline and <code>compare_dplyr_binding()</code> (and perhaps even <code>compare_dplyr_error()</code> if necessary. These functions compare the output of the original function with the dplyr bindings and make sure they match.<br>
 We recommend looking at the <a href="https://github.com/apache/arrow/blob/master/r/tests/testthat/helper-expectation.R" class="external-link">documentation next to the source code for these functions</a> to get a better understanding of how they work.</p>
@@ -268,9 +268,9 @@ We recommend looking at the <a href="https://github.com/apache/arrow/blob/master
 
 <span class="op">}</span><span class="op">)</span></code></pre></div>
 </div>
-<div class="section level2">
-<h2 id="step-2---hook-up-the-compute-function-with-options-class-if-necessary">Step 2 - Hook up the compute function with options class if necessary<a class="anchor" aria-label="anchor" href="#step-2---hook-up-the-compute-function-with-options-class-if-necessary"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-2---hook-up-the-compute-function-with-options-class-if-necessary">Step 2 - Hook up the compute function with options class if necessary<a class="anchor" aria-label="anchor" href="#step-2---hook-up-the-compute-function-with-options-class-if-necessary"></a>
+</h3>
 <p>If the C++ compute function can have options specified, make sure that the function is linked with its options class in <code>make_compute_options()</code> in the file <code>arrow/r/src/compute.cpp</code>. You can find out if a compute function requires options by looking in the docs here: <a href="https://arrow.apache.org/docs/cpp/compute.html" class="external-link uri">https://arrow.apache.org/docs/cpp/compute.html</a></p>
 <p>In the case of <code><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">starts_with()</a></code>, it looks something like this:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode cpp"><code class="sourceCode cpp"><a class="sourceLine" id="cb8-1" title="1">  <span class="cf">if</span> (func_name == <span class="st">"starts_with"</span>) {</a>
@@ -284,19 +284,19 @@ We recommend looking at the <a href="https://github.com/apache/arrow/blob/master
 <a class="sourceLine" id="cb8-9" title="9">  }</a></code></pre></div>
 <p>You can usually copy and paste from a similar existing example. In this case, as the option <code>ignore_case</code> doesn’t map to any parameters of <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code>, we give it a default value of <code>false</code> but if it’s been set, use the set value instead. As the <code>pattern</code> argument maps directly to <code>prefix</code> in <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code> we can pass it straight through.</p>
 </div>
-<div class="section level2">
-<h2 id="step-3---map-the-r-function-to-the-c-kernel">Step 3 - Map the R function to the C++ kernel<a class="anchor" aria-label="anchor" href="#step-3---map-the-r-function-to-the-c-kernel"></a>
-</h2>
-<p>The next task is writing the code which binds the R function to the C++ kernel.</p>
 <div class="section level3">
-<h3 id="step-3a---see-if-direct-mapping-is-appropriate">Step 3a - See if direct mapping is appropriate<a class="anchor" aria-label="anchor" href="#step-3a---see-if-direct-mapping-is-appropriate"></a>
+<h3 id="step-3---map-the-r-function-to-the-c-kernel">Step 3 - Map the R function to the C++ kernel<a class="anchor" aria-label="anchor" href="#step-3---map-the-r-function-to-the-c-kernel"></a>
 </h3>
+<p>The next task is writing the code which binds the R function to the C++ kernel.</p>
+<div class="section level4">
+<h4 id="step-3a---see-if-direct-mapping-is-appropriate">Step 3a - See if direct mapping is appropriate<a class="anchor" aria-label="anchor" href="#step-3a---see-if-direct-mapping-is-appropriate"></a>
+</h4>
 <p>Compare the C++ function and R function. If they are simple functions with no options, it might be possible to directly map between the C++ and R in <code>unary_function_map</code>, in the case of compute functions that operate on single columns of data, or <code>binary_function_map</code> for those which operate on 2 columns of data.</p>
 <p>As <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code> requires options, direct mapping is not appropriate.</p>
 </div>
-<div class="section level3">
-<h3 id="step-3b---if-direct-mapping-not-possible-try-a-modified-implementation">Step 3b - If direct mapping not possible, try a modified implementation<a class="anchor" aria-label="anchor" href="#step-3b---if-direct-mapping-not-possible-try-a-modified-implementation"></a>
-</h3>
+<div class="section level4">
+<h4 id="step-3b---if-direct-mapping-not-possible-try-a-modified-implementation">Step 3b - If direct mapping not possible, try a modified implementation<a class="anchor" aria-label="anchor" href="#step-3b---if-direct-mapping-not-possible-try-a-modified-implementation"></a>
+</h4>
 <p>If the function cannot be mapped directly, some extra work may be needed to ensure that calling the arrow version of the function results in the same result as calling the R version of the function. In this case, the function will need adding to the <code>nse_funcs</code> list in <code>arrow/r/R/dplyr-functions.R</code>. Here is how this might look for <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code>:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="../../reference/register_binding.html">register_binding</a></span><span class="op">(</span><span class="st">"startsWith"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">prefix</span><span class="op">)</span> <span class="op">{</span>
@@ -324,9 +324,9 @@ We recommend looking at the <a href="https://github.com/apache/arrow/blob/master
 <span class="co">## ]</span></code></pre>
 </div>
 </div>
-<div class="section level2">
-<h2 id="step-4---run-and-potentially-add-to-your-tests-">Step 4 - Run (and potentially add to) your tests.<a class="anchor" aria-label="anchor" href="#step-4---run-and-potentially-add-to-your-tests-"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-4---run-and-potentially-add-to-your-tests-">Step 4 - Run (and potentially add to) your tests.<a class="anchor" aria-label="anchor" href="#step-4---run-and-potentially-add-to-your-tests-"></a>
+</h3>
 <p>In the process of implementing the function, you will need at least one test to make sure that your binding works and that future changes to the Arrow R package don’t break it! Bindings are tested in files that correspond to the file in which they were defined (e.g., <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code> is tested in <code>tests/testthat/test-dplyr-funcs-string.R</code>) next to the tests for <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">endsWith()</a></code>.</p>
 <p>You may end up implementing more tests, for example if you discover unusual edge cases. This is fine - add them to the ones you wrote originally, and run them all. If they pass, you’re done and you can submit a PR. If you’ve modified the C++ code in the R package (for example, when hooking up a binding to its options class), you should make sure to run <code>arrow/r/lint.sh</code> to lint the code.</p>
 </div>
@@ -350,7 +350,7 @@ We recommend looking at the <a href="https://github.com/apache/arrow/blob/master
 
 <div class="pkgdown">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.1.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
 </div>
 
       </footer>
