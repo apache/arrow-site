@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Skyhook: Bringing Computation to Storage with Apache Arrow"
-date: "2022-1-21 00:00:00"
+date: "2022-01-28 00:00:00"
 author: Jayjeet Chakraborty, Carlos Maltzahn, David Li, Tom Drabas
 categories: [application]
 ---
