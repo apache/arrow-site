@@ -30,7 +30,7 @@ This divergent evolution means we need to rethink where and when we perform comp
 
 For example, when querying a dataset on a storage system like Ceph or Amazon S3, all the work of filtering data gets done by the client.
 Data has to be transferred over the network, and then the client has to spend precious CPU cycles decoding it, only to throw it away in the end due to a filter.
-While formats like Apache Parquet enable some optimizations here, fundamentally, the responsibility is all on the client.
+While formats like Apache Parquet enable some optimizations, fundamentally, the responsibility is all on the client.
 Meanwhile, even though the storage system has its own compute capabilities, it’s relegated to just serving “dumb bytes”.
 
 Thanks to the [Center for Research in Open Source Software][cross] (CROSS) at the University of California, Santa Cruz, Apache Arrow 7.0.0 includes Skyhook, an [Arrow Datasets][dataset] extension that solves this problem by using the storage layer to reduce client resource utilization.
@@ -60,7 +60,7 @@ To implement these operations, Skyhook first implements a file system shim in Ce
 
 Then, Skyhook defines a custom “file format” in the Arrow Datasets layer.
 Queries against such files get translated to direct requests to Ceph using those new operations, bypassing the traditional POSIX file system layer.
-After decoding, filtering, and projection, Ceph directly sends the client Arrow record batches, minimizing CPU overhead for encoding/decoding—another optimization Arrow makes possible.
+After decoding, filtering, and projecting, Ceph sends the Arrow record batches directly to the client, minimizing CPU overhead for encoding/decoding—another optimization Arrow makes possible.
 The record batches use Arrow’s compression support to further save bandwidth.
 
 <figure>
@@ -81,7 +81,7 @@ By striping or splitting the file in this way, we can parallelize scanning at su
 ## Applications
 
 In benchmarks, Skyhook has minimal storage-side CPU overhead and virtually eliminates client-side CPU usage.
-And scaling the storage cluster decreases query latency commensurately.
+Scaling the storage cluster decreases query latency commensurately.
 For systems like Dask that use the Arrow Datasets API, this means that just by switching to the Skyhook file format, we can speed up dataset scans, reduce the amount of data that needs to be transferred, and free up CPU resources for computations.
 
 <figure>
@@ -101,7 +101,7 @@ Additionally, in-memory SQL-based query engines like [DuckDB][duckdb], which int
 
 ## Summary and Acknowledgements
 
-Skyhook, available in Arrow 7.0, builds on research into programmable storage systems.
+Skyhook, available in Arrow 7.0.0, builds on research into programmable storage systems.
 By pushing filters and projections to the storage layer, we can speed up dataset scans by freeing precious CPU resources on the client, reducing the amount of data sent across the network, and better utilizing the scalability of systems like Ceph.
 To get started, just [build Arrow][arrow-build] with Skyhook enabled, deploy the Skyhook object class extensions to Ceph (see “Usage” in the [announcement post][medium]), and then use the `SkyhookFileFormat` to construct an Arrow dataset.
 A small code example is shown here.
