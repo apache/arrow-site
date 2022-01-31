@@ -213,7 +213,7 @@ For more information, see these papers and articles:
 [arxiv]: https://arxiv.org/abs/2105.09894
 [ceph]: https://ceph.io/en/
 [cross]: https://cross.ucsc.edu/
-[duckdb]: {{ site.baseurl }}/{% link _posts/2021-12-3-arrow-duckdb.md %}
+[duckdb]: {% link _posts/2021-12-3-arrow-duckdb.md %}
 [dataset]: https://arrow.apache.org/docs/cpp/dataset.html
 [medium]: https://jayjeetc.medium.com/skyhookdm-is-now-a-part-of-apache-arrow-e5d7b9a810ba
 [usenix]: https://www.usenix.org/publications/login/summer2020/lefevre
