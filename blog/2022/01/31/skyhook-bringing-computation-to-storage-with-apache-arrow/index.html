@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Skyhook: Bringing Computation to Storage with Apache Arrow | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.7.1 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Skyhook: Bringing Computation to Storage with Apache Arrow" />
+<meta name="author" content="Jayjeet Chakraborty, Carlos Maltzahn, David Li, Tom Drabas" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="CPUs, memory, storage, and network bandwidth get better every year, but increasingly, they’re improving in different dimensions. Processors are faster, but their memory bandwidth hasn’t kept up; meanwhile, cloud computing has led to storage being separated from applications across a network link. This divergent evolution means we need to rethink where and when we perform computation to best make use of the resources available to us. For example, when querying a dataset on a storage system like Ceph or Amazon S3, all the work of filtering data gets done by the client. Data has to be transferred over the network, and then the client has to spend precious CPU cycles decoding it, only to throw it away in the end due to a filter. While formats like Apache Parquet enable some optimizations, fundamentally, the responsibility is all on the client. Meanwhile, even though the storage system has its own compute capabilities, it’s relegated to just serving “dumb bytes”. Thanks to the Center for Research in Open Source Software (CROSS) at the University of California, Santa Cruz, Apache Arrow 7.0.0 includes Skyhook, an Arrow Datasets extension that solves this problem by using the storage layer to reduce client resource utilization. We’ll examine the developments surrounding Skyhook as well as how Skyhook works. Introducing Programmable Storage Skyhook is an example of programmable storage: exposing higher-level functionality from storage systems for clients to build upon. This allows us to make better use of existing resources (both hardware and development effort) in such systems, reduces the implementation burden of common operations for each client, and enables such operations to scale with the storage layer. Historically, big data systems like Apache Hadoop have tried to colocate computation and storage for efficiency. More recently, cloud and distributed computing have disaggregated computation and storage for flexibility and scalability, but at a performance cost. Programmable storage strikes a balance between these goals, allowing some operations to be run right next to the data while still keeping data and compute separate at a higher level. In particular, Skyhook builds on Ceph, a distributed storage system that scales to exabytes of data while being reliable and flexible. With its Object Class SDK, Ceph enables programmable storage by allowing extensions that define new object types with custom functionality. Skyhook Architecture Let’s look at how Skyhook applies these ideas. Overall, the idea is simple: the client should be able to ask Ceph to perform basic operations like decoding files, filtering the data, and selecting columns. That way, the work gets done using existing storage cluster resources, which means it’s both adjacent to the data and can scale with the cluster size. Also, this reduces the data transferred over the network, and of course reduces the client workload. On the storage system side, Skyhook uses the Ceph Object Class SDK to define scan operations on data stored in Parquet or Feather format. To implement these operations, Skyhook first implements a file system shim in Ceph’s object storage layer, then uses the existing filtering and projection capabilities of the Arrow Datasets library on top of that shim. Then, Skyhook defines a custom “file format” in the Arrow Datasets layer. Queries against such files get translated to direct requests to Ceph using those new operations, bypassing the traditional POSIX file system layer. After decoding, filtering, and projecting, Ceph sends the Arrow record batches directly to the client, minimizing CPU overhead for encoding/decoding—another optimization Arrow makes possible. The record batches use Arrow’s compression support to further save bandwidth. Skyhook extends Ceph and Arrow Datasets to push queries down to Ceph, reducing the client workload and network traffic. (Figure sourced from “SkyhookDM is now a part of Apache Arrow!”.) Skyhook also optimizes how Parquet files in particular are stored. Parquet files consist of a series of row groups, which each contain a chunk of the rows in a file. When storing such files, Skyhook either pads or splits them so that each row group is stored as its own Ceph object. By striping or splitting the file in this way, we can parallelize scanning at sub-file granularity across the Ceph nodes for further performance improvements. Applications In benchmarks, Skyhook has minimal storage-side CPU overhead and virtually eliminates client-side CPU usage. Scaling the storage cluster decreases query latency commensurately. For systems like Dask that use the Arrow Datasets API, this means that just by switching to the Skyhook file format, we can speed up dataset scans, reduce the amount of data that needs to be transferred, and free up CPU resources for computations. Skyhook frees the client CPU to do useful work, while minimally impacting the work done by the storage machines. The client still does some work in decompressing the LZ4-compressed record batches sent by Skyhook. (Note that the storage cluster plot is cumulative.) Of course, the ideas behind Skyhook apply to other systems adjacent to and beyond Apache Arrow. For example, “lakehouse” systems like Apache Iceberg and Delta Lake also build on distributed storage systems, and can naturally benefit from Skyhook to offload computation. Additionally, in-memory SQL-based query engines like DuckDB, which integrate seamlessly with Apache Arrow, can benefit from Skyhook by offloading portions of SQL queries. Summary and Acknowledgements Skyhook, available in Arrow 7.0.0, builds on research into programmable storage systems. By pushing filters and projections to the storage layer, we can speed up dataset scans by freeing precious CPU resources on the client, reducing the amount of data sent across the network, and better utilizing the scalability of systems like Ceph. To get started, just build Arrow with Skyhook enabled, deploy the Skyhook object class extensions to Ceph (see “Usage” in the announcement post), and then use the SkyhookFileFormat to construct an Arrow dataset. A small code example is shown here. // Licensed to the Apache Software Foundation (ASF) under one // or more contributor license agreements. See the NOTICE file // distributed with this work for additional information // regarding copyright ownership. The ASF licenses this file // to you under the Apache License, Version 2.0 (the // &quot;License&quot;); you may not use this file except in compliance // with the License. You may obtain a copy of the License at // // http://www.apache.org/licenses/LICENSE-2.0 // // Unless required by applicable law or agreed to in writing, // software distributed under the License is distributed on an // &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY // KIND, either express or implied. See the License for the // specific language governing permissions and limitations // under the License. #include &lt;arrow/compute/api.h&gt; #include &lt;arrow/dataset/api.h&gt; #include &lt;arrow/filesystem/api.h&gt; #include &lt;arrow/table.h&gt; #include &lt;skyhook/client/file_skyhook.h&gt; #include &lt;cstdlib&gt; #include &lt;iostream&gt; #include &lt;memory&gt; #include &lt;string&gt; namespace cp = arrow::compute; namespace ds = arrow::dataset; namespace fs = arrow::fs; // Demonstrate reading a dataset via Skyhook. arrow::Status ScanDataset() { // Configure SkyhookFileFormat to connect to our Ceph cluster. std::string ceph_config_path = &quot;/etc/ceph/ceph.conf&quot;; std::string ceph_data_pool = &quot;cephfs_data&quot;; std::string ceph_user_name = &quot;client.admin&quot;; std::string ceph_cluster_name = &quot;ceph&quot;; std::string ceph_cls_name = &quot;skyhook&quot;; std::shared_ptr&lt;skyhook::RadosConnCtx&gt; rados_ctx = std::make_shared&lt;skyhook::RadosConnCtx&gt;(ceph_config_path, ceph_data_pool, ceph_user_name, ceph_cluster_name, ceph_cls_name); ARROW_ASSIGN_OR_RAISE(auto format, skyhook::SkyhookFileFormat::Make(rados_ctx, &quot;parquet&quot;)); // Create the filesystem. std::string root; ARROW_ASSIGN_OR_RAISE(auto fs, fs::FileSystemFromUri(&quot;file:///mnt/cephfs/nyc&quot;, &amp;root)); // Create our dataset. fs::FileSelector selector; selector.base_dir = root; selector.recursive = true; ds::FileSystemFactoryOptions options; options.partitioning = std::make_shared&lt;ds::HivePartitioning&gt;( arrow::schema({arrow::field(&quot;payment_type&quot;, arrow::int32()), arrow::field(&quot;VendorID&quot;, arrow::int32())})); ARROW_ASSIGN_OR_RAISE(auto factory, ds::FileSystemDatasetFactory::Make(fs, std::move(selector), std::move(format), options)); ds::InspectOptions inspect_options; ds::FinishOptions finish_options; ARROW_ASSIGN_OR_RAISE(auto schema, factory-&gt;Inspect(inspect_options)); ARROW_ASSIGN_OR_RAISE(auto dataset, factory-&gt;Finish(finish_options)); // Scan the dataset. auto filter = cp::greater(cp::field_ref(&quot;payment_type&quot;), cp::literal(2)); ARROW_ASSIGN_OR_RAISE(auto scanner_builder, dataset-&gt;NewScan()); ARROW_RETURN_NOT_OK(scanner_builder-&gt;Filter(filter)); ARROW_RETURN_NOT_OK(scanner_builder-&gt;UseThreads(true)); ARROW_ASSIGN_OR_RAISE(auto scanner, scanner_builder-&gt;Finish()); ARROW_ASSIGN_OR_RAISE(auto table, scanner-&gt;ToTable()); std::cout &lt;&lt; &quot;Got &quot; &lt;&lt; table-&gt;num_rows() &lt;&lt; &quot; rows&quot; &lt;&lt; std::endl; return arrow::Status::OK(); } int main(int, char**) { auto status = ScanDataset(); if (!status.ok()) { std::cerr &lt;&lt; status.message() &lt;&lt; std::endl; return EXIT_FAILURE; } return EXIT_SUCCESS; } We would like to acknowledge Ivo Jimenez, Jeff LeFevre, Michael Sevilla, and Noah Watkins for their contributions to this project. This work was supported in part by the National Science Foundation under Cooperative Agreement OAC-1836650, the US Department of Energy ASCR DE-NA0003525 (FWP 20-023266), and the Center for Research in Open Source Software (cross.ucsc.edu). For more information, see these papers and articles: SkyhookDM: Data Processing in Ceph with Programmable Storage. (USENIX ;login: issue Summer 2020, Vol. 45, No. 2) SkyhookDM is now a part of Apache Arrow! (Medium) Towards an Arrow-native Storage System. (arXiv.org)" />
+<meta property="og:description" content="CPUs, memory, storage, and network bandwidth get better every year, but increasingly, they’re improving in different dimensions. Processors are faster, but their memory bandwidth hasn’t kept up; meanwhile, cloud computing has led to storage being separated from applications across a network link. This divergent evolution means we need to rethink where and when we perform computation to best make use of the resources available to us. For example, when querying a dataset on a storage system like Ceph or Amazon S3, all the work of filtering data gets done by the client. Data has to be transferred over the network, and then the client has to spend precious CPU cycles decoding it, only to throw it away in the end due to a filter. While formats like Apache Parquet enable some optimizations, fundamentally, the responsibility is all on the client. Meanwhile, even though the storage system has its own compute capabilities, it’s relegated to just serving “dumb bytes”. Thanks to the Center for Research in Open Source Software (CROSS) at the University of California, Santa Cruz, Apache Arrow 7.0.0 includes Skyhook, an Arrow Datasets extension that solves this problem by using the storage layer to reduce client resource utilization. We’ll examine the developments surrounding Skyhook as well as how Skyhook works. Introducing Programmable Storage Skyhook is an example of programmable storage: exposing higher-level functionality from storage systems for clients to build upon. This allows us to make better use of existing resources (both hardware and development effort) in such systems, reduces the implementation burden of common operations for each client, and enables such operations to scale with the storage layer. Historically, big data systems like Apache Hadoop have tried to colocate computation and storage for efficiency. More recently, cloud and distributed computing have disaggregated computation and storage for flexibility and scalability, but at a performance cost. Programmable storage strikes a balance between these goals, allowing some operations to be run right next to the data while still keeping data and compute separate at a higher level. In particular, Skyhook builds on Ceph, a distributed storage system that scales to exabytes of data while being reliable and flexible. With its Object Class SDK, Ceph enables programmable storage by allowing extensions that define new object types with custom functionality. Skyhook Architecture Let’s look at how Skyhook applies these ideas. Overall, the idea is simple: the client should be able to ask Ceph to perform basic operations like decoding files, filtering the data, and selecting columns. That way, the work gets done using existing storage cluster resources, which means it’s both adjacent to the data and can scale with the cluster size. Also, this reduces the data transferred over the network, and of course reduces the client workload. On the storage system side, Skyhook uses the Ceph Object Class SDK to define scan operations on data stored in Parquet or Feather format. To implement these operations, Skyhook first implements a file system shim in Ceph’s object storage layer, then uses the existing filtering and projection capabilities of the Arrow Datasets library on top of that shim. Then, Skyhook defines a custom “file format” in the Arrow Datasets layer. Queries against such files get translated to direct requests to Ceph using those new operations, bypassing the traditional POSIX file system layer. After decoding, filtering, and projecting, Ceph sends the Arrow record batches directly to the client, minimizing CPU overhead for encoding/decoding—another optimization Arrow makes possible. The record batches use Arrow’s compression support to further save bandwidth. Skyhook extends Ceph and Arrow Datasets to push queries down to Ceph, reducing the client workload and network traffic. (Figure sourced from “SkyhookDM is now a part of Apache Arrow!”.) Skyhook also optimizes how Parquet files in particular are stored. Parquet files consist of a series of row groups, which each contain a chunk of the rows in a file. When storing such files, Skyhook either pads or splits them so that each row group is stored as its own Ceph object. By striping or splitting the file in this way, we can parallelize scanning at sub-file granularity across the Ceph nodes for further performance improvements. Applications In benchmarks, Skyhook has minimal storage-side CPU overhead and virtually eliminates client-side CPU usage. Scaling the storage cluster decreases query latency commensurately. For systems like Dask that use the Arrow Datasets API, this means that just by switching to the Skyhook file format, we can speed up dataset scans, reduce the amount of data that needs to be transferred, and free up CPU resources for computations. Skyhook frees the client CPU to do useful work, while minimally impacting the work done by the storage machines. The client still does some work in decompressing the LZ4-compressed record batches sent by Skyhook. (Note that the storage cluster plot is cumulative.) Of course, the ideas behind Skyhook apply to other systems adjacent to and beyond Apache Arrow. For example, “lakehouse” systems like Apache Iceberg and Delta Lake also build on distributed storage systems, and can naturally benefit from Skyhook to offload computation. Additionally, in-memory SQL-based query engines like DuckDB, which integrate seamlessly with Apache Arrow, can benefit from Skyhook by offloading portions of SQL queries. Summary and Acknowledgements Skyhook, available in Arrow 7.0.0, builds on research into programmable storage systems. By pushing filters and projections to the storage layer, we can speed up dataset scans by freeing precious CPU resources on the client, reducing the amount of data sent across the network, and better utilizing the scalability of systems like Ceph. To get started, just build Arrow with Skyhook enabled, deploy the Skyhook object class extensions to Ceph (see “Usage” in the announcement post), and then use the SkyhookFileFormat to construct an Arrow dataset. A small code example is shown here. // Licensed to the Apache Software Foundation (ASF) under one // or more contributor license agreements. See the NOTICE file // distributed with this work for additional information // regarding copyright ownership. The ASF licenses this file // to you under the Apache License, Version 2.0 (the // &quot;License&quot;); you may not use this file except in compliance // with the License. You may obtain a copy of the License at // // http://www.apache.org/licenses/LICENSE-2.0 // // Unless required by applicable law or agreed to in writing, // software distributed under the License is distributed on an // &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY // KIND, either express or implied. See the License for the // specific language governing permissions and limitations // under the License. #include &lt;arrow/compute/api.h&gt; #include &lt;arrow/dataset/api.h&gt; #include &lt;arrow/filesystem/api.h&gt; #include &lt;arrow/table.h&gt; #include &lt;skyhook/client/file_skyhook.h&gt; #include &lt;cstdlib&gt; #include &lt;iostream&gt; #include &lt;memory&gt; #include &lt;string&gt; namespace cp = arrow::compute; namespace ds = arrow::dataset; namespace fs = arrow::fs; // Demonstrate reading a dataset via Skyhook. arrow::Status ScanDataset() { // Configure SkyhookFileFormat to connect to our Ceph cluster. std::string ceph_config_path = &quot;/etc/ceph/ceph.conf&quot;; std::string ceph_data_pool = &quot;cephfs_data&quot;; std::string ceph_user_name = &quot;client.admin&quot;; std::string ceph_cluster_name = &quot;ceph&quot;; std::string ceph_cls_name = &quot;skyhook&quot;; std::shared_ptr&lt;skyhook::RadosConnCtx&gt; rados_ctx = std::make_shared&lt;skyhook::RadosConnCtx&gt;(ceph_config_path, ceph_data_pool, ceph_user_name, ceph_cluster_name, ceph_cls_name); ARROW_ASSIGN_OR_RAISE(auto format, skyhook::SkyhookFileFormat::Make(rados_ctx, &quot;parquet&quot;)); // Create the filesystem. std::string root; ARROW_ASSIGN_OR_RAISE(auto fs, fs::FileSystemFromUri(&quot;file:///mnt/cephfs/nyc&quot;, &amp;root)); // Create our dataset. fs::FileSelector selector; selector.base_dir = root; selector.recursive = true; ds::FileSystemFactoryOptions options; options.partitioning = std::make_shared&lt;ds::HivePartitioning&gt;( arrow::schema({arrow::field(&quot;payment_type&quot;, arrow::int32()), arrow::field(&quot;VendorID&quot;, arrow::int32())})); ARROW_ASSIGN_OR_RAISE(auto factory, ds::FileSystemDatasetFactory::Make(fs, std::move(selector), std::move(format), options)); ds::InspectOptions inspect_options; ds::FinishOptions finish_options; ARROW_ASSIGN_OR_RAISE(auto schema, factory-&gt;Inspect(inspect_options)); ARROW_ASSIGN_OR_RAISE(auto dataset, factory-&gt;Finish(finish_options)); // Scan the dataset. auto filter = cp::greater(cp::field_ref(&quot;payment_type&quot;), cp::literal(2)); ARROW_ASSIGN_OR_RAISE(auto scanner_builder, dataset-&gt;NewScan()); ARROW_RETURN_NOT_OK(scanner_builder-&gt;Filter(filter)); ARROW_RETURN_NOT_OK(scanner_builder-&gt;UseThreads(true)); ARROW_ASSIGN_OR_RAISE(auto scanner, scanner_builder-&gt;Finish()); ARROW_ASSIGN_OR_RAISE(auto table, scanner-&gt;ToTable()); std::cout &lt;&lt; &quot;Got &quot; &lt;&lt; table-&gt;num_rows() &lt;&lt; &quot; rows&quot; &lt;&lt; std::endl; return arrow::Status::OK(); } int main(int, char**) { auto status = ScanDataset(); if (!status.ok()) { std::cerr &lt;&lt; status.message() &lt;&lt; std::endl; return EXIT_FAILURE; } return EXIT_SUCCESS; } We would like to acknowledge Ivo Jimenez, Jeff LeFevre, Michael Sevilla, and Noah Watkins for their contributions to this project. This work was supported in part by the National Science Foundation under Cooperative Agreement OAC-1836650, the US Department of Energy ASCR DE-NA0003525 (FWP 20-023266), and the Center for Research in Open Source Software (cross.ucsc.edu). For more information, see these papers and articles: SkyhookDM: Data Processing in Ceph with Programmable Storage. (USENIX ;login: issue Summer 2020, Vol. 45, No. 2) SkyhookDM is now a part of Apache Arrow! (Medium) Towards an Arrow-native Storage System. (arXiv.org)" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2022/01/31/skyhook-bringing-computation-to-storage-with-apache-arrow/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2022/01/31/skyhook-bringing-computation-to-storage-with-apache-arrow/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-01-31T00:00:00-05:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="twitter:title" content="Skyhook: Bringing Computation to Storage with Apache Arrow" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@Jayjeet Chakraborty, Carlos Maltzahn, David Li, Tom Drabas" />
+<script type="application/ld+json">
+{"mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2022/01/31/skyhook-bringing-computation-to-storage-with-apache-arrow/"},"image":"https://arrow.apache.org/img/arrow.png","description":"CPUs, memory, storage, and network bandwidth get better every year, but increasingly, they’re improving in different dimensions. Processors are faster, but their memory bandwidth hasn’t kept up; meanwhile, cloud computing has led to storage being separated from applications across a network link. This divergent evolution means we need to rethink where and when we perform computation to best make use of the resources available to us. For example, when querying a dataset on a storage system like Ceph or Amazon S3, all the work of filtering data gets done by the client. Data has to be transferred over the network, and then the client has to spend precious CPU cycles decoding it, only to throw it away in the end due to a filter. While formats like Apache Parquet enable some optimizations, fundamentally, the responsibility is all on the client. Meanwhile, even though the storage system has its own compute capabilities, it’s relegated to just serving “dumb bytes”. Thanks to the Center for Research in Open Source Software (CROSS) at the University of California, Santa Cruz, Apache Arrow 7.0.0 includes Skyhook, an Arrow Datasets extension that solves this problem by using the storage layer to reduce client resource utilization. We’ll examine the developments surrounding Skyhook as well as how Skyhook works. Introducing Programmable Storage Skyhook is an example of programmable storage: exposing higher-level functionality from storage systems for clients to build upon. This allows us to make better use of existing resources (both hardware and development effort) in such systems, reduces the implementation burden of common operations for each client, and enables such operations to scale with the storage layer. Historically, big data systems like Apache Hadoop have tried to colocate computation and storage for efficiency. More recently, cloud and distributed computing have disaggregated computation and storage for flexibility and scalability, but at a performance cost. Programmable storage strikes a balance between these goals, allowing some operations to be run right next to the data while still keeping data and compute separate at a higher level. In particular, Skyhook builds on Ceph, a distributed storage system that scales to exabytes of data while being reliable and flexible. With its Object Class SDK, Ceph enables programmable storage by allowing extensions that define new object types with custom functionality. Skyhook Architecture Let’s look at how Skyhook applies these ideas. Overall, the idea is simple: the client should be able to ask Ceph to perform basic operations like decoding files, filtering the data, and selecting columns. That way, the work gets done using existing storage cluster resources, which means it’s both adjacent to the data and can scale with the cluster size. Also, this reduces the data transferred over the network, and of course reduces the client workload. On the storage system side, Skyhook uses the Ceph Object Class SDK to define scan operations on data stored in Parquet or Feather format. To implement these operations, Skyhook first implements a file system shim in Ceph’s object storage layer, then uses the existing filtering and projection capabilities of the Arrow Datasets library on top of that shim. Then, Skyhook defines a custom “file format” in the Arrow Datasets layer. Queries against such files get translated to direct requests to Ceph using those new operations, bypassing the traditional POSIX file system layer. After decoding, filtering, and projecting, Ceph sends the Arrow record batches directly to the client, minimizing CPU overhead for encoding/decoding—another optimization Arrow makes possible. The record batches use Arrow’s compression support to further save bandwidth. Skyhook extends Ceph and Arrow Datasets to push queries down to Ceph, reducing the client workload and network traffic. (Figure sourced from “SkyhookDM is now a part of Apache Arrow!”.) Skyhook also optimizes how Parquet files in particular are stored. Parquet files consist of a series of row groups, which each contain a chunk of the rows in a file. When storing such files, Skyhook either pads or splits them so that each row group is stored as its own Ceph object. By striping or splitting the file in this way, we can parallelize scanning at sub-file granularity across the Ceph nodes for further performance improvements. Applications In benchmarks, Skyhook has minimal storage-side CPU overhead and virtually eliminates client-side CPU usage. Scaling the storage cluster decreases query latency commensurately. For systems like Dask that use the Arrow Datasets API, this means that just by switching to the Skyhook file format, we can speed up dataset scans, reduce the amount of data that needs to be transferred, and free up CPU resources for computations. Skyhook frees the client CPU to do useful work, while minimally impacting the work done by the storage machines. The client still does some work in decompressing the LZ4-compressed record batches sent by Skyhook. (Note that the storage cluster plot is cumulative.) Of course, the ideas behind Skyhook apply to other systems adjacent to and beyond Apache Arrow. For example, “lakehouse” systems like Apache Iceberg and Delta Lake also build on distributed storage systems, and can naturally benefit from Skyhook to offload computation. Additionally, in-memory SQL-based query engines like DuckDB, which integrate seamlessly with Apache Arrow, can benefit from Skyhook by offloading portions of SQL queries. Summary and Acknowledgements Skyhook, available in Arrow 7.0.0, builds on research into programmable storage systems. By pushing filters and projections to the storage layer, we can speed up dataset scans by freeing precious CPU resources on the client, reducing the amount of data sent across the network, and better utilizing the scalability of systems like Ceph. To get started, just build Arrow with Skyhook enabled, deploy the Skyhook object class extensions to Ceph (see “Usage” in the announcement post), and then use the SkyhookFileFormat to construct an Arrow dataset. A small code example is shown here. // Licensed to the Apache Software Foundation (ASF) under one // or more contributor license agreements. See the NOTICE file // distributed with this work for additional information // regarding copyright ownership. The ASF licenses this file // to you under the Apache License, Version 2.0 (the // &quot;License&quot;); you may not use this file except in compliance // with the License. You may obtain a copy of the License at // // http://www.apache.org/licenses/LICENSE-2.0 // // Unless required by applicable law or agreed to in writing, // software distributed under the License is distributed on an // &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY // KIND, either express or implied. See the License for the // specific language governing permissions and limitations // under the License. #include &lt;arrow/compute/api.h&gt; #include &lt;arrow/dataset/api.h&gt; #include &lt;arrow/filesystem/api.h&gt; #include &lt;arrow/table.h&gt; #include &lt;skyhook/client/file_skyhook.h&gt; #include &lt;cstdlib&gt; #include &lt;iostream&gt; #include &lt;memory&gt; #include &lt;string&gt; namespace cp = arrow::compute; namespace ds = arrow::dataset; namespace fs = arrow::fs; // Demonstrate reading a dataset via Skyhook. arrow::Status ScanDataset() { // Configure SkyhookFileFormat to connect to our Ceph cluster. std::string ceph_config_path = &quot;/etc/ceph/ceph.conf&quot;; std::string ceph_data_pool = &quot;cephfs_data&quot;; std::string ceph_user_name = &quot;client.admin&quot;; std::string ceph_cluster_name = &quot;ceph&quot;; std::string ceph_cls_name = &quot;skyhook&quot;; std::shared_ptr&lt;skyhook::RadosConnCtx&gt; rados_ctx = std::make_shared&lt;skyhook::RadosConnCtx&gt;(ceph_config_path, ceph_data_pool, ceph_user_name, ceph_cluster_name, ceph_cls_name); ARROW_ASSIGN_OR_RAISE(auto format, skyhook::SkyhookFileFormat::Make(rados_ctx, &quot;parquet&quot;)); // Create the filesystem. std::string root; ARROW_ASSIGN_OR_RAISE(auto fs, fs::FileSystemFromUri(&quot;file:///mnt/cephfs/nyc&quot;, &amp;root)); // Create our dataset. fs::FileSelector selector; selector.base_dir = root; selector.recursive = true; ds::FileSystemFactoryOptions options; options.partitioning = std::make_shared&lt;ds::HivePartitioning&gt;( arrow::schema({arrow::field(&quot;payment_type&quot;, arrow::int32()), arrow::field(&quot;VendorID&quot;, arrow::int32())})); ARROW_ASSIGN_OR_RAISE(auto factory, ds::FileSystemDatasetFactory::Make(fs, std::move(selector), std::move(format), options)); ds::InspectOptions inspect_options; ds::FinishOptions finish_options; ARROW_ASSIGN_OR_RAISE(auto schema, factory-&gt;Inspect(inspect_options)); ARROW_ASSIGN_OR_RAISE(auto dataset, factory-&gt;Finish(finish_options)); // Scan the dataset. auto filter = cp::greater(cp::field_ref(&quot;payment_type&quot;), cp::literal(2)); ARROW_ASSIGN_OR_RAISE(auto scanner_builder, dataset-&gt;NewScan()); ARROW_RETURN_NOT_OK(scanner_builder-&gt;Filter(filter)); ARROW_RETURN_NOT_OK(scanner_builder-&gt;UseThreads(true)); ARROW_ASSIGN_OR_RAISE(auto scanner, scanner_builder-&gt;Finish()); ARROW_ASSIGN_OR_RAISE(auto table, scanner-&gt;ToTable()); std::cout &lt;&lt; &quot;Got &quot; &lt;&lt; table-&gt;num_rows() &lt;&lt; &quot; rows&quot; &lt;&lt; std::endl; return arrow::Status::OK(); } int main(int, char**) { auto status = ScanDataset(); if (!status.ok()) { std::cerr &lt;&lt; status.message() &lt;&lt; std::endl; return EXIT_FAILURE; } return EXIT_SUCCESS; } We would like to acknowledge Ivo Jimenez, Jeff LeFevre, Michael Sevilla, and Noah Watkins for their contributions to this project. This work was supported in part by the National Science Foundation under Cooperative Agreement OAC-1836650, the US Department of Energy ASCR DE-NA0003525 (FWP 20-023266), and the Center for Research in Open Source Software (cross.ucsc.edu). For more information, see these papers and articles: SkyhookDM: Data Processing in Ceph with Programmable Storage. (USENIX ;login: issue Summer 2020, Vol. 45, No. 2) SkyhookDM is now a part of Apache Arrow! (Medium) Towards an Arrow-native Storage System. (arXiv.org)","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"Jayjeet Chakraborty, Carlos Maltzahn, David Li, Tom Drabas"},"headline":"Skyhook: Bringing Computation to Storage with Apache Arrow","dateModified":"2022-01-31T00:00:00-05:00","datePublished":"2022-01-31T00:00:00-05:00","url":"https://arrow.apache.org/blog/2022/01/31/skyhook-bringing-computation-to-storage-with-apache-arrow/","author":{"@type":"Person","name":"Jayjeet Chakraborty, Carlos Maltzahn, David Li, Tom Drabas"},"@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments)};
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/datafusion">DataFusion</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://issues.apache.org/jira/browse/ARROW">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="http://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="http://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="http://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Skyhook: Bringing Computation to Storage with Apache Arrow
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    31 Jan 2022
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Jayjeet Chakraborty, Carlos Maltzahn, David Li, Tom Drabas
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p>CPUs, memory, storage, and network bandwidth get better every year, but increasingly, they’re improving in different dimensions.
+Processors are faster, but their memory bandwidth hasn’t kept up; meanwhile, cloud computing has led to storage being separated from applications across a network link.
+This divergent evolution means we need to rethink where and when we perform computation to best make use of the resources available to us.</p>
+
+<p>For example, when querying a dataset on a storage system like Ceph or Amazon S3, all the work of filtering data gets done by the client.
+Data has to be transferred over the network, and then the client has to spend precious CPU cycles decoding it, only to throw it away in the end due to a filter.
+While formats like Apache Parquet enable some optimizations, fundamentally, the responsibility is all on the client.
+Meanwhile, even though the storage system has its own compute capabilities, it’s relegated to just serving “dumb bytes”.</p>
+
+<p>Thanks to the <a href="https://cross.ucsc.edu/">Center for Research in Open Source Software</a> (CROSS) at the University of California, Santa Cruz, Apache Arrow 7.0.0 includes Skyhook, an <a href="https://arrow.apache.org/docs/cpp/dataset.html">Arrow Datasets</a> extension that solves this problem by using the storage layer to reduce client resource utilization.
+We’ll examine the developments surrounding Skyhook as well as how Skyhook works.</p>
+
+<h2 id="introducing-programmable-storage">Introducing Programmable Storage</h2>
+
+<p>Skyhook is an example of programmable storage: exposing higher-level functionality from storage systems for clients to build upon.
+This allows us to make better use of existing resources (both hardware and development effort) in such systems, reduces the implementation burden of common operations for each client, and enables such operations to scale with the storage layer.</p>
+
+<p>Historically, big data systems like Apache Hadoop have tried to colocate computation and storage for efficiency.
+More recently, cloud and distributed computing have disaggregated computation and storage for flexibility and scalability, but at a performance cost.
+Programmable storage strikes a balance between these goals, allowing some operations to be run right next to the data while still keeping data and compute separate at a higher level.</p>
+
+<p>In particular, Skyhook builds on <a href="https://ceph.io/en/">Ceph</a>, a distributed storage system that scales to exabytes of data while being reliable and flexible.
+With its Object Class SDK, Ceph enables programmable storage by allowing extensions that define new object types with custom functionality.</p>
+
+<h2 id="skyhook-architecture">Skyhook Architecture</h2>
+
+<p>Let’s look at how Skyhook applies these ideas.
+Overall, the idea is simple: the client should be able to ask Ceph to perform basic operations like decoding files, filtering the data, and selecting columns.
+That way, the work gets done using existing storage cluster resources, which means it’s both adjacent to the data and can scale with the cluster size.
+Also, this reduces the data transferred over the network, and of course reduces the client workload.</p>
+
+<p>On the storage system side, Skyhook uses the Ceph Object Class SDK to define scan operations on data stored in Parquet or Feather format.
+To implement these operations, Skyhook first implements a file system shim in Ceph’s object storage layer, then uses the existing filtering and projection capabilities of the Arrow Datasets library on top of that shim.</p>
+
+<p>Then, Skyhook defines a custom “file format” in the Arrow Datasets layer.
+Queries against such files get translated to direct requests to Ceph using those new operations, bypassing the traditional POSIX file system layer.
+After decoding, filtering, and projecting, Ceph sends the Arrow record batches directly to the client, minimizing CPU overhead for encoding/decoding—another optimization Arrow makes possible.
+The record batches use Arrow’s compression support to further save bandwidth.</p>
+
+<figure>
+  <img src="/img/20220131-skyhook-architecture.png" alt="Skyhook Architecture" width="100%" class="img-responsive" />
+  <figcaption>
+    <p>Skyhook extends Ceph and Arrow Datasets to push queries down to Ceph, reducing the client workload and network traffic.
+(Figure sourced from <a href="https://jayjeetc.medium.com/skyhookdm-is-now-a-part-of-apache-arrow-e5d7b9a810ba">“SkyhookDM is now a part of Apache Arrow!”</a>.)</p>
+  </figcaption>
+</figure>
+
+<p>Skyhook also optimizes how Parquet files in particular are stored.
+Parquet files consist of a series of row groups, which each contain a chunk of the rows in a file.
+When storing such files, Skyhook either pads or splits them so that each row group is stored as its own Ceph object.
+By striping or splitting the file in this way, we can parallelize scanning at sub-file granularity across the Ceph nodes for further performance improvements.</p>
+
+<h2 id="applications">Applications</h2>
+
+<p>In benchmarks, Skyhook has minimal storage-side CPU overhead and virtually eliminates client-side CPU usage.
+Scaling the storage cluster decreases query latency commensurately.
+For systems like Dask that use the Arrow Datasets API, this means that just by switching to the Skyhook file format, we can speed up dataset scans, reduce the amount of data that needs to be transferred, and free up CPU resources for computations.</p>
+
+<figure>
+  <img src="/img/20220131-skyhook-cpu.png" alt="In benchmarks, Skyhook reduces client CPU usage while minimally impacting storage cluster CPU usage." width="100%" class="img-responsive" />
+  <figcaption>
+    Skyhook frees the client CPU to do useful work, while minimally impacting the work done by the storage machines.
+    The client still does some work in decompressing the LZ4-compressed record batches sent by Skyhook.
+    (Note that the storage cluster plot is cumulative.)
+  </figcaption>
+</figure>
+
+<p>Of course, the ideas behind Skyhook apply to other systems adjacent to and beyond Apache Arrow.
+For example, “lakehouse” systems like Apache Iceberg and Delta Lake also build on distributed storage systems, and can naturally benefit from Skyhook to offload computation.
+Additionally, in-memory SQL-based query engines like <a href="//blog/2021/12/03/arrow-duckdb/">DuckDB</a>, which integrate seamlessly with Apache Arrow, can benefit from Skyhook by offloading portions of SQL queries.</p>
+
+<h2 id="summary-and-acknowledgements">Summary and Acknowledgements</h2>
+
+<p>Skyhook, available in Arrow 7.0.0, builds on research into programmable storage systems.
+By pushing filters and projections to the storage layer, we can speed up dataset scans by freeing precious CPU resources on the client, reducing the amount of data sent across the network, and better utilizing the scalability of systems like Ceph.
+To get started, just <a href="https://arrow.apache.org/docs/developers/cpp/building.html">build Arrow</a> with Skyhook enabled, deploy the Skyhook object class extensions to Ceph (see “Usage” in the <a href="https://jayjeetc.medium.com/skyhookdm-is-now-a-part-of-apache-arrow-e5d7b9a810ba">announcement post</a>), and then use the <code class="language-plaintext highlighter-rouge">SkyhookFileFormat</code> to construct an Arrow dataset.
+A small code example is shown here.</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Licensed to the Apache Software Foundation (ASF) under one</span>
+<span class="c1">// or more contributor license agreements. See the NOTICE file</span>
+<span class="c1">// distributed with this work for additional information</span>
+<span class="c1">// regarding copyright ownership. The ASF licenses this file</span>
+<span class="c1">// to you under the Apache License, Version 2.0 (the</span>
+<span class="c1">// "License"); you may not use this file except in compliance</span>
+<span class="c1">// with the License. You may obtain a copy of the License at</span>
+<span class="c1">//</span>
+<span class="c1">// http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">//</span>
+<span class="c1">// Unless required by applicable law or agreed to in writing,</span>
+<span class="c1">// software distributed under the License is distributed on an</span>
+<span class="c1">// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</span>
+<span class="c1">// KIND, either express or implied. See the License for the</span>
+<span class="c1">// specific language governing permissions and limitations</span>
+<span class="c1">// under the License.</span>
+
+<span class="cp">#include &lt;arrow/compute/api.h&gt;
+#include &lt;arrow/dataset/api.h&gt;
+#include &lt;arrow/filesystem/api.h&gt;
+#include &lt;arrow/table.h&gt;
+#include &lt;skyhook/client/file_skyhook.h&gt;
+</span>
+<span class="cp">#include &lt;cstdlib&gt;
+#include &lt;iostream&gt;
+#include &lt;memory&gt;
+#include &lt;string&gt;
+</span>
+<span class="k">namespace</span> <span class="n">cp</span> <span class="o">=</span> <span class="n">arrow</span><span class="o">::</span><span class="n">compute</span><span class="p">;</span>
+<span class="k">namespace</span> <span class="n">ds</span> <span class="o">=</span> <span class="n">arrow</span><span class="o">::</span><span class="n">dataset</span><span class="p">;</span>
+<span class="k">namespace</span> <span class="n">fs</span> <span class="o">=</span> <span class="n">arrow</span><span class="o">::</span><span class="n">fs</span><span class="p">;</span>
+
+<span class="c1">// Demonstrate reading a dataset via Skyhook.</span>
+<span class="n">arrow</span><span class="o">::</span><span class="n">Status</span> <span class="nf">ScanDataset</span><span class="p">()</span> <span class="p">{</span>
+  <span class="c1">// Configure SkyhookFileFormat to connect to our Ceph cluster.</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_config_path</span> <span class="o">=</span> <span class="s">"/etc/ceph/ceph.conf"</span><span class="p">;</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_data_pool</span> <span class="o">=</span> <span class="s">"cephfs_data"</span><span class="p">;</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_user_name</span> <span class="o">=</span> <span class="s">"client.admin"</span><span class="p">;</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_cluster_name</span> <span class="o">=</span> <span class="s">"ceph"</span><span class="p">;</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_cls_name</span> <span class="o">=</span> <span class="s">"skyhook"</span><span class="p">;</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">skyhook</span><span class="o">::</span><span class="n">RadosConnCtx</span><span class="o">&gt;</span> <span class="n">rados_ctx</span> <span class="o">=</span>
+      <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">skyhook</span><span class="o">::</span><span class="n">RadosConnCtx</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ceph_config_path</span><span class="p">,</span> <span class="n">ceph_data_pool</span><span class="p">,</span>
+                                              <span class="n">ceph_user_name</span><span class="p">,</span> <span class="n">ceph_cluster_name</span><span class="p">,</span>
+                                              <span class="n">ceph_cls_name</span><span class="p">);</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">format</span><span class="p">,</span>
+                        <span class="n">skyhook</span><span class="o">::</span><span class="n">SkyhookFileFormat</span><span class="o">::</span><span class="n">Make</span><span class="p">(</span><span class="n">rados_ctx</span><span class="p">,</span> <span class="s">"parquet"</span><span class="p">));</span>
+
+  <span class="c1">// Create the filesystem.</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">root</span><span class="p">;</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">fs</span><span class="p">,</span> <span class="n">fs</span><span class="o">::</span><span class="n">FileSystemFromUri</span><span class="p">(</span><span class="s">"file:///mnt/cephfs/nyc"</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">root</span><span class="p">));</span>
+
+  <span class="c1">// Create our dataset.</span>
+  <span class="n">fs</span><span class="o">::</span><span class="n">FileSelector</span> <span class="n">selector</span><span class="p">;</span>
+  <span class="n">selector</span><span class="p">.</span><span class="n">base_dir</span> <span class="o">=</span> <span class="n">root</span><span class="p">;</span>
+  <span class="n">selector</span><span class="p">.</span><span class="n">recursive</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+
+  <span class="n">ds</span><span class="o">::</span><span class="n">FileSystemFactoryOptions</span> <span class="n">options</span><span class="p">;</span>
+  <span class="n">options</span><span class="p">.</span><span class="n">partitioning</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">ds</span><span class="o">::</span><span class="n">HivePartitioning</span><span class="o">&gt;</span><span class="p">(</span>
+      <span class="n">arrow</span><span class="o">::</span><span class="n">schema</span><span class="p">({</span><span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">"payment_type"</span><span class="p">,</span> <span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">()),</span>
+                     <span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">"VendorID"</span><span class="p">,</span> <span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">())}));</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">factory</span><span class="p">,</span>
+                        <span class="n">ds</span><span class="o">::</span><span class="n">FileSystemDatasetFactory</span><span class="o">::</span><span class="n">Make</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">selector</span><span class="p">),</span>
+                                                           <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">format</span><span class="p">),</span> <span class="n">options</span><span class="p">));</span>
+
+  <span class="n">ds</span><span class="o">::</span><span class="n">InspectOptions</span> <span class="n">inspect_options</span><span class="p">;</span>
+  <span class="n">ds</span><span class="o">::</span><span class="n">FinishOptions</span> <span class="n">finish_options</span><span class="p">;</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">schema</span><span class="p">,</span> <span class="n">factory</span><span class="o">-&gt;</span><span class="n">Inspect</span><span class="p">(</span><span class="n">inspect_options</span><span class="p">));</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">factory</span><span class="o">-&gt;</span><span class="n">Finish</span><span class="p">(</span><span class="n">finish_options</span><span class="p">));</span>
+
+  <span class="c1">// Scan the dataset.</span>
+  <span class="k">auto</span> <span class="n">filter</span> <span class="o">=</span> <span class="n">cp</span><span class="o">::</span><span class="n">greater</span><span class="p">(</span><span class="n">cp</span><span class="o">::</span><span class="n">field_ref</span><span class="p">(</span><span class="s">"payment_type"</span><span class="p">),</span> <span class="n">cp</span><span class="o">::</span><span class="n">literal</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">scanner_builder</span><span class="p">,</span> <span class="n">dataset</span><span class="o">-&gt;</span><span class="n">NewScan</span><span class="p">());</span>
+  <span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">scanner_builder</span><span class="o">-&gt;</span><span class="n">Filter</span><span class="p">(</span><span class="n">filter</span><span class="p">));</span>
+  <span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">scanner_builder</span><span class="o">-&gt;</span><span class="n">UseThreads</span><span class="p">(</span><span class="nb">true</span><span class="p">));</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">scanner</span><span class="p">,</span> <span class="n">scanner_builder</span><span class="o">-&gt;</span><span class="n">Finish</span><span class="p">());</span>
+
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">table</span><span class="p">,</span> <span class="n">scanner</span><span class="o">-&gt;</span><span class="n">ToTable</span><span class="p">());</span>
+
+  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Got "</span> <span class="o">&lt;&lt;</span> <span class="n">table</span><span class="o">-&gt;</span><span class="n">num_rows</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">" rows"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+  <span class="k">return</span> <span class="n">arrow</span><span class="o">::</span><span class="n">Status</span><span class="o">::</span><span class="n">OK</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">auto</span> <span class="n">status</span> <span class="o">=</span> <span class="n">ScanDataset</span><span class="p">();</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">status</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cerr</span> <span class="o">&lt;&lt;</span> <span class="n">status</span><span class="p">.</span><span class="n">message</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">EXIT_SUCCESS</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We would like to acknowledge Ivo Jimenez, Jeff LeFevre, Michael Sevilla, and Noah Watkins for their contributions to this project.</p>
+
+<p>This work was supported in part by the National Science Foundation under Cooperative Agreement OAC-1836650, the US Department of Energy ASCR DE-NA0003525 (FWP 20-023266), and the Center for Research in Open Source Software (<a href="https://cross.ucsc.edu/">cross.ucsc.edu</a>).</p>
+
+<p>For more information, see these papers and articles:</p>
+
+<ul>
+  <li><a href="https://www.usenix.org/publications/login/summer2020/lefevre">SkyhookDM: Data Processing in Ceph with Programmable Storage.</a> (USENIX <em>;login:</em> issue Summer 2020, Vol. 45, No. 2)</li>
+  <li><a href="https://jayjeetc.medium.com/skyhookdm-is-now-a-part-of-apache-arrow-e5d7b9a810ba">SkyhookDM is now a part of Apache Arrow!</a> (Medium)</li>
+  <li><a href="https://arxiv.org/abs/2105.09894">Towards an Arrow-native Storage System.</a> (arXiv.org)</li>
+</ul>
+
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2022 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
