@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Skyhook: Bringing Computation to Storage with Apache Arrow"
-date: "2022-01-28 00:00:00"
+date: "2022-01-31 00:00:00"
 author: Jayjeet Chakraborty, Carlos Maltzahn, David Li, Tom Drabas
 categories: [application]
 ---
@@ -64,7 +64,7 @@ After decoding, filtering, and projecting, Ceph sends the Arrow record batches d
 The record batches use Arrow’s compression support to further save bandwidth.
 
 <figure>
-  <img src="{{ site.baseurl }}/img/20220121-skyhook-architecture.png"
+  <img src="{{ site.baseurl }}/img/20220131-skyhook-architecture.png"
        alt="Skyhook Architecture"
        width="100%" class="img-responsive">
   <figcaption markdown="1">
@@ -85,7 +85,7 @@ Scaling the storage cluster decreases query latency commensurately.
 For systems like Dask that use the Arrow Datasets API, this means that just by switching to the Skyhook file format, we can speed up dataset scans, reduce the amount of data that needs to be transferred, and free up CPU resources for computations.
 
 <figure>
-  <img src="{{ site.baseurl }}/img/20220121-skyhook-cpu.png"
+  <img src="{{ site.baseurl }}/img/20220131-skyhook-cpu.png"
        alt="In benchmarks, Skyhook reduces client CPU usage while minimally impacting storage cluster CPU usage."
        width="100%" class="img-responsive">
   <figcaption>
