@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Memory Management &#8212; Apache Arrow v7.0.0.dev642</title>
+    <title>Memory Management &#8212; Apache Arrow v8.0.0.dev1</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -33,6 +33,7 @@
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script src="../_static/tabs.js"></script>
     <link rel="canonical" href="https://arrow.apache.org/docs/cpp/memory.html" />
     <link rel="shortcut icon" href="../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -78,7 +79,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        7.0.0.dev642
+        8.0.0.dev1
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -2799,6 +2800,11 @@ function checkPageExistsAndRedirect(event) {
         </a>
        </li>
        <li class="toctree-l4">
+        <a class="reference internal" href="../python/generated/pyarrow.compute.map_lookup.html">
+         pyarrow.compute.map_lookup
+        </a>
+       </li>
+       <li class="toctree-l4">
         <a class="reference internal" href="../python/generated/pyarrow.compute.replace_with_mask.html">
          pyarrow.compute.replace_with_mask
         </a>
@@ -2871,6 +2877,11 @@ function checkPageExistsAndRedirect(event) {
        <li class="toctree-l4">
         <a class="reference internal" href="../python/generated/pyarrow.compute.MakeStructOptions.html">
          pyarrow.compute.MakeStructOptions
+        </a>
+       </li>
+       <li class="toctree-l4">
+        <a class="reference internal" href="../python/generated/pyarrow.compute.MapLookupOptions.html">
+         pyarrow.compute.MapLookupOptions
         </a>
        </li>
        <li class="toctree-l4">
@@ -4330,6 +4341,11 @@ function checkPageExistsAndRedirect(event) {
    </li>
   </ul>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#memory-profiling">
+   Memory Profiling
+  </a>
+ </li>
 </ul>
 
 </nav>
@@ -4522,6 +4538,226 @@ simply do:</p>
    <span class="n">arbitrary_buffer</span><span class="p">,</span> <span class="n">arrow</span><span class="o">::</span><span class="n">default_cpu_memory_manager</span><span class="p">());</span>
 </pre></div>
 </div>
+</div>
+</div>
+<div class="section" id="memory-profiling">
+<h2>Memory Profiling<a class="headerlink" href="#memory-profiling" title="Permalink to this headline">¶</a></h2>
+<p>On Linux, detailed profiles of memory allocations can be generated using
+<code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">record</span></code>, without any need to modify the binaries. These profiles can
+show the traceback in addition to allocation size. This does require debug
+symbols, from either a debug build or a release with debug symbols build.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you profiling Arrow’s tests on another platform, you can run the following
+docker container using archery to access a Linux environment::</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span>archery docker run ubuntu-cpp bash
+/arrow/ci/scripts/cpp_build.sh /arrow /build
+cd build/cpp/debug
+./arrow-array-test # Run a test
+apt-get update
+apt-get install -y linux-tools-generic
+alias perf=/usr/lib/linux-tools/&lt;version-path&gt;/perf
+</pre></div>
+</div>
+</div>
+<p>To track allocations, create probe points on each of the allocator methods used.
+Collecting <code class="docutils literal notranslate"><span class="pre">$params</span></code> allows us to record the size of the allocations
+requested, while collecting <code class="docutils literal notranslate"><span class="pre">$retval</span></code> allows us to record the address of
+recorded allocations, so we can correlate them with the call to free/de-allocate.</p>
+<div class="sphinx-tabs docutils container">
+<div aria-label="Tabbed content" class="closeable" role="tablist"><button aria-controls="panel-0-0-0" aria-selected="true" class="sphinx-tabs-tab" id="tab-0-0-0" name="0-0" role="tab" tabindex="0">jemalloc</button><button aria-controls="panel-0-0-1" aria-selected="false" class="sphinx-tabs-tab" id="tab-0-0-1" name="0-1" role="tab" tabindex="-1">mimalloc</button></div><div aria-labelledby="tab-0-0-0" class="sphinx-tabs-panel" id="panel-0-0-0" name="0-0" role="tabpanel" tabindex="0"><div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span>perf probe -x libarrow.so je_arrow_mallocx &#39;$params&#39;
+perf probe -x libarrow.so je_arrow_mallocx%return &#39;$retval&#39;
+perf probe -x libarrow.so je_arrow_rallocx &#39;$params&#39;
+perf probe -x libarrow.so je_arrow_rallocx%return &#39;$retval&#39;
+perf probe -x libarrow.so je_arrow_dallocx &#39;$params&#39;
+PROBE_ARGS=&quot;-e probe_libarrow:je_arrow_mallocx \
+   -e probe_libarrow:je_arrow_mallocx__return \
+   -e probe_libarrow:je_arrow_rallocx \
+   -e probe_libarrow:je_arrow_rallocx__return \
+   -e probe_libarrow:je_arrow_dallocx&quot;
+</pre></div>
+</div>
+</div><div aria-labelledby="tab-0-0-1" class="sphinx-tabs-panel" hidden="true" id="panel-0-0-1" name="0-1" role="tabpanel" tabindex="0"><div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span>perf probe -x libarrow.so mi_malloc_aligned &#39;$params&#39;
+perf probe -x libarrow.so mi_malloc_aligned%return &#39;$retval&#39;
+perf probe -x libarrow.so mi_realloc_aligned &#39;$params&#39;
+perf probe -x libarrow.so mi_realloc_aligned%return &#39;$retval&#39;
+perf probe -x libarrow.so mi_free &#39;$params&#39;
+PROBE_ARGS=&quot;-e probe_libarrow:mi_malloc_aligned \
+   -e probe_libarrow:mi_malloc_aligned__return \
+   -e probe_libarrow:mi_realloc_aligned \
+   -e probe_libarrow:mi_realloc_aligned__return \
+   -e probe_libarrow:mi_free&quot;
+</pre></div>
+</div>
+</div></div>
+<p>Once probes have been set, you can record calls with associated tracebacks using
+<code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">record</span></code>. In this example, we are running the StructArray unit tests in
+Arrow:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span>perf record -g --call-graph dwarf \
+  $PROBE_ARGS \
+  ./arrow-array-test --gtest_filter=StructArray*
+</pre></div>
+</div>
+<p>If you want to profile a running process, you can run <code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">record</span> <span class="pre">-p</span> <span class="pre">&lt;PID&gt;</span></code>
+and it will record until you interrupt with CTRL+C. Alternatively, you can do
+<code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">record</span> <span class="pre">-P</span> <span class="pre">&lt;PID&gt;</span> <span class="pre">sleep</span> <span class="pre">10</span></code> to record for 10 seconds.</p>
+<p>The resulting data can be processed with standard tools to work with perf or
+<code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">script</span></code> can be used to pipe a text format of the data to custom scripts.
+The following script parses <code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">script</span></code> output and prints the output in
+new lines delimited JSON for easier processing.</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">process_perf_events.py</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="c1"># Example non-traceback line</span>
+<span class="c1"># arrow-array-tes 14344 [003]  7501.073802: probe_libarrow:je_arrow_mallocx: (7fbcd20bb640) size=0x80 flags=6</span>
+
+<span class="n">current</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">current_traceback</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+<span class="k">def</span> <span class="nf">new_row</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">current_traceback</span>
+    <span class="n">current</span><span class="p">[</span><span class="s1">&#39;traceback&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_traceback</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
+    <span class="n">current_traceback</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+<span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">:</span>
+        <span class="k">continue</span>
+    <span class="k">elif</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">:</span>
+        <span class="c1"># traceback line</span>
+        <span class="n">current_traceback</span> <span class="o">+=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_row</span><span class="p">()</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39; +&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+
+        <span class="n">parts</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> <span class="c1"># file</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> <span class="c1"># &quot;14344&quot;</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> <span class="c1"># &quot;[003]&quot;</span>
+
+        <span class="n">current</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">))</span>
+        <span class="n">current</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+
+        <span class="n">parts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> <span class="c1"># (7fbcd20bddf0)</span>
+        <span class="k">if</span> <span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;&lt;-&quot;</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
+            <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)</span>
+            <span class="n">params</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="n">current</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span>
+</pre></div>
+</div>
+</div>
+<p>Here’s an example invocation of that script, with a preview of output data:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">perf</span> <span class="n">script</span> <span class="o">|</span> <span class="n">python3</span> <span class="o">/</span><span class="n">arrow</span><span class="o">/</span><span class="n">process_perf_events</span><span class="p">.</span><span class="n">py</span> <span class="o">&gt;</span> <span class="n">processed_events</span><span class="p">.</span><span class="n">jsonl</span>
+<span class="o">&gt;</span> <span class="n">head</span> <span class="n">head</span> <span class="n">processed_events</span><span class="p">.</span><span class="n">jsonl</span> <span class="o">|</span> <span class="n">cut</span> <span class="o">-</span><span class="n">c</span> <span class="o">-</span><span class="mi">120</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.954378</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_mallocx&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;flags&quot;</span><span class="o">:</span> <span class="s">&quot;6&quot;</span><span class="p">,</span> <span class="s">&quot;size&quot;</span><span class="o">:</span> <span class="s">&quot;0x80&quot;</span><span class="p">},</span> <span class="s">&quot;traceback&quot;</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.95443</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_mallocx__return&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;arg1&quot;</span><span class="o">:</span> <span class="s">&quot;0x7f4a97e09000&quot;</span><span class="p">},</span> <span class="s">&quot;traceba</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.95448</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_mallocx&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;flags&quot;</span><span class="o">:</span> <span class="s">&quot;6&quot;</span><span class="p">,</span> <span class="s">&quot;size&quot;</span><span class="o">:</span> <span class="s">&quot;0x40&quot;</span><span class="p">},</span> <span class="s">&quot;traceback&quot;</span><span class="o">:</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.954486</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_mallocx__return&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;arg1&quot;</span><span class="o">:</span> <span class="s">&quot;0x7f4a97e0a000&quot;</span><span class="p">},</span> <span class="s">&quot;traceb</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.954502</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_rallocx&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;flags&quot;</span><span class="o">:</span> <span class="s">&quot;6&quot;</span><span class="p">,</span> <span class="s">&quot;size&quot;</span><span class="o">:</span> <span class="s">&quot;0x40&quot;</span><span class="p">,</span> <span class="s">&quot;ptr&quot;</span><span class="o">:</span> <span class="s">&quot;0x7f</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.954507</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_rallocx__return&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;arg1&quot;</span><span class="o">:</span> <span class="s">&quot;0x7f4a97e0a040&quot;</span><span class="p">},</span> <span class="s">&quot;traceb</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.954796</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_mallocx&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;flags&quot;</span><span class="o">:</span> <span class="s">&quot;6&quot;</span><span class="p">,</span> <span class="s">&quot;size&quot;</span><span class="o">:</span> <span class="s">&quot;0x40&quot;</span><span class="p">},</span> <span class="s">&quot;traceback&quot;</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.954805</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_mallocx__return&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;arg1&quot;</span><span class="o">:</span> <span class="s">&quot;0x7f4a97e0a080&quot;</span><span class="p">},</span> <span class="s">&quot;traceb</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.954817</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_mallocx&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;flags&quot;</span><span class="o">:</span> <span class="s">&quot;6&quot;</span><span class="p">,</span> <span class="s">&quot;size&quot;</span><span class="o">:</span> <span class="s">&quot;0x40&quot;</span><span class="p">},</span> <span class="s">&quot;traceback&quot;</span>
+<span class="p">{</span><span class="s">&quot;time&quot;</span><span class="o">:</span> <span class="mf">14814.95482</span><span class="p">,</span> <span class="s">&quot;event&quot;</span><span class="o">:</span> <span class="s">&quot;probe_libarrow:je_arrow_mallocx__return&quot;</span><span class="p">,</span> <span class="s">&quot;params&quot;</span><span class="o">:</span> <span class="p">{</span><span class="s">&quot;arg1&quot;</span><span class="o">:</span> <span class="s">&quot;0x7f4a97e0a0c0&quot;</span><span class="p">},</span> <span class="s">&quot;traceba</span>
+</pre></div>
+</div>
+<p>From there one can answer a number of questions. For example, the following
+script will find which allocations were never freed, and print the associated
+tracebacks along with the count of dangling allocations:</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">count_tracebacks.py</span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&#39;&#39;&#39;Find tracebacks of allocations with no corresponding free&#39;&#39;&#39;</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="n">allocated</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">:</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;probe_libarrow:je_arrow_mallocx__return&quot;</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="s1">&#39;arg1&#39;</span><span class="p">]</span>
+        <span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;traceback&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;probe_libarrow:je_arrow_rallocx&quot;</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="s1">&#39;ptr&#39;</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;probe_libarrow:je_arrow_rallocx__return&quot;</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="s1">&#39;arg1&#39;</span><span class="p">]</span>
+        <span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;traceback&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;probe_libarrow:je_arrow_dallocx&quot;</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="s1">&#39;ptr&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">address</span> <span class="ow">in</span> <span class="n">allocated</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;probe_libarrow:mi_malloc_aligned__return&quot;</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="s1">&#39;arg1&#39;</span><span class="p">]</span>
+        <span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;traceback&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;probe_libarrow:mi_realloc_aligned&quot;</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="s1">&#39;p&#39;</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;probe_libarrow:mi_realloc_aligned__return&quot;</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="s1">&#39;arg1&#39;</span><span class="p">]</span>
+        <span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;traceback&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;event&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;probe_libarrow:mi_free&quot;</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;params&#39;</span><span class="p">][</span><span class="s1">&#39;p&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">address</span> <span class="ow">in</span> <span class="n">allocated</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span>
+
+<span class="n">traceback_counts</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">traceback</span> <span class="ow">in</span> <span class="n">allocated</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+    <span class="n">traceback_counts</span><span class="p">[</span><span class="n">traceback</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="k">for</span> <span class="n">traceback</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">traceback_counts</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Num of dangling allocations:&quot;</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">traceback</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The script can be invoked like so:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">cat</span> <span class="n">processed_events</span><span class="p">.</span><span class="n">jsonl</span> <span class="o">|</span> <span class="n">python3</span> <span class="o">/</span><span class="n">arrow</span><span class="o">/</span><span class="n">count_tracebacks</span><span class="p">.</span><span class="n">py</span>
+<span class="n">Num</span> <span class="n">of</span> <span class="n">dangling</span> <span class="nl">allocations</span><span class="p">:</span> <span class="mi">1</span>
+ <span class="mf">7f</span><span class="n">c945e5cfd2</span> <span class="n">arrow</span><span class="o">::</span><span class="p">(</span><span class="n">anonymous</span> <span class="k">namespace</span><span class="p">)</span><span class="o">::</span><span class="n">JemallocAllocator</span><span class="o">::</span><span class="n">ReallocateAligned</span><span class="o">+</span><span class="mh">0x13b</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">libarrow</span><span class="p">.</span><span class="n">so</span><span class="mf">.700.0.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c945e5fe4f</span> <span class="n">arrow</span><span class="o">::</span><span class="n">BaseMemoryPoolImpl</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="p">(</span><span class="n">anonymous</span> <span class="k">namespace</span><span class="p">)</span><span class="o">::</span><span class="n">JemallocAllocator</span><span class="o">&gt;::</span><span class="n">Reallocate</span><span class="o">+</span><span class="mh">0x93</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">libarrow</span><span class="p">.</span><span class="n">so</span><span class="mf">.700.0.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c945e618f7</span> <span class="n">arrow</span><span class="o">::</span><span class="n">PoolBuffer</span><span class="o">::</span><span class="n">Resize</span><span class="o">+</span><span class="mh">0xed</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">libarrow</span><span class="p">.</span><span class="n">so</span><span class="mf">.700.0.0</span><span class="p">)</span>
+ <span class="mi">55</span><span class="n">a38b163859</span> <span class="n">arrow</span><span class="o">::</span><span class="n">BufferBuilder</span><span class="o">::</span><span class="n">Resize</span><span class="o">+</span><span class="mh">0x12d</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">arrow</span><span class="o">-</span><span class="n">array</span><span class="o">-</span><span class="n">test</span><span class="p">)</span>
+ <span class="mi">55</span><span class="n">a38b163bbe</span> <span class="n">arrow</span><span class="o">::</span><span class="n">BufferBuilder</span><span class="o">::</span><span class="n">Finish</span><span class="o">+</span><span class="mh">0x48</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">arrow</span><span class="o">-</span><span class="n">array</span><span class="o">-</span><span class="n">test</span><span class="p">)</span>
+ <span class="mi">55</span><span class="n">a38b163e3a</span> <span class="n">arrow</span><span class="o">::</span><span class="n">BufferBuilder</span><span class="o">::</span><span class="n">Finish</span><span class="o">+</span><span class="mh">0x50</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">arrow</span><span class="o">-</span><span class="n">array</span><span class="o">-</span><span class="n">test</span><span class="p">)</span>
+ <span class="mi">55</span><span class="n">a38b163f90</span> <span class="n">arrow</span><span class="o">::</span><span class="n">BufferBuilder</span><span class="o">::</span><span class="n">FinishWithLength</span><span class="o">+</span><span class="mh">0x4e</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">arrow</span><span class="o">-</span><span class="n">array</span><span class="o">-</span><span class="n">test</span><span class="p">)</span>
+ <span class="mi">55</span><span class="n">a38b2c8fa7</span> <span class="n">arrow</span><span class="o">::</span><span class="n">TypedBufferBuilder</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;::</span><span class="n">FinishWithLength</span><span class="o">+</span><span class="mh">0x4f</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">arrow</span><span class="o">-</span><span class="n">array</span><span class="o">-</span><span class="n">test</span><span class="p">)</span>
+ <span class="mi">55</span><span class="n">a38b2bcce7</span> <span class="n">arrow</span><span class="o">::</span><span class="n">NumericBuilder</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Int32Type</span><span class="o">&gt;::</span><span class="n">FinishInternal</span><span class="o">+</span><span class="mh">0x107</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">arrow</span><span class="o">-</span><span class="n">array</span><span class="o">-</span><span class="n">test</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c945c065ae</span> <span class="n">arrow</span><span class="o">::</span><span class="n">ArrayBuilder</span><span class="o">::</span><span class="n">Finish</span><span class="o">+</span><span class="mh">0x5a</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">libarrow</span><span class="p">.</span><span class="n">so</span><span class="mf">.700.0.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c94736ed41</span> <span class="n">arrow</span><span class="o">::</span><span class="n">ipc</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="p">(</span><span class="n">anonymous</span> <span class="k">namespace</span><span class="p">)</span><span class="o">::</span><span class="n">Converter</span><span class="o">::</span><span class="n">Finish</span><span class="o">+</span><span class="mh">0x123</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">libarrow</span><span class="p">.</span><span class="n">so</span><span class="mf">.700.0.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c94737426e</span> <span class="n">arrow</span><span class="o">::</span><span class="n">ipc</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">ArrayFromJSON</span><span class="o">+</span><span class="mh">0x299</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">libarrow</span><span class="p">.</span><span class="n">so</span><span class="mf">.700.0.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c948e98858</span> <span class="n">arrow</span><span class="o">::</span><span class="n">ArrayFromJSON</span><span class="o">+</span><span class="mh">0x64</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">libarrow_testing</span><span class="p">.</span><span class="n">so</span><span class="mf">.700.0.0</span><span class="p">)</span>
+ <span class="mi">55</span><span class="n">a38b6773f3</span> <span class="n">arrow</span><span class="o">::</span><span class="n">StructArray_FlattenOfSlice_Test</span><span class="o">::</span><span class="n">TestBody</span><span class="o">+</span><span class="mh">0x79</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">arrow</span><span class="o">-</span><span class="n">array</span><span class="o">-</span><span class="n">test</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c944689633</span> <span class="n">testing</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">HandleSehExceptionsInMethodIfSupported</span><span class="o">&lt;</span><span class="n">testing</span><span class="o">::</span><span class="n">Test</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;+</span><span class="mh">0x68</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c94468132a</span> <span class="n">testing</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">HandleExceptionsInMethodIfSupported</span><span class="o">&lt;</span><span class="n">testing</span><span class="o">::</span><span class="n">Test</span><span class="p">,</span> <span class="kt">void</span><span class="o">&gt;+</span><span class="mh">0x5d</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c9446555eb</span> <span class="n">testing</span><span class="o">::</span><span class="n">Test</span><span class="o">::</span><span class="n">Run</span><span class="o">+</span><span class="mh">0xf1</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c94465602d</span> <span class="n">testing</span><span class="o">::</span><span class="n">TestInfo</span><span class="o">::</span><span class="n">Run</span><span class="o">+</span><span class="mh">0x13f</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c944656947</span> <span class="n">testing</span><span class="o">::</span><span class="n">TestSuite</span><span class="o">::</span><span class="n">Run</span><span class="o">+</span><span class="mh">0x14b</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c9446663f5</span> <span class="n">testing</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">UnitTestImpl</span><span class="o">::</span><span class="n">RunAllTests</span><span class="o">+</span><span class="mh">0x433</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c94468ab61</span> <span class="n">testing</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">HandleSehExceptionsInMethodIfSupported</span><span class="o">&lt;</span><span class="n">testing</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">UnitTestImpl</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;+</span><span class="mh">0x68</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c944682568</span> <span class="n">testing</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">HandleExceptionsInMethodIfSupported</span><span class="o">&lt;</span><span class="n">testing</span><span class="o">::</span><span class="n">internal</span><span class="o">::</span><span class="n">UnitTestImpl</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&gt;+</span><span class="mh">0x5d</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c944664b0c</span> <span class="n">testing</span><span class="o">::</span><span class="n">UnitTest</span><span class="o">::</span><span class="n">Run</span><span class="o">+</span><span class="mh">0xcc</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtestd</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c9446d0299</span> <span class="n">RUN_ALL_TESTS</span><span class="o">+</span><span class="mh">0x14</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtest_maind</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c9446d021b</span> <span class="n">main</span><span class="o">+</span><span class="mh">0x42</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">googletest_ep</span><span class="o">-</span><span class="n">prefix</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">libgtest_maind</span><span class="p">.</span><span class="n">so</span><span class="mf">.1.11.0</span><span class="p">)</span>
+ <span class="mf">7f</span><span class="n">c9441e70b2</span> <span class="n">__libc_start_main</span><span class="o">+</span><span class="mh">0xf2</span> <span class="p">(</span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">x86_64</span><span class="o">-</span><span class="n">linux</span><span class="o">-</span><span class="n">gnu</span><span class="o">/</span><span class="n">libc</span><span class="o">-</span><span class="mf">2.31</span><span class="p">.</span><span class="n">so</span><span class="p">)</span>
+ <span class="mi">55</span><span class="n">a38b10a50d</span> <span class="n">_start</span><span class="o">+</span><span class="mh">0x2d</span> <span class="p">(</span><span class="o">/</span><span class="n">build</span><span class="o">/</span><span class="n">cpp</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">arrow</span><span class="o">-</span><span class="n">array</span><span class="o">-</span><span class="n">test</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 </div>
