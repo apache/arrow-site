@@ -52,13 +52,14 @@ server ([invite link](https://discord.gg/Qw5gKqHxUM)) in case you are not able
 to join the Slack workspace. If you need an invite to the Slack workspace, you
 can also ask for one in our Discord server.
 
-### Sync up Zoom calls
+### Sync up video calls
 
-We have biweekly sync calls every other Thursdays at 16:00 UTC
-(starting September 30, 2021) on Zoom [Meeting Link](https://influxdata.zoom.us/j/94666921249)
+We have biweekly sync calls every other Thursdays at both 04:00 UTC
+and 16:00 UTC (starting September 30, 2021) depending on if there are
+items on the agenda to discuss and someone being willing to host.
 
-The[agenda](https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/edit)
-is available if you would like to add a topic for discussion or see what is planned.
+Please see the [agenda](https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/edit)
+for the video call link, add topics and to see what others plan to discuss.
 
 The goals of these calls are:
 
@@ -75,9 +76,8 @@ Our source code is hosted on
 [GitHub](https://github.com/apache/arrow-datafusion). For developers new to
 the project, we have curated a
 [good-first-issue](https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
-list to help you get started.
+list to help you get started. You can find datafusion's major designs in docs/source/specification.
 
 We use GitHub issues for maintaining a queue of development work and as the
 public record. We often use Google docs, Github issues and pull requests for
-quick and small design discussions. For major design change proposals, please
-make sure to send them to the dev list for more visibility.
+quick and small design discussions. For major design change proposals, we encourage you to write a rfc.
