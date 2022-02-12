@@ -30,10 +30,35 @@ limitations under the License.
 
 We would like to introduce Flight SQL, a new client-server protocol developed by the Apache Arrow community for interacting with SQL databases that makes use of the Arrow in-memory columnar format and the Flight RPC framework.
 
-Flight SQL aims to provide similar functionality as existing APIs, including executing queries; creating prepared statements; and fetching metadata about the supported SQL dialect, available types, defined tables, and so on.
-
-By building on Apache Arrow, however, Flight SQL makes it easy for clients to talk to Arrow-native databases without converting data, unlike existing standards like JDBC.
+Flight SQL aims to provide broadly similar functionality to existing APIs like JDBC and ODBC, including executing queries; creating prepared statements; and fetching metadata about the supported SQL dialect, available types, defined tables, and so on.
+By building on Apache Arrow, however, Flight SQL makes it easy for clients to talk to Arrow-native databases without converting data.
 And by using [Flight][introducing-flight], it provides an efficient implementation of a wire format that supports features like encryption and authentication out of the box, while allowing for further optimizations like parallel data access.
+
+While it can be directly used for database access, it is not a direct replacement for JDBC/ODBC. Instead, Flight SQL serves as a concrete wire protocol/driver implementation that can support a JDBC/ODBC driver and reduces implementation burden on databases.
+
+<!-- mermaidjs:
+
+graph LR
+    JDBC[JDBC]
+    ODBC
+    FlightSQL[Flight SQL<br>libraries]
+    ANA[Arrow-native app]
+    DB[(Database with<br>Flight SQL endpoint)]
+
+    JDBC --&gt; FlightSQL
+    ODBC --&gt; FlightSQL
+    ANA --&gt; FlightSQL
+
+    FlightSQL --&gt;|Flight RPC| DB
+
+-->
+
+<div align="center">
+<img src="{{ site.baseurl }}/img/20220204-flight-sql-jdbc-odbc.svg"
+     alt="Illustration of where Flight SQL sits in the stack. JDBC and ODBC drivers can wrap Flight SQL, or an Arrow-native application can directly use the Flight SQL libraries. Flight SQL in turn talks over Arrow Flight to a database exposing a Flight SQL endpoint."
+     width="90%" class="img-responsive">
+</div>
+
 
 ## Motivation
 
@@ -146,7 +171,35 @@ Note that while Flight SQL is shipping as part of Apache Arrow 7.0.0, it is stil
 However, implementations are already available in C++ and Java, which provide a low-level client that can be used as well as a server skeleton that can be implemented.
 
 For those interested, a [server implementation wrapping Apache Derby](https://github.com/apache/arrow/blob/release-7.0.0/java/flight/flight-sql/src/test/java/org/apache/arrow/flight/sql/example/FlightSqlExample.java) and [one wrapping SQLite](https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/example/sqlite_server.h) are available in the source.
-A [simple CLI demonstrating the client](https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/test_app_cli.cc) is also available.
+A [simple CLI demonstrating the client](https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/test_app_cli.cc) is also available. Finally, we can look at a brief example of executing a query and fetching results:
+
+```cpp
+flight::FlightCallOptions call_options;
+
+// Execute the query, getting a FlightInfo describing how to fetch the results
+std::cout << "Executing query: '" << FLAGS_query << "'" << std::endl;
+ARROW_ASSIGN_OR_RAISE(std::unique_ptr<flight::FlightInfo> flight_info,
+                      client->Execute(call_options, FLAGS_query));
+
+// Fetch each partition sequentially (though this can be done in parallel)
+for (const flight::FlightEndpoint& endpoint : flight_info->endpoints()) {
+  // Here we assume each partition is on the same server we originally queried, but this
+  // isn't true in general: the server may split the query results between multiple
+  // other servers, which we would have to connect to.
+
+  // The "ticket" in the endpoint is opaque to the client. The server uses it to
+  // identify which part of the query results to return.
+  ARROW_ASSIGN_OR_RAISE(auto stream, client->DoGet(call_options, endpoint.ticket));
+  // Read all results into an Arrow Table, though we can iteratively process record
+  // batches as they arrive as well
+  std::shared_ptr<arrow::Table> table;
+  ARROW_RETURN_NOT_OK(stream->ReadAll(&table));
+  std::cout << "Read one chunk:" << std::endl;
+  std::cout << table->ToString() << std::endl;
+}
+```
+
+The full source is [available on GitHub](https://github.com/apache/arrow/blob/master/cpp/examples/arrow/flight_sql_example.cc).
 
 ## What's Next & Getting Involved
 
