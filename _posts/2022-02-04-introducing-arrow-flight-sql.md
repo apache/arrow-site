@@ -6,7 +6,7 @@ with SQL databases over Arrow Flight. We have been working on this protocol
 over the last six months, and are looking for feedback, interested
 contributors, and early adopters."
 date: "2022-02-04 00:00:00 -0500"
-author: James Duong, Kyle Porter, David Li
+author: José Almeida, James Duong, Vinicius Fraga, Juscelino Junior, David Li, Kyle Porter, Rafael Telles
 categories: [application]
 ---
 <!--
@@ -194,7 +194,7 @@ for (const flight::FlightEndpoint& endpoint : flight_info->endpoints()) {
   // batches as they arrive as well
   std::shared_ptr<arrow::Table> table;
   ARROW_RETURN_NOT_OK(stream->ReadAll(&table));
-  std::cout << "Read one chunk:" << std::endl;
+  std::cout << "Read one partition:" << std::endl;
   std::cout << table->ToString() << std::endl;
 }
 ```
