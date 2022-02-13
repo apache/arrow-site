@@ -5,7 +5,7 @@ description: "This post introduces Arrow Flight SQL, a protocol for interacting
 with SQL databases over Arrow Flight. We have been working on this protocol
 over the last six months, and are looking for feedback, interested
 contributors, and early adopters."
-date: "2022-02-04 00:00:00 -0500"
+date: "2022-02-16 00:00:00 -0500"
 author: José Almeida, James Duong, Vinicius Fraga, Juscelino Junior, David Li, Kyle Porter, Rafael Telles
 categories: [application]
 ---
@@ -54,7 +54,7 @@ graph LR
 -->
 
 <div align="center">
-<img src="{{ site.baseurl }}/img/20220204-flight-sql-jdbc-odbc.svg"
+<img src="{{ site.baseurl }}/img/20220216-flight-sql-jdbc-odbc.svg"
      alt="Illustration of where Flight SQL sits in the stack. JDBC and ODBC drivers can wrap Flight SQL, or an Arrow-native application can directly use the Flight SQL libraries. Flight SQL in turn talks over Arrow Flight to a database exposing a Flight SQL endpoint."
      width="90%" class="img-responsive">
 </div>
@@ -123,7 +123,7 @@ sequenceDiagram
 -->
 
 <div align="center">
-<img src="{{ site.baseurl }}/img/20220204-flight-sql-gettables.svg"
+<img src="{{ site.baseurl }}/img/20220216-flight-sql-gettables.svg"
      alt="Sequence diagram showing how to use CommandGetTables. First, the client calls the GetFlightInfo RPC method with a serialized CommandGetTables message as the argument. The server returns a FlightInfo message containing a Ticket message. The client then calls the DoGet RPC method with the Ticket as the argument, and gets back a stream of Arrow record batches containing the tables in the database."
      height="363" class="img-responsive">
 </div>
@@ -141,7 +141,7 @@ sequenceDiagram
 -->
 
 <div align="center">
-<img src="{{ site.baseurl }}/img/20220204-flight-sql-query.svg"
+<img src="{{ site.baseurl }}/img/20220216-flight-sql-query.svg"
      alt="Sequence diagram showing how to use CommandStatementQuery. First, the client calls the GetFlightInfo RPC method with a serialized CommandStatementQuery message as the argument. This message contains the SQL query. The server returns a FlightInfo message containing a Ticket message. The client then calls the DoGet RPC method with the Ticket as the argument, and gets back a stream of Arrow record batches containing the query results."
      height="363" class="img-responsive">
 </div>
@@ -160,7 +160,7 @@ sequenceDiagram
 -->
 
 <div align="center">
-<img src="{{ site.baseurl }}/img/20220204-flight-sql-prepared.svg"
+<img src="{{ site.baseurl }}/img/20220216-flight-sql-prepared.svg"
      alt="Sequence diagram showing how to use ActionCreatePreparedStatementResult. First, the client calls the DoAction RPC method with a serialized ActionCreatePreparedStatementResult message as the argument. This message contains the SQL query. The server returns a serialized ActionCreatePreparedStatementResult message containing an opaque handle for the prepared statement. The client then calls the DoPut RPC method with a CommandPreparedStatementUpdate message, containing the opaque handle, as the argument, and uploads a stream of Arrow record batches containing query parameters. The server responds with a serialized DoPutUpdateResult message containing the number of affected rows. Finally, the client calls DoAction again with ActionClosePreparedStatementRequest to clean up the prepared statement."
      height="459" class="img-responsive">
 </div>
