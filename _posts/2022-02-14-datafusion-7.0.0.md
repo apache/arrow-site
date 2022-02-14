@@ -30,7 +30,7 @@ limitations under the License.
 
 When you want to extend your Rust project with [SQL support](https://arrow.apache.org/datafusion/user-guide/sql/sql_status.html), a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth checking out.
 
-DataFusion supports both a SQL and DataFrame API for building logical query plans as well as a sophisticated query optimizer and execution engine capable of parallel execution against memory, CSV, Parquet, Avro and JSON.
+DataFusion's  SQL, `DataFrame`, and manual `PlanBuilder` API let users access a sophisticated query optimizer and execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of todays multicore hardware. Being written in Rust means DataFusion can offer *both* the safety of dynamic languages as well as the resource efficiency of a compiled language.
 
 The Apache Arrow team is pleased to announce the DataFusion 7.0.0 release. This covers 4 months of development work
 and includes 195 commits from the following 37 distinct contributors.
@@ -85,19 +85,15 @@ git shortlog -sn 5.0.0..6.0.0 datafusion datafusion-cli datafusion-examples | wc
      1  rdettai
 ```
 
-The release notes below are not exhaustive and only expose selected highlights of the release. Many other bug fixes
-and improvements have been made: we refer you to the complete
-[changelog](https://github.com/apache/arrow-datafusion/blob/7.0.0/datafusion/CHANGELOG.md).
+The following section highlights some of the improvements in this release. Of course, many other bug fixes and improvements have also been made and we refer you to the complete [changelog](https://github.com/apache/arrow-datafusion/blob/7.0.0/datafusion/CHANGELOG.md) for the full detail.
 
 # Summary
 
-There have been significant improvements across the board since the 6.0 release which are summarized below.
-
 - DataFusion Crate
-  - The DataFusion crate is in the process of being split into multiple crates in order to decrease compilation times and improve the development experience. To start, datafusion-common (the core DataFusion components) and datafusion-expr (DataFusion expressions, functions, and operators) will be split out.  There will be additional splits after the 7.0 release.
+  - The DataFusion crate is being split into multiple crates to decrease compilation times and improve the development experience. Initially, `datafusion-common` (the core DataFusion components) and `datafusion-expr` (DataFusion expressions, functions, and operators) have been split out. There will be additional splits after the 7.0 release.
 - Performance Improvements and Optimizations
-  - Arrow’s dyn scalar kernels are now used which enable more efficient operations on DictionaryArrays [#1685](https://github.com/apache/arrow-datafusion/pull/1685)
-  - Switch from std::sync::Mutex to parking_lot::Mutex [#1720](https://github.com/apache/arrow-datafusion/pull/1720)
+  - Arrow’s dyn scalar kernels are now used to enable efficient operations on `DictionaryArray`s [#1685](https://github.com/apache/arrow-datafusion/pull/1685)
+  - Switch from `std::sync::Mutex` to `parking_lot::Mutex` [#1720](https://github.com/apache/arrow-datafusion/pull/1720)
 - New Features
   - Better support for limiting resource usage
     - MemoryMananger and DiskManager [#1526](https://github.com/apache/arrow-datafusion/pull/1526)
@@ -112,7 +108,7 @@ There have been significant improvements across the board since the 6.0 release 
   - Support decimal type [#1394](https://github.com/apache/arrow-datafusion/pull/1394)[#1407](https://github.com/apache/arrow-datafusion/pull/1407)[#1408](https://github.com/apache/arrow-datafusion/pull/1408)[#1431](https://github.com/apache/arrow-datafusion/pull/1431)[#1483](https://github.com/apache/arrow-datafusion/pull/1483)[#1554](https://github.com/apache/arrow-datafusion/pull/1554)[#1640](https://github.com/apache/arrow-datafusion/pull/1640)
   - Support for evolved schemas [#1622](https://github.com/apache/arrow-datafusion/pull/1622)[#1709](https://github.com/apache/arrow-datafusion/pull/1709)
   - Support for registering `DataFrame` as table [#1699](https://github.com/apache/arrow-datafusion/pull/1699)
-  - Suppot `substring` function [#1621](https://github.com/apache/arrow-datafusion/pull/1621)
+  - Support for the `substring` function [#1621](https://github.com/apache/arrow-datafusion/pull/1621)
   - Support `array_agg(distinct ...)` [#1579](https://github.com/apache/arrow-datafusion/pull/1579)
   - Support `sort` on unprojected columns [#1415](https://github.com/apache/arrow-datafusion/pull/1415)
 - Additional Integration Points
@@ -129,17 +125,11 @@ There have been significant improvements across the board since the 6.0 release 
 - [Arrow2](https://github.com/jorgecarleitao/arrow2)
   - An [Arrow2 Branch](https://github.com/apache/arrow-datafusion/tree/arrow2) has been created.  There are ongoing discussions in [DataFusion](https://github.com/apache/arrow-datafusion/issues/1532) and [arrow-rs](https://github.com/apache/arrow-rs/issues/1176) about migrating `DataFusion` to `Arrow2`
 
-For the full list of new features with their relevant PRs, see the
-[enhancements section](https://github.com/apache/arrow-datafusion/blob/7.0.0/datafusion/CHANGELOG.md)
-in the changelog.
-
 # Documentation and Roadmap
 
-The project's documentation is being consolidated into the official site.  You can find more details there on topics such as the SQL status (TO DO LINK) and a user guide.
+We are working to consolidate the documentation into the [official site](https://arrow.apache.org/datafusion).  You can find more details there on topics such as the [SQL status](https://arrow.apache.org/datafusion/user-guide/sql/index.html)  and a [user guide](https://arrow.apache.org/datafusion/user-guide/introduction.html#introduction). This is also an area we would love to get help from the broader community [#1821](https://github.com/apache/arrow-datafusion/issues/1821).
 
-To provide transparency on DataFusion’s priorities to users and developers a three month roadmap will be published at the beginning of each quarter.  This can be found here (TO DO LINK once site is updated).  
-
-See full details on DataFusion’s ambitions (TO DO LINK).
+To provide transparency on DataFusion’s priorities to users and developers a three month roadmap will be published at the beginning of each quarter.  This can be found here [here](https://arrow.apache.org/datafusion/specification/roadmap.html).
 
 # Upcoming Attractions
 
@@ -156,11 +146,9 @@ See full details on DataFusion’s ambitions (TO DO LINK).
 
 # How to Get Involved
 
-If you are interested in contributing to DataFusion, we would love to have you! You
-can help by trying out DataFusion on some of your own data and projects and filing bug reports and helping to
-improve the documentation, or contribute to the documentation, tests or code. A list of open issues suitable for
-beginners is [here](https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
-and the full list is [here](https://github.com/apache/arrow-datafusion/issues).
+If you are interested in contributing to DataFusion, and learning about state of 
+the art query processing, we would love to have you join us on the journey! You
+can help by trying out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is [here](https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 Check out our new [Communication Doc](https://arrow.apache.org/datafusion/community/communication.html) on more
 ways to engage with the community.
