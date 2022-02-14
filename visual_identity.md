@@ -25,13 +25,18 @@ limitations under the License.
 
 # Visual Identity for Apache Arrow
 
-As a community project, the visual identity guidelines for Apache Arrow attempt to balance the need to maintain consistent visual imagery in formal contexts, while allowing flexibility for fun and creative reuse of the Apache Arrow visual identity informal contexts.
+As a community project, the visual identity guidelines for Apache Arrow attempt to balance the need to maintain consistent visual imagery in formal contexts, while allowing flexibility for fun and creative reuse of the Apache Arrow logo in informal contexts. On this page you can find:
+
+- [Design of the logo](#design)
+- [Variations of the logo](#variations)
+- [Usage guidelines](#using-the-logo)
+- [List of logo files](#files)
+
+## Design of the logo {#design}
+
+The Apache Arrow logo consists of the "Apache Arrow" logotype and the "Triple Chevron" logomark, arranged horizontally with the text placed to the left of the image. The standard "light theme" version of the logo uses black text and image against a white background, and the standard "dark theme" version of the logo is white against a black background. The light version looks like this:
 
 <img src="{{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png" width="100%">
-
-## Structure of the logo
-
-The Apache Arrow logo consists of the "Apache Arrow" logotype and the "Triple Chevron" logomark, arranged horizontally with the text placed to the left of the image. The standard "light theme" version of the logo uses black text and image against a white background, and the standard "dark theme" version of the logo is white against a black background.
 
 The word "Apache" in the logotype is written in all caps [Roboto font][1], and the word "Arrow" is written in all caps [Barlow font][2] in boldface. Both should use normal font kerning. The precise fontsize may depend slightly on the display context but the intent is that the word "Arrow" be approximately 3 times the height, and approximately 2.5 times the width of the word "Apache". The text should be left-justified, with the leftmost edge of the first letters in both words aligned horizontally.
 
@@ -39,67 +44,69 @@ The annotated image below shows the precise spacing used in the horizontal versi
 
 The horizontal midline of the word "Arrow" is aligned with horizontal midline of the chevrons, and the height of the word "Arrow" is approximately 1/3 the total height of the chevrons. Similarly the midline of the word "Apache" is aligned with the upper-inner vertex of the chevrons. The logotype and logomark are placed flush against one another, with the rightmost tip of the "W" in "Arrow" vertically aligned with the leftmost edge of the chevrons.
 
-<img src="{{ site.baseurl }}/img/logo-spacing-horizontal.png" width="100%">
+<img class = "py-3" src="{{ site.baseurl }}/img/logo-spacing-horizontal.png" width="100%">
 
 The horizontal layout above is the preferred variant of the Apache Arrow logo, but there will be cases where the full logo doesn't fit. There will be situations where using the "Apache Arrow" logotype alone or the "Triple Chevron" logomark alone is the most appropriate thing to do: the expectation is that people use their best judgment.
 
 In addition to the partial (logomark-only and logotype-only) layouts, there may be cases where a vertical layout work best. The vertically oriented logo attempts to preserve the same look and feel as the horizontal version, and preserves some points of horizontal alignment between components of the logotype and logomarks:
 
-<img src="{{ site.baseurl }}/img/logo-spacing-vertical.png" width="100%">
+<img class = "py-3" src="{{ site.baseurl }}/img/logo-spacing-vertical.png" width="100%">
 
 A good example of when the vertical layout is more appropriate is in the context of hex stickers. The standard version of the hex sticker arranges the vertical within a hexagonal frame so that it has some alignment with the native symmetries of the hexagon shape:
 
-<div class="col-8 offset-2"><img src="{{ site.baseurl }}/img/logo-spacing-hex.png" width="100%"></div>
+<div class="col-8 offset-2 py-1"><img src="{{ site.baseurl }}/img/logo-spacing-hex.png" width="100%"></div>
 
-## Official variations
+## Variations of the logo {#variations}
 
 At the bottom of this page you can find the complete list of all logo-related files provided by the Apache Arrow project. The logo exists in a light theme and a dark theme, and these versions are usually simple inversions of one another. The light theme uses black text against a white (or other light coloured) background:
 
-<img src="{{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png" width="100%">
+<img class = "py-3" src="{{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png" width="100%">
 
 Similarly, the dark theme uses white text against a black (or other dark coloured) background:
 
-<img src="{{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_black-bg.png" width="100%">
+<img class = "py-3" src="{{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_black-bg.png" width="100%">
 
 The image files in this repository include both variants, and include versions with transparent backgrounds as well as opaque backgrounds. It is entirely acceptable to use the transparent background variants against backgrounds that aren't precisely white or black, as exemplified by the main page on this site.
 
 Horizontal and vertical versions of all variants are included:
 
-<div class="container justify-content-evenly center">
+<div class="container justify-content-evenly center py-3">
 <div class="row">
-  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_vertical_black-txt_white-bg.png" width="100%"></div>
-  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_vertical_white-txt_black-bg.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/arrow-logo_vertical_black-txt_white-bg.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/arrow-logo_vertical_white-txt_black-bg.png" width="100%"></div>
 </div>
 </div>
 
 Similarly, two official variations of the hex sticker are provided:
 
-<div class="container justify-content-evenly center">
+<div class="container justify-content-evenly center py-3">
 <div class="row">
-  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_hex_black-txt_white-bg.png" width="100%"></div>
-  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_hex_white-txt_black-bg.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/arrow-logo_hex_black-txt_white-bg.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/arrow-logo_hex_white-txt_black-bg.png" width="100%"></div>
 </div>
 </div>
 
 The repository also includes files for "Triple Chevron" logomark on its own
 
-<div class="container justify-content-evenly center">
+<div class="container justify-content-evenly center py-3">
 <div class="row">
-  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_white-bg.png" width="100%"></div>
-  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_black-bg.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_white-bg.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_black-bg.png" width="100%"></div>
 </div>
 </div>
 
 and the "Apache Arrow" logotype on its own:
 
-<div class="container justify-content-evenly center">
+<div class="container justify-content-evenly center py-3">
 <div class="row">
-  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.png" width="100%"></div>
-  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_text_white-txt_black-bg.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/arrow-logo_text_white-txt_black-bg.png" width="100%"></div>
 </div>
 </div>
 
-## Official usage guidelines
+## Using the Apache Arrow logos {#using-the-logo}
+
+### General guidelines
 
 Usage guidelines for official logos are quite similar across many brands, and Apache Arrow is no exception. The core principle is to respect the visual integrity of the logo. Guidelines that will help you do so include:
 
@@ -108,18 +115,18 @@ Usage guidelines for official logos are quite similar across many brands, and Ap
  - Please don't modify the text or the design of the chevrons
  - Please don't add additional text to the logotype or imagery to the chevrons
  
-In general, the principles laid out in [Apache Foundation Style Guide][3] for usage of the Apache logo are also appropriate for the Apache Arrow logo.
+In general, the principles laid out in [Apache Foundation Style Guide][3] for usage of the Apache logo are also appropriate for the Apache Arrow logo. If you're in a situation where you want to refer formally to the Apache Arrow project you should adhere to these guidelines pretty closely and avoid modifying the official logos.
 
-## Creating unofficial images
+### Regarding unofficial images
 
-Okay that was the boring part, and we had to include it because Apache Arrow is a large project and it genuinely does need to have some meaningful visual identity. If you're in a situation where you want to refer formally to the Apache Arrow project you should adhere to those guidelines pretty closely. 
+That said, there are occasions where you may want to use the logo unofficially. The purpose of the visual identity guidelines as described so far is to provide guidance on what to do when you *do* need to refer to Apache Arrow in an official or formal way. It's not meant to prevent people from having fun creating unofficial images when appropriate. 
 
-That said, not everything in life is official. The purpose of the visual identity guidelines is to provide guidance on what to do when you *do* need to refer to Apache Arrow in an official or formal way. It's not meant to prevent people from having fun creating unofficial images when appropriate. To provide useful guidance on when unofficial images are acceptable and unacceptable, here are two examples:
+To provide useful guidance on when unofficial images are acceptable and unacceptable, here are two examples:
 
-<div class="container justify-content-evenly center">
+<div class="container justify-content-evenly center py-3">
 <div class="row">
-  <div class="col-6"><img src="{{ site.baseurl }}/img/offbrand_hex_1.png" width="100%"></div>
-  <div class="col-6"><img src="{{ site.baseurl }}/img/offbrand_hex_2.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/offbrand_hex_1.png" width="100%"></div>
+  <div class="col-12 col-md-6"><img src="{{ site.baseurl }}/img/offbrand_hex_2.png" width="100%"></div>
 </div>
 </div>
 
@@ -129,7 +136,7 @@ The image on the right adds extra orange colored chevrons to the dark themed hex
 
 Many other context-appropriate informal variations can be imagined. For example, if Apache Arrow were being used to power a generative art system, the background fill to the logo might not be a solid color, it could be the art itself. Again, the overriding principle is that the visual integrity of the Apache Arrow logo remains intact and the modifications are appropriate to the context in which it is used.
 
-## List of provided logo files
+## List of provided logo files {#files}
 
 ### Horizontal logos
 
