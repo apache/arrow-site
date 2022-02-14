@@ -26,11 +26,11 @@ limitations under the License.
 
 # Introduction
 
-[DataFusion](https://arrow.apache.org/datafusion/) is an embedded
-query engine which leverages the unique features of
-[Rust](https://www.rust-lang.org/) and [Apache
-Arrow](https://arrow.apache.org/) to provide a system that is high
-performance, easy to connect, easy to embed, and high quality.
+[DataFusion](https://arrow.apache.org/datafusion/) is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format.
+
+When you want to extend your Rust project with [SQL support](https://arrow.apache.org/datafusion/user-guide/sql/sql_status.html), a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth checking out.
+
+DataFusion supports both a SQL and DataFrame API for building logical query plans as well as a sophisticated query optimizer and execution engine capable of parallel execution against memory, CSV, Parquet, Avro and JSON.
 
 The Apache Arrow team is pleased to announce the DataFusion 7.0.0 release. This covers 4 months of development work
 and includes 195 commits from the following 37 distinct contributors.
@@ -84,12 +84,6 @@ git shortlog -sn 5.0.0..6.0.0 datafusion datafusion-cli datafusion-examples | wc
      1  r.4ntix
      1  rdettai
 ```
-
-[DataFusion](https://arrow.apache.org/datafusion/) is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format.
-
-When you want to extend your Rust project with [SQL support](https://arrow.apache.org/datafusion/user-guide/sql/sql_status.html), a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth checking out.
-
-DataFusion supports both a SQL and DataFrame API for building logical query plans as well as a sophisticated query optimizer and execution engine capable of parallel execution against memory, CSV, Parquet, Avro and JSON.
 
 The release notes below are not exhaustive and only expose selected highlights of the release. Many other bug fixes
 and improvements have been made: we refer you to the complete
