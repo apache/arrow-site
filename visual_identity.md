@@ -33,7 +33,7 @@ As a community project, the visual identity guidelines for Apache Arrow attempt 
 
 The Apache Arrow logo consists of the "Apache Arrow" logotype and the "Triple Chevron" logomark, arranged horizontally with the text placed to the left of the image. The standard "light theme" version of the logo uses black text and image against a white background, and the standard "dark theme" version of the logo is white against a black background.
 
-The word "Apache" in the logotype is written in all caps [Roboto font][1], and the word "Arrow" is written in all caps [Barlow font][2] in boldface. Both should use normal font kerning. The precise fontsize may depend slightly on the display context but the intent is that the word "Arrow" be approximately 3 times the height, and approximately 2.5 times the width of the word "Apache". The text should be left-justified, with the leftmost edge of the first letters in both words aligned horizontally. Both fonts are freely available: Roboto is licenced under the Apache licence, Barlow under the SIL Open Font Licence, and both are accessible through Google Fonts. 
+The word "Apache" in the logotype is written in all caps [Roboto font][1], and the word "Arrow" is written in all caps [Barlow font][2] in boldface. Both should use normal font kerning. The precise fontsize may depend slightly on the display context but the intent is that the word "Arrow" be approximately 3 times the height, and approximately 2.5 times the width of the word "Apache". The text should be left-justified, with the leftmost edge of the first letters in both words aligned horizontally.
 
 The annotated image below shows the precise spacing used in the horizontal version of the Apache Arrow logo as well as the design of the Triple Chevron. Each chevron has width exactly half its height, and forms a 90-degree angle at the tip. The thickness (both vertically and horizontally) of the chevron is 20% of its height. The spacing between adjacent chevrons is 15% of the height (i.e., if height = 100, width = 50, and spacing = 15). 
 
@@ -49,12 +49,11 @@ In addition to the partial (logomark-only and logotype-only) layouts, there may 
 
 A good example of when the vertical layout is more appropriate is in the context of hex stickers. The standard version of the hex sticker arranges the vertical within a hexagonal frame so that it has some alignment with the native symmetries of the hexagon shape:
 
-<p align="center"><img src="{{ site.baseurl }}/img/logo-spacing-hex.png" width="60%"></p>
-
+<div class="col-8 offset-2"><img src="{{ site.baseurl }}/img/logo-spacing-hex.png" width="100%"></div>
 
 ## Official variations
 
-The light theme and dark theme versions of the Apache Arrow logo are simple inversions of one another. The light theme uses black text against a white (or other light coloured) background:
+At the bottom of this page you can find the complete list of all logo-related files provided by the Apache Arrow project. The logo exists in a light theme and a dark theme, and these versions are usually simple inversions of one another. The light theme uses black text against a white (or other light coloured) background:
 
 <img src="{{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png" width="100%">
 
@@ -62,42 +61,43 @@ Similarly, the dark theme uses white text against a black (or other dark coloure
 
 <img src="{{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_black-bg.png" width="100%">
 
-The image files in this repository include both variants, and include versions with transparent backgrounds as well as opaque backgrounds. It is entirely acceptable to use the transparent background variants against backgrounds that aren't precisely white or black (what would be the point otherwise?) --- in fact this usage is illustrated on the official [Apache Arrow website](https://arrow.apache.org/) which employs the transparent version of the logo to place  white text over a grey background!
+The image files in this repository include both variants, and include versions with transparent backgrounds as well as opaque backgrounds. It is entirely acceptable to use the transparent background variants against backgrounds that aren't precisely white or black, as exemplified by the main page on this site.
 
 Horizontal and vertical versions of all variants are included:
 
-<p align="center">
-<img src="{{ site.baseurl }}/img/arrow-logo_vertical_black-txt_white-bg.png" width="40%">
-&nbsp;&nbsp;
-<img src="{{ site.baseurl }}/img/arrow-logo_vertical_white-txt_black-bg.png" width="40%">
-</p>
+<div class="container justify-content-evenly center">
+<div class="row">
+  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_vertical_black-txt_white-bg.png" width="100%"></div>
+  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_vertical_white-txt_black-bg.png" width="100%"></div>
+</div>
+</div>
 
 Similarly, two official variations of the hex sticker are provided:
 
-<p align="center">
-<img src="{{ site.baseurl }}/img/arrow-logo_hex_black-txt_white-bg.png" width="40%">
-&nbsp;&nbsp;
-<img src="{{ site.baseurl }}/img/arrow-logo_hex_white-txt_black-bg.png" width="40%">
-</p>
+<div class="container justify-content-evenly center">
+<div class="row">
+  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_hex_black-txt_white-bg.png" width="100%"></div>
+  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_hex_white-txt_black-bg.png" width="100%"></div>
+</div>
+</div>
 
-The repository also includes separate files for "Triple Chevron" logomark without any accompanying text:
+The repository also includes files for "Triple Chevron" logomark on its own
 
-<p align="center">
-<img src="{{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_white-bg.png" width="40%">
-&nbsp;&nbsp;
-<img src="{{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_black-bg.png" width="40%">
-</p>
+<div class="container justify-content-evenly center">
+<div class="row">
+  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_white-bg.png" width="100%"></div>
+  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_black-bg.png" width="100%"></div>
+</div>
+</div>
 
-There are also files for the "Apache Arrow" logotype without the logomark:
+and the "Apache Arrow" logotype on its own:
 
-<p align="center">
-<img src="{{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.png" width="40%">
-&nbsp;&nbsp;
-<img src="{{ site.baseurl }}/img/arrow-logo_text_white-txt_black-bg.png" width="40%">
-</p>
-
-
-
+<div class="container justify-content-evenly center">
+<div class="row">
+  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.png" width="100%"></div>
+  <div class="col-6"><img src="{{ site.baseurl }}/img/arrow-logo_text_white-txt_black-bg.png" width="100%"></div>
+</div>
+</div>
 
 ## Official usage guidelines
 
@@ -108,8 +108,7 @@ Usage guidelines for official logos are quite similar across many brands, and Ap
  - Please don't modify the text or the design of the chevrons
  - Please don't add additional text to the logotype or imagery to the chevrons
  
-In general, the principles laid out in [Apache Foundation Style Guide](https://apache.org/foundation/press/kit/ApacheFoundation_StyleGuide.pdf) for usage of the Apache logo are also appropriate for the Apache Arrow logo.
-
+In general, the principles laid out in [Apache Foundation Style Guide][3] for usage of the Apache logo are also appropriate for the Apache Arrow logo.
 
 ## Creating unofficial images
 
@@ -117,11 +116,12 @@ Okay that was the boring part, and we had to include it because Apache Arrow is 
 
 That said, not everything in life is official. The purpose of the visual identity guidelines is to provide guidance on what to do when you *do* need to refer to Apache Arrow in an official or formal way. It's not meant to prevent people from having fun creating unofficial images when appropriate. To provide useful guidance on when unofficial images are acceptable and unacceptable, here are two examples:
 
-<p align="center">
-<img src="{{ site.baseurl }}/img/offbrand_hex_1.png" width="40%">
-&nbsp;&nbsp;
-<img src="{{ site.baseurl }}/img/offbrand_hex_2.png" width="40%">
-</p>
+<div class="container justify-content-evenly center">
+<div class="row">
+  <div class="col-6"><img src="{{ site.baseurl }}/img/offbrand_hex_1.png" width="100%"></div>
+  <div class="col-6"><img src="{{ site.baseurl }}/img/offbrand_hex_2.png" width="100%"></div>
+</div>
+</div>
 
 The image on the left highlights the letter R and one of the chevrons in a fashion that is reminiscent of the R prompt, using colors that align with those used by the R-Ladies organization. Using this image informally as part of a presentation to an R-Ladies meetup would be consistent with the Apache Arrow guidelines, because it is thematically appropriate to the context and the image is not being presented as if it were the official Apache Arrow logo. The purple elements have been introduced to the image in a manner that leaves the visual integrity of the Apache Arrow logo intact, and in a fashion that reflects the informal context-specific use within an R-Ladies meetup.
 
@@ -129,5 +129,58 @@ The image on the right adds extra orange colored chevrons to the dark themed hex
 
 Many other context-appropriate informal variations can be imagined. For example, if Apache Arrow were being used to power a generative art system, the background fill to the logo might not be a solid color, it could be the art itself. Again, the overriding principle is that the visual integrity of the Apache Arrow logo remains intact and the modifications are appropriate to the context in which it is used.
 
+## List of provided logo files
+
+### Horizontal logos
+
+- [Arrow logo with horizontal orientation, white text, and black background][4]
+- [Arrow logo with horizontal orientation, white text, and transparent background][5]
+- [Arrow logo with horizontal orientation, black text, and white background][6]
+- [Arrow logo with horizontal orientation, black text, and transparent background][7]
+
+### Vertical logos
+
+- [Arrow logo with vertical orientation, white text, and black background][8]
+- [Arrow logo with vertical orientation, white text, and transparent background][9]
+- [Arrow logo with vertical orientation, black text, and white background][10]
+- [Arrow logo with vertical orientation, black text, and transparent background][11]
+
+### Hexagonal logos
+
+- [Arrow logo with hexagonal format, white text, and black background][12]
+- [Arrow logo with hexagonal format, black text, and white background][13]
+
+### Partial logos
+
+- [Arrow logo with chevrons only, white text, and black background][14]
+- [Arrow logo with chevrons only, white text, and transparent background][15]
+- [Arrow logo with chevrons only, black text, and white background][16]
+- [Arrow logo with chevrons only, black text, and transparent background][17]
+- [Arrow logo with text only, white text, and black background][18]
+- [Arrow logo with text only, white text, and transparent background][19]
+- [Arrow logo with text only, black text, and white background][20]
+- [Arrow logo with text only, black text, and transparent background][21]
+
+
 [1]: https://fonts.google.com/specimen/Roboto
 [2]: https://fonts.google.com/specimen/Barlow
+[3]: https://apache.org/foundation/press/kit/ApacheFoundation_StyleGuide.pdf
+[4]: {{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_black-bg.png
+[5]: {{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_transparent-bg.png
+[6]: {{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png
+[7]: {{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_transparent-bg.png
+[8]: {{ site.baseurl }}/img/arrow-logo_vertical_white-txt_black-bg.png
+[9]: {{ site.baseurl }}/img/arrow-logo_vertical_white-txt_transparent-bg.png
+[10]: {{ site.baseurl }}/img/arrow-logo_vertical_black-txt_white-bg.png
+[11]: {{ site.baseurl }}/img/arrow-logo_vertical_black-txt_transparent-bg.png
+[12]: {{ site.baseurl }}/img/arrow-logo_hex_white-txt_black-bg.png
+[13]: {{ site.baseurl }}/img/arrow-logo_hex_black-txt_white-bg.png
+[14]: {{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_black-bg.png
+[15]: {{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_transparent-bg.png
+[16]: {{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_white-bg.png
+[17]: {{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_transparent-bg.png
+[18]: {{ site.baseurl }}/img/arrow-logo_text_white-txt_black-bg.png
+[19]: {{ site.baseurl }}/img/arrow-logo_text_white-txt_transparent-bg.png
+[20]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.png
+[21]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_transparent-bg.png
+
