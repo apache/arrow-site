@@ -25,7 +25,7 @@ limitations under the License.
 
 # Visual Identity for Apache Arrow
 
-As a community project, the visual identity guidelines for Apache Arrow attempt to balance the need to maintain consistent visual imagery in formal contexts, while allowing flexibility for fun and creative reuse of the Apache Arrow logo in informal contexts. On this page you can find:
+As a community project, the visual identity guidelines for Apache Arrow attempt to balance the need to maintain consistent visual imagery in formal contexts, while allowing flexibility for fun and creative reuse of the Apache Arrow logo in informal contexts. On this page you can find the following resources:
 
 - [Design of the logo](#design)
 - [Variations of the logo](#variations)
@@ -38,7 +38,7 @@ The Apache Arrow logo consists of the "Apache Arrow" logotype and the "Triple Ch
 
 <img src="{{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png" width="100%">
 
-The word "Apache" in the logotype is written in all caps [Roboto font][1], and the word "Arrow" is written in all caps [Barlow font][2] in boldface. Both should use normal font kerning. The precise fontsize may depend slightly on the display context but the intent is that the word "Arrow" be approximately 3 times the height, and approximately 2.5 times the width of the word "Apache". The text should be left-justified, with the leftmost edge of the first letters in both words aligned horizontally.
+The word "Apache" in the logotype is written in all caps [Roboto font][1], and the word "Arrow" is written in all caps [Barlow font][2] in boldface. Both should use normal font kerning. The precise font size may depend slightly on the display context but the intent is that the word "Arrow" be approximately 3 times the height, and approximately 2.5 times the width of the word "Apache". The text should be left-justified, with the leftmost edge of the first letters in both words aligned horizontally.
 
 The annotated image below shows the precise spacing used in the horizontal version of the Apache Arrow logo as well as the design of the Triple Chevron. Each chevron has width exactly half its height, and forms a 90-degree angle at the tip. The thickness (both vertically and horizontally) of the chevron is 20% of its height. The spacing between adjacent chevrons is 15% of the height (i.e., if height = 100, width = 50, and spacing = 15). 
 
@@ -58,11 +58,11 @@ A good example of when the vertical layout is more appropriate is in the context
 
 ## Variations of the logo {#variations}
 
-At the bottom of this page you can find the complete list of all logo-related files provided by the Apache Arrow project. The logo exists in a light theme and a dark theme, and these versions are usually simple inversions of one another. The light theme uses black text against a white (or other light coloured) background:
+At the bottom of this page you can find the complete list of all logo-related files provided by the Apache Arrow project. The logo exists in a light theme and a dark theme, and these versions are usually simple inversions of one another. The light theme uses black text against a white (or other light colored) background:
 
 <img class = "py-3" src="{{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png" width="100%">
 
-Similarly, the dark theme uses white text against a black (or other dark coloured) background:
+Similarly, the dark theme uses white text against a black (or other dark colored) background:
 
 <img class = "py-3" src="{{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_black-bg.png" width="100%">
 
@@ -115,7 +115,7 @@ Usage guidelines for official logos are quite similar across many brands, and Ap
  - Please don't modify the text or the design of the chevrons
  - Please don't add additional text to the logotype or imagery to the chevrons
  
-In general, the principles laid out in [Apache Foundation Style Guide][3] for usage of the Apache logo are also appropriate for the Apache Arrow logo. If you're in a situation where you want to refer formally to the Apache Arrow project you should adhere to these guidelines pretty closely and avoid modifying the official logos.
+In general, the principles laid out in the [Apache Foundation Style Guide][3] for usage of the Apache logo are also appropriate for the Apache Arrow logo. If you're in a situation where you want to refer formally to the Apache Arrow project you should adhere to these guidelines pretty closely and avoid modifying the official logos.
 
 ### Regarding unofficial images
 
