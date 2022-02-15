@@ -105,7 +105,7 @@ The following section highlights some of the improvements in this release. Of co
     - `stddev` and `variance` (sample and population) [#1525](https://github.com/apache/arrow-datafusion/pull/1525)
     - `corr` [#1561](https://github.com/apache/arrow-datafusion/pull/1561)
   - Support decimal type [#1394](https://github.com/apache/arrow-datafusion/pull/1394)[#1407](https://github.com/apache/arrow-datafusion/pull/1407)[#1408](https://github.com/apache/arrow-datafusion/pull/1408)[#1431](https://github.com/apache/arrow-datafusion/pull/1431)[#1483](https://github.com/apache/arrow-datafusion/pull/1483)[#1554](https://github.com/apache/arrow-datafusion/pull/1554)[#1640](https://github.com/apache/arrow-datafusion/pull/1640)
-  - Support for evolved schemas [#1622](https://github.com/apache/arrow-datafusion/pull/1622)[#1709](https://github.com/apache/arrow-datafusion/pull/1709)
+  - Support for reading Parquet files with evolved schemas [#1622](https://github.com/apache/arrow-datafusion/pull/1622)[#1709](https://github.com/apache/arrow-datafusion/pull/1709)
   - Support for registering `DataFrame` as table [#1699](https://github.com/apache/arrow-datafusion/pull/1699)
   - Support for the `substring` function [#1621](https://github.com/apache/arrow-datafusion/pull/1621)
   - Support `array_agg(distinct ...)` [#1579](https://github.com/apache/arrow-datafusion/pull/1579)
