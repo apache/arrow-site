@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Apache Arrow DataFusion 6.0.0 Release
+title: Apache Arrow DataFusion 7.0.0 Release
 date: "2022-02-14 00:00:00"
 author: pmc
 categories: [release]
@@ -49,12 +49,11 @@ git shortlog -sn 5.0.0..6.0.0 datafusion datafusion-cli datafusion-examples | wc
     44  Andrew Lamb
     24  Kun Liu
     23  Jiayu Liu
-    12  xudong.w
+    17  xudong.w
     11  Yijie Shen
      9  Matthew Turner
      7  Liang-Chi Hsieh
      5  Lin Ma
-     5  Carlos
      4  Stephen Carman
      4  James Katz
      4  Dmitry Patsura
@@ -146,7 +145,7 @@ To provide transparency on DataFusion’s priorities to users and developers a t
 
 # How to Get Involved
 
-If you are interested in contributing to DataFusion, and learning about state of 
+If you are interested in contributing to DataFusion, and learning about state of
 the art query processing, we would love to have you join us on the journey! You
 can help by trying out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is [here](https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
