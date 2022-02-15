@@ -140,54 +140,89 @@ Many other context-appropriate informal variations can be imagined. For example,
 
 ### Horizontal logos
 
-- [Arrow logo with horizontal orientation, white text, and black background][4]
-- [Arrow logo with horizontal orientation, white text, and transparent background][5]
-- [Arrow logo with horizontal orientation, black text, and white background][6]
-- [Arrow logo with horizontal orientation, black text, and transparent background][7]
+- [Horizontal Arrow logo, PNG format, white text, and black background][4]
+- [Horizontal Arrow logo, SVG format, white text, and black background][5]
+- [Horizontal Arrow logo, PNG format, white text, and transparent background][6]
+- [Horizontal Arrow logo, SVG format, white text, and transparent background][7]
+- [Horizontal Arrow logo, PNG format, black text, and white background][8]
+- [Horizontal Arrow logo, SVG format, black text, and white background][9]
+- [Horizontal Arrow logo, PNG format, black text, and transparent background][10]
+- [Horizontal Arrow logo, SVG format, black text, and transparent background][11]
+
 
 ### Vertical logos
 
-- [Arrow logo with vertical orientation, white text, and black background][8]
-- [Arrow logo with vertical orientation, white text, and transparent background][9]
-- [Arrow logo with vertical orientation, black text, and white background][10]
-- [Arrow logo with vertical orientation, black text, and transparent background][11]
+- [Vertical Arrow logo, PNG format, white text, and black background][12]
+- [Vertical Arrow logo, SVG format, white text, and black background][13]
+- [Vertical Arrow logo, PNG format, white text, and transparent background][14]
+- [Vertical Arrow logo, SVG format, white text, and transparent background][15]
+- [Vertical Arrow logo, PNG format, black text, and white background][16]
+- [Vertical Arrow logo, SVG format, black text, and white background][17]
+- [Vertical Arrow logo, PNG format, black text, and transparent background][18]
+- [Vertical Arrow logo, SVG format, black text, and transparent background][19]
 
 ### Hexagonal logos
 
-- [Arrow logo with hexagonal format, white text, and black background][12]
-- [Arrow logo with hexagonal format, black text, and white background][13]
+- [Hexagonal Arrow logo, PNG format, white text, and black background][20]
+- [Hexagonal Arrow logo, PNG format, black text, and white background][21]
 
-### Partial logos
+### Chevron-only logos
 
-- [Arrow logo with chevrons only, white text, and black background][14]
-- [Arrow logo with chevrons only, white text, and transparent background][15]
-- [Arrow logo with chevrons only, black text, and white background][16]
-- [Arrow logo with chevrons only, black text, and transparent background][17]
-- [Arrow logo with text only, white text, and black background][18]
-- [Arrow logo with text only, white text, and transparent background][19]
-- [Arrow logo with text only, black text, and white background][20]
-- [Arrow logo with text only, black text, and transparent background][21]
+- [Chevron-only Arrow logo, PNG format, white text, and black background][22]
+- [Chevron-only Arrow logo, SVG format, white text, and black background][23]
+- [Chevron-only Arrow logo, PNG format, white text, and transparent background][24]
+- [Chevron-only Arrow logo, SVG format, white text, and transparent background][25]
+- [Chevron-only Arrow logo, PNG format, black text, and white background][26]
+- [Chevron-only Arrow logo, SVG format, black text, and white background][27]
+- [Chevron-only Arrow logo, PNG format, black text, and transparent background][28]
+- [Chevron-only Arrow logo, SVG format, black text, and transparent background][29]
+
+### Text-only logos
+
+- [Text-only Arrow logo, PNG format, white text, and black background][30]
+- [Text-only Arrow logo, SVG format, white text, and black background][31]
+- [Text-only Arrow logo, PNG format, white text, and transparent background][32]
+- [Text-only Arrow logo, SVG format, white text, and transparent background][33]
+- [Text-only Arrow logo, PNG format, black text, and white background][34]
+- [Text-only Arrow logo, SVG format, black text, and white background][35]
+- [Text-only Arrow logo, PNG format, black text, and transparent background][36]
+- [Text-only Arrow logo, SVG format, black text, and transparent background][37]
 
 
 [1]: https://fonts.google.com/specimen/Roboto
 [2]: https://fonts.google.com/specimen/Barlow
 [3]: https://apache.org/foundation/press/kit/ApacheFoundation_StyleGuide.pdf
 [4]: {{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_black-bg.png
-[5]: {{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_transparent-bg.png
-[6]: {{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png
-[7]: {{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_transparent-bg.png
-[8]: {{ site.baseurl }}/img/arrow-logo_vertical_white-txt_black-bg.png
-[9]: {{ site.baseurl }}/img/arrow-logo_vertical_white-txt_transparent-bg.png
-[10]: {{ site.baseurl }}/img/arrow-logo_vertical_black-txt_white-bg.png
-[11]: {{ site.baseurl }}/img/arrow-logo_vertical_black-txt_transparent-bg.png
-[12]: {{ site.baseurl }}/img/arrow-logo_hex_white-txt_black-bg.png
-[13]: {{ site.baseurl }}/img/arrow-logo_hex_black-txt_white-bg.png
-[14]: {{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_black-bg.png
-[15]: {{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_transparent-bg.png
-[16]: {{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_white-bg.png
-[17]: {{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_transparent-bg.png
-[18]: {{ site.baseurl }}/img/arrow-logo_text_white-txt_black-bg.png
-[19]: {{ site.baseurl }}/img/arrow-logo_text_white-txt_transparent-bg.png
-[20]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.png
-[21]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_transparent-bg.png
-
+[5]: {{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_black-bg.svg
+[6]: {{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_transparent-bg.png
+[7]: {{ site.baseurl }}/img/arrow-logo_horizontal_white-txt_transparent-bg.svg
+[8]: {{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png
+[9]: {{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.svg
+[10]: {{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_transparent-bg.png
+[11]: {{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_transparent-bg.svg
+[12]: {{ site.baseurl }}/img/arrow-logo_vertical_white-txt_black-bg.png
+[13]: {{ site.baseurl }}/img/arrow-logo_vertical_white-txt_black-bg.svg
+[14]: {{ site.baseurl }}/img/arrow-logo_vertical_white-txt_transparent-bg.png
+[15]: {{ site.baseurl }}/img/arrow-logo_vertical_white-txt_transparent-bg.svg
+[16]: {{ site.baseurl }}/img/arrow-logo_vertical_black-txt_white-bg.png
+[17]: {{ site.baseurl }}/img/arrow-logo_vertical_black-txt_white-bg.svg
+[18]: {{ site.baseurl }}/img/arrow-logo_vertical_black-txt_transparent-bg.png
+[19]: {{ site.baseurl }}/img/arrow-logo_vertical_black-txt_transparent-bg.svg
+[20]: {{ site.baseurl }}/img/arrow-logo_hex_white-txt_black-bg.png
+[21]: {{ site.baseurl }}/img/arrow-logo_hex_black-txt_white-bg.png
+[22]: {{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_black-bg.png
+[23]: {{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_black-bg.svg
+[24]: {{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_transparent-bg.png
+[25]: {{ site.baseurl }}/img/arrow-logo_chevrons_white-txt_transparent-bg.svg
+[26]: {{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_white-bg.png
+[27]: {{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_white-bg.svg
+[28]: {{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_transparent-bg.png
+[29]: {{ site.baseurl }}/img/arrow-logo_chevrons_black-txt_transparent-bg.svg
+[30]: {{ site.baseurl }}/img/arrow-logo_text_white-txt_black-bg.png
+[31]: {{ site.baseurl }}/img/arrow-logo_text_white-txt_black-bg.svg
+[32]: {{ site.baseurl }}/img/arrow-logo_text_white-txt_transparent-bg.png
+[33]: {{ site.baseurl }}/img/arrow-logo_text_white-txt_transparent-bg.svg
+[34]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.png
+[35]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.svg
+[36]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_transparent-bg.png
+[37]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_transparent-bg.svg
