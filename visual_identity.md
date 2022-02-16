@@ -130,7 +130,7 @@ To provide useful guidance on when unofficial images are acceptable and unaccept
 </div>
 </div>
 
-The image on the left highlights the letter R and one of the chevrons in a fashion that is reminiscent of the R prompt, using colors that align with those used by the R-Ladies organization. Using this image informally as part of a presentation to an R-Ladies meetup would be consistent with the Apache Arrow guidelines, because it is thematically appropriate to the context and the image is not being presented as if it were the official Apache Arrow logo. The purple elements have been introduced to the image in a manner that leaves the visual integrity of the Apache Arrow logo intact, and in a fashion that reflects the informal context-specific use within an R-Ladies meetup.
+The image on the left highlights the letter R and one of the chevrons in a fashion that is reminiscent of the R prompt, using colors that align with those used by the [R-Ladies][38] organization. Using this image informally as part of a presentation to an R-Ladies meetup would be consistent with the Apache Arrow guidelines, because it is thematically appropriate to the context and the image is not being presented as if it were the official Apache Arrow logo. The purple elements have been introduced to the image in a manner that leaves the visual integrity of the Apache Arrow logo intact, and in a fashion that reflects the informal context-specific use within an R-Ladies meetup.
 
 The image on the right adds extra orange colored chevrons to the dark themed hex sticker. Again, this is clearly not part of the official Apache Arrow visual identity and should not be presented as such. For this to be appropriate, even informally, the context would need to be one in which the orange elements are meaningfully connected to the surrounding imagery (e.g., perhaps the orange chevrons continue horizontally in either direction) so that the core of the Apache Arrow logo itself remains visually coherent.
 
@@ -226,3 +226,4 @@ Many other context-appropriate informal variations can be imagined. For example,
 [35]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_white-bg.svg
 [36]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_transparent-bg.png
 [37]: {{ site.baseurl }}/img/arrow-logo_text_black-txt_transparent-bg.svg
+[38]: https://rladies.org/
