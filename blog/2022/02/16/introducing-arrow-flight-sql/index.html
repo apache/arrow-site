@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Introducing Apache Arrow Flight SQL: Accelerating Database Access | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Introducing Apache Arrow Flight SQL: Accelerating Database Access" />
+<meta name="author" content="José Almeida, James Duong, Vinicius Fraga, Juscelino Junior, David Li, Kyle Porter, Rafael Telles" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="This post introduces Arrow Flight SQL, a protocol for interacting with SQL databases over Arrow Flight. We have been working on this protocol over the last six months, and are looking for feedback, interested contributors, and early adopters." />
+<meta property="og:description" content="This post introduces Arrow Flight SQL, a protocol for interacting with SQL databases over Arrow Flight. We have been working on this protocol over the last six months, and are looking for feedback, interested contributors, and early adopters." />
+<link rel="canonical" href="https://arrow.apache.org/blog/2022/02/16/introducing-arrow-flight-sql/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2022/02/16/introducing-arrow-flight-sql/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-02-16T00:00:00-05:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow.png" />
+<meta property="twitter:title" content="Introducing Apache Arrow Flight SQL: Accelerating Database Access" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@José Almeida, James Duong, Vinicius Fraga, Juscelino Junior, David Li, Kyle Porter, Rafael Telles" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"José Almeida, James Duong, Vinicius Fraga, Juscelino Junior, David Li, Kyle Porter, Rafael Telles"},"dateModified":"2022-02-16T00:00:00-05:00","datePublished":"2022-02-16T00:00:00-05:00","description":"This post introduces Arrow Flight SQL, a protocol for interacting with SQL databases over Arrow Flight. We have been working on this protocol over the last six months, and are looking for feedback, interested contributors, and early adopters.","headline":"Introducing Apache Arrow Flight SQL: Accelerating Database Access","image":"https://arrow.apache.org/img/arrow.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2022/02/16/introducing-arrow-flight-sql/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"José Almeida, James Duong, Vinicius Fraga, Juscelino Junior, David Li, Kyle Porter, Rafael Telles"},"url":"https://arrow.apache.org/blog/2022/02/16/introducing-arrow-flight-sql/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments)};
+  gtag('js', new Date());
+
+  gtag('config', 'UA-107500873-1');
+</script>
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/datafusion">DataFusion</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://issues.apache.org/jira/browse/ARROW">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="http://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="http://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="http://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Introducing Apache Arrow Flight SQL: Accelerating Database Access
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    16 Feb 2022
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    José Almeida, James Duong, Vinicius Fraga, Juscelino Junior, David Li, Kyle Porter, Rafael Telles
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p>We would like to introduce Flight SQL, a new client-server protocol developed by the Apache Arrow community for interacting with SQL databases that makes use of the Arrow in-memory columnar format and the Flight RPC framework.</p>
+
+<p>Flight SQL aims to provide broadly similar functionality to existing APIs like JDBC and ODBC, including executing queries; creating prepared statements; and fetching metadata about the supported SQL dialect, available types, defined tables, and so on.
+By building on Apache Arrow, however, Flight SQL makes it easy for clients to talk to Arrow-native databases without converting data.
+And by using <a href="/blog/2019/10/13/introducing-arrow-flight/">Flight</a>, it provides an efficient implementation of a wire format that supports features like encryption and authentication out of the box, while allowing for further optimizations like parallel data access.</p>
+
+<p>While it can be directly used for database access, it is not a direct replacement for JDBC/ODBC. Instead, Flight SQL serves as a concrete wire protocol/driver implementation that can support a JDBC/ODBC driver and reduces implementation burden on databases.</p>
+
+<!-- mermaidjs:
+
+graph LR
+    JDBC[JDBC]
+    ODBC
+    FlightSQL[Flight SQL<br>libraries]
+    ANA[Arrow-native app]
+    DB[(Database with<br>Flight SQL endpoint)]
+
+    JDBC --&gt; FlightSQL
+    ODBC --&gt; FlightSQL
+    ANA --&gt; FlightSQL
+
+    FlightSQL --&gt;|Flight RPC| DB
+
+-->
+
+<div align="center">
+<img src="/img/20220216-flight-sql-jdbc-odbc.svg" alt="Illustration of where Flight SQL sits in the stack. JDBC and ODBC drivers can wrap Flight SQL, or an Arrow-native application can directly use the Flight SQL libraries. Flight SQL in turn talks over Arrow Flight to a database exposing a Flight SQL endpoint." width="90%" class="img-responsive" />
+</div>
+
+<h2 id="motivation">Motivation</h2>
+
+<p>While standards like <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jdbc/">JDBC</a> and <a href="https://docs.microsoft.com/en-us/sql/odbc/reference/odbc-overview?view=sql-server-ver15">ODBC</a> have served users well for decades, they fall short for databases and clients which wish to use Apache Arrow or columnar data in general.
+Row-based APIs like JDBC or <a href="https://www.python.org/dev/peps/pep-0249/">PEP 249</a> require transposing data in this case, and for a database which is itself columnar, this means that data has to be transposed twice—once to present it in rows for the API, and once to get it back into columns for the consumer.
+Meanwhile, while APIs like ODBC do provide bulk access to result buffers, this data must still be copied into Arrow arrays for use with the broader Arrow ecosystem, as implemented by projects like <a href="https://turbodbc.readthedocs.io/en/latest/">Turbodbc</a>.
+Flight SQL aims to get rid of these intermediate steps.</p>
+
+<p>Flight SQL means database servers can implement a standard interface that is designed around Apache Arrow and columnar data from the start.
+Just like how Arrow provides a standard in-memory format, Flight SQL saves developers from having to design and implement an entirely new wire protocol.
+As mentioned, Flight already implements features like encryption on the wire and authentication of requests, which databases do not need to re-implement.</p>
+
+<p>For clients, Flight SQL provides bulk access to query results without having to convert data from another API or format.
+Additionally, by pushing the work of implementing the wire protocol into the Flight and Flight SQL libraries, less code has to be written for each client language or driver.
+And by using Flight underneath, clients and servers can cooperate to implement optimizations like parallel data access, <a href="/blog/2019/10/13/introducing-arrow-flight/#horizontal-scalability-parallel-and-partitioned-data-access">one of the original goals of Flight itself</a>.
+Databases can return multiple “endpoints” to a Flight SQL client, which can then pull data from all of them in parallel, enabling the database backend to horizontally scale.</p>
+
+<h2 id="flight-sql-basics">Flight SQL Basics</h2>
+
+<p>Flight SQL makes full use of the Flight RPC framework and its extensibility, defining additional request/response messages via <a href="https://developers.google.com/protocol-buffers/">Protobuf</a>.
+We’ll go over the Flight SQL protocol briefly, but C++ and Java already implement clients that manage much of this work.
+The full <a href="https://github.com/apache/arrow/blob/release-7.0.0/format/FlightSql.proto">protocol</a> can be found on GitHub.</p>
+
+<p>Most requests follow this pattern:</p>
+<ol>
+  <li>The client constructs a request using one of the defined Protobuf messages.</li>
+  <li>The client sends the request via the GetSchema RPC method (to get the schema of the response) or the GetFlightInfo RPC method (to execute the request).</li>
+  <li>The client makes request(s) to the endpoints returned from GetFlightInfo to get the response.</li>
+</ol>
+
+<p>Flight SQL defines methods to query database metadata, execute queries, or manipulate prepared statements.</p>
+
+<p>Metadata requests:</p>
+<ul>
+  <li>CommandGetCatalogs: list catalogs in a database.</li>
+  <li>CommandGetCrossReference: list foreign key columns that reference a particular other table.</li>
+  <li>CommandGetDbSchemas: list schemas in a catalog.</li>
+  <li>CommandGetExportedKeys: list foreign keys referencing a table.</li>
+  <li>CommandGetImportedKeys: list foreign keys of a table.</li>
+  <li>CommandGetPrimaryKeys: list primary keys of a table.</li>
+  <li>CommandGetSqlInfo: get information about the database itself and its supported SQL dialect.</li>
+  <li>CommandGetTables: list tables in a catalog/schema.</li>
+  <li>CommandGetTableTypes: list table types supported (e.g. table, view, system table).</li>
+</ul>
+
+<p>Queries:</p>
+<ul>
+  <li>CommandStatementQuery: execute a one-off SQL query.</li>
+  <li>CommandStatementUpdate: execute a one-off SQL update query.</li>
+</ul>
+
+<p>Prepared statements:</p>
+<ul>
+  <li>ActionClosePreparedStatementRequest: close a prepared statement.</li>
+  <li>ActionCreatePreparedStatementRequest: create a new prepared statement.</li>
+  <li>CommandPreparedStatementQuery: execute a prepared statement.</li>
+  <li>CommandPreparedStatementUpdate: execute a prepared statement that updates data.</li>
+</ul>
+
+<p>For example, to list all tables:</p>
+
+<!-- mermaidjs:
+
+sequenceDiagram
+    Client->>Server: GetFlightInfo(CommandGetTables)
+    Server->>Client: FlightInfo{..., Ticket, ...}
+    Client->>Server: DoGet(Ticket)
+    Server->>Client: list of tables as Arrow data
+
+-->
+
+<div align="center">
+<img src="/img/20220216-flight-sql-gettables.svg" alt="Sequence diagram showing how to use CommandGetTables. First, the client calls the GetFlightInfo RPC method with a serialized CommandGetTables message as the argument. The server returns a FlightInfo message containing a Ticket message. The client then calls the DoGet RPC method with the Ticket as the argument, and gets back a stream of Arrow record batches containing the tables in the database." height="363" class="img-responsive" />
+</div>
+
+<p>To execute a query:</p>
+
+<!-- mermaidjs:
+
+sequenceDiagram
+    Client->>Server: GetFlightInfo(CommandStatementQuery)
+    Server->>Client: FlightInfo{..., Ticket, ...}
+    Client->>Server: DoGet(Ticket)
+    Server->>Client: query results as Arrow data
+
+-->
+
+<div align="center">
+<img src="/img/20220216-flight-sql-query.svg" alt="Sequence diagram showing how to use CommandStatementQuery. First, the client calls the GetFlightInfo RPC method with a serialized CommandStatementQuery message as the argument. This message contains the SQL query. The server returns a FlightInfo message containing a Ticket message. The client then calls the DoGet RPC method with the Ticket as the argument, and gets back a stream of Arrow record batches containing the query results." height="363" class="img-responsive" />
+</div>
+
+<p>To create and execute a prepared statement to insert rows:</p>
+
+<!-- mermaidjs:
+
+sequenceDiagram
+    Client->>Server: DoAction(ActionCreatePreparedStatementRequest)
+    Server->>Client: ActionCreatePreparedStatementResult
+    Client->>Server: DoPut(CommandPreparedStatementUpdate)
+    Client--&gt;>Server: Arrow data representing parameter values
+    Server->>Client: DoPutUpdateResult
+    Client->>Server: DoAction(ActionClosePreparedStatementRequest)
+-->
+
+<div align="center">
+<img src="/img/20220216-flight-sql-prepared.svg" alt="Sequence diagram showing how to use ActionCreatePreparedStatementResult. First, the client calls the DoAction RPC method with a serialized ActionCreatePreparedStatementResult message as the argument. This message contains the SQL query. The server returns a serialized ActionCreatePreparedStatementResult message containing an opaque handle for the prepared statement. The client then calls the DoPut RPC method with a CommandPreparedStatementUpdate message, containing the opaque handle, as the argument, and uploads a stream of Arrow record batches containing query parameters. The server responds with a serialized DoPutUpdateResult message containing the number of affected rows. Finally, the client calls DoAction again with ActionClosePreparedStatementRequest to clean up the prepared statement." height="459" class="img-responsive" />
+</div>
+
+<h2 id="getting-started">Getting Started</h2>
+
+<p>Note that while Flight SQL is shipping as part of Apache Arrow 7.0.0, it is still under development, and detailed documentation is forthcoming.
+However, implementations are already available in C++ and Java, which provide a low-level client that can be used as well as a server skeleton that can be implemented.</p>
+
+<p>For those interested, a <a href="https://github.com/apache/arrow/blob/release-7.0.0/java/flight/flight-sql/src/test/java/org/apache/arrow/flight/sql/example/FlightSqlExample.java">server implementation wrapping Apache Derby</a> and <a href="https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/example/sqlite_server.h">one wrapping SQLite</a> are available in the source.
+A <a href="https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/test_app_cli.cc">simple CLI demonstrating the client</a> is also available. Finally, we can look at a brief example of executing a query and fetching results:</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">flight</span><span class="o">::</span><span class="n">FlightCallOptions</span> <span class="n">call_options</span><span class="p">;</span>
+
+<span class="c1">// Execute the query, getting a FlightInfo describing how to fetch the results</span>
+<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Executing query: '"</span> <span class="o">&lt;&lt;</span> <span class="n">FLAGS_query</span> <span class="o">&lt;&lt;</span> <span class="s">"'"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">flight</span><span class="o">::</span><span class="n">FlightInfo</span><span class="o">&gt;</span> <span class="n">flight_info</span><span class="p">,</span>
+                      <span class="n">client</span><span class="o">-&gt;</span><span class="n">Execute</span><span class="p">(</span><span class="n">call_options</span><span class="p">,</span> <span class="n">FLAGS_query</span><span class="p">));</span>
+
+<span class="c1">// Fetch each partition sequentially (though this can be done in parallel)</span>
+<span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">flight</span><span class="o">::</span><span class="n">FlightEndpoint</span><span class="o">&amp;</span> <span class="n">endpoint</span> <span class="o">:</span> <span class="n">flight_info</span><span class="o">-&gt;</span><span class="n">endpoints</span><span class="p">())</span> <span class="p">{</span>
+  <span class="c1">// Here we assume each partition is on the same server we originally queried, but this</span>
+  <span class="c1">// isn't true in general: the server may split the query results between multiple</span>
+  <span class="c1">// other servers, which we would have to connect to.</span>
+
+  <span class="c1">// The "ticket" in the endpoint is opaque to the client. The server uses it to</span>
+  <span class="c1">// identify which part of the query results to return.</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">stream</span><span class="p">,</span> <span class="n">client</span><span class="o">-&gt;</span><span class="n">DoGet</span><span class="p">(</span><span class="n">call_options</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">.</span><span class="n">ticket</span><span class="p">));</span>
+  <span class="c1">// Read all results into an Arrow Table, though we can iteratively process record</span>
+  <span class="c1">// batches as they arrive as well</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span> <span class="n">table</span><span class="p">;</span>
+  <span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">stream</span><span class="o">-&gt;</span><span class="n">ReadAll</span><span class="p">(</span><span class="o">&amp;</span><span class="n">table</span><span class="p">));</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Read one partition:"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">table</span><span class="o">-&gt;</span><span class="n">ToString</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The full source is <a href="https://github.com/apache/arrow/blob/master/cpp/examples/arrow/flight_sql_example.cc">available on GitHub</a>.</p>
+
+<h2 id="whats-next--getting-involved">What’s Next &amp; Getting Involved</h2>
+
+<p>Compared to existing libraries like PyODBC, <a href="https://www.dremio.com/subsurface/arrow-flight-and-flight-sql-accelerating-data-movement/">Arrow Flight is already as much as 20x faster</a> (~00:21:00).
+Flight SQL will package these performance advantages into a standard interface, ready for clients and databases to implement.</p>
+
+<p>Further protocol refinements and extensions are expected.
+Some of this work is to make it possible to implement APIs like JDBC on top of Flight SQL; a JDBC driver is being actively worked on.
+While this again introduces the overhead of data conversion, it means a database can make itself accessible to both Arrow-native clients and traditional clients by implementing Flight SQL.
+Other improvements in the future may include Python bindings, an ODBC driver, and more.</p>
+
+<p>For anyone interested in getting involved, either as a contributor or adopter, please reach out on the <a href="/community/#mailing-lists">mailing list</a> or join the discussion on <a href="https://github.com/apache/arrow">GitHub</a>.</p>
+
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2022 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
