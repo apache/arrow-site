@@ -1,7 +1,7 @@
 ---
 layout: article
 title: Visual identity
-description: Visual Identity for Apache Arrow
+description: Visual identity for Apache Arrow
 ---
 <!--
 {% comment %}
