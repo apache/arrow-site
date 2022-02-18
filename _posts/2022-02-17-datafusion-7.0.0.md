@@ -94,7 +94,7 @@ The following section highlights some of the improvements in this release. Of co
   - Arrow’s dyn scalar kernels are now used to enable efficient operations on `DictionaryArray`s [#1685](https://github.com/apache/arrow-datafusion/pull/1685)
   - Switch from `std::sync::Mutex` to `parking_lot::Mutex` [#1720](https://github.com/apache/arrow-datafusion/pull/1720)
 - New Features
-  - Better support for limiting resource usage
+  - Support for memory tracking and spilling to disk
     - MemoryMananger and DiskManager [#1526](https://github.com/apache/arrow-datafusion/pull/1526)
     - Out of core sort [#1526](https://github.com/apache/arrow-datafusion/pull/1526)
     - New metrics
