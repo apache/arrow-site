@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Apache Arrow DataFusion 7.0.0 Release
-date: "2022-02-17 00:00:00"
+date: "2022-02-28 00:00:00"
 author: pmc
 categories: [release]
 ---
