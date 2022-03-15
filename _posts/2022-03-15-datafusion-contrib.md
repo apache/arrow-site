@@ -79,6 +79,11 @@ Add the below to your `Cargo.toml` in your Rust Project with DataFusion.
 datafusion-objectstore-s3 = "0.1.0"
 ```
 
+## DataFusion-Substrait
+
+## DataFusion-BigTable
+
+## DataFusion-Java
 # How to Get Involved
 
 If you are interested in contributing to DataFusion, and learning about state of
