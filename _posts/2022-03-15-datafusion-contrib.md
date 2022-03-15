@@ -69,7 +69,7 @@ This [project](https://github.com/datafusion-contrib/datafusion-objectstore-s3) 
 
 ### Upcoming enhancements
 
-The current priority is adding python bindings for `S3FileSystem`.  After that there will be async improvements as DataFusion adopts more of that functionality.
+The current priority is adding python bindings for `S3FileSystem`.  After that there will be async improvements as DataFusion adopts more of that functionality and we are looking into S3 Select functionality.
 
 ### How to Install
 
