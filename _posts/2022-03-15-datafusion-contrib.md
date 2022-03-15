@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Intorducing Apache Arrow DataFusion Contrib
+title: Introducing Apache Arrow DataFusion Contrib
 date: "2022-02-28 00:00:00"
 author: pmc
 categories: [release]
@@ -75,8 +75,9 @@ The current priority is adding python bindings for `S3FileSystem`.  After that t
 
 Add the below to your `Cargo.toml` in your Rust Project with DataFusion.
 
+```toml
+datafusion-objectstore-s3 = "0.1.0"
 ```
-
 
 # How to Get Involved
 
