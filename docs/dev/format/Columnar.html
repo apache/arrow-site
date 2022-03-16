@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Arrow Columnar Format &#8212; Apache Arrow v8.0.0.dev214</title>
+    <title>Arrow Columnar Format &#8212; Apache Arrow v8.0.0.dev221</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -79,7 +79,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        8.0.0.dev214
+        8.0.0.dev221
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4426,6 +4426,13 @@ function checkPageExistsAndRedirect(event) {
     <a class="reference internal nav-link" href="#struct-layout">
      Struct Layout
     </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#struct-validity">
+       Struct Validity
+      </a>
+     </li>
+    </ul>
    </li>
    <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#union-layout">
@@ -4735,15 +4742,17 @@ right-to-left:</p>
 </pre></div>
 </div>
 <p>Arrays having a 0 null count may choose to not allocate the validity
-bitmap. Implementations may choose to always allocate one anyway as a
-matter of convenience, but this should be noted when memory is being
-shared.</p>
-<p>Nested type arrays except for union types have their own validity bitmap and
-null count regardless of the null count and valid bits of their child arrays.</p>
-<p>Array slots which are null are not required to have a particular
-value; any “masked” memory can have any value and need not be zeroed,
-though implementations frequently choose to zero memory for null
-values.</p>
+bitmap; how this is represented depends on the implementation (for
+example, a C++ implementation may represent such an “absent” validity
+bitmap using a NULL pointer). Implementations may choose to always allocate
+a validity bitmap anyway as a matter of convenience. Consumers of Arrow
+arrays should be ready to handle those two possibilities.</p>
+<p>Nested type arrays (except for union types as noted above) have their own
+top-level validity bitmap and null count, regardless of the null count and
+valid bits of their child arrays.</p>
+<p>Array slots which are null are not required to have a particular value;
+any “masked” memory can have any value and need not be zeroed, though
+implementations frequently choose to zero memory for null values.</p>
 </section>
 <section id="fixed-size-primitive-layout">
 <h3>Fixed-size Primitive Layout<a class="headerlink" href="#fixed-size-primitive-layout" title="Permalink to this headline">¶</a></h3>
@@ -4952,12 +4961,10 @@ the values array, starting at an offset of <code class="docutils literal notrans
 types (which can all be distinct), called its fields. Each field must
 have a UTF8-encoded name, and these field names are part of the type
 metadata.</p>
-<p>A struct array does not have any additional allocated physical storage
-for its values.  A struct array must still have an allocated validity
-bitmap, if it has one or more null values.</p>
 <p>Physically, a struct array has one child array for each field. The
 child arrays are independent and need not be adjacent to each other in
-memory.</p>
+memory. A struct array also has a validity bitmap to encode top-level
+validity information.</p>
 <p>For example, the struct (field names shown here as strings for illustration
 purposes):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Struct</span> <span class="o">&lt;</span>
@@ -5018,19 +5025,22 @@ type.</p>
       | 1          | 2           | unspecified | 4           | unspecified |
 </pre></div>
 </div>
-<p>While a struct does not have physical storage for each of its semantic
-slots (i.e. each scalar C-like struct), an entire struct slot can be
-set to null via the validity bitmap. Any of the child field arrays can
-have null values according to their respective independent validity
-bitmaps. This implies that for a particular struct slot the validity
-bitmap for the struct array might indicate a null slot when one or
-more of its child arrays has a non-null value in their corresponding
-slot.  When reading the struct array the parent validity bitmap takes
-priority.  This is illustrated in the example above, the child arrays
-have valid entries for the null struct but are ‘hidden’ from the
-consumer by the parent array’s validity bitmap.  However, when treated
-independently corresponding values of the children array will be
-non-null.</p>
+<section id="struct-validity">
+<h4>Struct Validity<a class="headerlink" href="#struct-validity" title="Permalink to this headline">¶</a></h4>
+<p>A struct array has its own validity bitmap that is independent of its
+child arrays’ validity bitmaps. The validity bitmap for the struct
+array might indicate a null when one or more of its child arrays has
+a non-null value in its corresponding slot; or conversely, a child
+array might have a null in its validity bitmap while the struct array’s
+validity bitmap shows a non-null value.</p>
+<p>Therefore, to know whether a particular child entry is valid, one must
+take the logical AND of the corresponding bits in the two validity bitmaps
+(the struct array’s and the child array’s).</p>
+<p>This is illustrated in the example above, the child arrays have valid entries
+for the null struct but they are “hidden” by the struct array’s validity
+bitmap. However, when treated independently, corresponding entries of the
+children array will be non-null.</p>
+</section>
 </section>
 <section id="union-layout">
 <h3>Union Layout<a class="headerlink" href="#union-layout" title="Permalink to this headline">¶</a></h3>
