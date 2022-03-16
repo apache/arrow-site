@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Introducing Apache Arrow DataFusion Contrib
-date: "2022-02-28 00:00:00"
+date: "2022-03-16 00:00:00"
 author: pmc
 categories: [release]
 ---
@@ -62,7 +62,7 @@ python -m pip install datafusion
 
 ## DataFusion-ObjectStore-S3
 
-This [project](https://github.com/datafusion-contrib/datafusion-objectstore-s3) provides an `ObjectStore` implementation for querying data stored in S3 or S3 compatible storage.
+This [crate](https://github.com/datafusion-contrib/datafusion-objectstore-s3) provides an `ObjectStore` implementation for querying data stored in S3 or S3 compatible storage.
 
 - Ability to create `S3FileSystem` to register as part of DataFusion `ExecutionContext`
 - Register files or directories stored on S3 with `ctx.register_listing_table`
@@ -81,9 +81,45 @@ datafusion-objectstore-s3 = "0.1.0"
 
 ## DataFusion-Substrait
 
+Substrait provides a cross-language serialization format for relational algebra, based on protocol buffers.
+
+This [crate](https://github.com/datafusion-contrib/datafusion-substrait) provides a Substrait producer and consumer for DataFusion.  A producer converts a DataFusion logical plan into a Substrait protobuf and a consumer does the reverse.
+
+Examples of how to use this crate can be found [here](https://github.com/datafusion-contrib/datafusion-substrait/blob/main/src/lib.rs).
+
+### Potential Use Cases
+
+- Replace current DataFusion protobuf definition used in Ballista for passing query plan fragments to executors.
+- Make it easier to pass query plans over FFI boundaries, such as from Python to Rust
+- Allow Apache Calcite query plans to be executed in DataFusion
+
 ## DataFusion-BigTable
 
+This [crate](https://github.com/datafusion-contrib/datafusion-bigtable) implements [Bigtable](https://cloud.google.com/bigtable) as a data source and physical executor for DataFusion queries.  It currently supports both UTF-8 string and 64-bit big-endian signed integers in Bigtable.  From a SQL perspective it supports both simple and composite row keys with `=`, `IN`, and `BETWEEN` operators as well as projection pushdown.  The physical execution for queries is handled by this crate while any subsequent aggregation, group bys, or joins are handled in DataFusion.
+
+### Upcoming Enhancements
+
+- Predicate pushdown
+  - Value range
+  - Value Regex
+  - Timestamp range
+- Multithreaded
+- Partition aware execution
+- Production ready
+
+### How to Install
+
+Add the below to your `Cargo.toml` in your Rust Project with DataFusion.
+
+```toml
+datafusion-bigtable = "0.1.0"
+```
+## DataFusion-HDFS
+This [crate](https://github.com/datafusion-contrib/datafusion-objectstore-hdfs) introduces `HadoopFileSystem` as a remote `ObjectStore` which provides the ability to query HDFS files.  For HDFS access the [fs-hdfs](https://github.com/yahoNanJing/fs-hdfs) library is used.
+
 ## DataFusion-Java
+
+This [project](https://github.com/datafusion-contrib/datafusion-java) created an initial set of Java bindings to DataFusion.  The project is currently in maintenance mode and is looking for maintainers to drive future development.
 # How to Get Involved
 
 If you are interested in contributing to DataFusion, and learning about state of
