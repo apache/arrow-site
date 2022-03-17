@@ -32,7 +32,7 @@ When you want to extend your Rust project with [SQL support](https://arrow.apach
 
 DataFusion's  SQL, `DataFrame`, and manual `PlanBuilder` API let users access a sophisticated query optimizer and execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of todays multicore hardware. Being written in Rust means DataFusion can offer *both* the safety of dynamic languages as well as the resource efficiency of a compiled language.
 
-The Apache Arrow DataFusion team is pleased to announce the creation of the [DataFusion-Contrib](https://github.com/datafusion-contrib) GitHub organization.  This organization was created to provide an unofficial testing ground for new DataFusion features and as home for extensions to the core DataFusion project.  There are currently four active repositories within this organization which are summarized below.
+The Apache Arrow DataFusion team is pleased to announce the creation of the [DataFusion-Contrib](https://github.com/datafusion-contrib) GitHub organization.  This organization was created to provide an unofficial testing ground for new DataFusion features and as home for extensions to the core DataFusion project.  There are currently five active repositories within this organization which are summarized below.
 
 ## DataFusion-Python
 
@@ -114,12 +114,31 @@ Add the below to your `Cargo.toml` in your Rust Project with DataFusion.
 ```toml
 datafusion-bigtable = "0.1.0"
 ```
+
 ## DataFusion-HDFS
+
 This [crate](https://github.com/datafusion-contrib/datafusion-objectstore-hdfs) introduces `HadoopFileSystem` as a remote `ObjectStore` which provides the ability to query HDFS files.  For HDFS access the [fs-hdfs](https://github.com/yahoNanJing/fs-hdfs) library is used.
+
+## DataFusion-Tokomak
+
+This [crate](https://github.com/datafusion-contrib/datafusion-tokomak) provides an e-graph based DataFusion optimization framework based on the Rust [egg](https://egraphs-good.github.io) library.  An e-graph is a data structure that powers the equality saturation optimization technique.
+
+As context, the optimizer framework within DataFusion is currently under review with the objective of implementing a more strategic long term solution that is more efficient and simpler to develop.
+
+Some of the benefits of using `egg` within DataFusion are:
+
+- An optimized algorithm that is hard to match with manually written optimization passes
+- Easier and less verbose to add simple rules
+- Plugin framework to add slightly more complex optimizations
+- Does not depend on rule order and combined with being able to apply multiple rules in one pass and until convergence, can optimize further than currently is possible (or what would be possible using a optimization strategy like Apache Spark)
+- Cost based optimizations are easy to add
+
+This is an exciting new area for DataFusion with lots of opportunity for community involvement!
 
 ## DataFusion-Java
 
 This [project](https://github.com/datafusion-contrib/datafusion-java) created an initial set of Java bindings to DataFusion.  The project is currently in maintenance mode and is looking for maintainers to drive future development.
+
 # How to Get Involved
 
 If you are interested in contributing to DataFusion, and learning about state of
