@@ -137,7 +137,29 @@ This is an exciting new area for DataFusion with lots of opportunity for communi
 
 ## DataFusion-Tui
 
-TODO
+[DataFusion-tui](https://github.com/datafusion-contrib/datafusion-tui) aka `dft` provides a feature rich terminal application for using DataFusion.  It has drawn inspiration and several features from `datafusion-cli`.  In contrast to `datafusion-cli` the objective of this tool is to provide a light SQL IDE experience for querying data with DataFusion.  This includes features such as the following which are currently implemented:
+
+- Tab Management to provide clean and structured organization of DataFusion queries, results, `ExecutionContext` information, and logs
+  - SQL Editor
+    - Text editor for writing SQL queries
+  - Query History
+    - History of executed queries, their execution time, and the number of returned rows
+  - `ExecutionContext` information
+    - Expose information on which physical optimizers are used and which `ExecutionConfig` settings are set
+  - Logs
+    - Logs from `dft`, DataFusion, and any dependent libraries
+- Support for custom `ObjectStore`s
+  - S3
+- Preload DDL from `~/.datafusionrc` to enable having local "database" available at startup
+
+### Upcoming Enhancements
+
+- SQL Editor
+  - Command to write query results to file
+  - Multiple SQL editor tabs
+- Expose more information from `ExecutionContext`
+- A new help tab that provides information on functions
+- Query custom `TableProvider`s such as [DeltaTable](https://github.com/delta-io/delta-rs) or [BigTable](https://github.com/datafusion-contrib/datafusion-bigtable)
 
 ## DataFusion-Java
 
