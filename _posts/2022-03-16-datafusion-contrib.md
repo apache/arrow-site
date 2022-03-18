@@ -127,13 +127,17 @@ As context, the optimizer framework within DataFusion is currently under review 
 
 Some of the benefits of using `egg` within DataFusion are:
 
-- An optimized algorithm that is hard to match with manually written optimization passes
-- Easier and less verbose to add simple rules
-- Plugin framework to add slightly more complex optimizations
-- Does not depend on rule order and combined with being able to apply multiple rules in one pass and until convergence, can optimize further than currently is possible (or what would be possible using a optimization strategy like Apache Spark)
-- Cost based optimizations are easy to add
+- Implements optimized algorithms that are hard to match with manually written optimization passes
+- Makes it easy and less verbose to add optimization rules
+- Plugin framework to add more complex optimizations
+- Egg does not depend on rule order and can lead to a higher level of optimization by being able to apply multiple rules at the same time until it converges
+- Allows for cost-based optimizations
 
 This is an exciting new area for DataFusion with lots of opportunity for community involvement!
+
+## DataFusion-Tui
+
+TODO
 
 ## DataFusion-Java
 
