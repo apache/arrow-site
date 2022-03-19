@@ -26,25 +26,25 @@ limitations under the License.
 
 # Introduction
 
-[DataFusion](https://arrow.apache.org/datafusion/) is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format.
+Apache Arrow [DataFusion](https://arrow.apache.org/datafusion/) is an extensible query execution framework, written in Rust, that uses [Apache Arrow](https://arrow.apache.org) as its in-memory format.
 
-When you want to extend your Rust project with [SQL support](https://arrow.apache.org/datafusion/user-guide/sql/sql_status.html), a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth checking out.
+When you want to extend your Rust project with [SQL support](https://arrow.apache.org/datafusion/user-guide/sql/sql_status.html), a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth checking out. DataFusion's pluggable design makes creating extensions at various points particular easy to build.
 
 DataFusion's  SQL, `DataFrame`, and manual `PlanBuilder` API let users access a sophisticated query optimizer and execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of todays multicore hardware. Being written in Rust means DataFusion can offer *both* the safety of dynamic languages as well as the resource efficiency of a compiled language.
 
-The Apache Arrow DataFusion team is pleased to announce the creation of the [DataFusion-Contrib](https://github.com/datafusion-contrib) GitHub organization.  This organization was created to provide an unofficial testing ground for new DataFusion features and as home for extensions to the core DataFusion project.  There are currently five active repositories within this organization which are summarized below.
+The DataFusion team is pleased to announce the creation of the [DataFusion-Contrib](https://github.com/datafusion-contrib) GitHub organization to support and accelerate other projects.  While the core DataFusion library remains under Apache governance, the contrib organization provides a more flexible testing ground for new DataFusion features and a home for DataFusion extensions.
 
 ## DataFusion-Python
 
-This [project](https://github.com/datafusion-contrib/datafusion-python) provides Python bindings to the core Rust implementation of DataFusion.  It already provides many core methods for working with DataFusion such as:
+This [project](https://github.com/datafusion-contrib/datafusion-python) provides Python bindings to the core Rust implementation of DataFusion, which allows users to:
 
-- Work with a SQL or DataFrame API for creating query plans, executing them in a multi-threaded environment, and returning results in Python
-- Creation of User Defined Functions and User Defined Aggregate Functions for complex operations
-- Provides zero copy between Python and underlying Rust based execution engine
+- Work with familiar SQL or DataFrame APIs to run queries in a safe, multi-threaded environment, returning results in Python
+- Create User Defined Functions and User Defined Aggregate Functions for complex operations
+- Pay no overhead to copy between Python and underlying Rust execution engine (by way of Apache Arrow arrays)
 
 ### Upcoming enhancements
 
-Going forward there will be a focus on exposing more features from the underlying Rust implementation of DataFusion and improving documentation.
+The team is focusing on exposing more features from the underlying Rust implementation of DataFusion and improving documentation.
 
 ### How to install
 
@@ -62,7 +62,7 @@ python -m pip install datafusion
 
 ## DataFusion-ObjectStore-S3
 
-This [crate](https://github.com/datafusion-contrib/datafusion-objectstore-s3) provides an `ObjectStore` implementation for querying data stored in S3 or S3 compatible storage.
+This [crate](https://github.com/datafusion-contrib/datafusion-objectstore-s3) provides an `ObjectStore` implementation for querying data stored in S3 or S3 compatible storage. This makes it almost as easy to query data that lives on S3 as lives in local files
 
 - Ability to create `S3FileSystem` to register as part of DataFusion `ExecutionContext`
 - Register files or directories stored on S3 with `ctx.register_listing_table`
@@ -81,7 +81,7 @@ datafusion-objectstore-s3 = "0.1.0"
 
 ## DataFusion-Substrait
 
-Substrait provides a cross-language serialization format for relational algebra, based on protocol buffers.
+[Substrait](https://substrait.io/) is an emerging standard that provides a cross-language serialization format for relational algebra (e.g. expressions and query plans).
 
 This [crate](https://github.com/datafusion-contrib/datafusion-substrait) provides a Substrait producer and consumer for DataFusion.  A producer converts a DataFusion logical plan into a Substrait protobuf and a consumer does the reverse.
 
@@ -89,7 +89,7 @@ Examples of how to use this crate can be found [here](https://github.com/datafus
 
 ### Potential Use Cases
 
-- Replace current DataFusion protobuf definition used in Ballista for passing query plan fragments to executors.
+- Replace custom DataFusion protobuf serialization.
 - Make it easier to pass query plans over FFI boundaries, such as from Python to Rust
 - Allow Apache Calcite query plans to be executed in DataFusion
 
@@ -123,7 +123,7 @@ This [crate](https://github.com/datafusion-contrib/datafusion-objectstore-hdfs) 
 
 This [crate](https://github.com/datafusion-contrib/datafusion-tokomak) provides an e-graph based DataFusion optimization framework based on the Rust [egg](https://egraphs-good.github.io) library.  An e-graph is a data structure that powers the equality saturation optimization technique.
 
-As context, the optimizer framework within DataFusion is currently under review with the objective of implementing a more strategic long term solution that is more efficient and simpler to develop.
+As context, the optimizer framework within DataFusion is currently [under review](https://github.com/apache/arrow-datafusion/issues/1972) with the objective of implementing a more strategic long term solution that is more efficient and simpler to develop.
 
 Some of the benefits of using `egg` within DataFusion are:
 
@@ -158,7 +158,7 @@ This is an exciting new area for DataFusion with lots of opportunity for communi
   - Command to write query results to file
   - Multiple SQL editor tabs
 - Expose more information from `ExecutionContext`
-- A new help tab that provides information on functions
+- A help tab that provides information on functions
 - Query custom `TableProvider`s such as [DeltaTable](https://github.com/delta-io/delta-rs) or [BigTable](https://github.com/datafusion-contrib/datafusion-bigtable)
 
 ## DataFusion-Java
@@ -171,7 +171,8 @@ If you are interested in contributing to DataFusion, and learning about state of
 the art query processing, we would love to have you join us on the journey! You
 can help by trying out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is [here](https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
-Check out our new [Communication Doc](https://arrow.apache.org/datafusion/community/communication.html) on more
-ways to engage with the community.
+The best way to find out about creating new extensions within DataFusion-Contrib is reaching out on the `#arrow-rust` channel of the Apache Software Foundation [Slack](https://join.slack.com/t/the-asf/shared_invite/zt-vlfbf7ch-HkbNHiU_uDlcH_RvaHv9gQ) workspace.
+
+You can also check out our new [Communication Doc](https://arrow.apache.org/datafusion/community/communication.html) on more ways to engage with the community.
 
 Links for each DataFusion-Contrib repository are provided above if you would like to contribute to those.
