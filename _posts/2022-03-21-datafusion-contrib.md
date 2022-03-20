@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Introducing Apache Arrow DataFusion Contrib
-date: "2022-03-16 00:00:00"
+date: "2022-03-21 00:00:00"
 author: pmc
 categories: [release]
 ---
@@ -32,7 +32,7 @@ When you want to extend your Rust project with [SQL support](https://arrow.apach
 
 DataFusion's  SQL, `DataFrame`, and manual `PlanBuilder` API let users access a sophisticated query optimizer and execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of todays multicore hardware. Being written in Rust means DataFusion can offer *both* the safety of dynamic languages as well as the resource efficiency of a compiled language.
 
-The DataFusion team is pleased to announce the creation of the [DataFusion-Contrib](https://github.com/datafusion-contrib) GitHub organization to support and accelerate other projects.  While the core DataFusion library remains under Apache governance, the contrib organization provides a more flexible testing ground for new DataFusion features and a home for DataFusion extensions.
+The DataFusion team is pleased to announce the creation of the [DataFusion-Contrib](https://github.com/datafusion-contrib) GitHub organization to support and accelerate other projects.  While the core DataFusion library remains under Apache governance, the contrib organization provides a more flexible testing ground for new DataFusion features and a home for DataFusion extensions.  With this announcement, we are pleased to introduce the following inaugural DataFusion-Contrib repositories.
 
 ## DataFusion-Python
 
@@ -160,6 +160,10 @@ This is an exciting new area for DataFusion with lots of opportunity for communi
 - Expose more information from `ExecutionContext`
 - A help tab that provides information on functions
 - Query custom `TableProvider`s such as [DeltaTable](https://github.com/delta-io/delta-rs) or [BigTable](https://github.com/datafusion-contrib/datafusion-bigtable)
+
+## DataFusion-Streams
+
+[DataFusion-Stream](https://github.com/datafusion-contrib/datafusion-streams) is a new testing ground for creating a `StreamProvider` in DataFusion that will enable querying streaming data sources such as Apache Kafka.  The implementation for this feature is currently being designed and is under active review.  Once the design is finalized the trait and attendant data structures will be added back to the core DataFusion crate.
 
 ## DataFusion-Java
 
