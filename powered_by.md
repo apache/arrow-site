@@ -44,9 +44,9 @@ in descriptions is also always allowed, as in "BigCoProduct is a widget for
 Apache Arrow".
 
 Projects and documents that want to include a logo for Apache Arrow should use
-the official logo:
+the official logo, and adhere to the guidelines listed on the [Visual Identity]({{ site.baseurl }}/visual_identity/) page:
 
-<img src="{{ site.baseurl }}/img/arrow.png" style="max-width: 100%;"/>
+<img src="{{ site.baseurl }}/img/arrow-logo_horizontal_black-txt_white-bg.png" style="max-width: 100%;"/>
 
 ## Projects Powered By Apache Arrow
 
