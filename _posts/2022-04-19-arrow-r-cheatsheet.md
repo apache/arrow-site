@@ -2,7 +2,7 @@
 layout: post
 title: Arrow for R Cheatsheet
 date: "2022-04-19 00:00:00"
-author: Stephanie Hazlitt
+author: stephhazlitt
 categories: [application]
 ---
 <!--
