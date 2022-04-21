@@ -24,7 +24,7 @@ limitations under the License.
 {% endcomment %}
 -->
 
-We are excited to introduce the new [Arrow for R Cheatsheet](https://github.com/apache/arrow/blob/master/r/cheatsheet/arrow-cheatsheet.pdf).
+We are excited to introduce the new [Apache Arrow for R Cheatsheet](https://github.com/apache/arrow/blob/master/r/cheatsheet/arrow-cheatsheet.pdf).
 
 <div align="center">
 <a href="https://github.com/apache/arrow/blob/master/r/cheatsheet/arrow-cheatsheet.pdf">
