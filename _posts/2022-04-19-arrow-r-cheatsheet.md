@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Apache Arrow for R Cheatsheet
-date: "2022-04-19 00:00:00"
+date: "2022-04-27 00:00:00"
 author: stephhazlitt
 categories: [application]
 ---
