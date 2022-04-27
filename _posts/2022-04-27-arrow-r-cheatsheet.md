@@ -28,7 +28,7 @@ We are excited to introduce the new [Apache Arrow for R Cheatsheet](https://gith
 
 <div align="center">
 <a href="https://github.com/apache/arrow/blob/master/r/cheatsheet/arrow-cheatsheet.pdf">
-<img src="{{ site.baseurl }}/img/20220419-arrow-r-cheatsheet-thumbnail.png"
+<img src="{{ site.baseurl }}/img/20220427-arrow-r-cheatsheet-thumbnail.png"
      alt="Thumbnail image of the first page of the Arrow for R cheatsheet."
      width="70%" height="70%">
 </a>
