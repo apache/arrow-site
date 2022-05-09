@@ -26,7 +26,10 @@ limitations under the License.
 
 ## Current Version: {{site.data.versions['current'].number}} ({{site.data.versions['current'].date}})
 
-See the [release notes][10] for more about what's new. For information on previous releases, see [here][19].
+See the [release notes][10] for more about what's new. For information on previous releases, see [here][19]. Rust and Julia libraries are released separately. See the following pages for details:
+
+* Rust: https://docs.rs/crate/arrow/latest
+* Julia: https://github.com/apache/arrow-julia/#readme
 
 This page is a reference listing of release artifacts and package managers. For language-specific user guides, see the pages listed in the "Documentation" menu above.
 
@@ -81,10 +84,11 @@ Apache Arrow GLib (C). Here are supported platforms:
 * Debian GNU/Linux bookworm
 * Ubuntu 18.04 LTS
 * Ubuntu 20.04 LTS
-* Ubuntu 21.04
+* Ubuntu 21.10
+* Ubuntu 22.04 LTS
 * AlmaLinux 8
 * CentOS 7
-* CentOS 8
+* CentOS 8 Stream
 * Red Hat Enterprise Linux 7
 * Red Hat Enterprise Linux 8
 * Amazon Linux 2
@@ -100,7 +104,9 @@ sudo apt update
 sudo apt install -y -V libarrow-dev # For C++
 sudo apt install -y -V libarrow-glib-dev # For GLib (C)
 sudo apt install -y -V libarrow-dataset-dev # For Apache Arrow Dataset C++
+sudo apt install -y -V libarrow-dataset-glib-dev # For Apache Arrow Dataset GLib (C)
 sudo apt install -y -V libarrow-flight-dev # For Apache Arrow Flight C++
+sudo apt install -y -V libarrow-flight-glib-dev # For Apache Arrow Flight GLib (C)
 # Notes for Plasma related packages:
 #   * You need to enable "non-free" component on Debian GNU/Linux
 #   * You need to enable "multiverse" component on Ubuntu
@@ -125,20 +131,30 @@ sudo subscription-manager repos --enable codeready-builder-for-rhel-$(cut -d: -f
 sudo dnf install -y arrow-devel # For C++
 sudo dnf install -y arrow-glib-devel # For GLib (C)
 sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo dnf install -y arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
+sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
+sudo dnf install -y gandiva-devel # For Apache Gandiva C++
+sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
 sudo dnf install -y parquet-devel # For Apache Parquet C++
 sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
 ```
 
-CentOS 8:
+CentOS 8 Stream:
 
 ```shell
 sudo dnf install -y epel-release
-sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-stream/apache-arrow-release-latest.rpm
 sudo dnf config-manager --set-enabled epel
 sudo dnf config-manager --set-enabled powertools
 sudo dnf install -y arrow-devel # For C++
 sudo dnf install -y arrow-glib-devel # For GLib (C)
 sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo dnf install -y arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
+sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
+sudo dnf install -y gandiva-devel # For Apache Gandiva C++
+sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
 sudo dnf install -y parquet-devel # For Apache Parquet C++
 sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
 ```
@@ -151,6 +167,7 @@ sudo yum install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo yum install -y --enablerepo=epel arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
 sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
 sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
 ```
@@ -163,8 +180,9 @@ sudo yum install -y https://apache.jfrog.io/artifactory/arrow/amazon-linux/2/apa
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo yum install -y --enablerepo=epel arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
 sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
-sudo yum install -y --enablerepo=epel parquet-glib-devel # For APache Parquet GLib (C)
+sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
 ```
 
 ### C# Packages
@@ -249,17 +267,9 @@ Install the R package from [CRAN][20] with
 install.packages("arrow")
 ```
 
-### Julia package via General registry
-
-Install the Julia package from the [General registry][21] with
-
-```julia
-using Pkg; Pkg.add("Arrow")
-```
-
 ### Ruby Packages on RubyGems
 
-Install the Ruby packages for Ruby 2.6, 2.7 and 3.0 from [RubyGems][25] with
+Install the Ruby packages for Ruby 2.7, 3.0 and 3.1 from [RubyGems][25] with
 
 ```shell
 gem install red-arrow
@@ -286,7 +296,6 @@ gem install red-plasma # For Plasma support
 [18]: https://github.com/Microsoft/vcpkg
 [19]: {{ site.baseurl }}/release/
 [20]: https://cran.r-project.org/
-[21]: https://github.com/JuliaRegistries/General
 [22]: https://www.nuget.org/packages/Apache.Arrow/
 [23]: https://www.nuget.org/packages/Apache.Arrow.Fligth/
 [24]: https://www.nuget.org/packages/Apache.Arrow.Flight.AspNetCore/
