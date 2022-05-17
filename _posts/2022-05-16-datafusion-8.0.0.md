@@ -130,7 +130,7 @@ planner to translate to their own execution engines.
 
 Here are some of the improvements and new features in the query execution engine:
 
-- The `ExecutionContext` has been renamed to SessionContext and now supports multi-tenancy
+- The `ExecutionContext` has been renamed to `SessionContext` and now supports multi-tenancy
 - The `ExecutionPlan` trait is no longer async
 - There is a work-in-progress new Morsel-Driven Scheduler based on the ["Morsel-Driven Parallelism: A NUMA-Aware Query
   Evaluation Framework for the Many-Core Age"](https://15721.courses.cs.cmu.edu/spring2016/papers/p743-leis.pdf) whitepaper
