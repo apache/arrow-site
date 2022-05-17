@@ -133,7 +133,7 @@ There are also many bug fixes and improvements around normalizing identifiers co
 We continue our tradition of incrementally releasing support for new
 features as it is developed. Thus, while the physical plan may not yet
 support all new features, it gets more complete each release. These
-changes also make DataFusion an increasingly compelling choice
+changes also make DataFusion an increasingly compelling choice for
 projects looking for a SQL parser and query planner to translate to
 their own execution engine.
 
