@@ -121,7 +121,7 @@ allows DataFusion to be used more effectively from the CLI.
 ## SQL Query Planner
 
 The SQL query planner now supports a number of new SQL features, including support for `IN`, `EXISTS`, and scalar 
-subquery expressions, and support for advanced aggregates with CUBE and ROLLUP grouping sets. There are also many 
+subquery expressions, and support for advanced aggregates with `CUBE` and `ROLLUP` grouping sets. There are also many 
 bug fixes around normalizing identifiers consistently. Note that the physical plan does not yet support all of the 
 new features but these changes make DataFusion more compelling for projects looking for a SQL parser and query 
 planner to translate to their own execution engines.
@@ -130,8 +130,8 @@ planner to translate to their own execution engines.
 
 Here are some of the improvements and new features in the query execution engine:
 
-- The ExecutionContext has been renamed to SessionContext and now supports multi-tenancy
-- The ExecutionPlan trait is no longer async
+- The `ExecutionContext` has been renamed to SessionContext and now supports multi-tenancy
+- The `ExecutionPlan` trait is no longer async
 - There is a work-in-progress new Morsel-Driven Scheduler based on the ["Morsel-Driven Parallelism: A NUMA-Aware Query
   Evaluation Framework for the Many-Core Age"](https://15721.courses.cs.cmu.edu/spring2016/papers/p743-leis.pdf) whitepaper
 - There is a new sort-merge join operator
@@ -153,8 +153,9 @@ and persisting session configs to allow schedulers to restart and continue proce
 
 Here are some of the initiatives that the community plans on working on prior to the next release.
 
-- There is a proposal (LINK) to move Ballista to its own top-level arrow-ballista repository to decouple DataFusion 
-and Ballista releases and to allow each project to have documentation better targeted at its particular audience.
+- There is a [proposal to move Ballista to its own top-level arrow-ballista repository](https://docs.google.com/document/d/1jNRbadyStSrV5kifwn0khufAwq6OnzGczG4z8oTQJP4/edit?usp=sharing) 
+ to decouple DataFusion and Ballista releases and to allow each project to have documentation better targeted at 
+  its particular audience.
 - We plan on increasing the frequency of DataFusion releases, with monthly releases now instead of quarterly. This 
   is driven by requests from the increasing number of projects that now depend on DataFusion.
 - There is ongoing work to implement new optimizer rules to rewrite queries containing subquery expressions as 
