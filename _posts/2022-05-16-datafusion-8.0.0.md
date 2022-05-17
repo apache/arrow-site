@@ -39,7 +39,7 @@ today's multicore hardware. Being written in Rust means DataFusion can offer *bo
 the resource efficiency of a compiled language.
 
 The Apache Arrow team is pleased to announce the DataFusion 8.0.0 release (and also the release of version 0.7.0 of 
-the Ballista subproject). This covers 3 months of development work and includes 279 commits from the following 51 
+the Ballista subproject). This covers 3 months of development work and includes 279 commits from the following 49 
 distinct contributors.
 
 <!--
