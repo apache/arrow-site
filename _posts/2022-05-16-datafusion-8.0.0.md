@@ -182,7 +182,7 @@ Here are some of the initiatives that the community plans on working on prior to
 - There is ongoing work to implement new optimizer rules to rewrite queries containing subquery expressions as
   joins, to support a wider range of queries.
 - The new scheduler based on morsel-driven execution will continue to evolve in this next release, with work to
- refine IO abstractions to improve performance and integration with the new scheduler.
+  refine IO abstractions to improve performance and integration with the new scheduler.
 - Improved performance for Sort, Grouping and Joins
 
 # How to Get Involved
