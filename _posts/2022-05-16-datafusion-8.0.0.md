@@ -148,7 +148,7 @@ There are several notable improvements and new features in the query execution e
 In addition, we have added several foundational features to drive even
 more advanced query processing into DataFusion, focusing on running
 arbitrary queries larger than available memory, and pushing the
-envelope for performance of sorting, grouping and joining even
+envelope for performance of sorting, grouping, and joining even
 further:
 
 - Morsel-Driven Scheduler based on ["Morsel-Driven Parallelism: A NUMA-Aware Query
