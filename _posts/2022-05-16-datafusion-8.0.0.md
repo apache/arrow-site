@@ -154,7 +154,7 @@ further:
 - Morsel-Driven Scheduler based on ["Morsel-Driven Parallelism: A NUMA-Aware Query
   Evaluation Framework for the Many-Core Age"](https://15721.courses.cs.cmu.edu/spring2016/papers/p743-leis.pdf)
 - Consolidated object store implementation and integration with parquet decoding
-- Memory Limited Spilling Sort operator
+- Memory Limited Spilling sort operator
 - Memory Limited Sort-Merge join operator
 - High performance JIT code generation for tuple comparisons
 - Memory efficient Row Format
