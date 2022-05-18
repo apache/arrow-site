@@ -33,7 +33,7 @@ When you want to extend your Rust project with [SQL support](https://arrow.apach
 a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth
 checking out.
 
-DataFusion's  SQL, `DataFrame`, and manual `PlanBuilder` API let users access a sophisticated query optimizer and
+DataFusion's SQL, `DataFrame`, and manual `PlanBuilder` API let users access a sophisticated query optimizer and
 execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of
 today's multicore hardware. Being written in Rust means DataFusion can offer *both* the safety of dynamic languages and
 the resource efficiency of a compiled language.
