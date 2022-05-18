@@ -35,7 +35,7 @@ checking out.
 
 DataFusion's SQL, `DataFrame`, and manual `PlanBuilder` API let users access a sophisticated query optimizer and
 execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of
-today's multicore hardware. Being written in Rust means DataFusion can offer *both* the safety of dynamic languages and
+today's multicore hardware. Being written in Rust means DataFusion can offer *both* the safety of a dynamic language and
 the resource efficiency of a compiled language.
 
 The Apache Arrow team is pleased to announce the DataFusion 8.0.0 release (and also the release of version 0.7.0 of
