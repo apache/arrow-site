@@ -146,7 +146,7 @@ There are several notable improvements and new features in the query execution e
 - A new serialization API for serializing plans to bytes (based on protobuf)
 
 In addition, we have added several foundational features to drive even
-more advanced query processing into DataFusion, focused on running
+more advanced query processing into DataFusion, focusing on running
 arbitrary queries larger than available memory, and pushing the
 envelope for performance of sorting, grouping and joining even
 further:
