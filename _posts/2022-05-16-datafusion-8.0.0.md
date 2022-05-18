@@ -102,7 +102,7 @@ $ git shortlog -sn 7.0.0..8.0.0 datafusion datafusion-cli datafusion-examples ba
      1  doki
 ```
 
-The following sections highlight some of changes in this release. Of course, many other bug fixes and
+The following sections highlight some of the changes in this release. Of course, many other bug fixes and
 improvements have been made and we encourage you to check out the
 [changelog](https://github.com/apache/arrow-datafusion/blob/8.0.0/datafusion/CHANGELOG.md) for full details.
 
@@ -126,15 +126,16 @@ The SQL query planner now supports a number of new SQL features, including:
 - _Grouping Sets_: `CUBE` and `ROLLUP` grouping sets.
 - _Aggregate functions_: `approx_percentile`, `approx_percentile_cont`, `approx_percentile_cont_with_weight`, `approx_distinct`, `approx_median` and `array`
 - _`null` literals_
-- _bitwise operations_: for example '|'
+- _bitwise operations_: for example '`|`'
 
 There are also many bug fixes and improvements around normalizing identifiers consistently.
 
 We continue our tradition of incrementally releasing support for new
-features as it is developed. Thus, while the physical plan may not yet
+features as they are developed. Thus, while the physical plan may not yet
 support all new features, it gets more complete each release. These
 changes also make DataFusion an increasingly compelling choice for
-projects looking for a SQL parser and query planner to translate to
+projects looking for a SQL parser and query planner that can produce
+optimized logical plans that can be translated to
 their own execution engine.
 
 ## Query Execution & Internals
