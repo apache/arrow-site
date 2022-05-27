@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pyarrow.dataset &#8212; Apache Arrow v9.0.0.dev100</title>
+    <title>pyarrow.dataset &#8212; Apache Arrow v9.0.0.dev110</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -87,7 +87,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        9.0.0.dev100
+        9.0.0.dev110
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4770,18 +4770,21 @@ function checkPageExistsAndRedirect(event) {
 
 <span class="sd">    Specify the Schema for paths like &quot;/2009/June&quot;:</span>
 
-<span class="sd">    &gt;&gt;&gt; partitioning(pa.schema([(&quot;year&quot;, pa.int16()), (&quot;month&quot;, pa.string())]))</span>
+<span class="sd">    &gt;&gt;&gt; import pyarrow as pa</span>
+<span class="sd">    &gt;&gt;&gt; import pyarrow.dataset as ds</span>
+<span class="sd">    &gt;&gt;&gt; part = ds.partitioning(pa.schema([(&quot;year&quot;, pa.int16()),</span>
+<span class="sd">    ...                                   (&quot;month&quot;, pa.string())]))</span>
 
 <span class="sd">    or let the types be inferred by only specifying the field names:</span>
 
-<span class="sd">    &gt;&gt;&gt; partitioning(field_names=[&quot;year&quot;, &quot;month&quot;])</span>
+<span class="sd">    &gt;&gt;&gt; part =  ds.partitioning(field_names=[&quot;year&quot;, &quot;month&quot;])</span>
 
 <span class="sd">    For paths like &quot;/2009/June&quot;, the year will be inferred as int32 while month</span>
 <span class="sd">    will be inferred as string.</span>
 
 <span class="sd">    Specify a Schema with dictionary encoding, providing dictionary values:</span>
 
-<span class="sd">    &gt;&gt;&gt; partitioning(</span>
+<span class="sd">    &gt;&gt;&gt; part = ds.partitioning(</span>
 <span class="sd">    ...     pa.schema([</span>
 <span class="sd">    ...         (&quot;year&quot;, pa.int16()),</span>
 <span class="sd">    ...         (&quot;month&quot;, pa.dictionary(pa.int8(), pa.string()))</span>
@@ -4793,7 +4796,7 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">    Alternatively, specify a Schema with dictionary encoding, but have Arrow</span>
 <span class="sd">    infer the dictionary values:</span>
 
-<span class="sd">    &gt;&gt;&gt; partitioning(</span>
+<span class="sd">    &gt;&gt;&gt; part = ds.partitioning(</span>
 <span class="sd">    ...     pa.schema([</span>
 <span class="sd">    ...         (&quot;year&quot;, pa.int16()),</span>
 <span class="sd">    ...         (&quot;month&quot;, pa.dictionary(pa.int8(), pa.string()))</span>
@@ -4802,15 +4805,14 @@ function checkPageExistsAndRedirect(event) {
 
 <span class="sd">    Create a Hive scheme for a path like &quot;/year=2009/month=11&quot;:</span>
 
-<span class="sd">    &gt;&gt;&gt; partitioning(</span>
+<span class="sd">    &gt;&gt;&gt; part = ds.partitioning(</span>
 <span class="sd">    ...     pa.schema([(&quot;year&quot;, pa.int16()), (&quot;month&quot;, pa.int8())]),</span>
 <span class="sd">    ...     flavor=&quot;hive&quot;)</span>
 
 <span class="sd">    A Hive scheme can also be discovered from the directory structure (and</span>
 <span class="sd">    types will be inferred):</span>
 
-<span class="sd">    &gt;&gt;&gt; partitioning(flavor=&quot;hive&quot;)</span>
-
+<span class="sd">    &gt;&gt;&gt; part = ds.partitioning(flavor=&quot;hive&quot;)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">flavor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># default flavor</span>
@@ -5237,26 +5239,76 @@ function checkPageExistsAndRedirect(event) {
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
+<span class="sd">    Creating an example Table:</span>
+
+<span class="sd">    &gt;&gt;&gt; import pyarrow as pa</span>
+<span class="sd">    &gt;&gt;&gt; import pyarrow.parquet as pq</span>
+<span class="sd">    &gt;&gt;&gt; table = pa.table({&#39;year&#39;: [2020, 2022, 2021, 2022, 2019, 2021],</span>
+<span class="sd">    ...                   &#39;n_legs&#39;: [2, 2, 4, 4, 5, 100],</span>
+<span class="sd">    ...                   &#39;animal&#39;: [&quot;Flamingo&quot;, &quot;Parrot&quot;, &quot;Dog&quot;, &quot;Horse&quot;,</span>
+<span class="sd">    ...                              &quot;Brittle stars&quot;, &quot;Centipede&quot;]})</span>
+<span class="sd">    &gt;&gt;&gt; pq.write_table(table, &quot;file.parquet&quot;)</span>
+
 <span class="sd">    Opening a single file:</span>
 
-<span class="sd">    &gt;&gt;&gt; dataset(&quot;path/to/file.parquet&quot;, format=&quot;parquet&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; import pyarrow.dataset as ds</span>
+<span class="sd">    &gt;&gt;&gt; dataset = ds.dataset(&quot;file.parquet&quot;, format=&quot;parquet&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; dataset.to_table()</span>
+<span class="sd">    pyarrow.Table</span>
+<span class="sd">    year: int64</span>
+<span class="sd">    n_legs: int64</span>
+<span class="sd">    animal: string</span>
+<span class="sd">    ----</span>
+<span class="sd">    year: [[2020,2022,2021,2022,2019,2021]]</span>
+<span class="sd">    n_legs: [[2,2,4,4,5,100]]</span>
+<span class="sd">    animal: [[&quot;Flamingo&quot;,&quot;Parrot&quot;,&quot;Dog&quot;,&quot;Horse&quot;,&quot;Brittle stars&quot;,&quot;Centipede&quot;]]</span>
 
 <span class="sd">    Opening a single file with an explicit schema:</span>
 
-<span class="sd">    &gt;&gt;&gt; dataset(&quot;path/to/file.parquet&quot;, schema=myschema, format=&quot;parquet&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; myschema = pa.schema([</span>
+<span class="sd">    ...     (&#39;n_legs&#39;, pa.int64()),</span>
+<span class="sd">    ...     (&#39;animal&#39;, pa.string())])</span>
+<span class="sd">    &gt;&gt;&gt; dataset = ds.dataset(&quot;file.parquet&quot;, schema=myschema, format=&quot;parquet&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; dataset.to_table()</span>
+<span class="sd">    pyarrow.Table</span>
+<span class="sd">    n_legs: int64</span>
+<span class="sd">    animal: string</span>
+<span class="sd">    ----</span>
+<span class="sd">    n_legs: [[2,2,4,4,5,100]]</span>
+<span class="sd">    animal: [[&quot;Flamingo&quot;,&quot;Parrot&quot;,&quot;Dog&quot;,&quot;Horse&quot;,&quot;Brittle stars&quot;,&quot;Centipede&quot;]]</span>
 
 <span class="sd">    Opening a dataset for a single directory:</span>
 
-<span class="sd">    &gt;&gt;&gt; dataset(&quot;path/to/nyc-taxi/&quot;, format=&quot;parquet&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; dataset(&quot;s3://mybucket/nyc-taxi/&quot;, format=&quot;parquet&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; ds.write_dataset(table, &quot;partitioned_dataset&quot;, format=&quot;parquet&quot;,</span>
+<span class="sd">    ...                  partitioning=[&#39;year&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; dataset = ds.dataset(&quot;partitioned_dataset&quot;, format=&quot;parquet&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; dataset.to_table()</span>
+<span class="sd">    pyarrow.Table</span>
+<span class="sd">    n_legs: int64</span>
+<span class="sd">    animal: string</span>
+<span class="sd">    ----</span>
+<span class="sd">    n_legs: [[5],[2],[4,100],[2,4]]</span>
+<span class="sd">    animal: [[&quot;Brittle stars&quot;],[&quot;Flamingo&quot;],...[&quot;Parrot&quot;,&quot;Horse&quot;]]</span>
+
+<span class="sd">    For a single directory from a S3 bucket:</span>
+
+<span class="sd">    &gt;&gt;&gt; ds.dataset(&quot;s3://mybucket/nyc-taxi/&quot;,</span>
+<span class="sd">    ...            format=&quot;parquet&quot;) # doctest: +SKIP</span>
 
 <span class="sd">    Opening a dataset from a list of relatives local paths:</span>
 
-<span class="sd">    &gt;&gt;&gt; dataset([</span>
-<span class="sd">    ...     &quot;part0/data.parquet&quot;,</span>
-<span class="sd">    ...     &quot;part1/data.parquet&quot;,</span>
-<span class="sd">    ...     &quot;part3/data.parquet&quot;,</span>
+<span class="sd">    &gt;&gt;&gt; dataset = ds.dataset([</span>
+<span class="sd">    ...     &quot;partitioned_dataset/2019/part-0.parquet&quot;,</span>
+<span class="sd">    ...     &quot;partitioned_dataset/2020/part-0.parquet&quot;,</span>
+<span class="sd">    ...     &quot;partitioned_dataset/2021/part-0.parquet&quot;,</span>
 <span class="sd">    ... ], format=&#39;parquet&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; dataset.to_table()</span>
+<span class="sd">    pyarrow.Table</span>
+<span class="sd">    n_legs: int64</span>
+<span class="sd">    animal: string</span>
+<span class="sd">    ----</span>
+<span class="sd">    n_legs: [[5],[2],[4,100]]</span>
+<span class="sd">    animal: [[&quot;Brittle stars&quot;],[&quot;Flamingo&quot;],[&quot;Dog&quot;,&quot;Centipede&quot;]]</span>
 
 <span class="sd">    With filesystem provided:</span>
 
@@ -5265,12 +5317,14 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">    ...     &#39;part1/data.parquet&#39;,</span>
 <span class="sd">    ...     &#39;part3/data.parquet&#39;,</span>
 <span class="sd">    ... ]</span>
-<span class="sd">    &gt;&gt;&gt; dataset(paths, filesystem=&#39;file:///directory/prefix, format=&#39;parquet&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; ds.dataset(paths, filesystem=&#39;file:///directory/prefix,</span>
+<span class="sd">    ...            format=&#39;parquet&#39;) # doctest: +SKIP</span>
 
 <span class="sd">    Which is equivalent with:</span>
 
-<span class="sd">    &gt;&gt;&gt; fs = SubTreeFileSystem(&quot;/directory/prefix&quot;, LocalFileSystem())</span>
-<span class="sd">    &gt;&gt;&gt; dataset(paths, filesystem=fs, format=&#39;parquet&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; fs = SubTreeFileSystem(&quot;/directory/prefix&quot;,</span>
+<span class="sd">    ...                        LocalFileSystem()) # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; ds.dataset(paths, filesystem=fs, format=&#39;parquet&#39;) # doctest: +SKIP</span>
 
 <span class="sd">    With a remote filesystem URI:</span>
 
@@ -5279,20 +5333,21 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">    ...     &#39;nested/directory/part1/data.parquet&#39;,</span>
 <span class="sd">    ...     &#39;nested/directory/part3/data.parquet&#39;,</span>
 <span class="sd">    ... ]</span>
-<span class="sd">    &gt;&gt;&gt; dataset(paths, filesystem=&#39;s3://bucket/&#39;, format=&#39;parquet&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; ds.dataset(paths, filesystem=&#39;s3://bucket/&#39;,</span>
+<span class="sd">    ...            format=&#39;parquet&#39;) # doctest: +SKIP</span>
 
 <span class="sd">    Similarly to the local example, the directory prefix may be included in the</span>
 <span class="sd">    filesystem URI:</span>
 
-<span class="sd">    &gt;&gt;&gt; dataset(paths, filesystem=&#39;s3://bucket/nested/directory&#39;,</span>
-<span class="sd">    ...         format=&#39;parquet&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; ds.dataset(paths, filesystem=&#39;s3://bucket/nested/directory&#39;,</span>
+<span class="sd">    ...         format=&#39;parquet&#39;) # doctest: +SKIP</span>
 
 <span class="sd">    Construction of a nested dataset:</span>
 
-<span class="sd">    &gt;&gt;&gt; dataset([</span>
+<span class="sd">    &gt;&gt;&gt; ds.dataset([</span>
 <span class="sd">    ...     dataset(&quot;s3://old-taxi-data&quot;, format=&quot;parquet&quot;),</span>
 <span class="sd">    ...     dataset(&quot;local/path/to/data&quot;, format=&quot;ipc&quot;)</span>
-<span class="sd">    ... ])</span>
+<span class="sd">    ... ]) # doctest: +SKIP</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># collect the keyword arguments for later reuse</span>
     <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
