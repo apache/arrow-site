@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Integrating PyArrow with Java &#8212; Apache Arrow v9.0.0.dev316</title>
+    <title>Integrating PyArrow with Java &#8212; Apache Arrow v9.0.0.dev325</title>
 <script>
   document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
   document.documentElement.dataset.theme = localStorage.getItem("theme") || "light"
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        9.0.0.dev316
+        9.0.0.dev325
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -5071,6 +5071,128 @@ values printed by the Python script have been properly changed by the Java code:
 <span class="go">    9,</span>
 <span class="go">    10</span>
 <span class="go">]</span>
+</pre></div>
+</div>
+<p>We can also use the C Stream Interface to exchange
+:py:class:<a href="#id1"><span class="problematic" id="id2">`</span></a>pyarrow.RecordBatchReader`s between Java and Python.  We’ll
+use this Java class as a demo, which lets you read an Arrow IPC file
+via Java’s implementation, or write data to a JSON file:</p>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">java.io.File</span><span class="p">;</span><span class="w"></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">java.nio.file.Files</span><span class="p">;</span><span class="w"></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">java.nio.file.Paths</span><span class="p">;</span><span class="w"></span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">org.apache.arrow.c.ArrowArrayStream</span><span class="p">;</span><span class="w"></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">org.apache.arrow.c.Data</span><span class="p">;</span><span class="w"></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">org.apache.arrow.memory.BufferAllocator</span><span class="p">;</span><span class="w"></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">org.apache.arrow.memory.RootAllocator</span><span class="p">;</span><span class="w"></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">org.apache.arrow.vector.ipc.ArrowFileReader</span><span class="p">;</span><span class="w"></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">org.apache.arrow.vector.ipc.ArrowReader</span><span class="p">;</span><span class="w"></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">org.apache.arrow.vector.ipc.JsonFileWriter</span><span class="p">;</span><span class="w"></span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">PythonInteropDemo</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">AutoCloseable</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">BufferAllocator</span><span class="w"> </span><span class="n">allocator</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="nf">PythonInteropDemo</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="na">allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">RootAllocator</span><span class="p">();</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">exportStream</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">cStreamPointer</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">(</span><span class="kd">final</span><span class="w"> </span><span class="n">ArrowArrayStream</span><span class="w"> </span><span class="n">stream</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrowArrayStream</span><span class="p">.</span><span class="na">wrap</span><span class="p">(</span><span class="n">cStreamPointer</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">ArrowFileReader</span><span class="w"> </span><span class="n">reader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ArrowFileReader</span><span class="p">(</span><span class="n">Files</span><span class="p">.</span><span class="na">newByteChannel</span><span class="p">(</span><span class="n">Paths</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">path</span><span class="p">)),</span><span class="w"> </span><span class="n">allocator</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="n">Data</span><span class="p">.</span><span class="na">exportArrayStream</span><span class="p">(</span><span class="n">allocator</span><span class="p">,</span><span class="w"> </span><span class="n">reader</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">importStream</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">path</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">cStreamPointer</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">(</span><span class="kd">final</span><span class="w"> </span><span class="n">ArrowArrayStream</span><span class="w"> </span><span class="n">stream</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrowArrayStream</span><span class="p">.</span><span class="na">wrap</span><span class="p">(</span><span class="n">cStreamPointer</span><span class="p">);</span><span class="w"></span>
+<span class="w">         </span><span class="kd">final</span><span class="w"> </span><span class="n">ArrowReader</span><span class="w"> </span><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Data</span><span class="p">.</span><span class="na">importArrayStream</span><span class="p">(</span><span class="n">allocator</span><span class="p">,</span><span class="w"> </span><span class="n">stream</span><span class="p">);</span><span class="w"></span>
+<span class="w">         </span><span class="n">JsonFileWriter</span><span class="w"> </span><span class="n">writer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">JsonFileWriter</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">)))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">writer</span><span class="p">.</span><span class="na">start</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="na">getVectorSchemaRoot</span><span class="p">().</span><span class="na">getSchema</span><span class="p">(),</span><span class="w"> </span><span class="n">input</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="na">loadNextBatch</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">writer</span><span class="p">.</span><span class="na">write</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="na">getVectorSchemaRoot</span><span class="p">());</span><span class="w"></span>
+<span class="w">      </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">close</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">Exception</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">allocator</span><span class="p">.</span><span class="na">close</span><span class="p">();</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>On the Python side, we’ll use JPype as before, except this time we’ll
+send RecordBatchReaders back and forth:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">tempfile</span>
+
+<span class="kn">import</span> <span class="nn">jpype</span>
+<span class="kn">import</span> <span class="nn">jpype.imports</span>
+<span class="kn">from</span> <span class="nn">jpype.types</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1"># Init the JVM and make demo class available to Python.</span>
+<span class="n">jpype</span><span class="o">.</span><span class="n">startJVM</span><span class="p">(</span><span class="n">classpath</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;./dependencies/*&quot;</span><span class="p">,</span> <span class="s2">&quot;./target/*&quot;</span><span class="p">])</span>
+<span class="n">PythonInteropDemo</span> <span class="o">=</span> <span class="n">JClass</span><span class="p">(</span><span class="s2">&quot;PythonInteropDemo&quot;</span><span class="p">)</span>
+<span class="n">demo</span> <span class="o">=</span> <span class="n">PythonInteropDemo</span><span class="p">()</span>
+
+<span class="c1"># Create a Python record batch reader</span>
+<span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
+<span class="n">schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;ints&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int64</span><span class="p">()),</span>
+    <span class="p">(</span><span class="s2">&quot;strs&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">())</span>
+<span class="p">])</span>
+<span class="n">batches</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">pa</span><span class="o">.</span><span class="n">record_batch</span><span class="p">([</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span>
+        <span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+    <span class="p">],</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">),</span>
+    <span class="n">pa</span><span class="o">.</span><span class="n">record_batch</span><span class="p">([</span>
+        <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+        <span class="p">[</span><span class="s2">&quot;e&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;h&quot;</span><span class="p">],</span>
+    <span class="p">],</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">),</span>
+<span class="p">]</span>
+<span class="n">reader</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">RecordBatchReader</span><span class="o">.</span><span class="n">from_batches</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">batches</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyarrow.cffi</span> <span class="kn">import</span> <span class="n">ffi</span> <span class="k">as</span> <span class="n">arrow_c</span>
+
+<span class="c1"># Export the Python reader through C Data</span>
+<span class="n">c_stream</span> <span class="o">=</span> <span class="n">arrow_c</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;struct ArrowArrayStream*&quot;</span><span class="p">)</span>
+<span class="n">c_stream_ptr</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">arrow_c</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="s2">&quot;uintptr_t&quot;</span><span class="p">,</span> <span class="n">c_stream</span><span class="p">))</span>
+<span class="n">reader</span><span class="o">.</span><span class="n">_export_to_c</span><span class="p">(</span><span class="n">c_stream_ptr</span><span class="p">)</span>
+
+<span class="c1"># Send reader to the Java function that writes a JSON file</span>
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">()</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+    <span class="n">demo</span><span class="o">.</span><span class="n">importStream</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">c_stream_ptr</span><span class="p">)</span>
+
+    <span class="c1"># Read the JSON file back</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;JSON file written by Java:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+
+
+<span class="c1"># Write an Arrow IPC file for Java to read</span>
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">()</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">pa</span><span class="o">.</span><span class="n">ipc</span><span class="o">.</span><span class="n">new_file</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">schema</span><span class="p">)</span> <span class="k">as</span> <span class="n">sink</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">:</span>
+            <span class="n">sink</span><span class="o">.</span><span class="n">write_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+
+    <span class="n">demo</span><span class="o">.</span><span class="n">exportStream</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">c_stream_ptr</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">pa</span><span class="o">.</span><span class="n">RecordBatchReader</span><span class="o">.</span><span class="n">_import_from_c</span><span class="p">(</span><span class="n">c_stream_ptr</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;IPC file read by Java:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">read_all</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mvn package
+<span class="gp">$ </span>mvn org.apache.maven.plugins:maven-dependency-plugin:2.7:copy-dependencies -DoutputDirectory<span class="o">=</span>dependencies
+<span class="gp">$ </span>python demo.py
+<span class="go">JSON file written by Java:</span>
+<span class="go">{&quot;schema&quot;:{&quot;fields&quot;:[{&quot;name&quot;:&quot;ints&quot;,&quot;nullable&quot;:true,&quot;type&quot;:{&quot;name&quot;:&quot;int&quot;,&quot;bitWidth&quot;:64,&quot;isSigned&quot;:true},&quot;children&quot;:[]},{&quot;name&quot;:&quot;strs&quot;,&quot;nullable&quot;:true,&quot;type&quot;:{&quot;name&quot;:&quot;utf8&quot;},&quot;children&quot;:[]}]},&quot;batches&quot;:[{&quot;count&quot;:4,&quot;columns&quot;:[{&quot;name&quot;:&quot;ints&quot;,&quot;count&quot;:4,&quot;VALIDITY&quot;:[1,1,1,1],&quot;DATA&quot;:[&quot;0&quot;,&quot;2&quot;,&quot;4&quot;,&quot;8&quot;]},{&quot;name&quot;:&quot;strs&quot;,&quot;count&quot;:4,&quot;VALIDITY&quot;:[1,1,1,0],&quot;OFFSET&quot;:[0,1,2,3,3],&quot;DATA&quot;:[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,&quot;&quot;]}]},{&quot;count&quot;:4,&quot;columns&quot;:[{&quot;name&quot;:&quot;ints&quot;,&quot;count&quot;:4,&quot;VALIDITY&quot;:[0,1,1,0],&quot;DATA&quot;:[&quot;0&quot;,&quot;32&quot;,&quot;64&quot;,&quot;0&quot;]},{&quot;name&quot;:&quot;strs&quot;,&quot;count&quot;:4,&quot;VALIDITY&quot;:[1,0,0,1],&quot;OFFSET&quot;:[0,1,1,1,2],&quot;DATA&quot;:[&quot;e&quot;,&quot;&quot;,&quot;&quot;,&quot;h&quot;]}]}]}</span>
+<span class="go">IPC file read by Java:</span>
+<span class="go">pyarrow.Table</span>
+<span class="go">ints: int64</span>
+<span class="go">strs: string</span>
+<span class="go">----</span>
+<span class="go">ints: [[0,2,4,8],[null,32,64,null]]</span>
+<span class="go">strs: [[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,null],[&quot;e&quot;,null,null,&quot;h&quot;]]</span>
 </pre></div>
 </div>
 </section>
