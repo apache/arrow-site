@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Extending pyarrow &#8212; Apache Arrow v9.0.0.dev325</title>
+    <title>Extending pyarrow &#8212; Apache Arrow v9.0.0.dev341</title>
 <script>
   document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
   document.documentElement.dataset.theme = localStorage.getItem("theme") || "light"
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        9.0.0.dev325
+        9.0.0.dev341
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -1644,6 +1644,11 @@ function checkPageExistsAndRedirect(event) {
        <li class="toctree-l4">
         <a class="reference internal" href="generated/pyarrow.UnionScalar.html">
          pyarrow.UnionScalar
+        </a>
+       </li>
+       <li class="toctree-l4">
+        <a class="reference internal" href="generated/pyarrow.ExtensionScalar.html">
+         pyarrow.ExtensionScalar
         </a>
        </li>
       </ul>
@@ -4676,6 +4681,11 @@ function checkPageExistsAndRedirect(event) {
     </a>
    </li>
    <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#custom-scalar-conversion">
+     Custom scalar conversion
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#conversion-to-pandas">
      Conversion to pandas
     </a>
@@ -4956,6 +4966,36 @@ extension array class will be preserved (as long as the definitions of the class
 are available).</p>
 <p>The same <code class="docutils literal notranslate"><span class="pre">__arrow_ext_class__</span></code> specialization can be used with custom types defined
 by subclassing <a class="reference internal" href="generated/pyarrow.ExtensionType.html#pyarrow.ExtensionType" title="pyarrow.ExtensionType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtensionType</span></code></a>.</p>
+</section>
+<section id="custom-scalar-conversion">
+<h3>Custom scalar conversion<a class="headerlink" href="#custom-scalar-conversion" title="Permalink to this heading">#</a></h3>
+<p>If you want scalars of your custom extension type to convert to a custom type when
+<a class="reference internal" href="generated/pyarrow.ExtensionScalar.html#pyarrow.ExtensionScalar.as_py" title="pyarrow.ExtensionScalar.as_py"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ExtensionScalar.as_py()</span></code></a> is called, you can override the <a class="reference internal" href="generated/pyarrow.ExtensionType.html#pyarrow.ExtensionType.scalar_as_py" title="pyarrow.ExtensionType.scalar_as_py"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ExtensionType.scalar_as_py()</span></code></a>
+method. For example, if we wanted the above example 3D point type to return a custom
+3D point class instead of a list, we would implement:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Point3D</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;Point3D&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">])</span>
+
+<span class="k">class</span> <span class="nc">Point3DType</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">PyExtensionType</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">PyExtensionType</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Point3DType</span><span class="p">,</span> <span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">scalar_as_py</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scalar</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">ListScalar</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Point3D</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Point3D</span><span class="p">(</span><span class="o">*</span><span class="n">scalar</span><span class="o">.</span><span class="n">as_py</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Arrays built using this extension type now provide scalars that convert to our <code class="docutils literal notranslate"><span class="pre">Point3D</span></code> class:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">storage</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]],</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="mi">3</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ExtensionArray</span><span class="o">.</span><span class="n">from_storage</span><span class="p">(</span><span class="n">Point3DType</span><span class="p">(),</span> <span class="n">storage</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+<span class="go">Point3D(x=1.0, y=2.0, z=3.0)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()</span>
+<span class="go">[Point3D(x=1.0, y=2.0, z=3.0), Point3D(x=4.0, y=5.0, z=6.0)]</span>
+</pre></div>
+</div>
 </section>
 <section id="conversion-to-pandas">
 <h3>Conversion to pandas<a class="headerlink" href="#conversion-to-pandas" title="Permalink to this heading">#</a></h3>
