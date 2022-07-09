@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Arrow Flight RPC &#8212; Apache Arrow v9.0.0.dev341</title>
+    <title>Arrow Flight RPC &#8212; Apache Arrow v9.0.0.dev347</title>
 <script>
   document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
   document.documentElement.dataset.theme = localStorage.getItem("theme") || "light"
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        9.0.0.dev341
+        9.0.0.dev347
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -6454,9 +6454,28 @@ error codes.</p>
 </section>
 <section id="implementing-custom-transports">
 <h2>Implementing Custom Transports<a class="headerlink" href="#implementing-custom-transports" title="Permalink to this heading">#</a></h2>
+<p>Internal (but not private) interface for implementing alternate network transports in Flight.</p>
+<p>
+To implement a transport, implement ServerTransport and ClientTransport, and register the desired URI schemes with TransportRegistry. Flight takes care of most of the per-RPC details; transports only handle connections and providing a I/O stream implementation (TransportDataStream).</p>
+<p>On the server side:</p>
+<p><ol class="arabic simple">
+<li><p>Applications subclass FlightServerBase and override RPC handlers.</p></li>
+<li><p>FlightServerBase::Init will look up and create a ServerTransport based on the scheme of the Location given to it.</p></li>
+<li><p>The ServerTransport will start the actual server. (For instance, for gRPC, it creates a gRPC server and registers a gRPC service.) That server will handle connections.</p></li>
+<li><p>The transport should forward incoming calls to the server to the RPC handlers defined on ServerTransport, which implements the actual RPC handler using the interfaces here. Any I/O the RPC handler needs to do is managed by transport-specific implementations of TransportDataStream.</p></li>
+<li><p>ServerTransport calls FlightServerBase for the actual application logic.</p></li>
+</ol>
+</p>
+<p>On the client side:</p>
+<p><ol class="arabic simple">
+<li><p>Applications create a FlightClient with a Location.</p></li>
+<li><p>FlightClient will look up and create a ClientTransport based on the scheme of the Location given to it.</p></li>
+<li><p>When calling a method on FlightClient, FlightClient will delegate to the ClientTransport. There is some indirection, e.g. for DoGet, FlightClient only requests that the ClientTransport start the call and provide it with an I/O stream. The “Flight implementation” itself still lives in FlightClient. </p></li>
+</ol>
+</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>doxygenfile: Cannot find file “arrow/flight/transport_impl.h </p>
+<p>EXPERIMENTAL. Subject to change.</p>
 </div>
 </section>
 </section>
