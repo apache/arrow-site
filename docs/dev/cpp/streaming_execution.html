@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-    <title>Acero: A C++ streaming execution engine &#8212; Apache Arrow v9.0.0.dev362</title>
+    <title>Acero: A C++ streaming execution engine &#8212; Apache Arrow v9.0.0.dev372</title>
 <script>
   document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
   document.documentElement.dataset.theme = localStorage.getItem("theme") || "light"
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        9.0.0.dev362
+        9.0.0.dev372
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4660,8 +4660,72 @@ function checkPageExistsAndRedirect(event) {
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#overview">
-   Overview
+  <a class="reference internal nav-link" href="#substrait">
+   Substrait
+  </a>
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#substrait-conformance">
+     Substrait Conformance
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#plans">
+       Plans
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#extensions">
+       Extensions
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#relations-in-general">
+       Relations (in general)
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#read-relations">
+       Read Relations
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#filter-relations">
+       Filter Relations
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#project-relations">
+       Project Relations
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#join-relations">
+       Join Relations
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#expressions-general">
+       Expressions (general)
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#literals">
+       Literals
+      </a>
+     </li>
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#functions">
+       Functions
+      </a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#architecture-overview">
+   Architecture Overview
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
@@ -4877,8 +4941,147 @@ to downstream nodes (its outputs) as they are finalized.</p>
 Journal of Functional Programming, 28.</a></p>
 </div>
 </section>
-<section id="overview">
-<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">#</a></h2>
+<section id="substrait">
+<h2>Substrait<a class="headerlink" href="#substrait" title="Permalink to this heading">#</a></h2>
+<p>In order to use Acero you will need to create an execution plan.  This is the
+model that describes the computation you want to apply to your data.  Acero has
+its own internal representation for execution plans but most users should not
+interact with this directly as it will couple their code to Acero.</p>
+<p><a class="reference external" href="https://substrait.io">Substrait</a> is an open standard for execution plans.
+Acero implements the Substrait “consumer” interface.  This means that Acero can
+accept a Substrait plan and fulfill the plan, loading the requested data and
+applying the desired computation.  By using Substrait plans users can easily
+switch out to a different execution engine at a later time.</p>
+<section id="substrait-conformance">
+<h3>Substrait Conformance<a class="headerlink" href="#substrait-conformance" title="Permalink to this heading">#</a></h3>
+<p>Substrait defines a broad set of operators and functions for many different
+situations and it is unlikely that Acero will ever completely satisfy all
+defined Substrait operators and functions.  To help understand what features
+are available the following sections define which features have been currently
+implemented in Acero and any caveats that apply.</p>
+<section id="plans">
+<h4>Plans<a class="headerlink" href="#plans" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>A plan should have a single top-level relation.</p></li>
+<li><p>The consumer is currently based on a custom build of Substrait that
+is older than 0.1.0.  Any features added that are newer than 0.1.0 will
+not be supported.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="extensions">
+<h4>Extensions<a class="headerlink" href="#extensions" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>If a plan contains any extension type variations it will be rejected.</p></li>
+<li><p>If a plan contains any advanced extensions it will be rejected.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="relations-in-general">
+<h4>Relations (in general)<a class="headerlink" href="#relations-in-general" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">emit</span></code> property (to customize output order of a node or to drop
+columns) is not supported and plans containing this property will
+be rejected.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">hint</span></code> property is not supported and plans containing this
+property will be rejected.</p></li>
+<li><p>Any advanced extensions will cause a plan to be rejected.</p></li>
+<li><p>Any relation not explicitly listed below will not be supported
+and will cause the plan to be rejected.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="read-relations">
+<h4>Read Relations<a class="headerlink" href="#read-relations" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">projection</span></code> property is not supported and plans containing this
+property will be rejected.</p></li>
+<li><p>The only supported read type is <code class="docutils literal notranslate"><span class="pre">LocalFiles</span></code>.  Plans with any other
+type will be rejected.</p></li>
+<li><p>Only the parquet file format is currently supported.</p></li>
+<li><p>All URIs must use the <code class="docutils literal notranslate"><span class="pre">file</span></code> scheme</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">partition_index</span></code>, <code class="docutils literal notranslate"><span class="pre">start</span></code>, and <code class="docutils literal notranslate"><span class="pre">length</span></code> are not supported.  Plans containing
+these properties will be rejected.</p></li>
+<li><p>The Substrait spec requires that a <code class="docutils literal notranslate"><span class="pre">filter</span></code> be completely satisfied by a read
+relation.  However, Acero only uses a read filter for pushdown projection and
+it may not be fully satisfied.  Users should generally attach an additional
+filter relation with the same filter expression after the read relation.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="filter-relations">
+<h4>Filter Relations<a class="headerlink" href="#filter-relations" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>No know caveats</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="project-relations">
+<h4>Project Relations<a class="headerlink" href="#project-relations" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>No known caveats</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="join-relations">
+<h4>Join Relations<a class="headerlink" href="#join-relations" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>The join type <code class="docutils literal notranslate"><span class="pre">JOIN_TYPE_SINGLE</span></code> is not supported and plans containing this
+will be rejected.</p></li>
+<li><p>The join expression must be a call to either the <code class="docutils literal notranslate"><span class="pre">equal</span></code> or <code class="docutils literal notranslate"><span class="pre">is_not_distinct_from</span></code>
+functions.  Both arguments to the call must be direct references.  Only a single
+join key is supported.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">post_join_filter</span></code> property is not supported and will be ignored.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="expressions-general">
+<h4>Expressions (general)<a class="headerlink" href="#expressions-general" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>Various places in the Substrait spec allow for expressions to be used outside
+of a filter or project relation.  For example, a join expression or an aggregate
+grouping set.  Acero typically expects these expressions to be direct references.
+Planners should extract the implicit projection into a formal project relation
+before delivering the plan to Acero.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="literals">
+<h4>Literals<a class="headerlink" href="#literals" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>A literal with non-default nullability will cause a plan to be rejected.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="functions">
+<h4>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h4>
+<blockquote>
+<div><ul class="simple">
+<li><p>The only functions currently supported by Acero are:</p>
+<ul>
+<li><p>add</p></li>
+<li><p>equal</p></li>
+<li><p>is_not_distinct_from</p></li>
+</ul>
+</li>
+<li><p>The functions above must be referenced using the URI
+<code class="docutils literal notranslate"><span class="pre">https://github.com/apache/arrow/blob/master/format/substrait/extension_types.yaml</span></code></p></li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+</section>
+<section id="architecture-overview">
+<h2>Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permalink to this heading">#</a></h2>
 <dl class="simple">
 <dt><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ExecNode</span></code></dt><dd><p>Each node in the graph is an implementation of the <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ExecNode</span></code> interface.</p>
 </dd>
@@ -5121,8 +5324,8 @@ reads and decodes twice.</p>
 <p><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ExecNode</span></code> is the component we use as a building block
 containing in-built operations with various functionalities.</p>
 <p>This is the list of operations associated with the execution plan:</p>
-<table class="table" id="id1">
-<caption><span class="caption-text">Operations and Options</span><a class="headerlink" href="#id1" title="Permalink to this table">#</a></caption>
+<table class="table" id="id2">
+<caption><span class="caption-text">Operations and Options</span><a class="headerlink" href="#id2" title="Permalink to this table">#</a></caption>
 <colgroup>
 <col style="width: 50%" />
 <col style="width: 50%" />
