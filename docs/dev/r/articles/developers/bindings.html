@@ -310,9 +310,9 @@ We recommend looking at the <a href="https://github.com/apache/arrow/blob/master
 <div class="section level4">
 <h4 id="step-3b---if-direct-mapping-not-possible-try-a-modified-implementation">Step 3b - If direct mapping not possible, try a modified implementation<a class="anchor" aria-label="anchor" href="#step-3b---if-direct-mapping-not-possible-try-a-modified-implementation"></a>
 </h4>
-<p>If the function cannot be mapped directly, some extra work may be needed to ensure that calling the arrow version of the function results in the same result as calling the R version of the function. In this case, the function will need adding to the <code>nse_funcs</code> list in <code>arrow/r/R/dplyr-functions.R</code>. Here is how this might look for <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code>:</p>
+<p>If the function cannot be mapped directly, some extra work may be needed to ensure that calling the arrow version of the function results in the same result as calling the R version of the function. In this case, the function will need adding to the <code>nse_funcs</code> function registry. Here is how this might look for <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code>:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../../reference/register_binding.html">register_binding</a></span><span class="op">(</span><span class="st">"startsWith"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">prefix</span><span class="op">)</span> <span class="op">{</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../../reference/register_binding.html">register_binding</a></span><span class="op">(</span><span class="st">"base::startsWith"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">prefix</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">Expression</span><span class="op">$</span><span class="fu">create</span><span class="op">(</span></span>
 <span>    <span class="st">"starts_with"</span>,</span>
 <span>    <span class="va">x</span>,</span>
@@ -320,8 +320,30 @@ We recommend looking at the <a href="https://github.com/apache/arrow/blob/master
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
 <p>In the source files, all the <code><a href="../../reference/register_binding.html">register_binding()</a></code> calls are wrapped in functions that are called on package load. These are separated into files based on subject matter (e.g., <code>R/dplyr-funcs-math.R</code>, <code>R/dplyr-funcs-string.R</code>): find the closest analog to the function whose binding is being defined and define the new binding in a similar location. For example, the binding for <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code> is registered in <code>dplyr-funcs-string.R</code> next to the binding for <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">endsWith()</a></code>.</p>
-<p>Hint: you can use <code><a href="../../reference/call_function.html">call_function()</a></code> to call a compute function directly from R. This might be useful if you want to experiment with a compute function while you’re writing bindings for it, e.g.</p>
+<p>Note: we use the namespace-qualified name (i.e. <code>"base::startsWith"</code>) for a binding. This will register the same binding both as <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith()</a></code> and as <code><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">base::startsWith()</a></code>, which will allow us to use the <code>pkg::</code> prefix in a call.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../../reference/Table.html">arrow_table</a></span><span class="op">(</span><span class="va">starwars</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu">stringr</span><span class="fu">::</span><span class="fu"><a href="https://stringr.tidyverse.org/reference/str_detect.html" class="external-link">str_detect</a></span><span class="op">(</span><span class="va">name</span>, <span class="st">"Darth"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Table (query)</span></span>
+<span><span class="co">## name: string</span></span>
+<span><span class="co">## height: int32</span></span>
+<span><span class="co">## mass: double</span></span>
+<span><span class="co">## hair_color: string</span></span>
+<span><span class="co">## skin_color: string</span></span>
+<span><span class="co">## eye_color: string</span></span>
+<span><span class="co">## birth_year: double</span></span>
+<span><span class="co">## sex: string</span></span>
+<span><span class="co">## gender: string</span></span>
+<span><span class="co">## homeworld: string</span></span>
+<span><span class="co">## species: string</span></span>
+<span><span class="co">## films: list&lt;item: string&gt;</span></span>
+<span><span class="co">## vehicles: list&lt;item: string&gt;</span></span>
+<span><span class="co">## starships: list&lt;item: string&gt;</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## * Filter: match_substring_regex(name, {pattern="Darth", ignore_case=false})</span></span>
+<span><span class="co">## See $.data for the source Arrow object</span></span></code></pre>
+<p>Hint: you can use <code><a href="../../reference/call_function.html">call_function()</a></code> to call a compute function directly from R. This might be useful if you want to experiment with a compute function while you’re writing bindings for it, e.g.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../reference/call_function.html">call_function</a></span><span class="op">(</span></span>
 <span>  <span class="st">"starts_with"</span>,</span>
 <span>  <span class="va">Array</span><span class="op">$</span><span class="fu">create</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Apache"</span>, <span class="st">"Arrow"</span>, <span class="st">"R"</span>, <span class="st">"package"</span><span class="op">)</span><span class="op">)</span>,</span>
