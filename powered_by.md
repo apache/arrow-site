@@ -73,7 +73,7 @@ short description of your use case.
 * **[Bodo][36]:** Bodo is a universal Python analytics engine that democratizes High Performance 
    Computing (HPC) architecture for mainstream enterprises, allowing Python analytics workloads to
    scale efficiently. Bodo uses Arrow to support I/O for Parquet files, as well as internal support for data operations.
-  **[ClickHouse][44]:** An open-source analytical database management system. 
+* **[ClickHouse][44]:** An open-source analytical database management system. 
    ClickHouse is using Apache Arrow for data import and export, and for direct querying of external datasets 
    in Arrow, ArrowStream, Parquet and ORC formats.
 * **[Cylon][35]:**  An open-source high performance distributed data processing library 
@@ -126,7 +126,7 @@ short description of your use case.
   serve as input for our implemented ML algorithms. Those dataframes can be
   accessed from the FPGAs with a single DMA operation by implementing a shared
   memory communication schema.
-* **[InfluxDB IOx][42]:**InfluxDB IOx is an open source time series database
+* **[InfluxDB IOx][42]:** InfluxDB IOx is an open source time series database
   written in Rust.  It is the future core of InfluxDB; supporting
   industry standard SQL, InfluxQL, and Flux. IOx uses Apache Arrow as its in-memory
   format, Apache Parquet as its persistence format and Apache Arrow Flight for RPC.
