@@ -73,6 +73,9 @@ short description of your use case.
 * **[Bodo][36]:** Bodo is a universal Python analytics engine that democratizes High Performance 
    Computing (HPC) architecture for mainstream enterprises, allowing Python analytics workloads to
    scale efficiently. Bodo uses Arrow to support I/O for Parquet files, as well as internal support for data operations.
+  **[ClickHouse][44]:** An open-source analytical database management system. 
+   ClickHouse is using Apache Arrow for data import and export, and for direct querying of external datasets 
+   in Arrow, ArrowStream, Parquet and ORC formats.
 * **[Cylon][35]:**  An open-source high performance distributed data processing library 
   that can be seamlessly integrated with existing Big Data and AI/ML frameworks. Cylon
   uses Arrow memory format and exposes language bindings to C++, Java, and Python.
@@ -231,3 +234,4 @@ short description of your use case.
 [41]: https://github.com/coady/graphique
 [42]: https://github.com/influxdata/influxdb_iox
 [43]: https://www.esri.com/en-us/arcgis/products/arcgis-python-libraries/libraries/arcpy
+[44]: https://clickhouse.com/docs/en/interfaces/formats/#data-format-arrow
