@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Arrow JDBC Adapter &#8212; Apache Arrow v9.0.0.dev466</title>
+    <title>Arrow JDBC Adapter &#8212; Apache Arrow v9.0.0.dev478</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -94,7 +94,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        9.0.0.dev466
+        9.0.0.dev478
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4674,6 +4674,18 @@ function checkPageExistsAndRedirect(event) {
    </li>
   </ul>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#vectorschemaroot-to-preparedstatement-parameter-conversion">
+   VectorSchemaRoot to PreparedStatement Parameter Conversion
+  </a>
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#id1">
+     Type Mapping
+    </a>
+   </li>
+  </ul>
+ </li>
 </ul>
 
 </nav>
@@ -4761,8 +4773,10 @@ inconsistent scale. A RoundingMode can be set to handle these cases:</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>Currently, it is not possible to define a custom type conversion for a
-supported or unsupported type.</p>
+<p>The mapping from JDBC type to Arrow type can be overridden via the
+<code class="docutils literal notranslate"><span class="pre">JdbcToArrowConfig</span></code>, but it is not possible to customize the
+conversion from JDBC value to Arrow value itself, nor is it possible
+to define a conversion for an unsupported type.</p>
 <section id="type-mapping">
 <h3>Type Mapping<a class="headerlink" href="#type-mapping" title="Permalink to this heading">¶</a></h3>
 <p>The JDBC to Arrow type mapping can be obtained at runtime from
@@ -4820,7 +4834,7 @@ supported or unsupported type.</p>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p>FLOAT</p></td>
-<td><p>Float</p></td>
+<td><p>Float32</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p>INTEGER</p></td>
@@ -4856,7 +4870,7 @@ supported or unsupported type.</p>
 <td></td>
 </tr>
 <tr class="row-even"><td><p>REAL</p></td>
-<td><p>Float</p></td>
+<td><p>Float32</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p>SMALLINT</p></td>
@@ -4906,6 +4920,155 @@ timezone.</p></li>
 </ul>
 </section>
 </section>
+<section id="vectorschemaroot-to-preparedstatement-parameter-conversion">
+<h2>VectorSchemaRoot to PreparedStatement Parameter Conversion<a class="headerlink" href="#vectorschemaroot-to-preparedstatement-parameter-conversion" title="Permalink to this heading">¶</a></h2>
+<p>The adapter can bind rows of Arrow data from a VectorSchemaRoot to
+parameters of a JDBC PreparedStatement.  This can be accessed via the
+JdbcParameterBinder class.  Each call to next() will bind parameters
+from the next row of data, and then the application can execute the
+statement, call addBatch(), etc. as desired.  Null values will lead to
+a setNull call with an appropriate JDBC type code (listed below).</p>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kd">final</span><span class="w"> </span><span class="n">JdbcParameterBinder</span><span class="w"> </span><span class="n">binder</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">    </span><span class="n">JdbcParameterBinder</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="n">statement</span><span class="p">,</span><span class="w"> </span><span class="n">root</span><span class="p">).</span><span class="na">bindAll</span><span class="p">().</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
+<span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">binder</span><span class="p">.</span><span class="na">next</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">statement</span><span class="p">.</span><span class="na">executeUpdate</span><span class="p">();</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+<span class="c1">// Use a VectorLoader to update the root</span><span class="w"></span>
+<span class="n">binder</span><span class="p">.</span><span class="na">reset</span><span class="p">();</span><span class="w"></span>
+<span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">binder</span><span class="p">.</span><span class="na">next</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">statement</span><span class="p">.</span><span class="na">executeUpdate</span><span class="p">();</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The mapping of vectors to parameters, the JDBC type code used by the
+converters, and the type conversions themselves can all be customized:</p>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kd">final</span><span class="w"> </span><span class="n">JdbcParameterBinder</span><span class="w"> </span><span class="n">binder</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">    </span><span class="n">JdbcParameterBinder</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="n">statement</span><span class="p">,</span><span class="w"> </span><span class="n">root</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="p">.</span><span class="na">bind</span><span class="p">(</span><span class="cm">/*parameterIndex*/</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="cm">/*columnIndex*/</span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="p">.</span><span class="na">bind</span><span class="p">(</span><span class="cm">/*parameterIndex*/</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">customColumnBinderInstance</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
+</pre></div>
+</div>
+<section id="id1">
+<h3>Type Mapping<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
+<p>The Arrow to JDBC type mapping can be obtained at runtime via
+a method on ColumnBinder.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Arrow Type</p></th>
+<th class="head"><p>JDBC Type</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Binary</p></td>
+<td><p>VARBINARY (setBytes)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Bool</p></td>
+<td><p>BOOLEAN (setBoolean)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>Date32</p></td>
+<td><p>DATE (setDate)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Date64</p></td>
+<td><p>DATE (setDate)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>Decimal128</p></td>
+<td><p>DECIMAL (setBigDecimal)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Decimal256</p></td>
+<td><p>DECIMAL (setBigDecimal)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>FixedSizeBinary</p></td>
+<td><p>BINARY (setBytes)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Float32</p></td>
+<td><p>REAL (setFloat)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>Int8</p></td>
+<td><p>TINYINT (setByte)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Int16</p></td>
+<td><p>SMALLINT (setShort)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>Int32</p></td>
+<td><p>INTEGER (setInt)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Int64</p></td>
+<td><p>BIGINT (setLong)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>LargeBinary</p></td>
+<td><p>LONGVARBINARY (setBytes)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>LargeUtf8</p></td>
+<td><p>LONGVARCHAR (setString)</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>Time[s]</p></td>
+<td><p>TIME (setTime)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Time[ms]</p></td>
+<td><p>TIME (setTime)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>Time[us]</p></td>
+<td><p>TIME (setTime)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Time[ns]</p></td>
+<td><p>TIME (setTime)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>Timestamp[s]</p></td>
+<td><p>TIMESTAMP (setTimestamp)</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Timestamp[ms]</p></td>
+<td><p>TIMESTAMP (setTimestamp)</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-even"><td><p>Timestamp[us]</p></td>
+<td><p>TIMESTAMP (setTimestamp)</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Timestamp[ns]</p></td>
+<td><p>TIMESTAMP (setTimestamp)</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-even"><td><p>Utf8</p></td>
+<td><p>VARCHAR (setString)</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>(1) Strings longer than Integer.MAX_VALUE bytes (the maximum length
+of a Java <code class="docutils literal notranslate"><span class="pre">byte[]</span></code>) will cause a runtime exception.</p></li>
+<li><p>(2) If the timestamp has a timezone, the JDBC type defaults to
+TIMESTAMP_WITH_TIMEZONE.  If the timestamp has no timezone,
+technically there is not a correct conversion from Arrow value to
+JDBC value, because a JDBC Timestamp is in UTC, and we have no
+timezone information.  In this case, the default binder will call
+<a class="reference external" href="https://docs.oracle.com/en/java/javase/11/docs/api/java.sql/java/sql/PreparedStatement.html#setTimestamp(int,java.sql.Timestamp)">setTimestamp(int, Timestamp)</a>,
+which will lead to the driver using the “default timezone” (that of
+the Java VM).</p></li>
+</ul>
+</section>
+</section>
 </section>
 
 
@@ -4948,7 +5111,7 @@ timezone.</p></li>
     
     <div class="footer-item">
       <p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.1.0.<br>
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.1.1.<br>
 </p>
     </div>
     
