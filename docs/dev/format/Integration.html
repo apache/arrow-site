@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Integration Testing &#8212; Apache Arrow v9.0.0.dev488</title>
+    <title>Integration Testing &#8212; Apache Arrow v9.0.0.dev498</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -94,7 +94,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        9.0.0.dev488
+        9.0.0.dev498
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4672,6 +4672,23 @@ function checkPageExistsAndRedirect(event) {
    JSON test data format
   </a>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#archery-integration-test-cases">
+   Archery Integration Test Cases
+  </a>
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#data-generator-tests">
+     Data Generator Tests
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#gold-file-integration-tests">
+     Gold File Integration Tests
+    </a>
+   </li>
+  </ul>
+ </li>
 </ul>
 
 </nav>
@@ -4708,8 +4725,14 @@ function checkPageExistsAndRedirect(event) {
 designed exclusively for Arrow’s integration tests</p></li>
 <li><p>Each implementation provides a testing executable capable of converting
 between the JSON and the binary Arrow file representation</p></li>
-<li><p>The test executable is also capable of validating the contents of a binary
-file against a corresponding JSON file</p></li>
+<li><p>Each testing executable is used to generate binary Arrow file representations
+from the JSON-based test datasets. These results are then used to call the
+testing executable of each other implementation to validate the contents
+against the corresponding JSON file.
+- <em>ie.</em> the C++ testing executable generates binary arrow files from JSON
+specified datasets. The resulting files are then used as input to the Java
+testing executable for validation, confirming that the Java implementation
+can correctly read what the C++ implementation wrote.</p></li>
 </ul>
 <section id="running-integration-tests">
 <h2>Running integration tests<a class="headerlink" href="#running-integration-tests" title="Permalink to this heading">¶</a></h2>
@@ -5042,6 +5065,114 @@ For example, if a <code class="docutils literal notranslate"><span class="pre">R
 of <code class="docutils literal notranslate"><span class="pre">listSize</span></code> 4, then the data inside the “children” of that <code class="docutils literal notranslate"><span class="pre">FieldData</span></code>
 will have count 28.</p>
 <p>For “null” type, <code class="docutils literal notranslate"><span class="pre">BufferData</span></code> does not contain any buffers.</p>
+</section>
+<section id="archery-integration-test-cases">
+<h2>Archery Integration Test Cases<a class="headerlink" href="#archery-integration-test-cases" title="Permalink to this heading">¶</a></h2>
+<p>This list can make it easier to understand what manual testing may need to
+be done for any future Arrow Format changes by knowing what cases the automated
+integration testing actually tests.</p>
+<p>There are two types of integration test cases: the ones populated on the fly
+by the data generator in the Archery utility, and <em>gold</em> files that exist
+in the <cite>arrow-testing &lt;https://github.com/apache/arrow-testing/tree/master/data/arrow-ipc-stream/integration&gt;</cite>
+repository.</p>
+<section id="data-generator-tests">
+<h3>Data Generator Tests<a class="headerlink" href="#data-generator-tests" title="Permalink to this heading">¶</a></h3>
+<p>This is the high-level description of the cases which are generated and
+tested using the <code class="docutils literal notranslate"><span class="pre">archery</span> <span class="pre">integration</span></code> command (see <code class="docutils literal notranslate"><span class="pre">get_generated_json_files</span></code>
+in <code class="docutils literal notranslate"><span class="pre">datagen.py</span></code>):</p>
+<ul class="simple">
+<li><p>Primitive Types
+- No Batches
+- Various Primitive Values
+- Batches with Zero Length
+- String and Binary Large offset cases</p></li>
+<li><p>Null Type
+* Trivial Null batches</p></li>
+<li><p>Decimal128</p></li>
+<li><p>Decimal256</p></li>
+<li><p>DateTime with various units</p></li>
+<li><p>Durations with various units</p></li>
+<li><p>Intervals
+- MonthDayNano interval is a separate case</p></li>
+<li><p>Map Types
+- Non-Canonical Maps</p></li>
+<li><p>Nested Types
+- Lists
+- Structs
+- Lists with Large Offsets</p></li>
+<li><p>Unions</p></li>
+<li><p>Custom Metadata</p></li>
+<li><p>Schemas with Duplicate Field Names</p></li>
+<li><p>Dictionary Types
+- Signed indices
+- Unsigned indices
+- Nested dictionaries</p></li>
+<li><p>Extension Types</p></li>
+</ul>
+</section>
+<section id="gold-file-integration-tests">
+<h3>Gold File Integration Tests<a class="headerlink" href="#gold-file-integration-tests" title="Permalink to this heading">¶</a></h3>
+<p>Pre-generated json and arrow IPC files (both file and stream format) exist
+in the <cite>arrow-testing &lt;https://github.com/apache/arrow-testing&gt;</cite> repository
+in the <code class="docutils literal notranslate"><span class="pre">data/arrow-ipc-stream/integration</span></code> directory. These serve as
+<em>gold</em> files that are assumed to be correct for use in testing. They are
+referenced by <code class="docutils literal notranslate"><span class="pre">runner.py</span></code> in the code for the <a class="reference internal" href="../developers/continuous_integration/archery.html#archery"><span class="std std-ref">Archery</span></a>
+utility. Below are the test cases which are covered by them:</p>
+<ul>
+<li><p>Backwards Compatibility
+- The following cases are tested using the 0.14.1 format:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>datetime</p></li>
+<li><p>decimals</p></li>
+<li><p>dictionaries</p></li>
+<li><p>intervals</p></li>
+<li><p>maps</p></li>
+<li><p>nested types (list, struct)</p></li>
+<li><p>primitives</p></li>
+<li><p>primitive with no batches</p></li>
+<li><p>primitive with zero length batches</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><p>The following is tested for 0.17.1 format:
++ unions</p></li>
+</ul>
+</li>
+<li><p>Endianness
+- The following cases are tested with both Little Endian and Big Endian versions for auto conversion</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>custom metadata</p></li>
+<li><p>datetime</p></li>
+<li><p>decimals</p></li>
+<li><p>decimal256</p></li>
+<li><p>dictionaries</p></li>
+<li><p>dictionaries with unsigned indices</p></li>
+<li><p>record batches with duplicate fieldnames</p></li>
+<li><p>extension types</p></li>
+<li><p>interval types</p></li>
+<li><p>map types</p></li>
+<li><p>non-canonical map data</p></li>
+<li><p>nested types (lists, structs)</p></li>
+<li><p>nested dictionaries</p></li>
+<li><p>nested large offset types</p></li>
+<li><p>nulls</p></li>
+<li><p>primitive data</p></li>
+<li><p>large offset binary and strings</p></li>
+<li><p>primitives with no batches included</p></li>
+<li><p>primitive batches with zero length</p></li>
+<li><p>recursive nested types</p></li>
+<li><p>union types</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Compression tests
+- LZ4
+- ZSTD</p></li>
+<li><p>Batches with Shared Dictionaries</p></li>
+</ul>
+</section>
 </section>
 </section>
 
