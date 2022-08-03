@@ -4,13 +4,21 @@ are used to populate a list of functions that operate on (and return)
 Expressions. These are the basis for the .data mask inside dplyr methods."><meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png"><meta property="og:image:alt" content="Apache Arrow logo, displaying the triple chevron image adjacent to the text"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:creator" content="@apachearrow"><meta name="twitter:site" content="@apachearrow"><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-<![endif]--><!-- Global site tag (gtag.js) - Google Analytics --><script async src="https://www.googletagmanager.com/gtag/js?id=UA-107500873-1"></script><script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-107500873-1');
-</script></head><body data-spy="scroll" data-target="#toc">
+<![endif]--><!-- Matomo --><script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script><!-- End Matomo Code --></head><body data-spy="scroll" data-target="#toc">
     
 
     <div class="container template-reference-topic">
@@ -25,7 +33,7 @@ Expressions. These are the basis for the .data mask inside dplyr methods."><meta
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Arrow R Package</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">8.0.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">9.0.0</span>
       </span>
     </div>
 
@@ -52,7 +60,7 @@ Expressions. These are the basis for the .data mask inside dplyr methods."><meta
       <a href="../articles/dataset.html">Working with Arrow Datasets and dplyr</a>
     </li>
     <li>
-      <a href="../articles/fs.html">Working with Cloud Storage (S3)</a>
+      <a href="../articles/fs.html">Working with Cloud Storage (S3, GCS)</a>
     </li>
     <li>
       <a href="../articles/python.html">Apache Arrow in Python and R with reticulate</a>
@@ -137,7 +145,7 @@ Expressions. These are the basis for the <code>.data</code> mask inside dplyr me
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">register_binding</span><span class="op">(</span><span class="va">fun_name</span>, <span class="va">fun</span>, registry <span class="op">=</span> <span class="va">nse_funcs</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">register_binding</span><span class="op">(</span><span class="va">fun_name</span>, <span class="va">fun</span>, registry <span class="op">=</span> <span class="va">nse_funcs</span>, update_cache <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -146,13 +154,29 @@ Expressions. These are the basis for the <code>.data</code> mask inside dplyr me
 <dd><p>A string containing a function name in the form <code>"function"</code> or
 <code>"package::function"</code>. The package name is currently not used but
 may be used in the future to allow these types of function calls.</p></dd>
+
+
 <dt>fun</dt>
 <dd><p>A function or <code>NULL</code> to un-register a previous function.
 This function must accept <code>Expression</code> objects as arguments and return
 <code>Expression</code> objects instead of regular R objects.</p></dd>
+
+
 <dt>registry</dt>
 <dd><p>An environment in which the functions should be
 assigned.</p></dd>
+
+
+<dt>update_cache</dt>
+<dd><p>Update .cache$functions at the time of registration.
+the default is FALSE because the majority of usage is to register
+bindings at package load, after which we create the cache once. The
+reason why .cache$functions is needed in addition to nse_funcs for
+non-aggregate functions could be revisited...it is currently used
+as the data mask in mutate, filter, and aggregate (but not
+summarise) because the data mask has to be a list.</p></dd>
+
+
 <dt>agg_fun</dt>
 <dd><p>An aggregate function or <code>NULL</code> to un-register a previous
 aggregate function. This function must accept <code>Expression</code> objects as
@@ -160,10 +184,13 @@ arguments and return a <code><a href="https://rdrr.io/r/base/list.html" class="e
 <li><p><code>data</code>: <code>Expression</code> (these are all currently a single field)</p></li>
 <li><p><code>options</code>: list of function options, as passed to call_function</p></li>
 </ul></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>The previously registered binding or <code>NULL</code> if no previously
+    
+
+<p>The previously registered binding or <code>NULL</code> if no previously
 registered function existed.</p>
     </div>
     <div id="writing-bindings">
@@ -191,7 +218,7 @@ to <a href="Scalar.html">Scalar</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>
