@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Building Arrow Java &#8212; Apache Arrow v10.0.0.dev164</title>
+    <title>Building Arrow Java &#8212; Apache Arrow v10.0.0.dev169</title>
     
     <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -94,7 +94,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        10.0.0.dev164
+        10.0.0.dev169
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4828,76 +4828,66 @@ We can build these manually or we can use <a class="reference external" href="ht
 <span class="go">|__ libarrow_dataset_jni.so</span>
 <span class="go">|__ libarrow_orc_jni.so</span>
 <span class="go">|__ libgandiva_jni.so</span>
+<span class="go">|__ libplasma_java.so</span>
 </pre></div>
 </div>
 </section>
 <section id="building-jni-libraries-on-macos">
 <h3><a class="toc-backref" href="#id7" role="doc-backlink">Building JNI Libraries on MacOS</a><a class="headerlink" href="#building-jni-libraries-on-macos" title="Permalink to this heading">¶</a></h3>
 <p>Note: If you are building on Apple Silicon, be sure to use a JDK version that was compiled for that architecture. See, for example, the <a class="reference external" href="https://www.azul.com/downloads/?os=macos&amp;architecture=arm-64-bit&amp;package=jdk">Azul JDK</a>.</p>
-<p>To build only the C Data Interface library:</p>
+<p>First, you need to build Apache Arrow C++:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">cd</span> arrow
 <span class="gp">$ </span>brew bundle --file<span class="o">=</span>cpp/Brewfile
 <span class="go">Homebrew Bundle complete! 25 Brewfile dependencies now installed.</span>
+<span class="gp">$ </span>brew uninstall aws-sdk-cpp
+<span class="go">(We can&#39;t use aws-sdk-cpp installed by Homebrew because it has</span>
+<span class="go">an issue: https://github.com/aws/aws-sdk-cpp/issues/1809 )</span>
 <span class="gp">$ </span><span class="nb">export</span> <span class="nv">JAVA_HOME</span><span class="o">=</span>&lt;absolute path to your java home&gt;
-<span class="gp">$ </span>mkdir -p java-dist java-native-c
-<span class="gp">$ </span><span class="nb">cd</span> java-native-c
+<span class="gp">$ </span>mkdir -p java-dist cpp-jni
 <span class="gp">$ </span>cmake <span class="se">\</span>
+    -S cpp <span class="se">\</span>
+    -B cpp-jni <span class="se">\</span>
+    -DARROW_CSV<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_DATASET<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_DEPENDENCY_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
+    -DARROW_FILESYSTEM<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_GANDIVA<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_GANDIVA_JAVA<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_GANDIVA_STATIC_LIBSTDCPP<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_JNI<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_ORC<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_PARQUET<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_PLASMA<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_PLASMA_JAVA_CLIENT<span class="o">=</span>ON <span class="se">\</span>
+    -DARROW_S3<span class="o">=</span>ON <span class="se">\</span>
+    -DAWSSDK_SOURCE<span class="o">=</span>BUNDLED <span class="se">\</span>
     -DCMAKE_BUILD_TYPE<span class="o">=</span>Release <span class="se">\</span>
-    -DCMAKE_INSTALL_PREFIX<span class="o">=</span>../java-dist/lib <span class="se">\</span>
-    ../java
-<span class="gp">$ </span>cmake --build . --target install
+    -DCMAKE_INSTALL_LIBDIR<span class="o">=</span>lib <span class="se">\</span>
+    -DCMAKE_INSTALL_PREFIX<span class="o">=</span>java-dist <span class="se">\</span>
+    -DCMAKE_UNITY_BUILD<span class="o">=</span>ON <span class="se">\</span>
+    -Dre2_SOURCE<span class="o">=</span>BUNDLED
+<span class="gp">$ </span>cmake --build cpp-jni --target install
+<span class="gp">$ </span>ls -latr  ../java-dist/lib
+<span class="go">|__ libarrow_orc_jni.dylib</span>
+<span class="go">|__ libgandiva_jni.dylib</span>
+<span class="go">|__ libplasma_java.dylib</span>
+</pre></div>
+</div>
+<p>Then, you can build JNI libraries:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mkdir -p java-jni
+<span class="gp">$ </span>cmake <span class="se">\</span>
+    -S java <span class="se">\</span>
+    -B java-jni <span class="se">\</span>
+    -DCMAKE_BUILD_TYPE<span class="o">=</span>Release <span class="se">\</span>
+    -DCMAKE_INSTALL_PREFIX<span class="o">=</span>java-dist/lib <span class="se">\</span>
+    -DCMAKE_PREFIX_PATH<span class="o">=</span>java-dist
+<span class="gp">$ </span>cmake --build java-jni --target install
 <span class="gp">$ </span>ls -latr ../java-dist/lib
 <span class="go">|__ libarrow_cdata_jni.dylib</span>
+<span class="go">|__ libarrow_dataset_jni.dylib</span>
 </pre></div>
 </div>
 <p>To build other JNI libraries:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">cd</span> arrow
-<span class="gp">$ </span>brew bundle --file<span class="o">=</span>cpp/Brewfile
-<span class="go">Homebrew Bundle complete! 25 Brewfile dependencies now installed.</span>
-<span class="gp">$ </span><span class="nb">export</span> <span class="nv">JAVA_HOME</span><span class="o">=</span>&lt;absolute path to your java home&gt;
-<span class="gp">$ </span>mkdir -p java-dist java-native-cpp
-<span class="gp">$ </span><span class="nb">cd</span> java-native-cpp
-<span class="gp">$ </span>cmake <span class="se">\</span>
-    -DARROW_BOOST_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_BROTLI_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_BZ2_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_GFLAGS_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_GRPC_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_LZ4_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_OPENSSL_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_PROTOBUF_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_SNAPPY_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_THRIFT_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_UTF8PROC_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_ZSTD_USE_SHARED<span class="o">=</span>OFF <span class="se">\</span>
-    -DARROW_JNI<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_PARQUET<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_FILESYSTEM<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_DATASET<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_GANDIVA_JAVA<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_GANDIVA_STATIC_LIBSTDCPP<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_GANDIVA<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_ORC<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_PLASMA_JAVA_CLIENT<span class="o">=</span>ON <span class="se">\</span>
-    -DARROW_PLASMA<span class="o">=</span>ON <span class="se">\</span>
-    -DCMAKE_BUILD_TYPE<span class="o">=</span>Release <span class="se">\</span>
-    -DCMAKE_INSTALL_LIBDIR<span class="o">=</span>lib <span class="se">\</span>
-    -DCMAKE_INSTALL_PREFIX<span class="o">=</span>../java-dist <span class="se">\</span>
-    -DCMAKE_UNITY_BUILD<span class="o">=</span>ON <span class="se">\</span>
-    -Dre2_SOURCE<span class="o">=</span>BUNDLED <span class="se">\</span>
-    -DBoost_SOURCE<span class="o">=</span>BUNDLED <span class="se">\</span>
-    -Dutf8proc_SOURCE<span class="o">=</span>BUNDLED <span class="se">\</span>
-    -DSnappy_SOURCE<span class="o">=</span>BUNDLED <span class="se">\</span>
-    -DORC_SOURCE<span class="o">=</span>BUNDLED <span class="se">\</span>
-    -DZLIB_SOURCE<span class="o">=</span>BUNDLED <span class="se">\</span>
-    ../cpp
-<span class="gp">$ </span>cmake --build . --target install
-<span class="gp">$ </span>ls -latr  ../java-dist/lib
-<span class="go">|__ libarrow_dataset_jni.dylib</span>
-<span class="go">|__ libarrow_orc_jni.dylib</span>
-<span class="go">|__ libgandiva_jni.dylib</span>
-</pre></div>
-</div>
 </section>
 <section id="building-arrow-jni-modules">
 <h3><a class="toc-backref" href="#id8" role="doc-backlink">Building Arrow JNI Modules</a><a class="headerlink" href="#building-arrow-jni-modules" title="Permalink to this heading">¶</a></h3>
