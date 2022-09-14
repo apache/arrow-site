@@ -41,11 +41,10 @@ that goal by defining how to use Flight RPC as a protocol[^1] for
 database communications: how a client should talk to a server and
 execute queries, fetch result sets, and so on.
 
-With this new JDBC driver, applications using the JDBC API can talk to
-any database server implementing the Flight SQL protocol, while still
-using a familiar Java interface.  Underneath, the driver sends queries
-to the server via Flight SQL and adapts responses to the ``ResultSet``
-interface.
+With this new JDBC driver, applications can talk to any database
+server implementing the Flight SQL protocol using familiar JDBC APIs.
+Underneath, the driver sends queries to the server via Flight SQL and
+adapts responses to the JDBC interfaces.
 
 Put another way, Flight SQL is a database protocol designed for 1)
 columnar data and 2) implementation by multiple databases.  Some
