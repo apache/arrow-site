@@ -34,11 +34,11 @@ itself.
 ## Background
 
 [Arrow Flight RPC][flight] is a framework for efficient transfer of
-Arrow data across the network.  While it is agnostic to the type of
-application using it, from the beginning, it was designed with an eye
-towards modern databases and other data systems.  Flight SQL realized
-that goal by defining how to use Flight RPC as a protocol[^1] for
-database communications: how a client should talk to a server and
+Arrow data across the network.  While it is flexible and can be used
+in any type of application, from the beginning, it was designed with
+an eye towards modern databases and other data systems.  Flight SQL
+realized that goal by defining how to use Flight RPC as a protocol[^1]
+for database communications: how a client should talk to a server and
 execute queries, fetch result sets, and so on.
 
 With this new JDBC driver, applications can talk to any database
@@ -53,7 +53,8 @@ benefit from existing driver implementations.  Flight SQL, on the
 other hand, provides a protocol that is:
 
 1. Columnar, using Arrow data for bulk result sets,
-2. Designed to be implemented by multiple databases, and
+2. Designed to be implemented by multiple databases, with C++ and Java
+   libraries, and
 3. Designed to be adapted to APIs like JDBC and ODBC.
 
 Just columnar data alone can be a [significant speedup][hannes] for
@@ -74,17 +75,20 @@ interfaces itself.
 
 This JDBC driver implementation demonstrates the generality of Arrow
 and Flight SQL, and increases the reach of Arrow-based applications.
-Now, by just implementing Flight SQL, a database can provide
-Arrow-native database access to clients that want it via standards
-like [ADBC][adbc], while simultaneously supporting the vast body of
-existing code that uses JDBC, all without having to implement two
-separate wire protocols.
+Additionally, an [ODBC driver implementation][dremio-odbc] based on
+Flight SQL is also available, though it is not part of the Arrow
+project.
+
+Now, a database can provide Arrow-native database access to clients
+that want it via standards like [ADBC][adbc], while simultaneously
+supporting the vast body of existing code that uses JDBC or ODBC, just
+by implementing a single wire protocol: Flight SQL.
 
 ## Getting Involved
 
 The JDBC driver was merged for the Arrow 10.0.0 release, and the
 [source code][impl] can be found in the Arrow repository.  Once Arrow
-10.0.0 is released (which should be around October 2022), official
+10.0.0 is released (which is planned for October 2022), official
 builds of the driver will be available alongside other Arrow
 libraries.  Dremio is already making use of the driver, and we're
 looking forward to seeing what gets built on top.  Of course, there
@@ -97,7 +101,8 @@ documentation][driver-docs].
 
 [adbc]: htttps://github.com/apache/arrow-adbc
 [dremio]: https://www.dremio.com/
-[driver-docs]: TODO
+[dremio-odbc]: https://docs.dremio.com/software/drivers/arrow-flight-sql-odbc-driver/
+[driver-docs]: https://arrow.apache.org/docs/dev/java/flight_sql_jdbc_driver.html
 [flight]: {{ site.baseurl }}/docs/format/Flight.html
 [flight-sql]: {{ site.baseurl }}/docs/format/FlightSql.html
 [github]: htttps://github.com/apache/arrow
