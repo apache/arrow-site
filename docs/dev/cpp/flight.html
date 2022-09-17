@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Arrow Flight RPC &#8212; Apache Arrow v10.0.0.dev222</title>
+    <title>Arrow Flight RPC &#8212; Apache Arrow v10.0.0.dev231</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -94,7 +94,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        10.0.0.dev222
+        10.0.0.dev231
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4688,6 +4688,53 @@ function checkPageExistsAndRedirect(event) {
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#best-practices">
+   Best practices
+  </a>
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#grpc">
+     gRPC
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#re-use-clients-whenever-possible">
+     Re-use clients whenever possible
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#dont-round-robin-load-balance">
+     Don’t round-robin load balance
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#debugging-connection-issues">
+     Debugging connection issues
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#memory-management">
+     Memory management
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#excessive-traffic">
+     Excessive traffic
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#limiting-doput-batch-size">
+     Limiting DoPut Batch Size
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#closing-unresponsive-connections">
+     Closing unresponsive connections
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#alternative-transports">
    Alternative Transports
   </a>
@@ -4856,6 +4903,184 @@ the client or server.</p>
 request/response. On the server, they can inspect incoming headers and
 fail the request; hence, they can be used to implement custom
 authentication methods.</p>
+</section>
+<section id="best-practices">
+<span id="flight-best-practices"></span><h2>Best practices<a class="headerlink" href="#best-practices" title="Permalink to this heading">¶</a></h2>
+<section id="grpc">
+<h3>gRPC<a class="headerlink" href="#grpc" title="Permalink to this heading">¶</a></h3>
+<p>When using the default gRPC transport, options can be passed to it via
+<a class="reference internal" href="api/flight.html#_CPPv4N5arrow6flight19FlightClientOptions15generic_optionsE" title="arrow::flight::FlightClientOptions::generic_options"><code class="xref cpp cpp-member docutils literal notranslate"><span class="pre">arrow::flight::FlightClientOptions::generic_options</span></code></a>. For example:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+</input><label class="sd-tab-label" for="sd-tab-item-0">
+C++</label><div class="sd-tab-content docutils">
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FlightClientOptions</span><span class="o">::</span><span class="n">Defaults</span><span class="p">();</span><span class="w"></span>
+<span class="c1">// Set the period after which a keepalive ping is sent on transport.</span>
+<span class="n">options</span><span class="p">.</span><span class="n">generic_options</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="n">GRPC_ARG_KEEPALIVE_TIME_MS</span><span class="p">,</span><span class="w"> </span><span class="mi">60000</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+</input><label class="sd-tab-label" for="sd-tab-item-1">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set the period after which a keepalive ping is sent on transport.</span>
+<span class="n">generic_options</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;GRPC_ARG_KEEPALIVE_TIME_MS&quot;</span><span class="p">,</span> <span class="mi">60000</span><span class="p">)]</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">flight</span><span class="o">.</span><span class="n">FlightClient</span><span class="p">(</span><span class="n">server_uri</span><span class="p">,</span> <span class="n">generic_options</span><span class="o">=</span><span class="n">generic_options</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Also see <a class="reference external" href="https://grpc.io/docs/guides/performance/#general">best gRPC practices</a> and available <a class="reference external" href="https://grpc.github.io/grpc/cpp/group__grpc__arg__keys.html">gRPC keys</a>.</p>
+</section>
+<section id="re-use-clients-whenever-possible">
+<h3>Re-use clients whenever possible<a class="headerlink" href="#re-use-clients-whenever-possible" title="Permalink to this heading">¶</a></h3>
+<p>Creating and closing clients requires setup and teardown on the client and
+server side which can take away from actually handling RPCs. Reuse clients
+whenever possible to avoid this. Note that clients are thread-safe, so a
+single client can be shared across multiple threads.</p>
+</section>
+<section id="dont-round-robin-load-balance">
+<h3>Don’t round-robin load balance<a class="headerlink" href="#dont-round-robin-load-balance" title="Permalink to this heading">¶</a></h3>
+<p><a class="reference external" href="https://github.com/grpc/grpc/blob/master/doc/load-balancing.md#round_robin">Round robin load balancing</a> means every client can have an open connection to
+every server, causing an unexpected number of open connections and depleting
+server resources.</p>
+</section>
+<section id="debugging-connection-issues">
+<h3>Debugging connection issues<a class="headerlink" href="#debugging-connection-issues" title="Permalink to this heading">¶</a></h3>
+<p>When facing unexpected disconnects on long running connections use netstat to
+monitor the number of open connections. If number of connections is much
+greater than the number of clients it might cause issues.</p>
+<p>For debugging, certain environment variables enable logging in gRPC. For
+example, <code class="docutils literal notranslate"><span class="pre">env</span> <span class="pre">GRPC_VERBOSITY=info</span> <span class="pre">GRPC_TRACE=http</span></code> will print the initial
+headers (on both sides) so you can see if gRPC established the connection or
+not. It will also print when a message is sent, so you can tell if the
+connection is open or not.</p>
+<p>gRPC may not report connection errors until a call is actually made.
+Hence, to detect connection errors when creating a client, some sort
+of dummy RPC should be made.</p>
+</section>
+<section id="memory-management">
+<h3>Memory management<a class="headerlink" href="#memory-management" title="Permalink to this heading">¶</a></h3>
+<p>Flight tries to reuse allocations made by gRPC to avoid redundant
+data copies. However, this means that those allocations may not
+be tracked by the Arrow memory pool, and that memory usage behavior,
+such as whether free memory is returned to the system, is dependent
+on the allocator that gRPC uses (usually the system allocator).</p>
+<p>A quick way of testing: attach to the process with a debugger and call
+<code class="docutils literal notranslate"><span class="pre">malloc_trim</span></code>, or call <a class="reference internal" href="api/memory.html#_CPPv4N5arrow10MemoryPool13ReleaseUnusedEv" title="arrow::MemoryPool::ReleaseUnused"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">ReleaseUnused</span></code></a>
+on the system pool. If memory usage drops, then likely, there is memory
+allocated by gRPC or by the application that the system allocator was holding
+on to. This can be adjusted in platform-specific ways; see an investigation
+in <a class="reference external" href="https://issues.apache.org/jira/browse/ARROW-16697">ARROW-16697</a> for an example of how this works on Linux/glibc. glibc malloc
+can be explicitly told to dump caches.</p>
+</section>
+<section id="excessive-traffic">
+<h3>Excessive traffic<a class="headerlink" href="#excessive-traffic" title="Permalink to this heading">¶</a></h3>
+<p>gRPC will spawn up to max threads quota of threads for concurrent clients. Those
+threads are not necessarily cleaned up (a “cached thread pool” in Java parlance).
+glibc malloc clears some per thread state and the default tuning never clears
+caches in some workloads.</p>
+<p>gRPC’s default behaviour allows one server to accept many connections from many
+different clients, but if requests do a lot of work (as they may under Flight),
+the server may not be able to keep up. Configuring clients to retry
+with backoff (and potentially connect to a different node), would give more
+consistent quality of service.</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-2" name="sd-tab-set-1" type="radio">
+</input><label class="sd-tab-label" for="sd-tab-item-2">
+C++</label><div class="sd-tab-content docutils">
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FlightClientOptions</span><span class="o">::</span><span class="n">Defaults</span><span class="p">();</span><span class="w"></span>
+<span class="c1">// Set the minimum time between subsequent connection attempts.</span>
+<span class="n">options</span><span class="p">.</span><span class="n">generic_options</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="n">GRPC_ARG_MIN_RECONNECT_BACKOFF_MS</span><span class="p">,</span><span class="w"> </span><span class="mi">2000</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+<input id="sd-tab-item-3" name="sd-tab-set-1" type="radio">
+</input><label class="sd-tab-label" for="sd-tab-item-3">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set the minimum time between subsequent connection attempts.</span>
+<span class="n">generic_options</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;GRPC_ARG_MIN_RECONNECT_BACKOFF_MS&quot;</span><span class="p">,</span> <span class="mi">2000</span><span class="p">)]</span>
+<span class="n">client</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">flight</span><span class="o">.</span><span class="n">FlightClient</span><span class="p">(</span><span class="n">server_uri</span><span class="p">,</span> <span class="n">generic_options</span><span class="o">=</span><span class="n">generic_options</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="limiting-doput-batch-size">
+<h3>Limiting DoPut Batch Size<a class="headerlink" href="#limiting-doput-batch-size" title="Permalink to this heading">¶</a></h3>
+<p>You may wish to limit the maximum batch size a client can submit to a server through
+DoPut, to prevent a request from taking up too much memory on the server. On
+the client-side, set <a class="reference internal" href="api/flight.html#_CPPv4N5arrow6flight19FlightClientOptions22write_size_limit_bytesE" title="arrow::flight::FlightClientOptions::write_size_limit_bytes"><code class="xref cpp cpp-member docutils literal notranslate"><span class="pre">arrow::flight::FlightClientOptions::write_size_limit_bytes</span></code></a>.
+On the server-side, set the gRPC option <code class="docutils literal notranslate"><span class="pre">GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH</span></code>.
+The client-side option will return an error that can be retried with smaller batches,
+while the server-side limit will close out the connection. Setting both can be wise, since
+the former provides a better user experience but the latter may be necessary to defend
+against impolite clients.</p>
+</section>
+<section id="closing-unresponsive-connections">
+<h3>Closing unresponsive connections<a class="headerlink" href="#closing-unresponsive-connections" title="Permalink to this heading">¶</a></h3>
+<ol class="arabic">
+<li><p>A stale call can be closed using
+<a class="reference internal" href="api/flight.html#_CPPv4N5arrow6flight17FlightCallOptions10stop_tokenE" title="arrow::flight::FlightCallOptions::stop_token"><code class="xref cpp cpp-member docutils literal notranslate"><span class="pre">arrow::flight::FlightCallOptions::stop_token</span></code></a>. This requires recording the
+stop token at call establishment time.</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-4" name="sd-tab-set-2" type="radio">
+</input><label class="sd-tab-label" for="sd-tab-item-4">
+C++</label><div class="sd-tab-content docutils">
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">StopSource</span><span class="w"> </span><span class="n">stop_source</span><span class="p">;</span><span class="w"></span>
+<span class="n">FlightCallOptions</span><span class="w"> </span><span class="n">options</span><span class="p">;</span><span class="w"></span>
+<span class="n">options</span><span class="p">.</span><span class="n">stop_token</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stop_source</span><span class="p">.</span><span class="n">token</span><span class="p">();</span><span class="w"></span>
+<span class="n">stop_source</span><span class="p">.</span><span class="n">RequestStop</span><span class="p">(</span><span class="n">Status</span><span class="o">::</span><span class="n">Cancelled</span><span class="p">(</span><span class="s">&quot;StopSource&quot;</span><span class="p">));</span><span class="w"></span>
+<span class="n">flight_client</span><span class="o">-&gt;</span><span class="n">DoAction</span><span class="p">(</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="p">{});</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+</div>
+</li>
+<li><p>Use call timeouts. (This is a general gRPC best practice.)</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-5" name="sd-tab-set-3" type="radio">
+</input><label class="sd-tab-label" for="sd-tab-item-5">
+C++</label><div class="sd-tab-content docutils">
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">FlightCallOptions</span><span class="w"> </span><span class="n">options</span><span class="p">;</span><span class="w"></span>
+<span class="n">options</span><span class="p">.</span><span class="n">timeout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TimeoutDuration</span><span class="p">{</span><span class="mf">0.2</span><span class="p">};</span><span class="w"></span>
+<span class="n">Status</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="o">-&gt;</span><span class="n">GetFlightInfo</span><span class="p">(</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="n">FlightDescriptor</span><span class="p">{}).</span><span class="n">status</span><span class="p">();</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+<input id="sd-tab-item-6" name="sd-tab-set-3" type="radio">
+</input><label class="sd-tab-label" for="sd-tab-item-6">
+Java</label><div class="sd-tab-content docutils">
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="n">Iterator</span><span class="o">&lt;</span><span class="n">Result</span><span class="o">&gt;</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">doAction</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">Action</span><span class="p">(</span><span class="s">&quot;hang&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">CallOptions</span><span class="p">.</span><span class="na">timeout</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">));</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+<input id="sd-tab-item-7" name="sd-tab-set-3" type="radio">
+</input><label class="sd-tab-label" for="sd-tab-item-7">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">options</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="o">.</span><span class="n">flight</span><span class="o">.</span><span class="n">FlightCallOptions</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">do_action</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</li>
+<li><p>Client timeouts are not great for long-running streaming calls, where it may
+be hard to choose a timeout for the entire operation. Instead, what is often
+desired is a per-read or per-write timeout so that the operation fails if it
+isn’t making progress. This can be implemented with a background thread that
+calls Cancel() on a timer, with the main thread resetting the timer every time
+an operation completes successfully. For a fully-worked out example, see the
+Cookbook.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>There is a long standing ticket for a per-write/per-read timeout
+instead of a per call timeout (<a class="reference external" href="https://issues.apache.org/jira/browse/ARROW-6062">ARROW-6062</a>), but this is not (easily)
+possible to implement with the blocking gRPC API.</p>
+</div>
+</li>
+</ol>
+</section>
 </section>
 <section id="alternative-transports">
 <h2>Alternative Transports<a class="headerlink" href="#alternative-transports" title="Permalink to this heading">¶</a></h2>
