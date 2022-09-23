@@ -28,8 +28,8 @@ limitations under the License.
 
 See the [release notes][10] for more about what's new. For information on previous releases, see [here][19]. Rust and Julia libraries are released separately. See the following pages for details:
 
-* Rust: https://docs.rs/crate/arrow/latest
-* Julia: https://github.com/apache/arrow-julia/#readme
+* Rust: [documentation for arrow crate][26]
+* Julia: [repository for Arrow.jl package][27]
 
 This page is a reference listing of release artifacts and package managers. For language-specific user guides, see the pages listed in the "Documentation" menu above.
 
@@ -300,3 +300,5 @@ gem install red-plasma # For Plasma support
 [23]: https://www.nuget.org/packages/Apache.Arrow.Fligth/
 [24]: https://www.nuget.org/packages/Apache.Arrow.Flight.AspNetCore/
 [25]: https://rubygems.org/
+[26]: https://docs.rs/crate/arrow/latest
+[27]: https://github.com/apache/arrow-julia/#readme
