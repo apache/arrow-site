@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pyarrow.parquet.core &#8212; Apache Arrow v10.0.0.dev309</title>
+    <title>pyarrow.parquet.core &#8212; Apache Arrow v10.0.0.dev320</title>
     
     <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -92,7 +92,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        10.0.0.dev309
+        10.0.0.dev320
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4718,7 +4718,6 @@ function checkPageExistsAndRedirect(event) {
 <span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">nullcontext</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">reduce</span>
 
-<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Collection</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -4742,7 +4741,7 @@ function checkPageExistsAndRedirect(event) {
 <span class="kn">from</span> <span class="nn">pyarrow.fs</span> <span class="kn">import</span> <span class="p">(</span><span class="n">LocalFileSystem</span><span class="p">,</span> <span class="n">FileSystem</span><span class="p">,</span>
                         <span class="n">_resolve_filesystem_and_path</span><span class="p">,</span> <span class="n">_ensure_filesystem</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">pyarrow</span> <span class="kn">import</span> <span class="n">filesystem</span> <span class="k">as</span> <span class="n">legacyfs</span>
-<span class="kn">from</span> <span class="nn">pyarrow.util</span> <span class="kn">import</span> <span class="n">guid</span><span class="p">,</span> <span class="n">_is_path_like</span><span class="p">,</span> <span class="n">_stringify_path</span>
+<span class="kn">from</span> <span class="nn">pyarrow.util</span> <span class="kn">import</span> <span class="n">guid</span><span class="p">,</span> <span class="n">_is_path_like</span><span class="p">,</span> <span class="n">_stringify_path</span><span class="p">,</span> <span class="n">_deprecate_api</span>
 
 <span class="n">_URI_STRIP_SCHEMES</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;hdfs&#39;</span><span class="p">,)</span>
 
@@ -4838,11 +4837,27 @@ function checkPageExistsAndRedirect(event) {
 <span class="s2">    &quot;&quot;&quot;</span>
 
 
-<span class="k">def</span> <span class="nf">_filters_to_expression</span><span class="p">(</span><span class="n">filters</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">filters_to_expression</span><span class="p">(</span><span class="n">filters</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Check if filters are well-formed.</span>
+<span class="sd">    Check if filters are well-formed and convert to an ``Expression``.</span>
 
-<span class="sd">    See _DNF_filter_doc above for more details.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filters : List[Tuple] or List[List[Tuple]]</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    See internal ``pyarrow._DNF_filter_doc`` attribute for more details.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    &gt;&gt;&gt; filters_to_expression([(&#39;foo&#39;, &#39;==&#39;, &#39;bar&#39;)])</span>
+<span class="sd">    &lt;pyarrow.compute.Expression (foo == &quot;bar&quot;)&gt;</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pyarrow.compute.Expression</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span> <span class="nn">pyarrow.dataset</span> <span class="k">as</span> <span class="nn">ds</span>
 
@@ -4886,6 +4901,11 @@ function checkPageExistsAndRedirect(event) {
         <span class="n">disjunction_members</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">and_</span><span class="p">,</span> <span class="n">conjunction_members</span><span class="p">))</span>
 
     <span class="k">return</span> <span class="n">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">or_</span><span class="p">,</span> <span class="n">disjunction_members</span><span class="p">)</span>
+
+
+<span class="n">_filters_to_expression</span> <span class="o">=</span> <span class="n">_deprecate_api</span><span class="p">(</span>
+    <span class="s2">&quot;_filters_to_expression&quot;</span><span class="p">,</span> <span class="s2">&quot;filters_to_expression&quot;</span><span class="p">,</span>
+    <span class="n">filters_to_expression</span><span class="p">,</span> <span class="s2">&quot;10.0.0&quot;</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
 
 
 <span class="c1"># ----------------------------------------------------------------------</span>
@@ -7040,7 +7060,7 @@ function checkPageExistsAndRedirect(event) {
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_filter_expression</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">filters</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_filter_expression</span> <span class="o">=</span> <span class="n">_filters_to_expression</span><span class="p">(</span><span class="n">filters</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_filter_expression</span> <span class="o">=</span> <span class="n">filters_to_expression</span><span class="p">(</span><span class="n">filters</span><span class="p">)</span>
 
         <span class="c1"># map old filesystems to new one</span>
         <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -8203,9 +8223,34 @@ function checkPageExistsAndRedirect(event) {
         <span class="k">return</span> <span class="n">file</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">to_arrow_schema</span><span class="p">()</span></div>
 
 
-<span class="c1"># re-export everything</span>
-<span class="c1"># std `from . import *` ignores symbols with leading `_`</span>
-<span class="n">__all__</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="vm">__name__</span><span class="p">]</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;ColumnChunkMetaData&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ColumnSchema&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FileDecryptionProperties&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FileEncryptionProperties&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;FileMetaData&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetDataset&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetDatasetPiece&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetFile&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetLogicalType&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetManifest&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetPartitions&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetReader&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetSchema&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ParquetWriter&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;PartitionSet&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;RowGroupMetaData&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Statistics&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;read_metadata&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;read_pandas&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;read_schema&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;read_table&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;write_metadata&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;write_table&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;write_to_dataset&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_filters_to_expression&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;filters_to_expression&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 
               </div>
@@ -8233,7 +8278,7 @@ function checkPageExistsAndRedirect(event) {
     
     <div class="footer-item">
       <p class="sphinx-version">
-Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.2.1.<br>
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.2.2.<br>
 </p>
     </div>
     
