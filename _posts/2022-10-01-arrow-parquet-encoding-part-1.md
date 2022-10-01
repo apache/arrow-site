@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Arrow and Parquet Part 1: Primitive Types and Nullability
-date: "2022-10--01 00:00:00"
+date: "2022-10-01 00:00:00"
 author: tustvold, alamb
 categories: [parquet, arrow]
 ---
@@ -26,17 +26,17 @@ limitations under the License.
 
 ## Introduction
 
-A long-running project within the [Rust Apache Arrow](https://github.com/apache/arrow-rs) implementation has been complete support for reading and writing arbitrarily nested parquet schema. This is a complex topic (as we will show), and we noticed a lack of available approachable technical information, and thus want to share our learnings with the community.
+A long-running project within the [Rust Apache Arrow](https://github.com/apache/arrow-rs) implementation has been complete support for reading and writing arbitrarily nested parquet schema. This is a complex topic, as we will show, and we noticed a lack of available approachable technical information, and thus wanted to share our learnings with the community.
 
 [Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
 
-It is increasingly common for analytic systems to use Arrow to process data stored in Parquet files, so fast, efficient, and correct translation between them is a key building block.
+It is increasingly common for analytic systems to use Arrow to process data stored in Parquet files, and therefore fast, efficient, and correct translation between them is a key building block.
 
 Historically analytic processing primarily focused on querying data with a tabular schema, that is one where there are a fixed number of columns, and each row contains a single value for a given column. However, with the increasing adoption of structured document formats such as XML, JSON, etc…, this schema limitation can seem antiquated and unnecessarily limiting.
 
 As of version [20.0.0](https://crates.io/crates/arrow/20.0.0), released in August 2022, the Rust implementation is feature complete. Instructions for getting started can be found [here](https://docs.rs/parquet/latest/parquet/arrow/index.html) and feel free to raise any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues).
 
-In this series article we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and giving a flavor of the practicalities of supporting reading and writing between them.
+In this series we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and giving a flavor of the practicalities of supporting reading and writing between them.
 
 ## Columnar vs Record-Oriented
 
@@ -62,7 +62,7 @@ Aside from potentially yielding better data compression, a columnar layout can d
 
 
 ## Parquet vs Arrow
-Parquet and Arrow are complementary technologies, and they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended to be operated on by vectorized computational kernels.
+Parquet and Arrow are complementary technologies, but they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended to be operated on by vectorized computational kernels.
 
 The major distinction is that arrow provides O(1) random access lookups to any array index, whilst parquet does not. In particular, Parquet uses [dremel record shredding](https://akshays-blog.medium.com/wrapping-head-around-repetition-and-definition-levels-in-dremel-powering-bigquery-c1a33c9695da), [variable length encoding schemes](https://github.com/apache/parquet-format/blob/master/Encodings.md), and [block compression](https://github.com/apache/parquet-format/blob/master/Compression.md) to drastically reduce the data size, but these techniques come at the loss of performant random access lookups.
 
@@ -109,7 +109,7 @@ Parquet has multiple different encodings that it can use for integers types, the
 
 # Nullable Primitive Column
 
-Now let us consider the case of a nullable column, where some of the values might have the special sentinel value `NULL` that designates “this value is unknown.”
+Now let us consider the case of a nullable column, where some of the values might have the special sentinel value `NULL` that designates “this value is unknown".
 
 In Arrow nulls are stored separately from the values in the form of a validity bitmask, with arbitrary data in the corresponding positions in the values buffer.
 
@@ -128,7 +128,7 @@ In Arrow nulls are stored separately from the values in the form of a validity b
 Validity   Values
 ```
 
-In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called definition levels. These will be expanded upon later, but for now a definition level of 1 indicates a valid value, and 0 a null value. Unlike arrow, nulls are not encoded in the list of values
+In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called definition levels. These will be expanded upon in the next post, but for now a definition level of 1 indicates a valid value, and 0 a null value. Unlike arrow, nulls are not encoded in the list of values
 
 ```text
 ┌─────┐    ┌─────┐
