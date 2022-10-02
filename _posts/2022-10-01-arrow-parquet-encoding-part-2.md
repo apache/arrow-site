@@ -234,7 +234,12 @@ Closing out support for nested types is columns containing a variable number of 
 }
 ```
 ```json
-{                     <-- “a” is not provided
+{                     <-- “a” is not provided (is null)
+}
+```
+```json
+{                     <-- “a” is non-null but empty
+  "a": []
 }
 ```
 ```json
@@ -265,15 +270,15 @@ message schema {
 
 As before, Arrow chooses to represent this in a hierarchical fashion with a list of monotonically increasing integers called *offsets* in the parent `ListArray`, and stores all the values that appear in the lists in a single child array. Each consecutive pair of elements in this offset array identifies a slice of the child array for that array index.
 
-For example, the list of  offsets [0, 1, 1, 3] contains 3 pairs of offsets, (0,1), (1,1), and (1,3), and is therefore a ListArray of length 3 with the following values:
+For example, the list of offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(1,3)`, and `(3,3)`, and is therefore a ListArray of length 3 with the following values:
 
 ```text
-0: [child[0]]
+0: [child[0], child[1]]
 1: []
-2: [child[1], child[2]]
+2: [child[2]]
 ```
 
-For the example, above this would be encoded in arrow as
+For the example above with 4 JSON documents, this would be encoded in arrow as
 
 ```text
 a: ListArray
@@ -294,13 +299,13 @@ a: ListArray
      │  0  │   │  1  │    │ │  1  │   │  2  ││ │
 │    ├─────┤   ├─────┤    │ ├─────┤   ├─────┤│
      │  1  │   │  1  │    │ │  0  │   │ ??  ││ │
-│    └─────┘   ├─────┤    │ └─────┘   └─────┘│
-     Validity  │  3  │    │ Validity   Values│ │
-│              └─────┘    │                  │
-                          │ child[0]         │ │
-│                         │ PrimitiveArray   │
-               Offsets    │                  │ │
-│                         └──────────────────┘
+│    ├─────┤   ├─────┤    │ └─────┘   └─────┘│
+     │  1  │   │  1  │    │ Validity   Values│ │
+│    └─────┘   ├─────┤    │                  │
+               │  3  │    │ child[0]         │ │
+│    Validity  └─────┘    │ PrimitiveArray   │
+                          │                  │ │
+│              Offsets    └──────────────────┘
      "a"                                       │
 │    ListArray
  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
