@@ -139,7 +139,7 @@ a:
     Repetition Levels: encode([0, 0, 0, 1])
     Definition Levels: encode([3, 0, 2, 2])
     Values: encode([1])
-b.c1:
+b.b1:
   Data Page:
     Repetition Levels: encode([0, 1, 0, 0])
     Definition Levels: encode([2, 2, 2, 1])
