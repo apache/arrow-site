@@ -93,24 +93,6 @@ Field(name: “d”), nullable: true, datatype: Struct[
 ])
 ```
 
-Documents of this format could be stored in this parquet schema
-
-```text
-message schema {
-  optional int32 a;
-  required group b {
-    optional int32 b1;
-    required int32 b2;
-  }
-  optional group c {
-    required int32 c1;
-  }
-  optional group d {
-    required int32 d1;
-    optional int32 d2;
-  }
-}
-```
 
 Arrow represents each `StructArray` hierarchically using a parent child relationship, with separate validity masks on each of the individual nullable arrays
 
@@ -182,6 +164,26 @@ A definition level of 2 would imply a defined value for d.d2:
 }
 ```
 
+
+Goin back to the JSON documents above, this format could be stored in this parquet schema
+
+```text
+message schema {
+  optional int32 a;
+  required group b {
+    optional int32 b1;
+    required int32 b2;
+  }
+  optional group c {
+    required int32 c1;
+  }
+  optional group d {
+    required int32 d1;
+    optional int32 d2;
+  }
+}
+```
+
 Thus the parquet encoding of the example would be:
 
 ```text
@@ -190,9 +192,9 @@ Thus the parquet encoding of the example would be:
  │  │  1  │     │  1  │   │  │ │  ┌─────┐    ┌─────┐  │ │  ┌─────┐  │
  │  ├─────┤     ├─────┤   │    │  │  1  │    │  1  │  │ │  │  3  │  │ │
  │  │  1  │     │  2  │   │  │ │  ├─────┤    ├─────┤  │ │  ├─────┤  │
- │  ├─────┤     └─────┘   │    │  │  1  │    │  2  │  │ │  │  4  │  │ │
+ │  ├─────┤     └─────┘   │    │  │  0  │    │  5  │  │ │  │  4  │  │ │
  │  │  0  │               │  │ │  ├─────┤    └─────┘  │ │  ├─────┤  │
- │  └─────┘               │    │  │  0  │             │ │  │  5  │  │ │
+ │  └─────┘               │    │  │  1  │             │ │  │  6  │  │ │
  │                        │  │ │  └─────┘             │ │  └─────┘  │
  │  Definition    Data    │    │                      │ │           │ │
  │    Levels              │  │ │  Definition   Data   │ │   Data    │
@@ -220,8 +222,7 @@ Thus the parquet encoding of the example would be:
   │  "c.1"               │ │   │  "d.1"               │ │  "d.d2"              │  │
 │ └──────────────────────┘   │ └──────────────────────┘ └──────────────────────┘
      "c"                   │      "d"                                             │
-└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-```
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ```
 
 ## List / Repeated Columns
 
