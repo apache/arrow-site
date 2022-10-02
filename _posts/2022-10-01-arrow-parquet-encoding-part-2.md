@@ -280,15 +280,6 @@ For example, the list of offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0
 
 For the example above with 4 JSON documents, this would be encoded in arrow as
 
-```text
-a: ListArray
-  Offsets: [0, 1, 1, 3]
-  Validity: [true, false, true]
-  Children:
-    element: PrimitiveArray
-      Buffer[0]: [1, 2, ARBITRARY]
-      Validity: [true, true, false]
-```
 
 ```text
 ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
