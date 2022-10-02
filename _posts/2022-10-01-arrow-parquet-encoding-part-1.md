@@ -45,9 +45,9 @@ First, it is necessary to take a step back and discuss the difference between co
 For example
 
 ```json
-{“Column1”: 1, “Column2”: 2}
-{“Column1”: 3, “Column2”: 4, “Column3”: 5}
-{“Column1”: 5, “Column2”: 4, “Column3”: 5}
+{"Column1": 1, "Column2": 2}
+{"Column1": 3, "Column2": 4, "Column3": 5}
+{"Column1": 5, "Column2": 4, "Column3": 5}
 ```
 
 In a columnar representation, the data for a given column is instead stored contiguously
@@ -109,7 +109,7 @@ Parquet has multiple different encodings that it can use for integers types, the
 
 # Nullable Primitive Column
 
-Now let us consider the case of a nullable column, where some of the values might have the special sentinel value `NULL` that designates “this value is unknown".
+Now let us consider the case of a nullable column, where some of the values might have the special sentinel value `NULL` that designates "this value is unknown".
 
 In Arrow nulls are stored separately from the values in the form of a validity bitmask, with arbitrary data in the corresponding positions in the values buffer.
 
