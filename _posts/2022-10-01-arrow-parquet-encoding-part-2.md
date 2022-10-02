@@ -309,13 +309,6 @@ In order to encode lists, Parquet stores an integer *repetition level* in additi
 Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
 
 
-```text
-a:
-  Data Page:
-    Repetition Levels: encode([0, 0, 0, 1])
-    Definition Levels: encode([3, 0, 2, 2])
-    Values: encode([1, 2])
-```
 
 ```text
 ┌────────────────────────────────────────┐
