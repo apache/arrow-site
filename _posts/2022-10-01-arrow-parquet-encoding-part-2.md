@@ -40,56 +40,56 @@ For example consider the following three JSON documents
 
 ```json
 {              <-- First record
-  “a”: 1,      <-- the top level fields are a, b, c, and d
-  “b”: {
-    “b1”: 1,   <-- b1 and b2 are “nested” fields of “b”
-    “b2”: 3    <-- b2 is always provided (not null)
+  "a": 1,      <-- the top level fields are a, b, c, and d
+  "b": {
+    "b1": 1,   <-- b1 and b2 are "nested" fields of "b"
+    "b2": 3    <-- b2 is always provided (not null)
    },
- “d”: {
-   “d1”:  1    <-- d1 is a “nested” field of “d”
+ "d": {
+   "d1":  1    <-- d1 is a "nested" field of "d"
   }
 }
 ```
 ```json
 {              <-- Second record
-  “a”: 2,
-  “b”: {
-    “b2”: 4    <-- note “b1” is NULL in this record
+  "a": 2,
+  "b": {
+    "b2": 4    <-- note "b1" is NULL in this record
   },
-  “c”: {       <-- note “c” was NULL in the first record
-    “c1”: 6        but when “c” is provided, c1 is also always provided
+  "c": {       <-- note "c" was NULL in the first record
+    "c1": 6        but when "c" is provided, c1 is also always provided
   },
-  “d”: {
-    “d1”: 2,
-    “d2”: 1
+  "d": {
+    "d1": 2,
+    "d2": 1
   }
 }
 ```
 ```json
 {              <-- Third record
-  “b”: {
-    “b1”: 5,
-    “b2”: 6
+  "b": {
+    "b1": 5,
+    "b2": 6
   },
-  “c”: {
-    “c1”: 7
+  "c": {
+    "c1": 7
   }
 }
 ```
 Documents of this format could be stored in this arrow schema
 
 ```text
-Field(name: “a”, nullable: true, datatype: Int32)
-Field(name: “b”, nullable: false, datatype: Struct[
-  Field(name: “b1”, nullable: true, datatype: Int32),
-  Field(name: “b2”, nullable: false, datatype: Int32)
+Field(name: "a", nullable: true, datatype: Int32)
+Field(name: "b", nullable: false, datatype: Struct[
+  Field(name: "b1", nullable: true, datatype: Int32),
+  Field(name: "b2", nullable: false, datatype: Int32)
 ])
-Field(name: “c”), nullable: true, datatype: Struct[
-  Field(name: “c1”, nullable: false, datatype: Int32)
+Field(name: "c"), nullable: true, datatype: Struct[
+  Field(name: "c1", nullable: false, datatype: Int32)
 ])
-Field(name: “d”), nullable: true, datatype: Struct[
-  Field(name: “d1”, nullable: false, datatype: Int32)
-  Field(name: “d2”, nullable: true, datatype: Int32)
+Field(name: "d"), nullable: true, datatype: Struct[
+  Field(name: "d1", nullable: false, datatype: Int32)
+  Field(name: "d2", nullable: true, datatype: Int32)
 ])
 ```
 
@@ -232,29 +232,29 @@ Closing out support for nested types is columns containing a variable number of 
 
 ```json
 {                     <-- First record
-  “a”: [1],           <-- top-level field a containing list of integers
+  "a": [1],           <-- top-level field a containing list of integers
 }
 ```
 ```json
-{                     <-- “a” is not provided (is null)
+{                     <-- "a" is not provided (is null)
 }
 ```
 ```json
-{                     <-- “a” is non-null but empty
+{                     <-- "a" is non-null but empty
   "a": []
 }
 ```
 ```json
 {
-  “a”: [null, 2],  <-- list elements of a are nullable
+  "a": [null, 2],  <-- list elements of a are nullable
 }
 ```
 
 Documents of this format could be stored in this Arrow schema
 
 ```text
-Field(name: “a”, nullable: true, datatype: List(
-  Field(name: “element”, nullable: true, datatype: Int32),
+Field(name: "a", nullable: true, datatype: List(
+  Field(name: "element", nullable: true, datatype: Int32),
 )
 ```
 
