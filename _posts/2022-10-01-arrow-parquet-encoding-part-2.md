@@ -332,4 +332,4 @@ Each repeated field also has a corresponding definition level, however, in this 
 
 ## Next up: Arbitrary Nesting: Lists of Structs and Structs of Lists
 
-In our next blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures. It will also explain why definition levels are 16 bit integers when we have only shown values `0` and `1` so far.
+In our next blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures.
