@@ -71,8 +71,8 @@ Field(name: “a”, nullable: true, datatype: List(
 )
 Field(name: “b”), nullable: false, datatype: List(
   Field(name: “element”, nullable: true, datatype: Struct[
-    Field(name: “b2”, nullable: false, datatype: Int32),
-    Field(name: “c2”, nullable: true, datatype: List(
+    Field(name: “b1”, nullable: false, datatype: Int32),
+    Field(name: “b2”, nullable: true, datatype: List(
       Field(name: “element”, nullable: false, datatype: Int32)
     ))
   ])
@@ -91,8 +91,8 @@ message schema {
   required group b (LIST) {
     repeated group list {
       optional group element {
-        required int32 c1;
-        optional group c2 (LIST) {
+        required int32 b1;
+        optional group b2 (LIST) {
           repeated group list {
             required int32 element;
           }
@@ -119,9 +119,9 @@ b: ListArray
     element: StructArray
       Validity: [true, true, true, false]
       Children:
-        c1: PrimitiveArray
+        b1: PrimitiveArray
           Buffer[0]: [1, 1, 2, ARBITRARY]
-        c2: ListArray
+        b2: ListArray
           Offsets: [0, 0, 2, 2, 2]
           Validity: [false, true, false, ARBITRARY]
           Children:
@@ -144,10 +144,10 @@ b.b1:
     Repetition Levels: encode([0, 1, 0, 0])
     Definition Levels: encode([2, 2, 2, 1])
     Values: encode([1, 1, 2])
-b.c2
+b.b2
   Data Page:
     Repetition Levels: encode([0, 1, 2, 0, 0])
-    Definition Levels: encode([2, 3, 3, 2, 1])
+    Definition Levels: encode([2, 4, 4, 2, 1])
     Values: encode([3, 4])
 ```
 
