@@ -311,13 +311,6 @@ In order to encode lists, Parquet stores an integer *repetition level* in additi
 Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
 
 
-```text
-a:
-  Data Page:
-    Repetition Levels: encode([0, 0, 0, 1])
-    Definition Levels: encode([3, 0, 2, 2])
-    Values: encode([1, 2])
-```
 
 ```text
 ┌────────────────────────────────────────┐
@@ -341,4 +334,4 @@ a:
 
 ## Next up: Arbitrary Nesting: Lists of Structs and Structs of Lists
 
-In our next blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures. It will also explain why definition levels are 16 bit integers when we have only shown values `0` and `1` so far.
+In our next blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures.
