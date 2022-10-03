@@ -90,7 +90,7 @@ In arrow this would be represented as a `PrimitiveArray`, which would store them
 Values
 ```
 
-Parquet has multiple different encodings that it can use for integers types, the exact details of which are beyond the scope of this post, but broadly speaking it will encode the data as one or more pages containing the integers
+Parquet has multiple [different encodings](https://parquet.apache.org/docs/file-format/data-pages/encodings/) that may be used for integers types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more [*DataPage*](https://parquet.apache.org/docs/file-format/data-pages/)s containing the integers in a highly compressed form.
 
 ```text
 ┌─────┐
