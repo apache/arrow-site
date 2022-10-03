@@ -75,7 +75,7 @@ For example, consider the following three JSON documents
   }
 }
 ```
-Documents of this format could be stored in this arrow schema
+Documents of this format could be stored in this Arrow schema
 
 ```text
 Field(name: "a", nullable: true, datatype: Int32)
@@ -183,7 +183,7 @@ message schema {
 }
 ```
 
-Thus the parquet encoding of the example would be:
+Thus the Parquet encoding of the example would be:
 
 ```text
  ┌────────────────────────┐  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
@@ -256,7 +256,7 @@ Field(name: "a", nullable: true, datatype: List(
 )
 ```
 
-Documents of this format could be stored in this parquet schema
+Documents of this format could be stored in this Parquet schema
 
 ```text
 message schema {
@@ -278,7 +278,7 @@ For example, the list of offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0
 2: [child[2]]
 ```
 
-For the example above with 4 JSON documents, this would be encoded in arrow as
+For the example above with 4 JSON documents, this would be encoded in Arrow as
 
 
 ```text
