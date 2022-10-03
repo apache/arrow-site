@@ -64,9 +64,9 @@ Aside from potentially yielding better data compression, a columnar layout can d
 ## Parquet vs Arrow
 Parquet and Arrow are complementary technologies, and they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended for operation by vectorized computational kernels.
 
-The major distinction is that arrow provides `O(1)` random access lookups to any array index, whilst Parquet does not. In particular, Parquet uses [dremel record shredding](https://akshays-blog.medium.com/wrapping-head-around-repetition-and-definition-levels-in-dremel-powering-bigquery-c1a33c9695da), [variable length encoding schemes](https://github.com/apache/parquet-format/blob/master/Encodings.md), and [block compression](https://github.com/apache/parquet-format/blob/master/Compression.md) to drastically reduce the data size, but these techniques come at the loss of performant random access lookups.
+The major distinction is that Arrow provides `O(1)` random access lookups to any array index, whilst Parquet does not. In particular, Parquet uses [dremel record shredding](https://akshays-blog.medium.com/wrapping-head-around-repetition-and-definition-levels-in-dremel-powering-bigquery-c1a33c9695da), [variable length encoding schemes](https://github.com/apache/parquet-format/blob/master/Encodings.md), and [block compression](https://github.com/apache/parquet-format/blob/master/Compression.md) to drastically reduce the data size, but these techniques come at the loss of performant random access lookups.
 
-A common pattern that plays to each technologies strengths, is to stream data from a compressed representation, such as parquet, in thousand row batches in the arrow format, process these batches individually, and accumulate the results in a more compressed representation. This benefits from the ability to efficiently perform computations on arrow data, whilst keeping memory requirements in check, and allowing the computation kernels to be agnostic to the encodings of the source and destination.
+A common pattern that plays to each technologies strengths, is to stream data from a compressed representation, such as Parquet, in thousand row batches in the Arrow format, process these batches individually, and accumulate the results in a more compressed representation. This benefits from the ability to efficiently perform computations on Arrow data, whilst keeping memory requirements in check, and allowing the computation kernels to be agnostic to the encodings of the source and destination.
 
 **Arrow is primarily an in-memory format, whereas Parquet is a storage format.**
 
@@ -75,7 +75,7 @@ A common pattern that plays to each technologies strengths, is to stream data fr
 
 Let us start with the simplest case of a non-nullable list of 32-bit signed integers.
 
-In arrow this would be represented as a `PrimitiveArray`, which would store them contiguously in memory
+In Arrow this would be represented as a `PrimitiveArray`, which would store them contiguously in memory
 
 ```text
 ┌─────┐
@@ -129,7 +129,7 @@ In Arrow, nulls are stored separately from the values in the form of a [validity
 Validity   Values
 ```
 
-In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called *definition levels*. Like other data in parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of `1` indicates a valid value, and `0` a null value. Unlike Arrow, nulls are not encoded in the list of values
+In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called *definition levels*. Like other data in Parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of `1` indicates a valid value, and `0` a null value. Unlike Arrow, nulls are not encoded in the list of values
 
 ```text
 ┌─────┐    ┌─────┐
