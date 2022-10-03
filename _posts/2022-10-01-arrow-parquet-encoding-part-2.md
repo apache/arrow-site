@@ -26,17 +26,16 @@ limitations under the License.
 
 ## Introduction
 
-This is the second, in a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. This post covers `Struct` and `List` types.
-
+This is the second, in a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. The fist post <!-- todo add link when published --> covers the basic of data storage and validity encoding, and this post covers `Struct` and `List` types.
 
 [Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
 
 
 ## Struct / Group Columns
 
-Both Parquet and Arrow have the concept of a struct column, this is a column that contains one or more other columns.
+Both Parquet and Arrow have the concept of a struct column, this is a column that contains one or more other columns in named fields and is analogous to a JSON object.
 
-For example consider the following three JSON documents
+For example, consider the following three JSON documents
 
 ```json
 {              <-- First record
