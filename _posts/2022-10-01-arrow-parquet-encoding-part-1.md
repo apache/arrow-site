@@ -90,7 +90,7 @@ In arrow this would be represented as a `PrimitiveArray`, which would store them
 Values
 ```
 
-Parquet has multiple [different encodings](https://parquet.apache.org/docs/file-format/data-pages/encodings/) that may be used for integers types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more [*DataPage*](https://parquet.apache.org/docs/file-format/data-pages/)s containing the integers in a highly compressed form.
+Parquet has multiple [different encodings](https://parquet.apache.org/docs/file-format/data-pages/encodings/) that may be used for integer types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more [*DataPage*](https://parquet.apache.org/docs/file-format/data-pages/)s containing the integers in an encoded form
 
 ```text
 ┌─────┐
@@ -111,7 +111,8 @@ Parquet has multiple [different encodings](https://parquet.apache.org/docs/file-
 
 Now let us consider the case of a nullable column, where some of the values might have the special sentinel value `NULL` that designates "this value is unknown".
 
-In Arrow nulls are stored separately from the values in the form of a validity bitmask, with arbitrary data in the corresponding positions in the values buffer.
+In Arrow, nulls are stored separately from the values in the form of a [validity bitmask](https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps), with arbitrary data in the corresponding positions in the values buffer. This space efficient encoding means that the entire validity mask for the following example is stored using 5 bits
+
 
 ```text
 ┌─────┐   ┌─────┐
@@ -128,7 +129,7 @@ In Arrow nulls are stored separately from the values in the form of a validity b
 Validity   Values
 ```
 
-In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called definition levels. These will be expanded upon in the next post, but for now a definition level of 1 indicates a valid value, and 0 a null value. Unlike arrow, nulls are not encoded in the list of values
+In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called *definition levels*. Like other data in parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of `1` indicates a valid value, and `0` a null value. Unlike Arrow, nulls are not encoded in the list of values
 
 ```text
 ┌─────┐    ┌─────┐
