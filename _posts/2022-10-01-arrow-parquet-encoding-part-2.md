@@ -164,7 +164,7 @@ A definition level of 2 would imply a defined value for d.d2:
 ```
 
 
-Goin back to the JSON documents above, this format could be stored in this parquet schema
+Going back to the JSON documents above, this format could be stored in this Parquet schema:
 
 ```text
 message schema {
