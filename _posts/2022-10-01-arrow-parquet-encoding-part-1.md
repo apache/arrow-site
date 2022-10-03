@@ -68,7 +68,7 @@ The major distinction is that arrow provides O(1) random access lookups to any a
 
 A common pattern that plays to each technologies strengths, is to stream data from a compressed representation, such as parquet, in thousand row batches in the arrow format, process these batches individually, and accumulate the results in a more compressed representation. This benefits from the ability to efficiently perform computations on arrow data, whilst keeping memory requirements in check, and allowing the computation kernels to be agnostic to the encodings of the source and destination.
 
-**Arrow is primarily an interchange format, whereas Parquet is a storage format.**
+**Arrow is primarily an in-memory format, whereas Parquet is a storage format.**
 
 
 ## Non-Nullable Primitive Column
