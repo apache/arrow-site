@@ -26,7 +26,7 @@ limitations under the License.
 
 ## Introduction
 
-A recently completed, long-running project within the [Rust Apache Arrow](https://github.com/apache/arrow-rs) implementation was complete support for reading and writing arbitrarily nested Parquet schema and conversion to Arrow. This is a complex topic, and we felt there was a lack of available approachable technical information, and thus wanted to share our learnings with the community.
+We recently completed a long-running project within [Rust Apache Arrow](https://github.com/apache/arrow-rs) to complete support for reading and writing arbitrarily nested Parquet and Arrow schemas. This is a complex topic, and we encountered a lack of approachable technical information, and thus wrote this blog to share our learnings with the community.
 
 [Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
 
