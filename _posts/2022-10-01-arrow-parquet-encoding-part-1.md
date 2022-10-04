@@ -40,7 +40,7 @@ In this series we will explain how Parquet and Arrow represent nested data, high
 
 ## Columnar vs Record-Oriented
 
-First, it is necessary to take a step back and discuss the difference between columnar and record-oriented data formats. In a record oriented data format, such as JSON, all the values for a given record are stored contiguously.
+First, it is necessary to take a step back and discuss the difference between columnar and record-oriented data formats. In a record oriented data format, such as newline-delimited JSON (NDJSON), all the values for a given record are stored contiguously.
 
 For example
 
