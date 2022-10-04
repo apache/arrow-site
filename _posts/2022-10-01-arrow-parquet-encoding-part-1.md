@@ -102,9 +102,7 @@ Parquet has multiple [different encodings](https://parquet.apache.org/docs/file-
 ├─────┤
 │  4  │
 └─────┘
- Data
-
- DataPage
+Values
 ```
 
 # Nullable Primitive Column
