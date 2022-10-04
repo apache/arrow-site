@@ -26,14 +26,14 @@ limitations under the License.
 
 ## Introduction
 
-This is the second, in a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. The fist post <!-- todo add link when published --> covers the basic of data storage and validity encoding, and this post covers `Struct` and `List` types.
+This is the second, in a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. The fist post <!-- todo add link when published --> covers the basics of data storage and validity encoding, and this post covers `Struct` and `List` types.
 
 [Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
 
 
 ## Struct / Group Columns
 
-Both Parquet and Arrow have the concept of a struct column, this is a column that contains one or more other columns in named fields and is analogous to a JSON object.
+Both Parquet and Arrow have the concept of a *struct* column, which is a column containing one or more other columns in named fields and is analogous to a JSON object.
 
 For example, consider the following three JSON documents
 
@@ -135,19 +135,21 @@ Arrow represents each `StructArray` hierarchically using a parent child relation
  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
  ```
 
+More technical detail is available in the [StructArray format specification](https://arrow.apache.org/docs/format/Columnar.html#struct-layout).
+
 ### Definition Levels
 Unlike Arrow, Parquet does not encode validity in a structured fashion, instead only storing definition levels for each of the primitive columns, i.e. those that aren’t groups. The definition level of a given element, is the depth in the schema at which it is fully defined.
 
-For example consider the case of d.d2, which contains two nullable levels d and d2.
+For example consider the case of `d.d2`, which contains two nullable levels `d` and `d2`.
 
-A definition level of 0 would imply a null at the level of d:
+A definition level of `0` would imply a null at the level of `d`:
 
 ```json
 {
 }
 ```
 
-A definition level of 1 would imply a null at the level of d.d2
+A definition level of `1` would imply a null at the level of `d.d2`
 
 ```json
 {
@@ -155,7 +157,7 @@ A definition level of 1 would imply a null at the level of d.d2
 }
 ```
 
-A definition level of 2 would imply a defined value for d.d2:
+A definition level of `2` would imply a defined value for `d.d2`:
 
 ```json
 {
@@ -226,7 +228,7 @@ Thus the Parquet encoding of the example would be:
 
 ## List / Repeated Columns
 
-Closing out support for nested types is columns containing a variable number of values. For example,
+Closing out support for nested types are *lists*, which containing a variable number of other values. For example,
 
 ```json
 {                     <-- First record
@@ -244,7 +246,7 @@ Closing out support for nested types is columns containing a variable number of 
 ```
 ```json
 {
-  "a": [null, 2],  <-- list elements of a are nullable
+  "a": [null, 2],     <-- list elements can themselves be null
 }
 ```
 
@@ -268,9 +270,9 @@ message schema {
 }
 ```
 
-As before, Arrow chooses to represent this in a hierarchical fashion with a list of monotonically increasing integers called *offsets* in the parent `ListArray`, and stores all the values that appear in the lists in a single child array. Each consecutive pair of elements in this offset array identifies a slice of the child array for that array index.
+As before, Arrow chooses to represent this in a hierarchical fashion with a list of monotonically increasing integers called *offsets* in a `ListArray`, and stores all the values that appear in the lists in a single child array. Each consecutive pair of elements in this offset array identifies a slice of the child array for that array index
 
-For example, the list of offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(1,3)`, and `(3,3)`, and is therefore a ListArray of length 3 with the following values:
+For example, the list of offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(2,3)`, and `(3,3)`, and is therefore a ListArray of length 3 with the following values:
 
 ```text
 0: [child[0], child[1]]
@@ -302,9 +304,12 @@ For the example above with 4 JSON documents, this would be encoded in Arrow as
  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
 ```
 
+More technical detail is available in the [ListArray format specification](https://arrow.apache.org/docs/format/Columnar.html#variable-size-list-layout).
+
+
 ### Repetition Levels
 
-In order to encode lists, Parquet stores an integer *repetition level* in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of 0 would imply a new list in the top-most repeated field, a value of 1 a new element within the top-most repeated field, a value of 2 a new element within the second top-most repeated field, and so on.
+In order to encode lists, Parquet stores an integer *repetition level* in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of `0` would imply a new list in the top-most repeated field, a value of 1 a new element within the top-most repeated field, a value of 2 a new element within the second top-most repeated field, and so on.
 
 Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
 
@@ -324,7 +329,7 @@ Each repeated field also has a corresponding definition level, however, in this 
 │  │  3  │      │  1  │               │
 │  └─────┘      └─────┘               │
 │                                     │
-│ Definition  Repetition      Data    │
+│ Definition  Repetition      Values  │
 │   Levels      Levels                │
 │  "a"                                │
 │                                     │
