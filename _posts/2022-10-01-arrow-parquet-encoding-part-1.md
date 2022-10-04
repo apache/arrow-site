@@ -32,7 +32,7 @@ We recently completed a long-running project within [Rust Apache Arrow](https://
 
 It is increasingly common for analytic systems to use Arrow to process data stored in Parquet files, and therefore fast, efficient, and correct translation between them is a key building block.
 
-Historically analytic processing primarily focused on querying data with a tabular schema, where there are a fixed number of columns, and each row contains a single value for a each column. However, with the increasing adoption of structured document formats such as XML, JSON, etc…, this schema limitation can seem antiquated and unnecessarily limiting.
+Historically analytic processing primarily focused on querying data with a tabular schema, where there are a fixed number of columns, and each row contains a single value for each column. However, with the increasing adoption of structured document formats such as XML, JSON, etc…, only supporting tabular schema can be frustrating for users, as it necessitates often non-trivial data transformation to first flatten the document data.
 
 As of version [20.0.0](https://crates.io/crates/arrow/20.0.0), released in August 2022, the Rust Arrow implementation for reading structured types is feature complete. Instructions for getting started can be found [here](https://docs.rs/parquet/latest/parquet/arrow/index.html) and feel free to raise any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues).
 
