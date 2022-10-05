@@ -125,7 +125,7 @@ apt-get install -y npm
 gem install bundler
 bundle install
 bundle exec rake
-# Serve using local container addres
+# Serve using local container address
 jekyll serve --incremental --livereload --host=0.0.0.0
 ```
 
