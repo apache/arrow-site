@@ -129,4 +129,4 @@ bundle exec rake
 jekyll serve --incremental --livereload --host=0.0.0.0
 ```
 
-The open http://locahost:4000 locally
+Then open http://locahost:4000 locally
