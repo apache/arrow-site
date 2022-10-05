@@ -1,4 +1,122 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2022-10-03T06:32:10-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow 9.0.0 Release</title><link href="https://arrow.apache.org/blog/2022/08/16/9.0.0-release/" rel="alternate" type="text/html" title="Apache Arrow 9.0.0 Release" /><published>2022-08-16T00:00:00-04:00</published><updated>2022-08-16T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/08/16/9.0.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/08/16/9.0.0-release/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2022-10-05T14:38:27-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html"></title><link href="https://arrow.apache.org/blog/2022/10/05/2022-10-01-arrow-parquet-encoding-part-1/" rel="alternate" type="text/html" title="" /><published>2022-10-05T14:38:27-04:00</published><updated>2022-10-05T14:38:27-04:00</updated><id>https://arrow.apache.org/blog/2022/10/05/2022-10-01-arrow-parquet-encoding-part-1</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/05/2022-10-01-arrow-parquet-encoding-part-1/"><![CDATA[<!--
+
+-->
+
+<h2 id="introduction">Introduction</h2>
+
+<p>We recently completed a long-running project within <a href="https://github.com/apache/arrow-rs">Rust Apache Arrow</a> to complete support for reading and writing arbitrarily nested Parquet and Arrow schemas. This is a complex topic, and we encountered a lack of approachable technical information, and thus wrote this blog to share our learnings with the community.</p>
+
+<p><a href="https://arrow.apache.org/">Apache Arrow</a> is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. <a href="https://parquet.apache.org/">Apache Parquet</a> is an open, column-oriented data file format designed for very efficient data encoding and retrieval.</p>
+
+<p>It is increasingly common for analytic systems to use Arrow to process data stored in Parquet files, and therefore fast, efficient, and correct translation between them is a key building block.</p>
+
+<p>Historically analytic processing primarily focused on querying data with a tabular schema, where there are a fixed number of columns, and each row contains a single value for each column. However, with the increasing adoption of structured document formats such as XML, JSON, etc…, only supporting tabular schema can be frustrating for users, as it necessitates often non-trivial data transformation to first flatten the document data.</p>
+
+<p>As of version <a href="https://crates.io/crates/arrow/20.0.0">20.0.0</a>, released in August 2022, the Rust Arrow implementation for reading structured types is feature complete. Instructions for getting started can be found <a href="https://docs.rs/parquet/latest/parquet/arrow/index.html">here</a> and feel free to raise any issues on our <a href="https://github.com/apache/arrow-rs/issues">bugtracker</a>.</p>
+
+<p>In this series we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and giving a flavor of the practicalities of converting between the formats.</p>
+
+<h2 id="columnar-vs-record-oriented">Columnar vs Record-Oriented</h2>
+
+<p>First, it is necessary to take a step back and discuss the difference between columnar and record-oriented data formats. In a record oriented data format, such as newline-delimited JSON (NDJSON), all the values for a given record are stored contiguously.</p>
+
+<p>For example</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="nl">"Column1"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column2"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">}</span><span class="w">
+</span><span class="p">{</span><span class="nl">"Column1"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column2"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column3"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">}</span><span class="w">
+</span><span class="p">{</span><span class="nl">"Column1"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column2"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column3"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>In a columnar representation, the data for a given column is instead stored contiguously</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Column1: [1, 3, 5]
+Column2: [2, 4, 4]
+Column3: [null, 5, 5]
+</code></pre></div></div>
+
+<p>Aside from potentially yielding better data compression, a columnar layout can dramatically improve performance of certain queries. This is because laying data out contiguously in memory allows both the compiler and CPU to better exploit opportunities for parallelism. The specifics of <a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a> and <a href="https://en.wikipedia.org/wiki/Instruction-level_parallelism">ILP</a> are well beyond the scope of this post, but the important takeaway is that processing large blocks of data without intervening conditional branches has substantial performance benefits.</p>
+
+<h2 id="parquet-vs-arrow">Parquet vs Arrow</h2>
+<p>Parquet and Arrow are complementary technologies, and they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended for operation by vectorized computational kernels.</p>
+
+<p>The major distinction is that Arrow provides <code class="language-plaintext highlighter-rouge">O(1)</code> random access lookups to any array index, whilst Parquet does not. In particular, Parquet uses <a href="https://akshays-blog.medium.com/wrapping-head-around-repetition-and-definition-levels-in-dremel-powering-bigquery-c1a33c9695da">dremel record shredding</a>, <a href="https://github.com/apache/parquet-format/blob/master/Encodings.md">variable length encoding schemes</a>, and <a href="https://github.com/apache/parquet-format/blob/master/Compression.md">block compression</a> to drastically reduce the data size, but these techniques come at the loss of performant random access lookups.</p>
+
+<p>A common pattern that plays to each technologies strengths, is to stream data from a compressed representation, such as Parquet, in thousand row batches in the Arrow format, process these batches individually, and accumulate the results in a more compressed representation. This benefits from the ability to efficiently perform computations on Arrow data, whilst keeping memory requirements in check, and allowing the computation kernels to be agnostic to the encodings of the source and destination.</p>
+
+<p><strong>Arrow is primarily an in-memory format, whereas Parquet is a storage format.</strong></p>
+
+<h2 id="non-nullable-primitive-column">Non-Nullable Primitive Column</h2>
+
+<p>Let us start with the simplest case of a non-nullable list of 32-bit signed integers.</p>
+
+<p>In Arrow this would be represented as a <code class="language-plaintext highlighter-rouge">PrimitiveArray</code>, which would store them contiguously in memory</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────┐
+│  1  │
+├─────┤
+│  2  │
+├─────┤
+│  3  │
+├─────┤
+│  4  │
+└─────┘
+Values
+</code></pre></div></div>
+
+<p>Parquet has multiple <a href="https://parquet.apache.org/docs/file-format/data-pages/encodings/">different encodings</a> that may be used for integer types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more <a href="https://parquet.apache.org/docs/file-format/data-pages/"><em>DataPage</em></a>s containing the integers in an encoded form</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────┐
+│  1  │
+├─────┤
+|  2  │
+├─────┤
+│  3  │
+├─────┤
+│  4  │
+└─────┘
+Values
+</code></pre></div></div>
+
+<h1 id="nullable-primitive-column">Nullable Primitive Column</h1>
+
+<p>Now let us consider the case of a nullable column, where some of the values might have the special sentinel value <code class="language-plaintext highlighter-rouge">NULL</code> that designates “this value is unknown”.</p>
+
+<p>In Arrow, nulls are stored separately from the values in the form of a <a href="https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps">validity bitmask</a>, with arbitrary data in the corresponding positions in the values buffer. This space efficient encoding means that the entire validity mask for the following example is stored using 5 bits</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────┐   ┌─────┐
+│  1  │   │  1  │
+├─────┤   ├─────┤
+│  0  │   │ ??  │
+├─────┤   ├─────┤
+│  1  │   │  3  │
+├─────┤   ├─────┤
+│  1  │   │  4  │
+├─────┤   ├─────┤
+│  0  │   │ ??  │
+└─────┘   └─────┘
+Validity   Values
+</code></pre></div></div>
+
+<p>In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called <em>definition levels</em>. Like other data in Parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of <code class="language-plaintext highlighter-rouge">1</code> indicates a valid value, and <code class="language-plaintext highlighter-rouge">0</code> a null value. Unlike Arrow, nulls are not encoded in the list of values</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────┐    ┌─────┐
+│  1  │    │  1  │
+├─────┤    ├─────┤
+│  0  │    │  3  │
+├─────┤    ├─────┤
+│  1  │    │  4  │
+├─────┤    └─────┘
+│  1  │
+├─────┤
+│  0  │
+└─────┘
+Definition  Values
+ Levels
+</code></pre></div></div>
+
+<h2 id="next-up-nested-and-hierarchal-data">Next up: Nested and Hierarchal Data</h2>
+
+<p>Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our upcoming blog post on the topic <!-- I propose to update this text with a link when when we have published the next blog -->.</p>]]></content><author><name></name></author><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 9.0.0 Release</title><link href="https://arrow.apache.org/blog/2022/08/16/9.0.0-release/" rel="alternate" type="text/html" title="Apache Arrow 9.0.0 Release" /><published>2022-08-16T00:00:00-04:00</published><updated>2022-08-16T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/08/16/9.0.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/08/16/9.0.0-release/"><![CDATA[<!--
 
 -->
 
@@ -1580,275 +1698,4 @@ suitable for beginners <a href="https://github.com/apache/arrow-rs/issues?q=is%3
 and the full list <a href="https://github.com/apache/arrow-rs/issues">here</a>.</p>
 
 <p>Other ways to get involved include trying out Arrow on some of your data and filing bug reports, and helping to
-improve the documentation.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Rust implementation of Apache Arrow has just released version 9.0.2. While a major version of this magnitude may shock some in the Rust community to whom it implies a slow moving 20 year old piece of software, nothing could be further from the truth! With regular and predictable bi-weekly releases, the library continues to evolve rapidly, and 9.0.2 is no exception. Some recent highlights: parquet: async, performance, safety and nested types The parquet 9.0.2 release includes an async reader, a long time requested feature. Using the async reader it is now possible to read only the relevant parts of a parquet file from a networked source such as object storage. Previously the entire file had to be buffered locally. We are hoping to add an async writer in a future release and would love some help. It is also significantly faster to read parquet data (up to 60x in some cases) than with previous versions of the parquet crate. Kudos to tustvold and yordan-pavlov for their contributions in these areas. With 8.0.0 and later, the code that reads and writes RecordBatches to and from Parquet now supports all types, including deeply nested structs and lists. Thanks helgikrs for cleaning up the last corner cases! Other notable recent additions to parquet are UTF-8 validation on string data for improved security against malicious inputs. Planned upcoming work includes pushing more filtering directly into the parquet scan as well as an async writer. arrow: performance, dyn kernels, and DecimalArray The compute kernels have been improved significantly in arrow 9.0.2. Some filter benchmarks are twice as fast and the SIMD kernels are also significantly faster. Many thanks to tustvold and jhorstmann. Additional substantial improvements are likely to land in arrow 10.0.0. We are working on new set of “dynamic” dyn_ kernels (for example, eq_dyn) that make it easier to invoke the heavily optimized kernels provided by the arrow crate. Work is underway to expand the breadth of types supported by these new kernels to make them even more useful. Thanks to matthewmturner and viirya for their help in this effort. While arrow has had basic support for DecimalArray since version 3.0.0, support has been expanded for Decimal type in calculation kernels such as sort, take and filter thanks to some great contributions from liukun4515. There is ongoing work to improve the API ergonomics and performance of DecimalArray as well. Security The 6.4.0 release resolved the last outstanding RUSTSEC advisory on the arrow crate and the 8.0.0 release resolved the last outstanding known security issues. While these security issues were mostly limited misuse of the low level “power user” APIs which most users do not (and should not) be using, it was good to tighten up that area. Now that arrow-rs is releasing major versions every other week, we are also able to update dependencies at the same pace, helping to ensure that security fixes upstream can flow more quickly to downstream projects. Final shoutout It takes a community to build great software, and we would like to thank everyone who has contributed to the arrow-rs repository since the 7.0.0 release: git shortlog -sn 7.0.0..9.0.0 22 Raphael Taylor-Davies 18 Andrew Lamb 6 Helgi Kristvin Sigurbjarnarson 6 Remzi Yang 5 Jörn Horstmann 4 Liang-Chi Hsieh 3 Jiayu Liu 2 dependabot[bot] 2 Yijie Shen 1 Matthew Turner 1 Kun Liu 1 Yang 1 Edd Robinson 1 Patrick More How to Get Involved If you are interested in contributing to the Rust subproject in Apache Arrow, you can find a list of open issues suitable for beginners here and the full list here. Other ways to get involved include trying out Arrow on some of your data and filing bug reports, and helping to improve the documentation.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 7.0.0 Release</title><link href="https://arrow.apache.org/blog/2022/02/08/7.0.0-release/" rel="alternate" type="text/html" title="Apache Arrow 7.0.0 Release" /><published>2022-02-08T01:00:00-05:00</published><updated>2022-02-08T01:00:00-05:00</updated><id>https://arrow.apache.org/blog/2022/02/08/7.0.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/02/08/7.0.0-release/"><![CDATA[<!--
-
--->
-
-<p>The Apache Arrow team is pleased to announce the 7.0.0 release. This covers
-over 3 months of development work and includes <a href="https://issues.apache.org/jira/issues/?jql=project%20%3D%20ARROW%20AND%20status%20%3D%20Resolved%20AND%20fixVersion%20%3D%207.0.0"><strong>617 resolved issues</strong></a>
-from <a href="/release/7.0.0.html#contributors"><strong>105 distinct contributors</strong></a>. See the Install Page to learn how to
-get the libraries for your platform.</p>
-
-<p>The release notes below are not exhaustive and only expose selected highlights
-of the release. Many other bugfixes and improvements have been made: we refer
-you to the <a href="/release/7.0.0.html#changelog">complete changelog</a>.</p>
-
-<h2 id="community">Community</h2>
-
-<p>Since the 6.0.1 release, Rémi Dattai and Alessandro Molina have been invited to be committers.
-Daniël Heres and Yibo Cai have joined the Project Management Committee (PMC).
-Thanks for your contributions and participation in the project!</p>
-
-<h2 id="arrow-flight-rpc-notes">Arrow Flight RPC notes</h2>
-
-<p>The Flight specification has been clarified to note that schemas are expected to be IPC-encapsulated on the wire.</p>
-
-<p>Documentation has been generally improved; see the <a href="https://arrow.apache.org/cookbook/">Arrow Cookbook</a> for recipes on how to use Flight in Python and R, and a new <a href="https://github.com/apache/arrow/blob/master/cpp/examples/arrow/flight_grpc_example.cc">example</a> on how to use Flight and gRPC services on the same port.</p>
-
-<p>This release includes Arrow Flight SQL, a protocol for using Arrow Flight to execute queries against and fetch metadata from SQL databases. Support is included for C++ and Java (but <em>not</em> languages that bind to C++, like Python or R). A more detailed blog post is forthcoming (<em>EDIT</em> 2022/02/16: see the <a href="/blog/2022/02/16/introducing-arrow-flight-sql/">Flight SQL announcement</a>). Note that development is ongoing and the specification is currently experimental.</p>
-
-<h2 id="c-notes">C++ notes</h2>
-
-<p>A set of CMake presets has been added to ease building Arrow in a number
-of cases (ARROW-14678, ARROW-14714).</p>
-
-<p>The <code class="language-plaintext highlighter-rouge">arrow::BitUtil</code> namespace has been renamed to <code class="language-plaintext highlighter-rouge">arrow::bit_util</code>
-(ARROW-13494).</p>
-
-<p>Concatenation of union arrays is now supported (ARROW-4975).</p>
-
-<p><code class="language-plaintext highlighter-rouge">StructType</code> gained three convenience methods to add, change and remove
-a given field (ARROW-11424).</p>
-
-<p>The <code class="language-plaintext highlighter-rouge">Datum</code> kind <code class="language-plaintext highlighter-rouge">COLLECTION</code> has been removed as it was entirely unused
-in the codebase (ARROW-13598).</p>
-
-<h3 id="compute-layer">Compute Layer</h3>
-
-<p>A number of compute functions have been added:</p>
-
-<ul>
-  <li>functions operating on strings: “binary_reverse” (ARROW-14306),
-“string_repeat” (ARROW-12712), “utf8_normalize” (ARROW-14205);</li>
-  <li>“fill_null_forward”, “fill_null_backward” (ARROW-1699);</li>
-  <li>“ceil_temporal”, “floor_temporal”, “round_temporal” to adjust temporal input
-to an integral multiple of a given unit (ARROW-14822);</li>
-  <li>“year_month_day” to extract the calendar components of the input (ARROW-15032);</li>
-  <li>“random” to general random floating-point values between 0 and 1 (ARROW-12404);</li>
-  <li>“indices_nonzero” to return the indices in the input where there are
-non-zero, non-null values (ARROW-13035).</li>
-</ul>
-
-<p>Decimal data is now supported as input of the arithmetic kernels
-(ARROW-13130).</p>
-
-<p>Dictionary data is now supported as input of the hash join execution node
-(ARROW-14181).</p>
-
-<p>Residual predicates have been implemented in the hash join node
-(ARROW-13643).</p>
-
-<p>The “list_parent_indices” function now always returns int64 data
-regardless of the input type (ARROW-14592).</p>
-
-<p>Month-day-nano interval data is now supported as input of the same functions
-as other interval types (ARROW-13989).</p>
-
-<h3 id="csv">CSV</h3>
-
-<p>The CSV writer got additional configuration options:</p>
-<ul>
-  <li>the string representation of null values (ARROW-14905);</li>
-  <li>the quoting strategy: always / never / as needed (ARROW-14905);</li>
-  <li>the end of line character(s) (ARROW-14907)</li>
-</ul>
-
-<h3 id="dataset-layer">Dataset Layer</h3>
-
-<p><a href="/blog/2022/01/31/skyhook-bringing-computation-to-storage-with-apache-arrow/">Skyhook</a>,
-a dataset addition that offloads fragment scan operations to a
-Ceph distributed storage cluster, was contributed (ARROW-13607).</p>
-
-<p>The dataset writer now exposes options <code class="language-plaintext highlighter-rouge">min_rows_per_group</code> and
-<code class="language-plaintext highlighter-rouge">max_rows_per_group</code> to control the size of row groups created (ARROW-14426).</p>
-
-<h3 id="io-and-filesystem-layer">IO and Filesystem Layer</h3>
-
-<p>A critical bug in the AWS SDK for C++ that risks losing data in S3 multipart
-uploads has been circumvented (ARROW-14523).</p>
-
-<p>The Google Cloud Storage filesystem is now featureful enough to pass all
-generic filesystem tests (ARROW-14924).</p>
-
-<p>The OpenAppendStream method of filesystems has been un-deprecated; however,
-it still cannot be implemented for all filesystem backends (ARROW-14969).</p>
-
-<p>A new function <code class="language-plaintext highlighter-rouge">arrow::fs::ResolveS3BucketRegion</code> allows resolving the
-region where a particular S3 bucket resides (ARROW-15165).</p>
-
-<p>The S3 filesystem now sets the Content-Type of output files to
-“application/octet-stream” (instead of “application/xml” previously)
-if not explicitly specified by the caller (ARROW-15306).</p>
-
-<h3 id="ipc">IPC</h3>
-
-<p>Fine-grained I/O (coalescing) is now enabled in the synchronous (ARROW-12683)
-and asynchronous (ARROW-14577) IPC reader.</p>
-
-<p>It is now possible to set the compression level when using LZ4 compression
-(ARROW-9648).</p>
-
-<h3 id="orc">ORC</h3>
-
-<p>The ORC adapters have been significantly improved. A lot more properties of the ORC reader as well as ORC writer options are now available. Moreover API docs for both the ORC reader and the ORC writer have been generated.  (ARROW-11297)</p>
-<h3 id="parquet">Parquet</h3>
-
-<p>DELTA_BYTE_ARRAY-encoded data can now be read from (but not written to)
-bytearray columns in Parquet files (PARQUET-492).</p>
-
-<h2 id="go-notes">Go notes</h2>
-
-<h3 id="arrow">Arrow</h3>
-
-<h4 id="bug-fixes">Bug Fixes</h4>
-
-<ul>
-  <li>License lifted up a level so that it is properly detected for the github.com/apache/arrow/go/v7 module for pkg.go.dev <a href="https://github.com/apache/arrow/pull/11715">ARROW-14728</a>. Documentation on pkg.go.dev will look correct with complete major version handling as of the v7.0.0 release.</li>
-  <li>Errors from <code class="language-plaintext highlighter-rouge">MessageReader.Message</code> get properly surfaced by <code class="language-plaintext highlighter-rouge">Reader.Read</code> <a href="https://github.com/apache/arrow/pull/11739">ARROW-14769</a></li>
-  <li><code class="language-plaintext highlighter-rouge">ipc.Reader</code> properly uses the allocator it is initialized with instead of making native byte slices <a href="https://github.com/apache/arrow/pull/11712">ARROW-14717</a></li>
-  <li>Fixed a CI issue where the CGO tests were crashing on windows <a href="https://github.com/apache/arrow/pull/11611">ARROW-14589</a></li>
-  <li>Various fixes for internal usages of <code class="language-plaintext highlighter-rouge">Release</code> and <code class="language-plaintext highlighter-rouge">Retain</code> to maintain proper management of reference counting.</li>
-</ul>
-
-<h4 id="enhancements">Enhancements</h4>
-
-<ul>
-  <li>Continuous Integration for Go library now uses Go1.16 as the version being tested <a href="https://github.com/apache/arrow/pull/11860">ARROW-14985</a></li>
-  <li><code class="language-plaintext highlighter-rouge">ValueOffsets</code> function added to <code class="language-plaintext highlighter-rouge">array.String</code> to return the entire slice of offsets <a href="https://github.com/apache/arrow/pull/11653">ARROW-14645</a></li>
-  <li><code class="language-plaintext highlighter-rouge">array.Interface</code> has been lifted to <code class="language-plaintext highlighter-rouge">arrow.Array</code>, <code class="language-plaintext highlighter-rouge">array.{Record,Column,Chunked,Table}</code> have been lifted to <code class="language-plaintext highlighter-rouge">arrow.{Record,Column,Chunked,Table}</code>. Interface <code class="language-plaintext highlighter-rouge">arrow.ArrayData</code> has been created to be used instead of <code class="language-plaintext highlighter-rouge">array.Data</code>. Aliases have been provided for the <code class="language-plaintext highlighter-rouge">array</code> package so existing code that doesn’t directly use <code class="language-plaintext highlighter-rouge">array.Data</code> shouldn’t be affected. The aliases will be removed in v8. <a href="https://github.com/apache/arrow/pull/11832">ARROW-5599</a>. The <code class="language-plaintext highlighter-rouge">Chunked.NewSlice</code> method has been removed and is replaced by the <code class="language-plaintext highlighter-rouge">array.NewChunkedSlice</code> function.</li>
-  <li>Arrays and Records now support marshalling to JSON via the <code class="language-plaintext highlighter-rouge">json.Marshaller</code> interface. Builders support adding values to them by unmarshalling from JSON via the <code class="language-plaintext highlighter-rouge">json.Unmarshaller</code> interface. <code class="language-plaintext highlighter-rouge">array.FromJSON</code> function added to create Arrays from JSON directly. <a href="https://github.com/apache/arrow/pull/11359">ARROW-9630</a></li>
-  <li>Basic handling of field referencing and expression building similar to the C++ Compute APIs added through the new <code class="language-plaintext highlighter-rouge">compute</code> package in preparation for adding compute interfaces. Does not yet allow <em>executing</em> expressions. <a href="https://github.com/apache/arrow/pull/11514">ARROW-14430</a></li>
-</ul>
-
-<h3 id="parquet-1">Parquet</h3>
-
-<h4 id="enhancements-1">Enhancements</h4>
-
-<ul>
-  <li>Updated dependency versions <a href="https://github.com/apache/arrow/pull/11537">ARROW-14462</a></li>
-  <li><code class="language-plaintext highlighter-rouge">file</code> module added, Go Parquet library now supports full file reading and writing. <a href="https://github.com/apache/arrow/pull/11146">ARROW-13984</a> <a href="https://github.com/apache/arrow/pull/11538">ARROW-13986</a>. Does not yet provide direct Parquet &lt;–&gt; Arrow conversions.</li>
-  <li>Internal min_max utility functions given Arm64 NEON SIMD optimized assembly, gaining a 4x - 6x performance improvement. <a href="https://github.com/apache/arrow/pull/12163">ARROW-15536</a></li>
-</ul>
-
-<h2 id="java-notes">Java notes</h2>
-
-<ul>
-  <li>Flight SQL support is now available in the Java library, with integration tests to verify it against the C++ reference implementation.</li>
-  <li><code class="language-plaintext highlighter-rouge">GeneralOutOfPlaceVectorSorter</code> is now available for sorting any kind of vector. In general if dedicated sorters can be used (like <code class="language-plaintext highlighter-rouge">FixedWidthInPlaceVectorSorter</code>) they should preferred as they will generally perform better.</li>
-  <li><code class="language-plaintext highlighter-rouge">log4j2</code> dependency was removed as it was unused and a possible vector for attacks</li>
-  <li><code class="language-plaintext highlighter-rouge">VectorSchemaRootAppender</code> now works with <code class="language-plaintext highlighter-rouge">BitVector</code></li>
-</ul>
-
-<h2 id="javascript-notes">JavaScript notes</h2>
-
-<ul>
-  <li>Major simplifications to the API. There is only a single Vector class now. See the (also much improved) docs for details.</li>
-  <li>Dictionary vectors created with <code class="language-plaintext highlighter-rouge">vectorFromArray</code> are automatically cached for better performance.</li>
-  <li>Better tree shaking support. Some bundles can now be only a few kb.</li>
-</ul>
-
-<h2 id="python-notes">Python notes</h2>
-
-<ul>
-  <li>Official support for Python 3.6 has been dropped.</li>
-  <li><code class="language-plaintext highlighter-rouge">random</code> and <code class="language-plaintext highlighter-rouge">indices_nonzero</code> compute functions are now supported in Python</li>
-  <li><code class="language-plaintext highlighter-rouge">pyarrow.orc.read_table</code> is now provided to easily read the content of ORC files to a Table.</li>
-  <li><code class="language-plaintext highlighter-rouge">pyarrow.orc.ORCFile</code> now has a lot more properties exposed.</li>
-  <li><code class="language-plaintext highlighter-rouge">pyarrow.orc.ORCWriter</code> and <code class="language-plaintext highlighter-rouge">pyarrow.orc.write_table</code> now have the writer options available.</li>
-  <li><code class="language-plaintext highlighter-rouge">pyarrow.orc</code> now has much better API documentation.</li>
-  <li>Support for compute functions arguments and options has been improved in general,  arguments are not position only, while options can be provided as keyword args or not, and error reporting for wrong arguments has been improved.</li>
-  <li><code class="language-plaintext highlighter-rouge">Table</code> now has a <code class="language-plaintext highlighter-rouge">group_by</code> method that allows to perform aggregations on table data. The compute functions documentation has also been improved to better distinguish between standard compute functions and <code class="language-plaintext highlighter-rouge">HASH_AGGREGATE</code> compute functions that can only be using for aggregations.</li>
-  <li>Python documentation now provides interlinking for references to parameter types and return values, thus making far easier to navigate the documentation.</li>
-</ul>
-
-<h2 id="r-notes">R notes</h2>
-
-<p>This release adds additional improvements to the <code class="language-plaintext highlighter-rouge">dplyr</code> interface, to CSV support, and to the C-Data interface to exchange data with other languages. For more details, see the <a href="/docs/r/news/">complete R changelog</a>.</p>
-
-<h2 id="ruby-and-c-glib-notes">Ruby and C GLib notes</h2>
-
-<h3 id="ruby">Ruby</h3>
-
-<p>There are two new contributors @okadakk and @simpl1g .</p>
-
-<p>The updates of Red Arrow consists of the following improvements:</p>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">Arrow::Function#execute</code> now accepts an instance of an <code class="language-plaintext highlighter-rouge">Arrow::Column</code> as its argument <a href="https://issues.apache.org/jira/browse/ARROW-14551">(ARROW-14551)</a></li>
-  <li><code class="language-plaintext highlighter-rouge">Arrow::Table.load</code> now supports <code class="language-plaintext highlighter-rouge">.arrows</code> files to load <a href="https://issues.apache.org/jira/browse/ARROW-15356">(ARROW-15356)</a></li>
-  <li>Add support loading <code class="language-plaintext highlighter-rouge">Arrow::Table</code> by a <code class="language-plaintext highlighter-rouge">URI</code> in <code class="language-plaintext highlighter-rouge">Arrow::Table.load</code> <a href="https://issues.apache.org/jira/browse/ARROW-14562">(ARROW-14562)</a></li>
-  <li><code class="language-plaintext highlighter-rouge">Arrow::Table</code> now supports to join two tables <a href="https://issues.apache.org/jira/browse/ARROW-14531">(ARROW-14531)</a></li>
-  <li><code class="language-plaintext highlighter-rouge">Arrow::Function#execute</code> gets more easier to use than before <a href="https://issues.apache.org/jira/browse/ARROW-15274">(ARROW-15274)</a></li>
-  <li><code class="language-plaintext highlighter-rouge">Arrow::SortKey#name</code> has been renamed to <code class="language-plaintext highlighter-rouge">Arrow::SortKey#target</code> <a href="https://issues.apache.org/jira/browse/ARROW-14784">(ARROW-14784)</a></li>
-  <li>Add Cookbook section to documentation <a href="https://issues.apache.org/jira/browse/ARROW-14636">(ARROW-14636)</a></li>
-  <li>Support the explicit initialization of S3 API by the <code class="language-plaintext highlighter-rouge">Arrow.s3_initialize</code> method <a href="https://issues.apache.org/jira/browse/ARROW-14637">(ARROW-14637)</a></li>
-  <li>On macOS, stop specifying the version of openssl package explicitly when building the extension library <a href="https://issues.apache.org/jira/browse/ARROW-14619">(ARROW-14619)</a></li>
-</ul>
-
-<h3 id="c-glib">C GLib</h3>
-
-<p>The updates of Arrow GLib etc. consists of the following improvements:</p>
-
-<ul>
-  <li>Add <code class="language-plaintext highlighter-rouge">garrow_execute_plan_build_hash_join_node</code> function, <code class="language-plaintext highlighter-rouge">GArrowHashJoinNodeOption</code>, and <code class="language-plaintext highlighter-rouge">GArrowJoinType</code> <a href="https://issues.apache.org/jira/browse/ARROW-15288">(ARROW-15288)</a></li>
-  <li>Add <code class="language-plaintext highlighter-rouge">garrow_function_get_options_type</code> function <a href="https://issues.apache.org/jira/browse/ARROW-15273">(ARROW-15273)</a></li>
-  <li>Add <code class="language-plaintext highlighter-rouge">garrow_function_get_default_options</code> function <a href="https://issues.apache.org/jira/browse/ARROW-15267">(ARROW-15267)</a></li>
-  <li>Add <code class="language-plaintext highlighter-rouge">GArrowRoundToMultipleOptions</code> to customize the <code class="language-plaintext highlighter-rouge">round_to_multiple</code> function <a href="https://issues.apache.org/jira/browse/ARROW-15216">(ARROW-15216)</a></li>
-  <li>Add <code class="language-plaintext highlighter-rouge">garrow_function_all</code> function to list up all the functions <a href="https://issues.apache.org/jira/browse/ARROW-15205">(ARROW-15205)</a>
-    <ul>
-      <li>In addition, add <code class="language-plaintext highlighter-rouge">garrow_function_get_name</code>, <code class="language-plaintext highlighter-rouge">garrow_function_equal</code>, and <code class="language-plaintext highlighter-rouge">garrow_function_to_string</code> functions for convenience</li>
-    </ul>
-  </li>
-  <li>Add <code class="language-plaintext highlighter-rouge">GArrowRoundOptions</code> <a href="https://issues.apache.org/jira/browse/ARROW-15204">(ARROW-15204)</a></li>
-  <li>Add <code class="language-plaintext highlighter-rouge">garrow_struct_scalar_get_value</code> function for converting a C++ scalar value to a GLib value <a href="https://issues.apache.org/jira/browse/ARROW-15203">(ARROW-15203)</a></li>
-  <li>Add the following three interval data types <a href="https://issues.apache.org/jira/browse/ARROW-15134">(ARROW-15134)</a>
-    <ul>
-      <li><code class="language-plaintext highlighter-rouge">GArrowMonthIntervalDataType</code> for the interval with the month component</li>
-      <li><code class="language-plaintext highlighter-rouge">GArrowDayTimeIntervalDataType</code> for the interval with the days and the milliseconds components</li>
-      <li><code class="language-plaintext highlighter-rouge">GArrowMonthDayNanoIntervalDataType</code> for the interval with the months, the days, and the nanoseconds components</li>
-    </ul>
-  </li>
-  <li>Rename <code class="language-plaintext highlighter-rouge">GArrowSortKey::name</code> to <code class="language-plaintext highlighter-rouge">::target</code> <a href="https://issues.apache.org/jira/browse/ARROW-14784">(ARROW-14784)</a></li>
-  <li>Support the explicit initialization of S3 API by the <code class="language-plaintext highlighter-rouge">garrow_s3_initialize</code> function <a href="https://issues.apache.org/jira/browse/ARROW-14637">(ARROW-14637)</a></li>
-  <li><code class="language-plaintext highlighter-rouge">garrow_decimal128_new_string</code> and <code class="language-plaintext highlighter-rouge">garrow_decimal256_new_string</code> now returns errors when they gets a invalid decimal string <a href="https://issues.apache.org/jira/browse/ARROW-14530">(ARROW-14530)</a></li>
-  <li><code class="language-plaintext highlighter-rouge">garrow_decimal128_data_type_new</code> and <code class="language-plaintext highlighter-rouge">garrow_decimal256_data_type_new</code> functions now validates the given precision <a href="https://issues.apache.org/jira/browse/ARROW-14529">(ARROW-14529)</a></li>
-</ul>
-
-<h2 id="rust-notes">Rust notes</h2>
-
-<p>Rust releases minor versions every 2 weeks in addition to a major
-version with the rest of the Arrow language implementations. Thus most
-enhancements have been incrementally released over the last 3 months
-as part of the 6.x.</p>
-
-<p>Going forward, the Rust implementation version will start deviating
-from the rest of the Arrow implementations, incrementing a major
-version if the changes to the crate require it. We still plan a
-release every other week. Please see issue <a href="https://github.com/apache/arrow-rs/issues/1120">#1120</a>
-for more details</p>
-
-<p>Major changes in the 7.0.0 release include:</p>
-<ol>
-  <li>Additional support for <code class="language-plaintext highlighter-rouge">Decimal</code></li>
-  <li>More ergonomic compute kernels that take <code class="language-plaintext highlighter-rouge">dyn Array</code></li>
-  <li><code class="language-plaintext highlighter-rouge">Union</code> type now follows the latest Arrow standard</li>
-  <li>Support for custom datetime format for inference and parsing CSV files</li>
-</ol>
-
-<p>Another highlight is that the community continues to improve the
-safety of the arrow crate. The 6.4.0 release included complete data
-validation and has resolved all outstanding RUSTSEC issues against the
-crate.</p>
-
-<p>For additional details on the 7.0.0
-Rust implementation, please see the <a href="https://github.com/apache/arrow-rs/blob/7.0.0/CHANGELOG.md">Arrow Rust CHANGELOG</a></p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 7.0.0 release. This covers over 3 months of development work and includes 617 resolved issues from 105 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 6.0.1 release, Rémi Dattai and Alessandro Molina have been invited to be committers. Daniël Heres and Yibo Cai have joined the Project Management Committee (PMC). Thanks for your contributions and participation in the project! Arrow Flight RPC notes The Flight specification has been clarified to note that schemas are expected to be IPC-encapsulated on the wire. Documentation has been generally improved; see the Arrow Cookbook for recipes on how to use Flight in Python and R, and a new example on how to use Flight and gRPC services on the same port. This release includes Arrow Flight SQL, a protocol for using Arrow Flight to execute queries against and fetch metadata from SQL databases. Support is included for C++ and Java (but not languages that bind to C++, like Python or R). A more detailed blog post is forthcoming (EDIT 2022/02/16: see the Flight SQL announcement). Note that development is ongoing and the specification is currently experimental. C++ notes A set of CMake presets has been added to ease building Arrow in a number of cases (ARROW-14678, ARROW-14714). The arrow::BitUtil namespace has been renamed to arrow::bit_util (ARROW-13494). Concatenation of union arrays is now supported (ARROW-4975). StructType gained three convenience methods to add, change and remove a given field (ARROW-11424). The Datum kind COLLECTION has been removed as it was entirely unused in the codebase (ARROW-13598). Compute Layer A number of compute functions have been added: functions operating on strings: “binary_reverse” (ARROW-14306), “string_repeat” (ARROW-12712), “utf8_normalize” (ARROW-14205); “fill_null_forward”, “fill_null_backward” (ARROW-1699); “ceil_temporal”, “floor_temporal”, “round_temporal” to adjust temporal input to an integral multiple of a given unit (ARROW-14822); “year_month_day” to extract the calendar components of the input (ARROW-15032); “random” to general random floating-point values between 0 and 1 (ARROW-12404); “indices_nonzero” to return the indices in the input where there are non-zero, non-null values (ARROW-13035). Decimal data is now supported as input of the arithmetic kernels (ARROW-13130). Dictionary data is now supported as input of the hash join execution node (ARROW-14181). Residual predicates have been implemented in the hash join node (ARROW-13643). The “list_parent_indices” function now always returns int64 data regardless of the input type (ARROW-14592). Month-day-nano interval data is now supported as input of the same functions as other interval types (ARROW-13989). CSV The CSV writer got additional configuration options: the string representation of null values (ARROW-14905); the quoting strategy: always / never / as needed (ARROW-14905); the end of line character(s) (ARROW-14907) Dataset Layer Skyhook, a dataset addition that offloads fragment scan operations to a Ceph distributed storage cluster, was contributed (ARROW-13607). The dataset writer now exposes options min_rows_per_group and max_rows_per_group to control the size of row groups created (ARROW-14426). IO and Filesystem Layer A critical bug in the AWS SDK for C++ that risks losing data in S3 multipart uploads has been circumvented (ARROW-14523). The Google Cloud Storage filesystem is now featureful enough to pass all generic filesystem tests (ARROW-14924). The OpenAppendStream method of filesystems has been un-deprecated; however, it still cannot be implemented for all filesystem backends (ARROW-14969). A new function arrow::fs::ResolveS3BucketRegion allows resolving the region where a particular S3 bucket resides (ARROW-15165). The S3 filesystem now sets the Content-Type of output files to “application/octet-stream” (instead of “application/xml” previously) if not explicitly specified by the caller (ARROW-15306). IPC Fine-grained I/O (coalescing) is now enabled in the synchronous (ARROW-12683) and asynchronous (ARROW-14577) IPC reader. It is now possible to set the compression level when using LZ4 compression (ARROW-9648). ORC The ORC adapters have been significantly improved. A lot more properties of the ORC reader as well as ORC writer options are now available. Moreover API docs for both the ORC reader and the ORC writer have been generated. (ARROW-11297) Parquet DELTA_BYTE_ARRAY-encoded data can now be read from (but not written to) bytearray columns in Parquet files (PARQUET-492). Go notes Arrow Bug Fixes License lifted up a level so that it is properly detected for the github.com/apache/arrow/go/v7 module for pkg.go.dev ARROW-14728. Documentation on pkg.go.dev will look correct with complete major version handling as of the v7.0.0 release. Errors from MessageReader.Message get properly surfaced by Reader.Read ARROW-14769 ipc.Reader properly uses the allocator it is initialized with instead of making native byte slices ARROW-14717 Fixed a CI issue where the CGO tests were crashing on windows ARROW-14589 Various fixes for internal usages of Release and Retain to maintain proper management of reference counting. Enhancements Continuous Integration for Go library now uses Go1.16 as the version being tested ARROW-14985 ValueOffsets function added to array.String to return the entire slice of offsets ARROW-14645 array.Interface has been lifted to arrow.Array, array.{Record,Column,Chunked,Table} have been lifted to arrow.{Record,Column,Chunked,Table}. Interface arrow.ArrayData has been created to be used instead of array.Data. Aliases have been provided for the array package so existing code that doesn’t directly use array.Data shouldn’t be affected. The aliases will be removed in v8. ARROW-5599. The Chunked.NewSlice method has been removed and is replaced by the array.NewChunkedSlice function. Arrays and Records now support marshalling to JSON via the json.Marshaller interface. Builders support adding values to them by unmarshalling from JSON via the json.Unmarshaller interface. array.FromJSON function added to create Arrays from JSON directly. ARROW-9630 Basic handling of field referencing and expression building similar to the C++ Compute APIs added through the new compute package in preparation for adding compute interfaces. Does not yet allow executing expressions. ARROW-14430 Parquet Enhancements Updated dependency versions ARROW-14462 file module added, Go Parquet library now supports full file reading and writing. ARROW-13984 ARROW-13986. Does not yet provide direct Parquet &lt;–&gt; Arrow conversions. Internal min_max utility functions given Arm64 NEON SIMD optimized assembly, gaining a 4x - 6x performance improvement. ARROW-15536 Java notes Flight SQL support is now available in the Java library, with integration tests to verify it against the C++ reference implementation. GeneralOutOfPlaceVectorSorter is now available for sorting any kind of vector. In general if dedicated sorters can be used (like FixedWidthInPlaceVectorSorter) they should preferred as they will generally perform better. log4j2 dependency was removed as it was unused and a possible vector for attacks VectorSchemaRootAppender now works with BitVector JavaScript notes Major simplifications to the API. There is only a single Vector class now. See the (also much improved) docs for details. Dictionary vectors created with vectorFromArray are automatically cached for better performance. Better tree shaking support. Some bundles can now be only a few kb. Python notes Official support for Python 3.6 has been dropped. random and indices_nonzero compute functions are now supported in Python pyarrow.orc.read_table is now provided to easily read the content of ORC files to a Table. pyarrow.orc.ORCFile now has a lot more properties exposed. pyarrow.orc.ORCWriter and pyarrow.orc.write_table now have the writer options available. pyarrow.orc now has much better API documentation. Support for compute functions arguments and options has been improved in general, arguments are not position only, while options can be provided as keyword args or not, and error reporting for wrong arguments has been improved. Table now has a group_by method that allows to perform aggregations on table data. The compute functions documentation has also been improved to better distinguish between standard compute functions and HASH_AGGREGATE compute functions that can only be using for aggregations. Python documentation now provides interlinking for references to parameter types and return values, thus making far easier to navigate the documentation. R notes This release adds additional improvements to the dplyr interface, to CSV support, and to the C-Data interface to exchange data with other languages. For more details, see the complete R changelog. Ruby and C GLib notes Ruby There are two new contributors @okadakk and @simpl1g . The updates of Red Arrow consists of the following improvements: Arrow::Function#execute now accepts an instance of an Arrow::Column as its argument (ARROW-14551) Arrow::Table.load now supports .arrows files to load (ARROW-15356) Add support loading Arrow::Table by a URI in Arrow::Table.load (ARROW-14562) Arrow::Table now supports to join two tables (ARROW-14531) Arrow::Function#execute gets more easier to use than before (ARROW-15274) Arrow::SortKey#name has been renamed to Arrow::SortKey#target (ARROW-14784) Add Cookbook section to documentation (ARROW-14636) Support the explicit initialization of S3 API by the Arrow.s3_initialize method (ARROW-14637) On macOS, stop specifying the version of openssl package explicitly when building the extension library (ARROW-14619) C GLib The updates of Arrow GLib etc. consists of the following improvements: Add garrow_execute_plan_build_hash_join_node function, GArrowHashJoinNodeOption, and GArrowJoinType (ARROW-15288) Add garrow_function_get_options_type function (ARROW-15273) Add garrow_function_get_default_options function (ARROW-15267) Add GArrowRoundToMultipleOptions to customize the round_to_multiple function (ARROW-15216) Add garrow_function_all function to list up all the functions (ARROW-15205) In addition, add garrow_function_get_name, garrow_function_equal, and garrow_function_to_string functions for convenience Add GArrowRoundOptions (ARROW-15204) Add garrow_struct_scalar_get_value function for converting a C++ scalar value to a GLib value (ARROW-15203) Add the following three interval data types (ARROW-15134) GArrowMonthIntervalDataType for the interval with the month component GArrowDayTimeIntervalDataType for the interval with the days and the milliseconds components GArrowMonthDayNanoIntervalDataType for the interval with the months, the days, and the nanoseconds components Rename GArrowSortKey::name to ::target (ARROW-14784) Support the explicit initialization of S3 API by the garrow_s3_initialize function (ARROW-14637) garrow_decimal128_new_string and garrow_decimal256_new_string now returns errors when they gets a invalid decimal string (ARROW-14530) garrow_decimal128_data_type_new and garrow_decimal256_data_type_new functions now validates the given precision (ARROW-14529) Rust notes Rust releases minor versions every 2 weeks in addition to a major version with the rest of the Arrow language implementations. Thus most enhancements have been incrementally released over the last 3 months as part of the 6.x. Going forward, the Rust implementation version will start deviating from the rest of the Arrow implementations, incrementing a major version if the changes to the crate require it. We still plan a release every other week. Please see issue #1120 for more details Major changes in the 7.0.0 release include: Additional support for Decimal More ergonomic compute kernels that take dyn Array Union type now follows the latest Arrow standard Support for custom datetime format for inference and parsing CSV files Another highlight is that the community continues to improve the safety of the arrow crate. The 6.4.0 release included complete data validation and has resolved all outstanding RUSTSEC issues against the crate. For additional details on the 7.0.0 Rust implementation, please see the Arrow Rust CHANGELOG]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+improve the documentation.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Rust implementation of Apache Arrow has just released version 9.0.2. While a major version of this magnitude may shock some in the Rust community to whom it implies a slow moving 20 year old piece of software, nothing could be further from the truth! With regular and predictable bi-weekly releases, the library continues to evolve rapidly, and 9.0.2 is no exception. Some recent highlights: parquet: async, performance, safety and nested types The parquet 9.0.2 release includes an async reader, a long time requested feature. Using the async reader it is now possible to read only the relevant parts of a parquet file from a networked source such as object storage. Previously the entire file had to be buffered locally. We are hoping to add an async writer in a future release and would love some help. It is also significantly faster to read parquet data (up to 60x in some cases) than with previous versions of the parquet crate. Kudos to tustvold and yordan-pavlov for their contributions in these areas. With 8.0.0 and later, the code that reads and writes RecordBatches to and from Parquet now supports all types, including deeply nested structs and lists. Thanks helgikrs for cleaning up the last corner cases! Other notable recent additions to parquet are UTF-8 validation on string data for improved security against malicious inputs. Planned upcoming work includes pushing more filtering directly into the parquet scan as well as an async writer. arrow: performance, dyn kernels, and DecimalArray The compute kernels have been improved significantly in arrow 9.0.2. Some filter benchmarks are twice as fast and the SIMD kernels are also significantly faster. Many thanks to tustvold and jhorstmann. Additional substantial improvements are likely to land in arrow 10.0.0. We are working on new set of “dynamic” dyn_ kernels (for example, eq_dyn) that make it easier to invoke the heavily optimized kernels provided by the arrow crate. Work is underway to expand the breadth of types supported by these new kernels to make them even more useful. Thanks to matthewmturner and viirya for their help in this effort. While arrow has had basic support for DecimalArray since version 3.0.0, support has been expanded for Decimal type in calculation kernels such as sort, take and filter thanks to some great contributions from liukun4515. There is ongoing work to improve the API ergonomics and performance of DecimalArray as well. Security The 6.4.0 release resolved the last outstanding RUSTSEC advisory on the arrow crate and the 8.0.0 release resolved the last outstanding known security issues. While these security issues were mostly limited misuse of the low level “power user” APIs which most users do not (and should not) be using, it was good to tighten up that area. Now that arrow-rs is releasing major versions every other week, we are also able to update dependencies at the same pace, helping to ensure that security fixes upstream can flow more quickly to downstream projects. Final shoutout It takes a community to build great software, and we would like to thank everyone who has contributed to the arrow-rs repository since the 7.0.0 release: git shortlog -sn 7.0.0..9.0.0 22 Raphael Taylor-Davies 18 Andrew Lamb 6 Helgi Kristvin Sigurbjarnarson 6 Remzi Yang 5 Jörn Horstmann 4 Liang-Chi Hsieh 3 Jiayu Liu 2 dependabot[bot] 2 Yijie Shen 1 Matthew Turner 1 Kun Liu 1 Yang 1 Edd Robinson 1 Patrick More How to Get Involved If you are interested in contributing to the Rust subproject in Apache Arrow, you can find a list of open issues suitable for beginners here and the full list here. Other ways to get involved include trying out Arrow on some of your data and filing bug reports, and helping to improve the documentation.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
