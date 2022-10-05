@@ -113,7 +113,7 @@ rsync -r doc/ ../../arrow-site/asf-site/docs/js
 Then add/commit/push from the `asf-site/` git checkout.
 
 
-## Using docker
+## Using Docker
 
 If you don't wish to change or install `ruby` and `nodejs` locally, you can use docker to build and preview the site with a command like:
 
