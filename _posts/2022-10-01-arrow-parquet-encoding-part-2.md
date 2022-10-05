@@ -1,8 +1,8 @@
 ---
 layout: post
-title: Arrow and Parquet Part 2: Nested and Hierarchal Data using Structs and Lists
+title: "Arrow and Parquet Part 2: Nested and Hierarchal Data using Structs and Lists"
 date: "2022-10-01 00:00:00"
-author: tustvold, alamb
+author: "tustvold and alamb"
 categories: [parquet, arrow]
 ---
 <!--
