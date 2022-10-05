@@ -127,5 +127,6 @@ bundle install
 bundle exec rake
 # Serve using local container addres
 jekyll serve --incremental --livereload --host=0.0.0.0
+```
 
 The open http://locahost:4000 locally
