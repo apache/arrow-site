@@ -2,7 +2,7 @@
 layout: post
 title: "Arrow and Parquet Part 1: Primitive Types and Nullability"
 date: "2022-10-05 00:00:00"
-author: [tustvold, alamb]
+author: "tustvold and alamb"
 categories: [parquet, arrow]
 ---
 <!--
@@ -36,7 +36,7 @@ Historically analytic processing primarily focused on querying data with a tabul
 
 As of version [20.0.0](https://crates.io/crates/arrow/20.0.0), released in August 2022, the Rust Arrow implementation for reading structured types is feature complete. Instructions for getting started can be found [here](https://docs.rs/parquet/latest/parquet/arrow/index.html) and feel free to raise any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues).
 
-In this series we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and giving a flavor of the practicalities of converting between the formats.
+In this series we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and give a flavor of the practicalities of converting between the formats.
 
 ## Columnar vs Record-Oriented
 
