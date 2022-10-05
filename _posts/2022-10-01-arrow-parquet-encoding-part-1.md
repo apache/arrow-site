@@ -58,7 +58,7 @@ Column2: [2, 4, 4]
 Column3: [null, 5, 5]
 ```
 
-Aside from potentially yielding better data compression, a columnar layout can dramatically improve performance of certain queries. This is because laying data out contiguously in memory allows both the compiler and CPU to better exploit data parallelism. The specifics of [SIMD](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data) and [ILP](https://en.wikipedia.org/wiki/Instruction-level_parallelism) are well beyond the scope of this post, but the important takeaway is that processing large blocks of data without intervening conditional branches has substantial performance benefits.
+Aside from potentially yielding better data compression, a columnar layout can dramatically improve performance of certain queries. This is because laying data out contiguously in memory allows both the compiler and CPU to better exploit opportunities for parallelism. The specifics of [SIMD](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data) and [ILP](https://en.wikipedia.org/wiki/Instruction-level_parallelism) are well beyond the scope of this post, but the important takeaway is that processing large blocks of data without intervening conditional branches has substantial performance benefits.
 
 
 ## Parquet vs Arrow
