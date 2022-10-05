@@ -1,8 +1,8 @@
 ---
 layout: post
-title: Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists
+title: "Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists"
 date: "2022-10-01 00:00:00"
-author: tustvold, alamb
+author: "tustvold and alamb"
 categories: [parquet, arrow]
 ---
 <!--
