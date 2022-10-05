@@ -124,9 +124,8 @@ apt-get update
 apt-get install -y npm
 gem install bundler
 bundle install
-bundle exec rake
 # Serve using local container address
-jekyll serve --incremental --livereload --host=0.0.0.0
+bundle exec rake HOST=0.0.0.0
 ```
 
 Then open http://locahost:4000 locally
