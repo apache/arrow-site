@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Arrow and Parquet Part 1: Primitive Types and Nullability | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Arrow and Parquet Part 1: Primitive Types and Nullability" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Introduction We recently completed a long-running project within Rust Apache Arrow to complete support for reading and writing arbitrarily nested Parquet and Arrow schemas. This is a complex topic, and we encountered a lack of approachable technical information, and thus wrote this blog to share our learnings with the community. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. It is increasingly common for analytic systems to use Arrow to process data stored in Parquet files, and therefore fast, efficient, and correct translation between them is a key building block. Historically analytic processing primarily focused on querying data with a tabular schema, where there are a fixed number of columns, and each row contains a single value for each column. However, with the increasing adoption of structured document formats such as XML, JSON, etc…, only supporting tabular schema can be frustrating for users, as it necessitates often non-trivial data transformation to first flatten the document data. As of version 20.0.0, released in August 2022, the Rust Arrow implementation for reading structured types is feature complete. Instructions for getting started can be found here and feel free to raise any issues on our bugtracker. In this series we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and giving a flavor of the practicalities of converting between the formats. Columnar vs Record-Oriented First, it is necessary to take a step back and discuss the difference between columnar and record-oriented data formats. In a record oriented data format, such as newline-delimited JSON (NDJSON), all the values for a given record are stored contiguously. For example {&quot;Column1&quot;: 1, &quot;Column2&quot;: 2} {&quot;Column1&quot;: 3, &quot;Column2&quot;: 4, &quot;Column3&quot;: 5} {&quot;Column1&quot;: 5, &quot;Column2&quot;: 4, &quot;Column3&quot;: 5} In a columnar representation, the data for a given column is instead stored contiguously Column1: [1, 3, 5] Column2: [2, 4, 4] Column3: [null, 5, 5] Aside from potentially yielding better data compression, a columnar layout can dramatically improve performance of certain queries. This is because laying data out contiguously in memory allows both the compiler and CPU to better exploit opportunities for parallelism. The specifics of SIMD and ILP are well beyond the scope of this post, but the important takeaway is that processing large blocks of data without intervening conditional branches has substantial performance benefits. Parquet vs Arrow Parquet and Arrow are complementary technologies, and they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended for operation by vectorized computational kernels. The major distinction is that Arrow provides O(1) random access lookups to any array index, whilst Parquet does not. In particular, Parquet uses dremel record shredding, variable length encoding schemes, and block compression to drastically reduce the data size, but these techniques come at the loss of performant random access lookups. A common pattern that plays to each technologies strengths, is to stream data from a compressed representation, such as Parquet, in thousand row batches in the Arrow format, process these batches individually, and accumulate the results in a more compressed representation. This benefits from the ability to efficiently perform computations on Arrow data, whilst keeping memory requirements in check, and allowing the computation kernels to be agnostic to the encodings of the source and destination. Arrow is primarily an in-memory format, whereas Parquet is a storage format. Non-Nullable Primitive Column Let us start with the simplest case of a non-nullable list of 32-bit signed integers. In Arrow this would be represented as a PrimitiveArray, which would store them contiguously in memory ┌─────┐ │ 1 │ ├─────┤ │ 2 │ ├─────┤ │ 3 │ ├─────┤ │ 4 │ └─────┘ Values Parquet has multiple different encodings that may be used for integer types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more DataPages containing the integers in an encoded form ┌─────┐ │ 1 │ ├─────┤ | 2 │ ├─────┤ │ 3 │ ├─────┤ │ 4 │ └─────┘ Values Nullable Primitive Column Now let us consider the case of a nullable column, where some of the values might have the special sentinel value NULL that designates “this value is unknown”. In Arrow, nulls are stored separately from the values in the form of a validity bitmask, with arbitrary data in the corresponding positions in the values buffer. This space efficient encoding means that the entire validity mask for the following example is stored using 5 bits ┌─────┐ ┌─────┐ │ 1 │ │ 1 │ ├─────┤ ├─────┤ │ 0 │ │ ?? │ ├─────┤ ├─────┤ │ 1 │ │ 3 │ ├─────┤ ├─────┤ │ 1 │ │ 4 │ ├─────┤ ├─────┤ │ 0 │ │ ?? │ └─────┘ └─────┘ Validity Values In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called definition levels. Like other data in Parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of 1 indicates a valid value, and 0 a null value. Unlike Arrow, nulls are not encoded in the list of values ┌─────┐ ┌─────┐ │ 1 │ │ 1 │ ├─────┤ ├─────┤ │ 0 │ │ 3 │ ├─────┤ ├─────┤ │ 1 │ │ 4 │ ├─────┤ └─────┘ │ 1 │ ├─────┤ │ 0 │ └─────┘ Definition Values Levels Next up: Nested and Hierarchal Data Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our upcoming blog post on the topic ." />
+<meta property="og:description" content="Introduction We recently completed a long-running project within Rust Apache Arrow to complete support for reading and writing arbitrarily nested Parquet and Arrow schemas. This is a complex topic, and we encountered a lack of approachable technical information, and thus wrote this blog to share our learnings with the community. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. It is increasingly common for analytic systems to use Arrow to process data stored in Parquet files, and therefore fast, efficient, and correct translation between them is a key building block. Historically analytic processing primarily focused on querying data with a tabular schema, where there are a fixed number of columns, and each row contains a single value for each column. However, with the increasing adoption of structured document formats such as XML, JSON, etc…, only supporting tabular schema can be frustrating for users, as it necessitates often non-trivial data transformation to first flatten the document data. As of version 20.0.0, released in August 2022, the Rust Arrow implementation for reading structured types is feature complete. Instructions for getting started can be found here and feel free to raise any issues on our bugtracker. In this series we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and giving a flavor of the practicalities of converting between the formats. Columnar vs Record-Oriented First, it is necessary to take a step back and discuss the difference between columnar and record-oriented data formats. In a record oriented data format, such as newline-delimited JSON (NDJSON), all the values for a given record are stored contiguously. For example {&quot;Column1&quot;: 1, &quot;Column2&quot;: 2} {&quot;Column1&quot;: 3, &quot;Column2&quot;: 4, &quot;Column3&quot;: 5} {&quot;Column1&quot;: 5, &quot;Column2&quot;: 4, &quot;Column3&quot;: 5} In a columnar representation, the data for a given column is instead stored contiguously Column1: [1, 3, 5] Column2: [2, 4, 4] Column3: [null, 5, 5] Aside from potentially yielding better data compression, a columnar layout can dramatically improve performance of certain queries. This is because laying data out contiguously in memory allows both the compiler and CPU to better exploit opportunities for parallelism. The specifics of SIMD and ILP are well beyond the scope of this post, but the important takeaway is that processing large blocks of data without intervening conditional branches has substantial performance benefits. Parquet vs Arrow Parquet and Arrow are complementary technologies, and they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended for operation by vectorized computational kernels. The major distinction is that Arrow provides O(1) random access lookups to any array index, whilst Parquet does not. In particular, Parquet uses dremel record shredding, variable length encoding schemes, and block compression to drastically reduce the data size, but these techniques come at the loss of performant random access lookups. A common pattern that plays to each technologies strengths, is to stream data from a compressed representation, such as Parquet, in thousand row batches in the Arrow format, process these batches individually, and accumulate the results in a more compressed representation. This benefits from the ability to efficiently perform computations on Arrow data, whilst keeping memory requirements in check, and allowing the computation kernels to be agnostic to the encodings of the source and destination. Arrow is primarily an in-memory format, whereas Parquet is a storage format. Non-Nullable Primitive Column Let us start with the simplest case of a non-nullable list of 32-bit signed integers. In Arrow this would be represented as a PrimitiveArray, which would store them contiguously in memory ┌─────┐ │ 1 │ ├─────┤ │ 2 │ ├─────┤ │ 3 │ ├─────┤ │ 4 │ └─────┘ Values Parquet has multiple different encodings that may be used for integer types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more DataPages containing the integers in an encoded form ┌─────┐ │ 1 │ ├─────┤ | 2 │ ├─────┤ │ 3 │ ├─────┤ │ 4 │ └─────┘ Values Nullable Primitive Column Now let us consider the case of a nullable column, where some of the values might have the special sentinel value NULL that designates “this value is unknown”. In Arrow, nulls are stored separately from the values in the form of a validity bitmask, with arbitrary data in the corresponding positions in the values buffer. This space efficient encoding means that the entire validity mask for the following example is stored using 5 bits ┌─────┐ ┌─────┐ │ 1 │ │ 1 │ ├─────┤ ├─────┤ │ 0 │ │ ?? │ ├─────┤ ├─────┤ │ 1 │ │ 3 │ ├─────┤ ├─────┤ │ 1 │ │ 4 │ ├─────┤ ├─────┤ │ 0 │ │ ?? │ └─────┘ └─────┘ Validity Values In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called definition levels. Like other data in Parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of 1 indicates a valid value, and 0 a null value. Unlike Arrow, nulls are not encoded in the list of values ┌─────┐ ┌─────┐ │ 1 │ │ 1 │ ├─────┤ ├─────┤ │ 0 │ │ 3 │ ├─────┤ ├─────┤ │ 1 │ │ 4 │ ├─────┤ └─────┘ │ 1 │ ├─────┤ │ 0 │ └─────┘ Definition Values Levels Next up: Nested and Hierarchal Data Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our upcoming blog post on the topic ." />
+<link rel="canonical" href="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-10-05T00:00:00-04:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="Arrow and Parquet Part 1: Primitive Types and Nullability" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-10-05T00:00:00-04:00","datePublished":"2022-10-05T00:00:00-04:00","description":"Introduction We recently completed a long-running project within Rust Apache Arrow to complete support for reading and writing arbitrarily nested Parquet and Arrow schemas. This is a complex topic, and we encountered a lack of approachable technical information, and thus wrote this blog to share our learnings with the community. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. It is increasingly common for analytic systems to use Arrow to process data stored in Parquet files, and therefore fast, efficient, and correct translation between them is a key building block. Historically analytic processing primarily focused on querying data with a tabular schema, where there are a fixed number of columns, and each row contains a single value for each column. However, with the increasing adoption of structured document formats such as XML, JSON, etc…, only supporting tabular schema can be frustrating for users, as it necessitates often non-trivial data transformation to first flatten the document data. As of version 20.0.0, released in August 2022, the Rust Arrow implementation for reading structured types is feature complete. Instructions for getting started can be found here and feel free to raise any issues on our bugtracker. In this series we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and giving a flavor of the practicalities of converting between the formats. Columnar vs Record-Oriented First, it is necessary to take a step back and discuss the difference between columnar and record-oriented data formats. In a record oriented data format, such as newline-delimited JSON (NDJSON), all the values for a given record are stored contiguously. For example {&quot;Column1&quot;: 1, &quot;Column2&quot;: 2} {&quot;Column1&quot;: 3, &quot;Column2&quot;: 4, &quot;Column3&quot;: 5} {&quot;Column1&quot;: 5, &quot;Column2&quot;: 4, &quot;Column3&quot;: 5} In a columnar representation, the data for a given column is instead stored contiguously Column1: [1, 3, 5] Column2: [2, 4, 4] Column3: [null, 5, 5] Aside from potentially yielding better data compression, a columnar layout can dramatically improve performance of certain queries. This is because laying data out contiguously in memory allows both the compiler and CPU to better exploit opportunities for parallelism. The specifics of SIMD and ILP are well beyond the scope of this post, but the important takeaway is that processing large blocks of data without intervening conditional branches has substantial performance benefits. Parquet vs Arrow Parquet and Arrow are complementary technologies, and they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended for operation by vectorized computational kernels. The major distinction is that Arrow provides O(1) random access lookups to any array index, whilst Parquet does not. In particular, Parquet uses dremel record shredding, variable length encoding schemes, and block compression to drastically reduce the data size, but these techniques come at the loss of performant random access lookups. A common pattern that plays to each technologies strengths, is to stream data from a compressed representation, such as Parquet, in thousand row batches in the Arrow format, process these batches individually, and accumulate the results in a more compressed representation. This benefits from the ability to efficiently perform computations on Arrow data, whilst keeping memory requirements in check, and allowing the computation kernels to be agnostic to the encodings of the source and destination. Arrow is primarily an in-memory format, whereas Parquet is a storage format. Non-Nullable Primitive Column Let us start with the simplest case of a non-nullable list of 32-bit signed integers. In Arrow this would be represented as a PrimitiveArray, which would store them contiguously in memory ┌─────┐ │ 1 │ ├─────┤ │ 2 │ ├─────┤ │ 3 │ ├─────┤ │ 4 │ └─────┘ Values Parquet has multiple different encodings that may be used for integer types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more DataPages containing the integers in an encoded form ┌─────┐ │ 1 │ ├─────┤ | 2 │ ├─────┤ │ 3 │ ├─────┤ │ 4 │ └─────┘ Values Nullable Primitive Column Now let us consider the case of a nullable column, where some of the values might have the special sentinel value NULL that designates “this value is unknown”. In Arrow, nulls are stored separately from the values in the form of a validity bitmask, with arbitrary data in the corresponding positions in the values buffer. This space efficient encoding means that the entire validity mask for the following example is stored using 5 bits ┌─────┐ ┌─────┐ │ 1 │ │ 1 │ ├─────┤ ├─────┤ │ 0 │ │ ?? │ ├─────┤ ├─────┤ │ 1 │ │ 3 │ ├─────┤ ├─────┤ │ 1 │ │ 4 │ ├─────┤ ├─────┤ │ 0 │ │ ?? │ └─────┘ └─────┘ Validity Values In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called definition levels. Like other data in Parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of 1 indicates a valid value, and 0 a null value. Unlike Arrow, nulls are not encoded in the list of values ┌─────┐ ┌─────┐ │ 1 │ │ 1 │ ├─────┤ ├─────┤ │ 0 │ │ 3 │ ├─────┤ ├─────┤ │ 1 │ │ 4 │ ├─────┤ └─────┘ │ 1 │ ├─────┤ │ 0 │ └─────┘ Definition Values Levels Next up: Nested and Hierarchal Data Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our upcoming blog post on the topic .","headline":"Arrow and Parquet Part 1: Primitive Types and Nullability","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"}},"url":"https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="/datafusion">DataFusion</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://issues.apache.org/jira/browse/ARROW">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="http://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="http://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="http://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="http://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Arrow and Parquet Part 1: Primitive Types and Nullability
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    05 Oct 2022
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    tustvoldalamb
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<h2 id="introduction">Introduction</h2>
+
+<p>We recently completed a long-running project within <a href="https://github.com/apache/arrow-rs">Rust Apache Arrow</a> to complete support for reading and writing arbitrarily nested Parquet and Arrow schemas. This is a complex topic, and we encountered a lack of approachable technical information, and thus wrote this blog to share our learnings with the community.</p>
+
+<p><a href="https://arrow.apache.org/">Apache Arrow</a> is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. <a href="https://parquet.apache.org/">Apache Parquet</a> is an open, column-oriented data file format designed for very efficient data encoding and retrieval.</p>
+
+<p>It is increasingly common for analytic systems to use Arrow to process data stored in Parquet files, and therefore fast, efficient, and correct translation between them is a key building block.</p>
+
+<p>Historically analytic processing primarily focused on querying data with a tabular schema, where there are a fixed number of columns, and each row contains a single value for each column. However, with the increasing adoption of structured document formats such as XML, JSON, etc…, only supporting tabular schema can be frustrating for users, as it necessitates often non-trivial data transformation to first flatten the document data.</p>
+
+<p>As of version <a href="https://crates.io/crates/arrow/20.0.0">20.0.0</a>, released in August 2022, the Rust Arrow implementation for reading structured types is feature complete. Instructions for getting started can be found <a href="https://docs.rs/parquet/latest/parquet/arrow/index.html">here</a> and feel free to raise any issues on our <a href="https://github.com/apache/arrow-rs/issues">bugtracker</a>.</p>
+
+<p>In this series we will explain how Parquet and Arrow represent nested data, highlighting the similarities and differences between them, and giving a flavor of the practicalities of converting between the formats.</p>
+
+<h2 id="columnar-vs-record-oriented">Columnar vs Record-Oriented</h2>
+
+<p>First, it is necessary to take a step back and discuss the difference between columnar and record-oriented data formats. In a record oriented data format, such as newline-delimited JSON (NDJSON), all the values for a given record are stored contiguously.</p>
+
+<p>For example</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="nl">"Column1"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column2"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">}</span><span class="w">
+</span><span class="p">{</span><span class="nl">"Column1"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column2"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column3"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">}</span><span class="w">
+</span><span class="p">{</span><span class="nl">"Column1"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column2"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nl">"Column3"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>In a columnar representation, the data for a given column is instead stored contiguously</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Column1: [1, 3, 5]
+Column2: [2, 4, 4]
+Column3: [null, 5, 5]
+</code></pre></div></div>
+
+<p>Aside from potentially yielding better data compression, a columnar layout can dramatically improve performance of certain queries. This is because laying data out contiguously in memory allows both the compiler and CPU to better exploit opportunities for parallelism. The specifics of <a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a> and <a href="https://en.wikipedia.org/wiki/Instruction-level_parallelism">ILP</a> are well beyond the scope of this post, but the important takeaway is that processing large blocks of data without intervening conditional branches has substantial performance benefits.</p>
+
+<h2 id="parquet-vs-arrow">Parquet vs Arrow</h2>
+<p>Parquet and Arrow are complementary technologies, and they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended for operation by vectorized computational kernels.</p>
+
+<p>The major distinction is that Arrow provides <code class="language-plaintext highlighter-rouge">O(1)</code> random access lookups to any array index, whilst Parquet does not. In particular, Parquet uses <a href="https://akshays-blog.medium.com/wrapping-head-around-repetition-and-definition-levels-in-dremel-powering-bigquery-c1a33c9695da">dremel record shredding</a>, <a href="https://github.com/apache/parquet-format/blob/master/Encodings.md">variable length encoding schemes</a>, and <a href="https://github.com/apache/parquet-format/blob/master/Compression.md">block compression</a> to drastically reduce the data size, but these techniques come at the loss of performant random access lookups.</p>
+
+<p>A common pattern that plays to each technologies strengths, is to stream data from a compressed representation, such as Parquet, in thousand row batches in the Arrow format, process these batches individually, and accumulate the results in a more compressed representation. This benefits from the ability to efficiently perform computations on Arrow data, whilst keeping memory requirements in check, and allowing the computation kernels to be agnostic to the encodings of the source and destination.</p>
+
+<p><strong>Arrow is primarily an in-memory format, whereas Parquet is a storage format.</strong></p>
+
+<h2 id="non-nullable-primitive-column">Non-Nullable Primitive Column</h2>
+
+<p>Let us start with the simplest case of a non-nullable list of 32-bit signed integers.</p>
+
+<p>In Arrow this would be represented as a <code class="language-plaintext highlighter-rouge">PrimitiveArray</code>, which would store them contiguously in memory</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────┐
+│  1  │
+├─────┤
+│  2  │
+├─────┤
+│  3  │
+├─────┤
+│  4  │
+└─────┘
+Values
+</code></pre></div></div>
+
+<p>Parquet has multiple <a href="https://parquet.apache.org/docs/file-format/data-pages/encodings/">different encodings</a> that may be used for integer types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more <a href="https://parquet.apache.org/docs/file-format/data-pages/"><em>DataPage</em></a>s containing the integers in an encoded form</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────┐
+│  1  │
+├─────┤
+|  2  │
+├─────┤
+│  3  │
+├─────┤
+│  4  │
+└─────┘
+Values
+</code></pre></div></div>
+
+<h1 id="nullable-primitive-column">Nullable Primitive Column</h1>
+
+<p>Now let us consider the case of a nullable column, where some of the values might have the special sentinel value <code class="language-plaintext highlighter-rouge">NULL</code> that designates “this value is unknown”.</p>
+
+<p>In Arrow, nulls are stored separately from the values in the form of a <a href="https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps">validity bitmask</a>, with arbitrary data in the corresponding positions in the values buffer. This space efficient encoding means that the entire validity mask for the following example is stored using 5 bits</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────┐   ┌─────┐
+│  1  │   │  1  │
+├─────┤   ├─────┤
+│  0  │   │ ??  │
+├─────┤   ├─────┤
+│  1  │   │  3  │
+├─────┤   ├─────┤
+│  1  │   │  4  │
+├─────┤   ├─────┤
+│  0  │   │ ??  │
+└─────┘   └─────┘
+Validity   Values
+</code></pre></div></div>
+
+<p>In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called <em>definition levels</em>. Like other data in Parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of <code class="language-plaintext highlighter-rouge">1</code> indicates a valid value, and <code class="language-plaintext highlighter-rouge">0</code> a null value. Unlike Arrow, nulls are not encoded in the list of values</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────┐    ┌─────┐
+│  1  │    │  1  │
+├─────┤    ├─────┤
+│  0  │    │  3  │
+├─────┤    ├─────┤
+│  1  │    │  4  │
+├─────┤    └─────┘
+│  1  │
+├─────┤
+│  0  │
+└─────┘
+Definition  Values
+ Levels
+</code></pre></div></div>
+
+<h2 id="next-up-nested-and-hierarchal-data">Next up: Nested and Hierarchal Data</h2>
+
+<p>Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our upcoming blog post on the topic <!-- I propose to update this text with a link when when we have published the next blog -->.</p>
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2022 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
