@@ -1,8 +1,8 @@
 ---
 layout: post
-title: Arrow and Parquet Part 1: Primitive Types and Nullability
-date: "2022-10-01 00:00:00"
-author: tustvold, alamb
+title: "Arrow and Parquet Part 1: Primitive Types and Nullability"
+date: "2022-10-05 00:00:00"
+author: [tustvold, alamb]
 categories: [parquet, arrow]
 ---
 <!--
