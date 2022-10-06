@@ -145,6 +145,6 @@ Definition  Values
  Levels
 ```
 
-## Next up: Nested and Hierarchal Data
+## Next up: Nested and Hierarchical Data
 
 Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our upcoming blog post on the topic <!-- I propose to update this text with a link when when we have published the next blog -->.
