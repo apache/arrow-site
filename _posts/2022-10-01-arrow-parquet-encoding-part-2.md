@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Arrow and Parquet Part 2: Nested and Hierarchal Data using Structs and Lists"
+title: "Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists"
 date: "2022-10-01 00:00:00"
 author: "tustvold and alamb"
 categories: [parquet, arrow]
@@ -309,7 +309,9 @@ More technical detail is available in the [ListArray format specification](https
 
 ### Repetition Levels
 
-In order to encode lists, Parquet stores an integer *repetition level* in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of `0` would imply a new list in the top-most repeated field, a value of 1 a new element within the top-most repeated field, a value of 2 a new element within the second top-most repeated field, and so on.
+In order to encode lists, Parquet stores an integer *repetition level* in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of `0` would imply a new list in the top-most repeated list, a value of 1 a new element within the top-most repeated list, a value of 2 a new element within the second top-most repeated list, and so on.
+
+Protip: for the the top level list, since `0` indicates the start of a new element (row), the number of zeros must match the number of rows.
 
 Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
 
