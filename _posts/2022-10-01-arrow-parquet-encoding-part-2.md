@@ -207,28 +207,28 @@ Thus the Parquet encoding of the example would be:
                              └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
 
-┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-  ┌──────────────────────┐ │   ┌──────────────────────┐ ┌──────────────────────┐  │
-│ │  ┌─────┐    ┌─────┐  │   │ │  ┌─────┐    ┌─────┐  │ │ ┌─────┐     ┌─────┐  │
-  │  │  0  │    │  6  │  │ │   │  │  1  │    │  1  │  │ │ │  1  │     │  1  │  │  │
-│ │  ├─────┤    ├─────┤  │   │ │  ├─────┤    ├─────┤  │ │ ├─────┤     └─────┘  │
-  │  │  1  │    │  7  │  │ │   │  │  1  │    │  2  │  │ │ │  2  │              │  │
-│ │  ├─────┤    └─────┘  │   │ │  ├─────┤    └─────┘  │ │ ├─────┤              │
-  │  │  1  │             │ │   │  │  0  │             │ │ │  0  │              │  │
-│ │  └─────┘             │   │ │  └─────┘             │ │ └─────┘              │
-  │                      │ │   │                      │ │                      │  │
-│ │  Definition   Data   │   │ │  Definition   Data   │ │ Definition   Data    │
-  │    Levels            │ │   │    Levels            │ │   Levels             │  │
-│ │                      │   │ │                      │ │                      │
-  │  "c.1"               │ │   │  "d.1"               │ │  "d.d2"              │  │
-│ └──────────────────────┘   │ └──────────────────────┘ └──────────────────────┘
-     "c"                   │      "d"                                             │
-└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+┌ ─ ─ ─ ─ ─ ── ─ ─ ─ ─ ─ ─  ┌ ─ ─ ─ ─ ── ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  ┌─────────────────────┐ │   ┌─────────────────────┐ ┌────────────────────┐ │
+│ │  ┌─────┐   ┌─────┐  │   │ │  ┌─────┐   ┌─────┐  │ │ ┌─────┐   ┌─────┐  │
+  │  │  0  │   │  6  │  │ │   │  │  1  │   │  1  │  │ │ │  1  │   │  1  │  │ │
+│ │  ├─────┤   ├─────┤  │   │ │  ├─────┤   ├─────┤  │ │ ├─────┤   └─────┘  │
+  │  │  1  │   │  7  │  │ │   │  │  1  │   │  2  │  │ │ │  2  │            │ │
+│ │  ├─────┤   └─────┘  │   │ │  ├─────┤   └─────┘  │ │ ├─────┤            │
+  │  │  1  │            │ │   │  │  0  │            │ │ │  0  │            │ │
+│ │  └─────┘            │   │ │  └─────┘            │ │ └─────┘            │
+  │                     │ │   │                     │ │                    │ │
+│ │  Definition  Data   │   │ │  Definition  Data   │ │ Definition Data    │
+  │    Levels           │ │   │    Levels           │ │   Levels           │ │
+│ │                     │   │ │                     │ │                    │
+  │  "c.1"              │ │   │  "d.1"              │ │  "d.d2"            │ │
+│ └─────────────────────┘   │ └─────────────────────┘ └────────────────────┘
+     "c"                  │      "d"                                         │
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
  ```
 
 ## List / Repeated Columns
 
-Closing out support for nested types are *lists*, which containing a variable number of other values. For example,
+Closing out support for nested types are *lists*, which containing a variable number of other values. For example, the followig four documents each have a (nullable) field `a` with that contains a list of integers
 
 ```json
 {                     <-- First record
@@ -258,21 +258,9 @@ Field(name: "a", nullable: true, datatype: List(
 )
 ```
 
-Documents of this format could be stored in this Parquet schema
+As before, Arrow chooses to represent this in a hierarchical fashion as a `ListArray`. A `ListArray` contains a list of monotonically increasing integers called *offsets*, a validity mask if the list is nullable, and a child array containing the list elements. Each consecutive pair of elements in the offset array identifies a slice of the child array for that index in the ListArray
 
-```text
-message schema {
-  optional group a (LIST) {
-    repeated group list {
-      optional int32 element;
-    }
-  }
-}
-```
-
-As before, Arrow chooses to represent this in a hierarchical fashion as a ListArray. This contains a list of monotonically increasing integers called *offsets*, a validity mask if the list is nullable, and a child array containing the list elements. Each consecutive pair of elements in the offset array identifies a slice of the child array for that index in the ListArray
-
-For example, a list with offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(2,3)`, and `(3,3)`, and is therefore a ListArray of length 3 with the following values:
+For example, a list with offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(2,3)`, and `(3,3)`, and is therefore represents a `ListArray` of length 3 with the following values:
 
 ```text
 0: [child[0], child[1]]
@@ -307,13 +295,26 @@ For the example above with 4 JSON documents, this would be encoded in Arrow as
 More technical detail is available in the [ListArray format specification](https://arrow.apache.org/docs/format/Columnar.html#variable-size-list-layout).
 
 
-### Repetition Levels
+### Parquet Repetition Levels
+
+T example above with 4 JSON documents can be stored in this Parquet schema
+
+```text
+message schema {
+  optional group a (LIST) {
+    repeated group list {
+      optional int32 element;
+    }
+  }
+}
+```
 
 In order to encode lists, Parquet stores an integer *repetition level* in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of `0` would imply a new list in the top-most repeated list, a value of 1 a new element within the top-most repeated list, a value of 2 a new element within the second top-most repeated list, and so on.
 
-Protip: for the the top level list, since `0` indicates the start of a new element (row), the number of zeros must match the number of rows.
+*Protip*: for the the top level list, since `0` indicates the start of a new element (row), the number of zeros must match the number of rows.
 
 Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
+
 
 
 
@@ -337,7 +338,6 @@ Each repeated field also has a corresponding definition level, however, in this 
 │                                     │
 └─────────────────────────────────────┘
 ```
-
 
 
 
