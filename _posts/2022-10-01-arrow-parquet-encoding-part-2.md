@@ -26,7 +26,7 @@ limitations under the License.
 
 ## Introduction
 
-This is the second, in a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. The fist post <!-- todo add link when published --> covers the basics of data storage and validity encoding, and this post covers `Struct` and `List` types.
+This is the second, in a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) and [Apache Parquet](https://parquet.apache.org/). The [first post](https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/) covered the basics of data storage and validity encoding, and this post will cover the more complex `Struct` and `List` types.
 
 [Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
 
@@ -40,9 +40,9 @@ For example, consider the following three JSON documents
 ```json
 {              <-- First record
   "a": 1,      <-- the top level fields are a, b, c, and d
-  "b": {
+  "b": {       <-- b is always provided (not nullable)
     "b1": 1,   <-- b1 and b2 are "nested" fields of "b"
-    "b2": 3    <-- b2 is always provided (not null)
+    "b2": 3    <-- b2 is always provided (not nullable)
    },
  "d": {
    "d1":  1    <-- d1 is a "nested" field of "d"
@@ -56,7 +56,7 @@ For example, consider the following three JSON documents
     "b2": 4    <-- note "b1" is NULL in this record
   },
   "c": {       <-- note "c" was NULL in the first record
-    "c1": 6        but when "c" is provided, c1 is also always provided
+    "c1": 6        but when "c" is provided, c1 is also always provided (not nullable)
   },
   "d": {
     "d1": 2,
@@ -138,7 +138,7 @@ Arrow represents each `StructArray` hierarchically using a parent child relation
 More technical detail is available in the [StructArray format specification](https://arrow.apache.org/docs/format/Columnar.html#struct-layout).
 
 ### Definition Levels
-Unlike Arrow, Parquet does not encode validity in a structured fashion, instead only storing definition levels for each of the primitive columns, i.e. those that aren’t groups. The definition level of a given element, is the depth in the schema at which it is fully defined.
+Unlike Arrow, Parquet does not encode validity in a structured fashion, instead only storing definition levels for each of the primitive columns, i.e. those that don't contain other columns. The definition level of a given element, is the depth in the schema at which it is fully defined.
 
 For example consider the case of `d.d2`, which contains two nullable levels `d` and `d2`.
 
@@ -149,7 +149,7 @@ A definition level of `0` would imply a null at the level of `d`:
 }
 ```
 
-A definition level of `1` would imply a null at the level of `d.d2`
+A definition level of `1` would imply a null at the level of `d`
 
 ```json
 {
@@ -270,9 +270,9 @@ message schema {
 }
 ```
 
-As before, Arrow chooses to represent this in a hierarchical fashion with a list of monotonically increasing integers called *offsets* in a `ListArray`, and stores all the values that appear in the lists in a single child array. Each consecutive pair of elements in this offset array identifies a slice of the child array for that array index
+As before, Arrow chooses to represent this in a hierarchical fashion as a ListArray. This contains a list of monotonically increasing integers called *offsets*, a validity mask if the list is nullable, and a child array containing the list elements. Each consecutive pair of elements in the offset array identifies a slice of the child array for that index in the ListArray
 
-For example, the list of offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(2,3)`, and `(3,3)`, and is therefore a ListArray of length 3 with the following values:
+For example, a list with offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(2,3)`, and `(3,3)`, and is therefore a ListArray of length 3 with the following values:
 
 ```text
 0: [child[0], child[1]]
@@ -324,7 +324,7 @@ Each repeated field also has a corresponding definition level, however, in this 
 │  ├─────┤      ├─────┤               │
 │  │  0  │      │  0  │               │
 │  ├─────┤      ├─────┤      ┌─────┐  │
-│  │  1  │      │  1  │      │  1  │  │
+│  │  1  │      │  0  │      │  1  │  │
 │  ├─────┤      ├─────┤      ├─────┤  │
 │  │  2  │      │  0  │      │  2  │  │
 │  ├─────┤      ├─────┤      └─────┘  │
