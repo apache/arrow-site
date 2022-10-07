@@ -153,7 +153,7 @@ A definition level of `1` would imply a null at the level of `d`
 
 ```json
 {
-  d: { NULL }
+  d: { null }
 }
 ```
 
@@ -228,7 +228,7 @@ The Parquet encoding of the example would be:
 
 ## List / Repeated Columns
 
-Closing out support for nested types are *lists*, which containing a variable number of other values. For example, the followig four documents each have a (nullable) field `a` with that contains a list of integers
+Closing out support for nested types are *lists*, which contain a variable number of other values. For example, the following four documents each have a (nullable) field `a` containing a list of integers
 
 ```json
 {                     <-- First record
@@ -246,7 +246,7 @@ Closing out support for nested types are *lists*, which containing a variable nu
 ```
 ```json
 {
-  "a": [null, 2],     <-- list elements can themselves be null
+  "a": [null, 2],     <-- "a" has a null and non-null elements
 }
 ```
 
@@ -260,7 +260,7 @@ Field(name: "a", nullable: true, datatype: List(
 
 As before, Arrow chooses to represent this in a hierarchical fashion as a `ListArray`. A `ListArray` contains a list of monotonically increasing integers called *offsets*, a validity mask if the list is nullable, and a child array containing the list elements. Each consecutive pair of elements in the offset array identifies a slice of the child array for that index in the ListArray
 
-For example, a list with offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(2,3)`, and `(3,3)`, and is therefore represents a `ListArray` of length 3 with the following values:
+For example, a list with offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(2,3)`, and `(3,3)`, and therefore represents a `ListArray` of length 3 with the following values:
 
 ```text
 0: [child[0], child[1]]
@@ -297,7 +297,7 @@ More technical detail is available in the [ListArray format specification](https
 
 ### Parquet Repetition Levels
 
-T example above with 4 JSON documents can be stored in this Parquet schema
+The example above with 4 JSON documents can be stored in this Parquet schema
 
 ```text
 message schema {
@@ -309,13 +309,11 @@ message schema {
 }
 ```
 
-In order to encode lists, Parquet stores an integer *repetition level* in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of `0` would imply a new list in the top-most repeated list, a value of 1 a new element within the top-most repeated list, a value of 2 a new element within the second top-most repeated list, and so on.
+In order to encode lists, Parquet stores an integer *repetition level* in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of `0` means a new list in the top-most repeated list, a value of `1` means a new element within the top-most repeated list, a value of `2` means a new element within the second top-most repeated list, and so on.
 
-*Protip*: for the the top level list, since `0` indicates the start of a new element (row), the number of zeros must match the number of rows.
+*Protip*: for the topmost level list, the number of zeros in the `repetition` levels must match the number of rows.
 
 Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
-
-
 
 
 ```text
@@ -343,4 +341,4 @@ Each repeated field also has a corresponding definition level, however, in this 
 
 ## Next up: Arbitrary Nesting: Lists of Structs and Structs of Lists
 
-In our next blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures.
+In our final blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures.
