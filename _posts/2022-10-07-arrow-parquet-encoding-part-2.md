@@ -153,7 +153,7 @@ A definition level of `1` would imply a null at the level of `d`
 
 ```json
 {
-  d: { .. }
+  d: { NULL }
 }
 ```
 
@@ -166,7 +166,7 @@ A definition level of `2` would imply a defined value for `d.d2`:
 ```
 
 
-Going back to the JSON documents above, this format could be stored in this Parquet schema:
+Going back to the three JSON documents above, they could be stored in Parquet with this schema
 
 ```text
 message schema {
@@ -185,7 +185,7 @@ message schema {
 }
 ```
 
-Thus the Parquet encoding of the example would be:
+The Parquet encoding of the example would be:
 
 ```text
  ┌────────────────────────┐  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
@@ -207,23 +207,23 @@ Thus the Parquet encoding of the example would be:
                              └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
 
-┌ ─ ─ ─ ─ ─ ── ─ ─ ─ ─ ─ ─  ┌ ─ ─ ─ ─ ── ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-  ┌─────────────────────┐ │   ┌─────────────────────┐ ┌────────────────────┐ │
-│ │  ┌─────┐   ┌─────┐  │   │ │  ┌─────┐   ┌─────┐  │ │ ┌─────┐   ┌─────┐  │
-  │  │  0  │   │  6  │  │ │   │  │  1  │   │  1  │  │ │ │  1  │   │  1  │  │ │
-│ │  ├─────┤   ├─────┤  │   │ │  ├─────┤   ├─────┤  │ │ ├─────┤   └─────┘  │
-  │  │  1  │   │  7  │  │ │   │  │  1  │   │  2  │  │ │ │  2  │            │ │
-│ │  ├─────┤   └─────┘  │   │ │  ├─────┤   └─────┘  │ │ ├─────┤            │
-  │  │  1  │            │ │   │  │  0  │            │ │ │  0  │            │ │
-│ │  └─────┘            │   │ │  └─────┘            │ │ └─────┘            │
-  │                     │ │   │                     │ │                    │ │
-│ │  Definition  Data   │   │ │  Definition  Data   │ │ Definition Data    │
-  │    Levels           │ │   │    Levels           │ │   Levels           │ │
-│ │                     │   │ │                     │ │                    │
-  │  "c.1"              │ │   │  "d.1"              │ │  "d.d2"            │ │
-│ └─────────────────────┘   │ └─────────────────────┘ └────────────────────┘
-     "c"                  │      "d"                                         │
-└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+┌ ─ ─ ─ ─ ─ ── ─ ─ ─ ─ ─   ┌ ─ ─ ─ ─ ── ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  ┌────────────────────┐ │   ┌────────────────────┐ ┌──────────────────┐ │
+│ │  ┌─────┐   ┌─────┐ │   │ │  ┌─────┐   ┌─────┐ │ │ ┌─────┐  ┌─────┐ │
+  │  │  0  │   │  6  │ │ │   │  │  1  │   │  1  │ │ │ │  1  │  │  1  │ │ │
+│ │  ├─────┤   ├─────┤ │   │ │  ├─────┤   ├─────┤ │ │ ├─────┤  └─────┘ │
+  │  │  1  │   │  7  │ │ │   │  │  1  │   │  2  │ │ │ │  2  │          │ │
+│ │  ├─────┤   └─────┘ │   │ │  ├─────┤   └─────┘ │ │ ├─────┤          │
+  │  │  1  │           │ │   │  │  0  │           │ │ │  0  │          │ │
+│ │  └─────┘           │   │ │  └─────┘           │ │ └─────┘          │
+  │                    │ │   │                    │ │                  │ │
+│ │  Definition  Data  │   │ │  Definition  Data  │ │ Definition Data  │
+  │    Levels          │ │   │    Levels          │ │   Levels         │ │
+│ │                    │   │ │                    │ │                  │
+  │  "c.1"             │ │   │  "d.1"             │ │  "d.d2"          │ │
+│ └────────────────────┘   │ └────────────────────┘ └──────────────────┘
+     "c"                 │      "d"                                      │
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
  ```
 
 ## List / Repeated Columns
