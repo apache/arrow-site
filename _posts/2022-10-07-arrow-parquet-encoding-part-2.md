@@ -56,8 +56,8 @@ For example, consider the following three JSON documents
     "b2": 4    <-- note "b1" is NULL in this record
   },
   "c": {       <-- note "c" was NULL in the first record
-    "c1": 6        but when "c" is provided, c1 is also always provided (not nullable)
-  },
+    "c1": 6        but when "c" is provided, c1 is also
+  },               always provided (not nullable)
   "d": {
     "d1": 2,
     "d2": 1
@@ -75,7 +75,7 @@ For example, consider the following three JSON documents
   }
 }
 ```
-Documents of this format could be stored in this Arrow schema
+Documents of this format could be stored in an Arrow `StructArray` with this schema
 
 ```text
 Field(name: "a", nullable: true, datatype: Int32)
@@ -115,24 +115,24 @@ Arrow represents each `StructArray` hierarchically using a parent child relation
                                │    StructArray                      │
                                 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
-┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-             ┌───────────┐                  ┌──────────┐┌──────────────────┐ │
-│   ┌─────┐  │ ┌─────┐   │  │ │   ┌─────┐   │┌─────┐   ││ ┌─────┐   ┌─────┐│
-    │  0  │  │ │ ??  │   │        │  1  │   ││  1  │   ││ │  0  │   │ ??  ││ │
-│   ├─────┤  │ ├─────┤   │  │ │   ├─────┤   │├─────┤   ││ ├─────┤   ├─────┤│
-    │  1  │  │ │  6  │   │        │  1  │   ││  2  │   ││ │  1  │   │  1  ││ │
-│   ├─────┤  │ ├─────┤   │  │ │   ├─────┤   │├─────┤   ││ ├─────┤   ├─────┤│
-    │  1  │  │ │  7  │   │        │  0  │   ││ ??  │   ││ │ ??  │   │ ??  ││ │
-│   └─────┘  │ └─────┘   │  │ │   └─────┘   │└─────┘   ││ └─────┘   └─────┘│
-    Validity │  Values   │        Validity  │ Values   ││ Validity   Values│ │
-│            │           │  │ │             │          ││                  │
-             │ "c.c1"    │                  │"d.d1"    ││ "d.d2"           │ │
-│            │ Primitive │  │ │             │Primitive ││ PrimitiveArray   │
-             │ Array     │                  │Array     ││                  │ │
-│            └───────────┘  │ │             └──────────┘└──────────────────┘
-     "c"                           "d"                                       │
-│    StructArray            │ │    StructArray
- ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+            ┌───────────┐                ┌──────────┐┌─────────────────┐ │
+│  ┌─────┐  │ ┌─────┐   │ │ │  ┌─────┐   │┌─────┐   ││ ┌─────┐  ┌─────┐│
+   │  0  │  │ │ ??  │   │      │  1  │   ││  1  │   ││ │  0  │  │ ??  ││ │
+│  ├─────┤  │ ├─────┤   │ │ │  ├─────┤   │├─────┤   ││ ├─────┤  ├─────┤│
+   │  1  │  │ │  6  │   │      │  1  │   ││  2  │   ││ │  1  │  │  1  ││ │
+│  ├─────┤  │ ├─────┤   │ │ │  ├─────┤   │├─────┤   ││ ├─────┤  ├─────┤│
+   │  1  │  │ │  7  │   │      │  0  │   ││ ??  │   ││ │ ??  │  │ ??  ││ │
+│  └─────┘  │ └─────┘   │ │ │  └─────┘   │└─────┘   ││ └─────┘  └─────┘│
+   Validity │  Values   │      Validity  │ Values   ││ Validity  Values│ │
+│           │           │ │ │            │          ││                 │
+            │ "c.c1"    │                │"d.d1"    ││ "d.d2"          │ │
+│           │ Primitive │ │ │            │Primitive ││ PrimitiveArray  │
+            │ Array     │                │Array     ││                 │ │
+│           └───────────┘ │ │            └──────────┘└─────────────────┘
+    "c"                         "d"                                      │
+│   StructArray           │ │   StructArray
+  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
  ```
 
 More technical detail is available in the [StructArray format specification](https://arrow.apache.org/docs/format/Columnar.html#struct-layout).
