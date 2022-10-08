@@ -138,7 +138,7 @@ Arrow represents each `StructArray` hierarchically using a parent child relation
 More technical detail is available in the [StructArray format specification](https://arrow.apache.org/docs/format/Columnar.html#struct-layout).
 
 ### Definition Levels
-Unlike Arrow, Parquet does not encode validity in a structured fashion, instead only storing definition levels for each of the primitive columns, i.e. those that don't contain other columns. The definition level of a given element, is the depth in the schema at which it is fully defined.
+Unlike Arrow, Parquet does not encode validity in a structured fashion, instead only storing definition levels for each of the primitive columns, i.e. those that don't contain other columns. The definition level of a given element is the depth in the schema at which it is fully defined.
 
 For example consider the case of `d.d2`, which contains two nullable levels `d` and `d2`.
 
