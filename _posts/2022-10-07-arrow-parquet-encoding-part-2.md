@@ -311,9 +311,11 @@ message schema {
 
 In order to encode lists, Parquet stores an integer *repetition level* in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of `0` means a new list in the top-most repeated list, a value of `1` means a new element within the top-most repeated list, a value of `2` means a new element within the second top-most repeated list, and so on.
 
-*Protip*: for the topmost level list, the number of zeros in the `repetition` levels must match the number of rows.
+A consequence of this encoding is that the number of zeros in the `repetition` levels is the total number of rows in the column, and the first level in a column must be 0.
 
 Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
+
+The example above would therefore be encoded as
 
 
 ```text
@@ -341,4 +343,6 @@ Each repeated field also has a corresponding definition level, however, in this 
 
 ## Next up: Arbitrary Nesting: Lists of Structs and Structs of Lists
 
-In our final blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures.
+In our final blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures. 
+
+If you just want to get stuck in with the code, you will be pleased to hear that with the Rust [parquet](https://crates.io/crates/parquet) implementation, reading and writing nested data either into Arrow is as simple as reading unnested data, with all the complex record shredding handled automatically for you. With this and other exciting features, such as out of the box support for [reading asynchronously](https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html) from [object storage](https://docs.rs/object_store/0.5.0/object_store/), and advanced row filter pushdown, blog post to follow, it is the fastest and most feature complete Rust parquet implementation. We look forward to seeing what you build with it!
