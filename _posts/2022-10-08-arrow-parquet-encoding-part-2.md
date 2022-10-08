@@ -153,7 +153,7 @@ A definition level of `1` would imply a null at the level of `d`
 
 ```json
 {
-  d: { null }
+  "d": { null }
 }
 ```
 
@@ -161,7 +161,7 @@ A definition level of `2` would imply a defined value for `d.d2`:
 
 ```json
 {
-  d: { d2: .. }
+  "d": { "d2": .. }
 }
 ```
 
