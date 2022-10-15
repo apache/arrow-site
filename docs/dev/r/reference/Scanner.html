@@ -164,7 +164,7 @@ to keep all rows.</p></li>
     
 
 <p><code>ScannerBuilder</code> has the following methods:</p><ul><li><p><code>$Project(cols)</code>: Indicate that the scan should only return columns given
-by <code>cols</code>, a character vector of column names</p></li>
+by <code>cols</code>, a character vector of column names or a named list of <a href="Expression.html">Expression</a>.</p></li>
 <li><p><code>$Filter(expr)</code>: Filter rows by an <a href="Expression.html">Expression</a>.</p></li>
 <li><p><code>$UseThreads(threads)</code>: logical: should the scan use multithreading?
 The method's default input is <code>TRUE</code>, but you must call the method to enable
@@ -178,6 +178,61 @@ then this method can be called to reduce their size.</p></li>
 query and returns an Arrow <a href="Table.html">Table</a>.</p>
     </div>
 
+    <div id="ref-examples">
+    <h2>Examples</h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Set up directory for examples</span></span></span>
+<span class="r-in"><span><span class="va">tf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">tf</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">tf</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="fu"><a href="write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="va">tf</span>, partitioning<span class="op">=</span><span class="st">"cyl"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="open_dataset.html">open_dataset</a></span><span class="op">(</span><span class="va">tf</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">scan_builder</span> <span class="op">&lt;-</span> <span class="va">ds</span><span class="op">$</span><span class="fu">NewScan</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">scan_builder</span><span class="op">$</span><span class="fu">Filter</span><span class="op">(</span><span class="va">Expression</span><span class="op">$</span><span class="fu">field_ref</span><span class="op">(</span><span class="st">"hp"</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">100</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ScannerBuilder</span>
+<span class="r-in"><span><span class="va">scan_builder</span><span class="op">$</span><span class="fu">Project</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>hp_times_ten <span class="op">=</span> <span class="fl">10</span> <span class="op">*</span> <span class="va">Expression</span><span class="op">$</span><span class="fu">field_ref</span><span class="op">(</span><span class="st">"hp"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ScannerBuilder</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Once configured, call $Finish()</span></span></span>
+<span class="r-in"><span><span class="va">scanner</span> <span class="op">&lt;-</span> <span class="va">scan_builder</span><span class="op">$</span><span class="fu">Finish</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Can get results as a table</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">scanner</span><span class="op">$</span><span class="fu">ToTable</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    hp_times_ten</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1          1130</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2          1090</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3          1100</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4          1100</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5          1100</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6          1050</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7          1230</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8          1230</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9          1750</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10         1750</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11         2450</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12         1800</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13         1800</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14         1800</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15         2050</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16         2150</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17         2300</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18         1500</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19         1500</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20         2450</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21         1750</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22         2640</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23         3350</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Or as a RecordBatchReader</span></span></span>
+<span class="r-in"><span><span class="va">scanner</span><span class="op">$</span><span class="fu">ToRecordBatchReader</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> RecordBatchReader</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> hp_times_ten: double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> See $metadata for additional Schema metadata</span>
+</code></pre></div>
+    </div>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top"><h2 data-toc-skip>Contents</h2>
