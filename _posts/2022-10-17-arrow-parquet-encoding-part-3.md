@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists"
-date: "2022-10-01 00:00:00"
+date: "2022-10-07 00:00:00"
 author: "tustvold and alamb"
 categories: [parquet, arrow]
 ---
@@ -110,31 +110,30 @@ The Arrow encoding of the example would be:
   ListArray          └──────────────────┘
 └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
 
-┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-           ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-│                    ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │
-  ┌─────┐  │ ┌─────┐ │ ┌─────┐  │   ┌─────┐ ┌─────┐ ┌─────────┐
-│ │  0  │    │  1  │ │ │  1  │  │ │ │  0  │ │  0  │ │ ┌─────┐ │ │ │ │
-  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │ │  3  │ │
-│ │  2  │    │  1  │ │ │  1  │  │ │ │  1  │ │  0  │ │ ├─────┤ │ │ │ │
-  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │ │  4  │ │
-│ │  3  │    │  1  │ │ │  2  │  │ │ │  0  │ │  2  │ │ └─────┘ │ │ │ │
-  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │         │
-│ │  4  │    │  0  │ │ │ ??  │  │ │ │ ??  │ │  2  │ │  Values │ │ │ │
-  └─────┘  │ └─────┘ │ └─────┘  │   └─────┘ ├─────┤ │         │
-│                    │          │ │         │  2  │ │         │ │ │ │
-  Offsets  │ Validity│ Values   │           └─────┘ │         │
-│                    │          │ │Validity         │child[0] │ │ │ │
-           │         │ "b1"     │           Offsets │Primitive│
-│                    │ Primitive│ │ "b2"            │Array    │ │ │ │
-           │         │ Array    │   ListArray       └─────────┘
-│                    └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │
-
-│            "element"                                            │ │
-           │ StructArray
-│ "b"       ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │
-  ListArray
-└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+           ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │
+│                    ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  ┌─────┐  │ ┌─────┐ │ ┌─────┐  │   ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │
+│ │  0  │    │  1  │ │ │  1  │  │ │ │  0  │ │  0  │ │ ┌─────┐  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │ │  3  │  │ │ │ │
+│ │  2  │    │  1  │ │ │  1  │  │ │ │  1  │ │  0  │ │ ├─────┤  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │ │  4  │  │ │ │ │
+│ │  3  │    │  1  │ │ │  2  │  │ │ │  0  │ │  2  │ │ └─────┘  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │          │ │ │ │
+│ │  4  │    │  0  │ │ │ ??  │  │ │ │ ??  │ │  2  │ │  Values  │
+  └─────┘  │ └─────┘ │ └─────┘  │   └─────┘ ├─────┤ │          │ │ │ │
+│                    │          │ │         │  2  │ │          │
+  Offsets  │ Validity│ Values   │           └─────┘ │          │ │ │ │
+│                    │          │ │Validity         │ child[0] │
+           │         │ "b1"     │           Offsets │ Primitive│ │ │ │
+│                    │ Primitive│ │ "b2"            │ Array    │
+           │         │ Array    │   ListArray       └──────────┘ │ │ │
+│                    └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+           │ "element"                                             │ │
+│            StructArray
+  "b"      └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │
+│ ListArray
+ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
 ```
 
 Documents of this format could be stored in this Parquet schema
@@ -163,7 +162,7 @@ message schema {
 
 As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability.
 
-This is a non trivial topic. For more detail, you can read the ["Google Dremel Paper"](https://research.google/pubs/pub36632/) which is typically cited as the inspiration for Parquet repetition and definition levels, and offers an academic description of the algorithm. You can also explore this [gist](https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443) to see Rust [parquet](https://crates.io/crates/parquet) code which generates the example below.
+Definition and repetition levels is a non trivial topic. For more detail, you can read the [Google Dremel Paper](https://research.google/pubs/pub36632/) which is typically cited as the inspiration for Parquet repetition and definition levels, and offers an academic description of the algorithm. You can also explore this [gist](https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443) to see Rust [parquet](https://crates.io/crates/parquet) code which generates the example below.
 
 The Parquet encoding of the example would be:
 
@@ -206,7 +205,7 @@ The Parquet encoding of the example would be:
 
 ## Additional Complications
 
-This series of posts has necessarily glossed over a number of details that further complicate matters:
+This series of posts has necessarily glossed over a number of details that further complicate actual implementations:
 
 * A `ListArray` may contain a non-empty offset range that is masked by a validity mask
 * Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present
@@ -217,6 +216,6 @@ This series of posts has necessarily glossed over a number of details that furth
 * And more…
 
 ## Summary
-Both Parquet and Arrow are columnar formats and support nested structs and lists, however the way they represent such nesting differs significantly and conversion between the two formats is complex.
+Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex.
 
-Fortunately, with the Rust [parquet](https://crates.io/crates/parquet) implementation, reading and writing nested data in Arrow, in Parquet or between the two is as simple as reading unnested data. The library handles all the complex record shredding handled automatically for you. With this and other exciting features, such as support for [reading asynchronously](https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html) from [object storage](https://docs.rs/object_store), it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!
+Fortunately, with the Rust [parquet](https://crates.io/crates/parquet) implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for [reading asynchronously](https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html) from [object storage](https://docs.rs/object_store), it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!
