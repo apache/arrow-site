@@ -29,37 +29,42 @@ limitations under the License.
 This is the third of a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. [Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
 
 
-[Arrow and Parquet Part 1: Primitive Types and Nullability](https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/) covers the basics of primitive types.  [Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists](https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/) covers the `Struct` and `List` types,  and now this post puts it all together to describe how they support arbitrary nesting.
+[Arrow and Parquet Part 1: Primitive Types and Nullability](https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/) covers the basics of primitive types.  [Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists](https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/) covers the `Struct` and `List` types,  and now this post gives an example of how both formats combine the topics to support arbitrary nesting.
 
-
-
+Some libraries, such as Rust [parquet](https://crates.io/crates/parquet) implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so.
 
 
 # Structs with Lists
-Consider the following
+Consider the following three json documents
 
 ```json
 {                     <-- First record
   “a”: [1],           <-- top-level field a containing list of integers
   “b”: [              <-- top-level field b containing list of structures
     {                 <-- list element of b containing two field b1 and b2
-      “b1”: 1         <-- b1 is always provided (not null)
+      “b1”: 1         <-- b1 is always provided (non nullable)
     },
     {
       “b1”: 1,
       “b2”: [         <-- b2 contains list of integers
-        3, 4          <-- list elements of b.b2 always provided (not null)
+        3, 4          <-- list elements of b.b2 always provided (non nullable)
       ]
     }
   ]
 }
+```
+
+```json
 {
-  “b”: [              <-- b is always provided (not null)
+  “b”: [              <-- b is always provided (non nullable)
     {
       “b1”: 2
     },
   ]
 }
+```
+
+```json
 {
   “a”: [null, null],  <-- list elements of a are nullable
   “b”: [null]         <-- list elements of b are nullable
@@ -81,6 +86,52 @@ Field(name: “b”), nullable: false, datatype: List(
   ])
 ))
 ```
+
+
+As explained previously, Arrow chooses to represent this in a hierarchical fashion.  `StructArray`s are stored as child arrays that contain each field of the struct.  `ListArray`s are stored as lists of monotonically increasing integers called offsets, and stores the values that appear in the lists in a single child array. Each consecutive pair of elements in this offset array identifies a slice of the child array for that array index.
+
+
+```text
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                     ┌──────────────────┐
+│ ┌─────┐   ┌─────┐  │ ┌─────┐   ┌─────┐│ │
+  │  1  │   │  0  │  │ │  1  │   │  1  ││
+│ ├─────┤   ├─────┤  │ ├─────┤   ├─────┤│ │
+  │  0  │   │  1  │  │ │  0  │   │ ??  ││
+│ ├─────┤   ├─────┤  │ ├─────┤   ├─────┤│ │
+  │  1  │   │  1  │  │ │  0  │   │ ??  ││
+│ └─────┘   ├─────┤  │ └─────┘   └─────┘│ │
+            │  3  │  │ Validity   Values│
+│ Validity  └─────┘  │                  │ │
+                     │ child[0]         │
+│ "a"       Offsets  │ PrimitiveArray   │ │
+  ListArray          └──────────────────┘
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+
+
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+           ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+│                       ┌───────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │
+  ┌─────┐  │ ┌─────┐    │ ┌─────┐   │   ┌─────┐   ┌─────┐  ┌──────────┐
+│ │  0  │    │  1  │    │ │  1  │   │ │ │  0  │   │  0  │  │ ┌─────┐  │ │ │ │
+  ├─────┤  │ ├─────┤    │ ├─────┤   │   ├─────┤   ├─────┤  │ │  3  │  │
+│ │  2  │    │  1  │    │ │  1  │   │ │ │  1  │   │  0  │  │ ├─────┤  │ │ │ │
+  ├─────┤  │ ├─────┤    │ ├─────┤   │   ├─────┤   ├─────┤  │ │  4  │  │
+│ │  3  │    │  1  │    │ │  2  │   │ │ │  0  │   │  2  │  │ └─────┘  │ │ │ │
+  ├─────┤  │ ├─────┤    │ ├─────┤   │   ├─────┤   ├─────┤  │          │
+│ │  4  │    │  0  │    │ │ ??  │   │ │ │ ??  │   │  2  │  │  Values  │ │ │ │
+  └─────┘  │ └─────┘    │ └─────┘   │   └─────┘   ├─────┤  │          │
+│                       │           │ │           │  2  │  │          │ │ │ │
+  Offsets  │ Validity   │  Values   │   Validity  └─────┘  │          │
+│                       │           │ │                    │ child[0] │ │ │ │
+           │            │ "b1"      │             Offsets  │ Primitive│
+│                       │ Primitive │ │ "b2"               │ Array    │ │ │ │
+           │ "element"  │ Array     │   ListArray          └──────────┘
+│ "b"        StructArray└───────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │
+  ListArray└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+```
+
 
 Documents of this format could be stored in this parquet schema
 
@@ -106,37 +157,13 @@ message schema {
 }
 ```
 
-As explained previously, Arrow chooses to represent this in a hierarchical fashion. To achieve this it stores a list of monotonically increasing integers called offsets in the parent ListArray, and stores all the values that appear in the lists in a single child array. Each consecutive pair of elements in this offset array identifies a slice of the child array for that array index.
+In order to encode lists, Parquet stores an integer repetition level in addition to a definition level. Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
 
-```text
-a: ListArray
-  Offsets: [0, 1, 1, 3]
-  Validity: [true, false, true]
-  Children:
-    element: PrimitiveArray
-      Buffer[0]: [1, ARBITRARY, ARBITRARY]
-      Validity: [true, false, false]
-b: ListArray
-  Offsets: [0, 2, 3, 4]
-  Children:
-    element: StructArray
-      Validity: [true, true, true, false]
-      Children:
-        b1: PrimitiveArray
-          Buffer[0]: [1, 1, 2, ARBITRARY]
-        b2: ListArray
-          Offsets: [0, 0, 2, 2, 2]
-          Validity: [false, true, false, ARBITRARY]
-          Children:
-            element: PrimitiveArray
-              Buffer[0]: [3, 4]
-```
 
-In order to encode lists, Parquet stores an integer repetition level in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of 0 would imply a new list in the top-most repeated field, a value of 1 a new element within the top-most repeated field, a value of 2 a new element within the second top-most repeated field, and so on.
+For more details, the ["Google Dremel Paper"](https://research.google/pubs/pub36632/) is typically cited as the inspiration for parquet repetition and definition levels, and offers an thorough academic description of the algorithm.
 
-Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
+See this [gist](https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443) for code that demonstrates how to validate these numbers.
 
-see this https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443
 
 ```text
 a:
