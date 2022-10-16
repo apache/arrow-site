@@ -132,7 +132,6 @@ As explained previously, Arrow chooses to represent this in a hierarchical fashi
 └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
 ```
 
-
 Documents of this format could be stored in this parquet schema
 
 ```text
@@ -157,30 +156,46 @@ message schema {
 }
 ```
 
-In order to encode lists, Parquet stores an integer repetition level in addition to a definition level. Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
+As explained in previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability.
 
-
-For more details, the ["Google Dremel Paper"](https://research.google/pubs/pub36632/) is typically cited as the inspiration for parquet repetition and definition levels, and offers an thorough academic description of the algorithm.
-
-See this [gist](https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443) for code that demonstrates how to validate these numbers.
+For more details, the ["Google Dremel Paper"](https://research.google/pubs/pub36632/) is typically cited as the inspiration for parquet repetition and definition levels, and offers a more academic description of the algorithm. You can also see this  [gist](https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443) for code that uses the Rust [parquet](https://crates.io/crates/parquet) implementation to generate the numbers below.
 
 
 ```text
-a:
-  Data Page:
-    Repetition Levels: encode([0, 0, 0, 1])
-    Definition Levels: encode([3, 0, 2, 2])
-    Values: encode([1])
-b.b1:
-  Data Page:
-    Repetition Levels: encode([0, 1, 0, 0])
-    Definition Levels: encode([2, 2, 2, 1])
-    Values: encode([1, 1, 2])
-b.b2
-  Data Page:
-    Repetition Levels: encode([0, 1, 2, 0, 0])
-    Definition Levels: encode([2, 4, 4, 2, 1])
-    Values: encode([3, 4])
+┌───────────────────────────────┐ ┌────────────────────────────────┐
+│ ┌─────┐    ┌─────┐    ┌─────┐ │ │  ┌─────┐    ┌─────┐    ┌─────┐ │
+│ │  3  │    │  0  │    │  1  │ │ │  │  2  │    │  0  │    │  1  │ │
+│ ├─────┤    ├─────┤    └─────┘ │ │  ├─────┤    ├─────┤    ├─────┤ │
+│ │  0  │    │  0  │            │ │  │  2  │    │  1  │    │  1  │ │
+│ ├─────┤    ├─────┤      Data  │ │  ├─────┤    ├─────┤    ├─────┤ │
+│ │  2  │    │  0  │            │ │  │  2  │    │  0  │    │  2  │ │
+│ ├─────┤    ├─────┤            │ │  ├─────┤    ├─────┤    └─────┘ │
+│ │  2  │    │  1  │            │ │  │  1  │    │  0  │            │
+│ └─────┘    └─────┘            │ │  └─────┘    └─────┘     Data   │
+│                               │ │                                │
+│Definition Repetition          │ │ Definition Repetition          │
+│  Levels     Levels            │ │   Levels     Levels            │
+│                               │ │                                │
+│ "a"                           │ │  "b.b1"                        │
+└───────────────────────────────┘ └────────────────────────────────┘
+
+┌───────────────────────────────┐
+│  ┌─────┐    ┌─────┐    ┌─────┐│
+│  │  2  │    │  0  │    │  3  ││
+│  ├─────┤    ├─────┤    ├─────┤│
+│  │  4  │    │  1  │    │  4  ││
+│  ├─────┤    ├─────┤    └─────┘│
+│  │  4  │    │  2  │           │
+│  ├─────┤    ├─────┤           │
+│  │  2  │    │  0  │           │
+│  ├─────┤    ├─────┤     Data  │
+│  │  1  │    │  0  │           │
+│  └─────┘    └─────┘           │
+│Definition  Repetition         │
+│  Levels      Levels           │
+│                               │
+│  "b.b2"                       │
+└───────────────────────────────┘
 ```
 
 ## Additional Complications
