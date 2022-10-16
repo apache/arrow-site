@@ -26,14 +26,17 @@ limitations under the License.
 
 ## Introduction
 
-This is the third of a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. This post covers how to combine the `Struct` and `List` types described in the previous posts for arbitrary nesting.
+This is the third of a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. [Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
 
 
-[Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
+[Arrow and Parquet Part 1: Primitive Types and Nullability](https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/) covers the basics of primitive types.  [Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists](https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/) covers the `Struct` and `List` types,  and now this post puts it all together to describe how they support arbitrary nesting.
+
+
+
 
 
 # Structs with Lists
-
+Consider the following
 
 ```json
 {                     <-- First record
@@ -132,6 +135,8 @@ b: ListArray
 In order to encode lists, Parquet stores an integer repetition level in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of 0 would imply a new list in the top-most repeated field, a value of 1 a new element within the top-most repeated field, a value of 2 a new element within the second top-most repeated field, and so on.
 
 Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.
+
+see this https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443
 
 ```text
 a:
