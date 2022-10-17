@@ -37,25 +37,25 @@ Both Parquet and Arrow have the concept of a *struct* column, which is a column 
 
 For example, consider the following three JSON documents
 
-```json
-{              <-- First record
-  "a": 1,      <-- the top level fields are a, b, c, and d
-  "b": {       <-- b is always provided (not nullable)
-    "b1": 1,   <-- b1 and b2 are "nested" fields of "b"
-    "b2": 3    <-- b2 is always provided (not nullable)
+```python
+{              # <-- First record
+  "a": 1,      # <-- the top level fields are a, b, c, and d
+  "b": {       # <-- b is always provided (not nullable)
+    "b1": 1,   # <-- b1 and b2 are "nested" fields of "b"
+    "b2": 3    # <-- b2 is always provided (not nullable)
    },
  "d": {
-   "d1":  1    <-- d1 is a "nested" field of "d"
+   "d1":  1    # <-- d1 is a "nested" field of "d"
   }
 }
 ```
-```json
-{              <-- Second record
+```python
+{              # <-- Second record
   "a": 2,
   "b": {
-    "b2": 4    <-- note "b1" is NULL in this record
+    "b2": 4    # <-- note "b1" is NULL in this record
   },
-  "c": {       <-- note "c" was NULL in the first record
+  "c": {       # <-- note "c" was NULL in the first record
     "c1": 6        but when "c" is provided, c1 is also
   },               always provided (not nullable)
   "d": {
@@ -64,8 +64,8 @@ For example, consider the following three JSON documents
   }
 }
 ```
-```json
-{              <-- Third record
+```python
+{              # <-- Third record
   "b": {
     "b1": 5,
     "b2": 6
@@ -77,7 +77,7 @@ For example, consider the following three JSON documents
 ```
 Documents of this format could be stored in an Arrow `StructArray` with this schema
 
-```text
+```python
 Field(name: "a", nullable: true, datatype: Int32)
 Field(name: "b", nullable: false, datatype: Struct[
   Field(name: "b1", nullable: true, datatype: Int32),
@@ -144,14 +144,14 @@ For example consider the case of `d.d2`, which contains two nullable levels `d` 
 
 A definition level of `0` would imply a null at the level of `d`:
 
-```json
+```python
 {
 }
 ```
 
 A definition level of `1` would imply a null at the level of `d`
 
-```json
+```python
 {
   "d": { null }
 }
@@ -159,7 +159,7 @@ A definition level of `1` would imply a null at the level of `d`
 
 A definition level of `2` would imply a defined value for `d.d2`:
 
-```json
+```python
 {
   "d": { "d2": .. }
 }
@@ -168,7 +168,7 @@ A definition level of `2` would imply a defined value for `d.d2`:
 
 Going back to the three JSON documents above, they could be stored in Parquet with this schema
 
-```text
+```python
 message schema {
   optional int32 a;
   required group b {
@@ -230,29 +230,29 @@ The Parquet encoding of the example would be:
 
 Closing out support for nested types are *lists*, which contain a variable number of other values. For example, the following four documents each have a (nullable) field `a` containing a list of integers
 
-```json
-{                     <-- First record
-  "a": [1],           <-- top-level field a containing list of integers
+```python
+{                     # <-- First record
+  "a": [1],           # <-- top-level field a containing list of integers
 }
 ```
-```json
-{                     <-- "a" is not provided (is null)
+```python
+{                     # <-- "a" is not provided (is null)
 }
 ```
-```json
-{                     <-- "a" is non-null but empty
+```python
+{                     # <-- "a" is non-null but empty
   "a": []
 }
 ```
-```json
+```python
 {
-  "a": [null, 2],     <-- "a" has a null and non-null elements
+  "a": [null, 2],     # <-- "a" has a null and non-null elements
 }
 ```
 
 Documents of this format could be stored in this Arrow schema
 
-```text
+```python
 Field(name: "a", nullable: true, datatype: List(
   Field(name: "element", nullable: true, datatype: Int32),
 )
@@ -262,7 +262,7 @@ As before, Arrow chooses to represent this in a hierarchical fashion as a `ListA
 
 For example, a list with offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0,2)`, `(2,3)`, and `(3,3)`, and therefore represents a `ListArray` of length 3 with the following values:
 
-```text
+```python
 0: [child[0], child[1]]
 1: []
 2: [child[2]]
@@ -299,7 +299,7 @@ More technical detail is available in the [ListArray format specification](https
 
 The example above with 4 JSON documents can be stored in this Parquet schema
 
-```text
+```python
 message schema {
   optional group a (LIST) {
     repeated group list {
