@@ -79,19 +79,22 @@ import "github.com/apache/arrow/go/v{{site.data.version['current'].major_number}
 We have provided APT and Yum repositories for Apache Arrow C++ and
 Apache Arrow GLib (C). Here are supported platforms:
 
-* Debian GNU/Linux buster
 * Debian GNU/Linux bullseye
 * Debian GNU/Linux bookworm
 * Ubuntu 18.04 LTS
 * Ubuntu 20.04 LTS
-* Ubuntu 21.10
 * Ubuntu 22.04 LTS
 * AlmaLinux 8
+* AlmaLinux 9
 * CentOS 7
-* CentOS 8 Stream
+* CentOS Stream 8
+* CentOS Stream 9
 * Red Hat Enterprise Linux 7
 * Red Hat Enterprise Linux 8
+* Red Hat Enterprise Linux 9
 * Amazon Linux 2
+* Oracle Linux 8
+* Oracle Linux 9
 
 Debian GNU/Linux and Ubuntu:
 
@@ -119,34 +122,17 @@ sudo apt install -y -V libparquet-dev # For Apache Parquet C++
 sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
 ```
 
-AlmaLinux 8 and Red Hat Enterprise Linux 8:
+AlmaLinux 8/9, Oracle Linux 8/9, Red Hat Enterprise Linux 8/9 and CentOS Stream 8/9:
 
 ```shell
-sudo dnf install -y epel-release || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
+sudo dnf install -y epel-release || sudo dnf install -y oracle-epel-release-el$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1) || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
 sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/almalinux/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo dnf config-manager --set-enabled epel || :
 sudo dnf config-manager --set-enabled powertools || :
+sudo dnf config-manager --set-enabled crb || :
+sudo dnf config-manager --set-enabled ol$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)_codeready_builder || :
 sudo dnf config-manager --set-enabled codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-rhui-rpms || :
 sudo subscription-manager repos --enable codeready-builder-for-rhel-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-$(arch)-rpms || :
-sudo dnf install -y arrow-devel # For C++
-sudo dnf install -y arrow-glib-devel # For GLib (C)
-sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
-sudo dnf install -y arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
-sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
-sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
-sudo dnf install -y gandiva-devel # For Apache Gandiva C++
-sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
-sudo dnf install -y parquet-devel # For Apache Parquet C++
-sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
-```
-
-CentOS 8 Stream:
-
-```shell
-sudo dnf install -y epel-release
-sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)-stream/apache-arrow-release-latest.rpm
-sudo dnf config-manager --set-enabled epel
-sudo dnf config-manager --set-enabled powertools
 sudo dnf install -y arrow-devel # For C++
 sudo dnf install -y arrow-glib-devel # For GLib (C)
 sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
@@ -232,6 +218,12 @@ brew install apache-arrow-glib
 
 The MSYS2 packages include [Apache Arrow C++ and GLib (C)
 package][16]. You can install the package by `pacman`.
+
+UCRT 64-bit version:
+
+```shell
+pacman -S --noconfirm mingw-w64-ucrt-x86_64-arrow
+```
 
 64-bit version:
 
