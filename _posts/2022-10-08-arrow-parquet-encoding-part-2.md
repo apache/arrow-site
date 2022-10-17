@@ -343,6 +343,6 @@ The example above would therefore be encoded as
 
 ## Next up: Arbitrary Nesting: Lists of Structs and Structs of Lists
 
-In our final blog post <!-- When published, add link here --> we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures.
+In our [final blog post](https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3/) we will explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures.
 
 If you want to store and process structured types, you will be pleased to hear that the Rust [parquet](https://crates.io/crates/parquet) implementation fully supports reading and writing directly into Arrow, as simply as any other type. All the complex record shredding and reconstruction is handled automatically. With this and other exciting features such as  [reading asynchronously](https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html) from [object storage](https://docs.rs/object_store/0.5.0/object_store/), and advanced row filter pushdown, it is the fastest and most feature complete Rust parquet implementation. We look forward to seeing what you build with it!

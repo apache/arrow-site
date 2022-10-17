@@ -44,7 +44,7 @@ First, it is necessary to take a step back and discuss the difference between co
 
 For example
 
-```json
+```python
 {"Column1": 1, "Column2": 2}
 {"Column1": 3, "Column2": 4, "Column3": 5}
 {"Column1": 5, "Column2": 4, "Column3": 5}
@@ -52,7 +52,7 @@ For example
 
 In a columnar representation, the data for a given column is instead stored contiguously
 
-```text
+```python
 Column1: [1, 3, 5]
 Column2: [2, 4, 4]
 Column3: [null, 5, 5]
@@ -147,4 +147,4 @@ Definition  Values
 
 ## Next up: Nested and Hierarchical Data
 
-Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our upcoming blog post on the topic <!-- I propose to update this text with a link when when we have published the next blog -->.
+Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our [next blog post on the topic](https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/).
