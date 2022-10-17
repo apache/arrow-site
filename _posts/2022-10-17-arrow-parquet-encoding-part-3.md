@@ -37,51 +37,51 @@ Some libraries, such as Rust [parquet](https://crates.io/crates/parquet) impleme
 # Structs with Lists
 Consider the following three json documents
 
-```json
-{                     <-- First record
-  “a”: [1],           <-- top-level field a containing list of integers
-  “b”: [              <-- top-level field b containing list of structures
-    {                 <-- list element of b containing two field b1 and b2
-      “b1”: 1         <-- b1 is always provided (non nullable)
+```python
+{                     # <-- First record
+  "a": [1],           # <-- top-level field a containing list of integers
+  "b": [              # <-- top-level field b containing list of structures
+    {                 # <-- list element of b containing two field b1 and b2
+      "b1": 1         # <-- b1 is always provided (non nullable)
     },
     {
-      “b1”: 1,
-      “b2”: [         <-- b2 contains list of integers
-        3, 4          <-- list elements of b.b2 always provided (non nullable)
+      "b1": 1,
+      "b2": [         # <-- b2 contains list of integers
+        3, 4          # <-- list elements of b.b2 always provided (non nullable)
       ]
     }
   ]
 }
 ```
 
-```json
+```python
 {
-  “b”: [              <-- b is always provided (non nullable)
+  "b": [              # <-- b is always provided (non nullable)
     {
-      “b1”: 2
+      "b1": 2
     },
   ]
 }
 ```
 
-```json
+```python
 {
-  “a”: [null, null],  <-- list elements of a are nullable
-  “b”: [null]         <-- list elements of b are nullable
+  "a": [null, null],  # <-- list elements of a are nullable
+  "b": [null]         # <-- list elements of b are nullable
 }
 ```
 
 Documents of this format could be stored in this Arrow schema
 
-```text
-Field(name: “a”, nullable: true, datatype: List(
-  Field(name: “element”, nullable: true, datatype: Int32),
+```python
+Field(name: "a", nullable: true, datatype: List(
+  Field(name: "element", nullable: true, datatype: Int32),
 )
-Field(name: “b”), nullable: false, datatype: List(
-  Field(name: “element”, nullable: true, datatype: Struct[
-    Field(name: “b1”, nullable: false, datatype: Int32),
-    Field(name: “b2”, nullable: true, datatype: List(
-      Field(name: “element”, nullable: false, datatype: Int32)
+Field(name: "b"), nullable: false, datatype: List(
+  Field(name: "element", nullable: true, datatype: Struct[
+    Field(name: "b1", nullable: false, datatype: Int32),
+    Field(name: "b2", nullable: true, datatype: List(
+      Field(name: "element", nullable: false, datatype: Int32)
     ))
   ])
 ))
@@ -138,7 +138,7 @@ The Arrow encoding of the example would be:
 
 Documents of this format could be stored in this Parquet schema
 
-```text
+```python
 message schema {
   optional group a (LIST) {
     repeated group list {
