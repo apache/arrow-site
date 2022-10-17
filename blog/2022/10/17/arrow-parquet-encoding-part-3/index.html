@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists" />
+<meta name="author" content="tustvold and alamb" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Introduction This is the third of a three part series exploring how projects such as Rust Apache Arrow support conversion between Apache Arrow for in memory processing and Apache Parquet for efficient storage. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. Arrow and Parquet Part 1: Primitive Types and Nullability covered the basics of primitive types. Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists covered the Struct and List types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting. Some libraries, such as Rust parquet implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so. Structs with Lists Consider the following three json documents { # &lt;-- First record &quot;a&quot;: [1], # &lt;-- top-level field a containing list of integers &quot;b&quot;: [ # &lt;-- top-level field b containing list of structures { # &lt;-- list element of b containing two field b1 and b2 &quot;b1&quot;: 1 # &lt;-- b1 is always provided (non nullable) }, { &quot;b1&quot;: 1, &quot;b2&quot;: [ # &lt;-- b2 contains list of integers 3, 4 # &lt;-- list elements of b.b2 always provided (non nullable) ] } ] } { &quot;b&quot;: [ # &lt;-- b is always provided (non nullable) { &quot;b1&quot;: 2 }, ] } { &quot;a&quot;: [null, null], # &lt;-- list elements of a are nullable &quot;b&quot;: [null] # &lt;-- list elements of b are nullable } Documents of this format could be stored in this Arrow schema Field(name: &quot;a&quot;, nullable: true, datatype: List( Field(name: &quot;element&quot;, nullable: true, datatype: Int32), ) Field(name: &quot;b&quot;), nullable: false, datatype: List( Field(name: &quot;element&quot;, nullable: true, datatype: Struct[ Field(name: &quot;b1&quot;, nullable: false, datatype: Int32), Field(name: &quot;b2&quot;, nullable: true, datatype: List( Field(name: &quot;element&quot;, nullable: false, datatype: Int32) )) ]) )) As explained previously, Arrow chooses to represent this in a hierarchical fashion. StructArrays are stored as child arrays that contain each field of the struct. ListArrays are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index. The Arrow encoding of the example would be: ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌──────────────────┐ │ ┌─────┐ ┌─────┐ │ ┌─────┐ ┌─────┐│ │ │ 1 │ │ 0 │ │ │ 1 │ │ 1 ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 0 │ │ 1 │ │ │ 0 │ │ ?? ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 1 │ │ 1 │ │ │ 0 │ │ ?? ││ │ └─────┘ ├─────┤ │ └─────┘ └─────┘│ │ │ 3 │ │ Validity Values│ │ Validity └─────┘ │ │ │ │ child[0] │ │ &quot;a&quot; Offsets │ PrimitiveArray │ │ ListArray └──────────────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │ ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌─────┐ │ ┌─────┐ │ ┌─────┐ │ ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │ │ │ 0 │ │ 1 │ │ │ 1 │ │ │ │ 0 │ │ 0 │ │ ┌─────┐ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 3 │ │ │ │ │ │ │ 2 │ │ 1 │ │ │ 1 │ │ │ │ 1 │ │ 0 │ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 4 │ │ │ │ │ │ │ 3 │ │ 1 │ │ │ 2 │ │ │ │ 0 │ │ 2 │ │ └─────┘ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ │ │ │ │ │ 4 │ │ 0 │ │ │ ?? │ │ │ │ ?? │ │ 2 │ │ Values │ └─────┘ │ └─────┘ │ └─────┘ │ └─────┘ ├─────┤ │ │ │ │ │ │ │ │ │ │ 2 │ │ │ Offsets │ Validity│ Values │ └─────┘ │ │ │ │ │ │ │ │ │Validity │ child[0] │ │ │ &quot;b1&quot; │ Offsets │ Primitive│ │ │ │ │ │ Primitive│ │ &quot;b2&quot; │ Array │ │ │ Array │ ListArray └──────────┘ │ │ │ │ └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ &quot;element&quot; │ │ │ StructArray &quot;b&quot; └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │ ListArray ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ Documents of this format could be stored in this Parquet schema message schema { optional group a (LIST) { repeated group list { optional int32 element; } } required group b (LIST) { repeated group list { optional group element { required int32 b1; optional group b2 (LIST) { repeated group list { required int32 element; } } } } } } As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability. Definition and repetition levels is a non trivial topic. For more detail, you can read the Google Dremel Paper which offers an academic description of the algorithm. You can also explore this gist to see Rust parquet code which generates the example below. The Parquet encoding of the example would be: ┌───────────────────────────────┐ ┌────────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ 3 │ │ 0 │ │ 1 │ │ │ │ 2 │ │ 0 │ │ 1 │ │ │ ├─────┤ ├─────┤ └─────┘ │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 0 │ │ 0 │ │ │ │ 2 │ │ 1 │ │ 1 │ │ │ ├─────┤ ├─────┤ Data │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ │ 2 │ │ 0 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ ├─────┤ ├─────┤ └─────┘ │ │ │ 2 │ │ 1 │ │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │ └─────┘ └─────┘ Data │ │ │ │ │ │Definition Repetition │ │ Definition Repetition │ │ Levels Levels │ │ Levels Levels │ │ │ │ │ │ &quot;a&quot; │ │ &quot;b.b1&quot; │ └───────────────────────────────┘ └────────────────────────────────┘ ┌───────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐│ │ │ 2 │ │ 0 │ │ 3 ││ │ ├─────┤ ├─────┤ ├─────┤│ │ │ 4 │ │ 1 │ │ 4 ││ │ ├─────┤ ├─────┤ └─────┘│ │ │ 4 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ ├─────┤ ├─────┤ Data │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │Definition Repetition │ │ Levels Levels │ │ │ │ &quot;b.b2&quot; │ └───────────────────────────────┘ Additional Complications This series of posts has necessarily glossed over a number of details that further complicate actual implementations: A ListArray may contain a non-empty offset range that is masked by a validity mask Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present Reading a given number of rows from a repeated field requires reading the repetition levels and detecting a new row based on a repetition level of 0 A Parquet file may contain multiple row groups, each containing multiple column chunks A column chunk may contain multiple pages, and there is no relationship between pages across columns Parquet has alternative schema for representing lists with varying degrees of nullability And more… Summary Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex. Fortunately, with the Rust parquet implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for reading asynchronously from object storage, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!" />
+<meta property="og:description" content="Introduction This is the third of a three part series exploring how projects such as Rust Apache Arrow support conversion between Apache Arrow for in memory processing and Apache Parquet for efficient storage. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. Arrow and Parquet Part 1: Primitive Types and Nullability covered the basics of primitive types. Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists covered the Struct and List types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting. Some libraries, such as Rust parquet implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so. Structs with Lists Consider the following three json documents { # &lt;-- First record &quot;a&quot;: [1], # &lt;-- top-level field a containing list of integers &quot;b&quot;: [ # &lt;-- top-level field b containing list of structures { # &lt;-- list element of b containing two field b1 and b2 &quot;b1&quot;: 1 # &lt;-- b1 is always provided (non nullable) }, { &quot;b1&quot;: 1, &quot;b2&quot;: [ # &lt;-- b2 contains list of integers 3, 4 # &lt;-- list elements of b.b2 always provided (non nullable) ] } ] } { &quot;b&quot;: [ # &lt;-- b is always provided (non nullable) { &quot;b1&quot;: 2 }, ] } { &quot;a&quot;: [null, null], # &lt;-- list elements of a are nullable &quot;b&quot;: [null] # &lt;-- list elements of b are nullable } Documents of this format could be stored in this Arrow schema Field(name: &quot;a&quot;, nullable: true, datatype: List( Field(name: &quot;element&quot;, nullable: true, datatype: Int32), ) Field(name: &quot;b&quot;), nullable: false, datatype: List( Field(name: &quot;element&quot;, nullable: true, datatype: Struct[ Field(name: &quot;b1&quot;, nullable: false, datatype: Int32), Field(name: &quot;b2&quot;, nullable: true, datatype: List( Field(name: &quot;element&quot;, nullable: false, datatype: Int32) )) ]) )) As explained previously, Arrow chooses to represent this in a hierarchical fashion. StructArrays are stored as child arrays that contain each field of the struct. ListArrays are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index. The Arrow encoding of the example would be: ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌──────────────────┐ │ ┌─────┐ ┌─────┐ │ ┌─────┐ ┌─────┐│ │ │ 1 │ │ 0 │ │ │ 1 │ │ 1 ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 0 │ │ 1 │ │ │ 0 │ │ ?? ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 1 │ │ 1 │ │ │ 0 │ │ ?? ││ │ └─────┘ ├─────┤ │ └─────┘ └─────┘│ │ │ 3 │ │ Validity Values│ │ Validity └─────┘ │ │ │ │ child[0] │ │ &quot;a&quot; Offsets │ PrimitiveArray │ │ ListArray └──────────────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │ ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌─────┐ │ ┌─────┐ │ ┌─────┐ │ ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │ │ │ 0 │ │ 1 │ │ │ 1 │ │ │ │ 0 │ │ 0 │ │ ┌─────┐ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 3 │ │ │ │ │ │ │ 2 │ │ 1 │ │ │ 1 │ │ │ │ 1 │ │ 0 │ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 4 │ │ │ │ │ │ │ 3 │ │ 1 │ │ │ 2 │ │ │ │ 0 │ │ 2 │ │ └─────┘ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ │ │ │ │ │ 4 │ │ 0 │ │ │ ?? │ │ │ │ ?? │ │ 2 │ │ Values │ └─────┘ │ └─────┘ │ └─────┘ │ └─────┘ ├─────┤ │ │ │ │ │ │ │ │ │ │ 2 │ │ │ Offsets │ Validity│ Values │ └─────┘ │ │ │ │ │ │ │ │ │Validity │ child[0] │ │ │ &quot;b1&quot; │ Offsets │ Primitive│ │ │ │ │ │ Primitive│ │ &quot;b2&quot; │ Array │ │ │ Array │ ListArray └──────────┘ │ │ │ │ └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ &quot;element&quot; │ │ │ StructArray &quot;b&quot; └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │ ListArray ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ Documents of this format could be stored in this Parquet schema message schema { optional group a (LIST) { repeated group list { optional int32 element; } } required group b (LIST) { repeated group list { optional group element { required int32 b1; optional group b2 (LIST) { repeated group list { required int32 element; } } } } } } As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability. Definition and repetition levels is a non trivial topic. For more detail, you can read the Google Dremel Paper which offers an academic description of the algorithm. You can also explore this gist to see Rust parquet code which generates the example below. The Parquet encoding of the example would be: ┌───────────────────────────────┐ ┌────────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ 3 │ │ 0 │ │ 1 │ │ │ │ 2 │ │ 0 │ │ 1 │ │ │ ├─────┤ ├─────┤ └─────┘ │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 0 │ │ 0 │ │ │ │ 2 │ │ 1 │ │ 1 │ │ │ ├─────┤ ├─────┤ Data │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ │ 2 │ │ 0 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ ├─────┤ ├─────┤ └─────┘ │ │ │ 2 │ │ 1 │ │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │ └─────┘ └─────┘ Data │ │ │ │ │ │Definition Repetition │ │ Definition Repetition │ │ Levels Levels │ │ Levels Levels │ │ │ │ │ │ &quot;a&quot; │ │ &quot;b.b1&quot; │ └───────────────────────────────┘ └────────────────────────────────┘ ┌───────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐│ │ │ 2 │ │ 0 │ │ 3 ││ │ ├─────┤ ├─────┤ ├─────┤│ │ │ 4 │ │ 1 │ │ 4 ││ │ ├─────┤ ├─────┤ └─────┘│ │ │ 4 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ ├─────┤ ├─────┤ Data │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │Definition Repetition │ │ Levels Levels │ │ │ │ &quot;b.b2&quot; │ └───────────────────────────────┘ Additional Complications This series of posts has necessarily glossed over a number of details that further complicate actual implementations: A ListArray may contain a non-empty offset range that is masked by a validity mask Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present Reading a given number of rows from a repeated field requires reading the repetition levels and detecting a new row based on a repetition level of 0 A Parquet file may contain multiple row groups, each containing multiple column chunks A column chunk may contain multiple pages, and there is no relationship between pages across columns Parquet has alternative schema for representing lists with varying degrees of nullability And more… Summary Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex. Fortunately, with the Rust parquet implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for reading asynchronously from object storage, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-10-17T00:00:00-04:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@tustvold and alamb" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"tustvold and alamb"},"dateModified":"2022-10-17T00:00:00-04:00","datePublished":"2022-10-17T00:00:00-04:00","description":"Introduction This is the third of a three part series exploring how projects such as Rust Apache Arrow support conversion between Apache Arrow for in memory processing and Apache Parquet for efficient storage. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. Arrow and Parquet Part 1: Primitive Types and Nullability covered the basics of primitive types. Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists covered the Struct and List types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting. Some libraries, such as Rust parquet implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so. Structs with Lists Consider the following three json documents { # &lt;-- First record &quot;a&quot;: [1], # &lt;-- top-level field a containing list of integers &quot;b&quot;: [ # &lt;-- top-level field b containing list of structures { # &lt;-- list element of b containing two field b1 and b2 &quot;b1&quot;: 1 # &lt;-- b1 is always provided (non nullable) }, { &quot;b1&quot;: 1, &quot;b2&quot;: [ # &lt;-- b2 contains list of integers 3, 4 # &lt;-- list elements of b.b2 always provided (non nullable) ] } ] } { &quot;b&quot;: [ # &lt;-- b is always provided (non nullable) { &quot;b1&quot;: 2 }, ] } { &quot;a&quot;: [null, null], # &lt;-- list elements of a are nullable &quot;b&quot;: [null] # &lt;-- list elements of b are nullable } Documents of this format could be stored in this Arrow schema Field(name: &quot;a&quot;, nullable: true, datatype: List( Field(name: &quot;element&quot;, nullable: true, datatype: Int32), ) Field(name: &quot;b&quot;), nullable: false, datatype: List( Field(name: &quot;element&quot;, nullable: true, datatype: Struct[ Field(name: &quot;b1&quot;, nullable: false, datatype: Int32), Field(name: &quot;b2&quot;, nullable: true, datatype: List( Field(name: &quot;element&quot;, nullable: false, datatype: Int32) )) ]) )) As explained previously, Arrow chooses to represent this in a hierarchical fashion. StructArrays are stored as child arrays that contain each field of the struct. ListArrays are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index. The Arrow encoding of the example would be: ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌──────────────────┐ │ ┌─────┐ ┌─────┐ │ ┌─────┐ ┌─────┐│ │ │ 1 │ │ 0 │ │ │ 1 │ │ 1 ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 0 │ │ 1 │ │ │ 0 │ │ ?? ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 1 │ │ 1 │ │ │ 0 │ │ ?? ││ │ └─────┘ ├─────┤ │ └─────┘ └─────┘│ │ │ 3 │ │ Validity Values│ │ Validity └─────┘ │ │ │ │ child[0] │ │ &quot;a&quot; Offsets │ PrimitiveArray │ │ ListArray └──────────────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │ ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌─────┐ │ ┌─────┐ │ ┌─────┐ │ ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │ │ │ 0 │ │ 1 │ │ │ 1 │ │ │ │ 0 │ │ 0 │ │ ┌─────┐ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 3 │ │ │ │ │ │ │ 2 │ │ 1 │ │ │ 1 │ │ │ │ 1 │ │ 0 │ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 4 │ │ │ │ │ │ │ 3 │ │ 1 │ │ │ 2 │ │ │ │ 0 │ │ 2 │ │ └─────┘ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ │ │ │ │ │ 4 │ │ 0 │ │ │ ?? │ │ │ │ ?? │ │ 2 │ │ Values │ └─────┘ │ └─────┘ │ └─────┘ │ └─────┘ ├─────┤ │ │ │ │ │ │ │ │ │ │ 2 │ │ │ Offsets │ Validity│ Values │ └─────┘ │ │ │ │ │ │ │ │ │Validity │ child[0] │ │ │ &quot;b1&quot; │ Offsets │ Primitive│ │ │ │ │ │ Primitive│ │ &quot;b2&quot; │ Array │ │ │ Array │ ListArray └──────────┘ │ │ │ │ └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ &quot;element&quot; │ │ │ StructArray &quot;b&quot; └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │ ListArray ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ Documents of this format could be stored in this Parquet schema message schema { optional group a (LIST) { repeated group list { optional int32 element; } } required group b (LIST) { repeated group list { optional group element { required int32 b1; optional group b2 (LIST) { repeated group list { required int32 element; } } } } } } As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability. Definition and repetition levels is a non trivial topic. For more detail, you can read the Google Dremel Paper which offers an academic description of the algorithm. You can also explore this gist to see Rust parquet code which generates the example below. The Parquet encoding of the example would be: ┌───────────────────────────────┐ ┌────────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ 3 │ │ 0 │ │ 1 │ │ │ │ 2 │ │ 0 │ │ 1 │ │ │ ├─────┤ ├─────┤ └─────┘ │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 0 │ │ 0 │ │ │ │ 2 │ │ 1 │ │ 1 │ │ │ ├─────┤ ├─────┤ Data │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ │ 2 │ │ 0 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ ├─────┤ ├─────┤ └─────┘ │ │ │ 2 │ │ 1 │ │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │ └─────┘ └─────┘ Data │ │ │ │ │ │Definition Repetition │ │ Definition Repetition │ │ Levels Levels │ │ Levels Levels │ │ │ │ │ │ &quot;a&quot; │ │ &quot;b.b1&quot; │ └───────────────────────────────┘ └────────────────────────────────┘ ┌───────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐│ │ │ 2 │ │ 0 │ │ 3 ││ │ ├─────┤ ├─────┤ ├─────┤│ │ │ 4 │ │ 1 │ │ 4 ││ │ ├─────┤ ├─────┤ └─────┘│ │ │ 4 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ ├─────┤ ├─────┤ Data │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │Definition Repetition │ │ Levels Levels │ │ │ │ &quot;b.b2&quot; │ └───────────────────────────────┘ Additional Complications This series of posts has necessarily glossed over a number of details that further complicate actual implementations: A ListArray may contain a non-empty offset range that is masked by a validity mask Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present Reading a given number of rows from a repeated field requires reading the repetition levels and detecting a new row based on a repetition level of 0 A Parquet file may contain multiple row groups, each containing multiple column chunks A column chunk may contain multiple pages, and there is no relationship between pages across columns Parquet has alternative schema for representing lists with varying degrees of nullability And more… Summary Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex. Fortunately, with the Rust parquet implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for reading asynchronously from object storage, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!","headline":"Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"tustvold and alamb"},"url":"https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="/datafusion">DataFusion</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://issues.apache.org/jira/browse/ARROW">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    17 Oct 2022
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    tustvold and alamb
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<h2 id="introduction">Introduction</h2>
+
+<p>This is the third of a three part series exploring how projects such as <a href="https://github.com/apache/arrow-rs">Rust Apache Arrow</a> support conversion between <a href="https://arrow.apache.org/">Apache Arrow</a> for in memory processing and <a href="https://parquet.apache.org/">Apache Parquet</a> for efficient storage. <a href="https://arrow.apache.org/">Apache Arrow</a> is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. <a href="https://parquet.apache.org/">Apache Parquet</a> is an open, column-oriented data file format designed for very efficient data encoding and retrieval.</p>
+
+<p><a href="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/">Arrow and Parquet Part 1: Primitive Types and Nullability</a> covered the basics of primitive types.  <a href="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/">Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists</a> covered the <code class="language-plaintext highlighter-rouge">Struct</code> and <code class="language-plaintext highlighter-rouge">List</code> types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting.</p>
+
+<p>Some libraries, such as Rust <a href="https://crates.io/crates/parquet">parquet</a> implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so.</p>
+
+<h1 id="structs-with-lists">Structs with Lists</h1>
+<p>Consider the following three json documents</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>                     <span class="c1"># &lt;-- First record
+</span>  <span class="s">"a"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span>           <span class="c1"># &lt;-- top-level field a containing list of integers
+</span>  <span class="s">"b"</span><span class="p">:</span> <span class="p">[</span>              <span class="c1"># &lt;-- top-level field b containing list of structures
+</span>    <span class="p">{</span>                 <span class="c1"># &lt;-- list element of b containing two field b1 and b2
+</span>      <span class="s">"b1"</span><span class="p">:</span> <span class="mi">1</span>         <span class="c1"># &lt;-- b1 is always provided (non nullable)
+</span>    <span class="p">},</span>
+    <span class="p">{</span>
+      <span class="s">"b1"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="s">"b2"</span><span class="p">:</span> <span class="p">[</span>         <span class="c1"># &lt;-- b2 contains list of integers
+</span>        <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span>          <span class="c1"># &lt;-- list elements of b.b2 always provided (non nullable)
+</span>      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
+  <span class="s">"b"</span><span class="p">:</span> <span class="p">[</span>              <span class="c1"># &lt;-- b is always provided (non nullable)
+</span>    <span class="p">{</span>
+      <span class="s">"b1"</span><span class="p">:</span> <span class="mi">2</span>
+    <span class="p">},</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
+  <span class="s">"a"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">,</span> <span class="n">null</span><span class="p">],</span>  <span class="c1"># &lt;-- list elements of a are nullable
+</span>  <span class="s">"b"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">]</span>         <span class="c1"># &lt;-- list elements of b are nullable
+</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>Documents of this format could be stored in this Arrow schema</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"a"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">List</span><span class="p">(</span>
+  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"element"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">List</span><span class="p">(</span>
+  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"element"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
+    <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b1"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
+    <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b2"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">List</span><span class="p">(</span>
+      <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"element"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
+    <span class="p">))</span>
+  <span class="p">])</span>
+<span class="p">))</span>
+</code></pre></div></div>
+
+<p>As explained previously, Arrow chooses to represent this in a hierarchical fashion. <code class="language-plaintext highlighter-rouge">StructArray</code>s are stored as child arrays that contain each field of the struct.  <code class="language-plaintext highlighter-rouge">ListArray</code>s are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index.</p>
+
+<p>The Arrow encoding of the example would be:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                     ┌──────────────────┐
+│ ┌─────┐   ┌─────┐  │ ┌─────┐   ┌─────┐│ │
+  │  1  │   │  0  │  │ │  1  │   │  1  ││
+│ ├─────┤   ├─────┤  │ ├─────┤   ├─────┤│ │
+  │  0  │   │  1  │  │ │  0  │   │ ??  ││
+│ ├─────┤   ├─────┤  │ ├─────┤   ├─────┤│ │
+  │  1  │   │  1  │  │ │  0  │   │ ??  ││
+│ └─────┘   ├─────┤  │ └─────┘   └─────┘│ │
+            │  3  │  │ Validity   Values│
+│ Validity  └─────┘  │                  │ │
+                     │ child[0]         │
+│ "a"       Offsets  │ PrimitiveArray   │ │
+  ListArray          └──────────────────┘
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+           ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │
+│                    ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  ┌─────┐  │ ┌─────┐ │ ┌─────┐  │   ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │
+│ │  0  │    │  1  │ │ │  1  │  │ │ │  0  │ │  0  │ │ ┌─────┐  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │ │  3  │  │ │ │ │
+│ │  2  │    │  1  │ │ │  1  │  │ │ │  1  │ │  0  │ │ ├─────┤  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │ │  4  │  │ │ │ │
+│ │  3  │    │  1  │ │ │  2  │  │ │ │  0  │ │  2  │ │ └─────┘  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │          │ │ │ │
+│ │  4  │    │  0  │ │ │ ??  │  │ │ │ ??  │ │  2  │ │  Values  │
+  └─────┘  │ └─────┘ │ └─────┘  │   └─────┘ ├─────┤ │          │ │ │ │
+│                    │          │ │         │  2  │ │          │
+  Offsets  │ Validity│ Values   │           └─────┘ │          │ │ │ │
+│                    │          │ │Validity         │ child[0] │
+           │         │ "b1"     │           Offsets │ Primitive│ │ │ │
+│                    │ Primitive│ │ "b2"            │ Array    │
+           │         │ Array    │   ListArray       └──────────┘ │ │ │
+│                    └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+           │ "element"                                             │ │
+│            StructArray
+  "b"      └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │
+│ ListArray
+ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+</code></pre></div></div>
+
+<p>Documents of this format could be stored in this Parquet schema</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">message</span> <span class="n">schema</span> <span class="p">{</span>
+  <span class="n">optional</span> <span class="n">group</span> <span class="n">a</span> <span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
+      <span class="n">optional</span> <span class="n">int32</span> <span class="n">element</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="n">required</span> <span class="n">group</span> <span class="n">b</span> <span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
+      <span class="n">optional</span> <span class="n">group</span> <span class="n">element</span> <span class="p">{</span>
+        <span class="n">required</span> <span class="n">int32</span> <span class="n">b1</span><span class="p">;</span>
+        <span class="n">optional</span> <span class="n">group</span> <span class="n">b2</span> <span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
+          <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
+            <span class="n">required</span> <span class="n">int32</span> <span class="n">element</span><span class="p">;</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability.</p>
+
+<p>Definition and repetition levels is a non trivial topic. For more detail, you can read the <a href="https://research.google/pubs/pub36632/">Google Dremel Paper</a> which offers an academic description of the algorithm. You can also explore this <a href="https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443">gist</a> to see Rust <a href="https://crates.io/crates/parquet">parquet</a> code which generates the example below.</p>
+
+<p>The Parquet encoding of the example would be:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌───────────────────────────────┐ ┌────────────────────────────────┐
+│ ┌─────┐    ┌─────┐    ┌─────┐ │ │  ┌─────┐    ┌─────┐    ┌─────┐ │
+│ │  3  │    │  0  │    │  1  │ │ │  │  2  │    │  0  │    │  1  │ │
+│ ├─────┤    ├─────┤    └─────┘ │ │  ├─────┤    ├─────┤    ├─────┤ │
+│ │  0  │    │  0  │            │ │  │  2  │    │  1  │    │  1  │ │
+│ ├─────┤    ├─────┤      Data  │ │  ├─────┤    ├─────┤    ├─────┤ │
+│ │  2  │    │  0  │            │ │  │  2  │    │  0  │    │  2  │ │
+│ ├─────┤    ├─────┤            │ │  ├─────┤    ├─────┤    └─────┘ │
+│ │  2  │    │  1  │            │ │  │  1  │    │  0  │            │
+│ └─────┘    └─────┘            │ │  └─────┘    └─────┘     Data   │
+│                               │ │                                │
+│Definition Repetition          │ │ Definition Repetition          │
+│  Levels     Levels            │ │   Levels     Levels            │
+│                               │ │                                │
+│ "a"                           │ │  "b.b1"                        │
+└───────────────────────────────┘ └────────────────────────────────┘
+
+┌───────────────────────────────┐
+│  ┌─────┐    ┌─────┐    ┌─────┐│
+│  │  2  │    │  0  │    │  3  ││
+│  ├─────┤    ├─────┤    ├─────┤│
+│  │  4  │    │  1  │    │  4  ││
+│  ├─────┤    ├─────┤    └─────┘│
+│  │  4  │    │  2  │           │
+│  ├─────┤    ├─────┤           │
+│  │  2  │    │  0  │           │
+│  ├─────┤    ├─────┤     Data  │
+│  │  1  │    │  0  │           │
+│  └─────┘    └─────┘           │
+│Definition  Repetition         │
+│  Levels      Levels           │
+│                               │
+│  "b.b2"                       │
+└───────────────────────────────┘
+</code></pre></div></div>
+
+<h2 id="additional-complications">Additional Complications</h2>
+
+<p>This series of posts has necessarily glossed over a number of details that further complicate actual implementations:</p>
+
+<ul>
+  <li>A <code class="language-plaintext highlighter-rouge">ListArray</code> may contain a non-empty offset range that is masked by a validity mask</li>
+  <li>Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present</li>
+  <li>Reading a given number of rows from a repeated field requires reading the repetition levels and detecting a new row based on a repetition level of 0</li>
+  <li>A Parquet file may contain multiple row groups, each containing multiple column chunks</li>
+  <li>A column chunk may contain multiple pages, and there is no relationship between pages across columns</li>
+  <li>Parquet has alternative schema for representing lists with varying degrees of nullability</li>
+  <li>And more…</li>
+</ul>
+
+<h2 id="summary">Summary</h2>
+<p>Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex.</p>
+
+<p>Fortunately, with the Rust <a href="https://crates.io/crates/parquet">parquet</a> implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for <a href="https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html">reading asynchronously</a> from <a href="https://docs.rs/object_store">object storage</a>, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!</p>
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2022 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>

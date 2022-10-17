@@ -1,4 +1,193 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2022-10-08T06:55:27-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists</title><link href="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/" rel="alternate" type="text/html" title="Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists" /><published>2022-10-08T00:00:00-04:00</published><updated>2022-10-08T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2022-10-17T16:12:20-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists</title><link href="https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3/" rel="alternate" type="text/html" title="Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists" /><published>2022-10-17T00:00:00-04:00</published><updated>2022-10-17T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3/"><![CDATA[<!--
+
+-->
+
+<h2 id="introduction">Introduction</h2>
+
+<p>This is the third of a three part series exploring how projects such as <a href="https://github.com/apache/arrow-rs">Rust Apache Arrow</a> support conversion between <a href="https://arrow.apache.org/">Apache Arrow</a> for in memory processing and <a href="https://parquet.apache.org/">Apache Parquet</a> for efficient storage. <a href="https://arrow.apache.org/">Apache Arrow</a> is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. <a href="https://parquet.apache.org/">Apache Parquet</a> is an open, column-oriented data file format designed for very efficient data encoding and retrieval.</p>
+
+<p><a href="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/">Arrow and Parquet Part 1: Primitive Types and Nullability</a> covered the basics of primitive types.  <a href="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/">Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists</a> covered the <code class="language-plaintext highlighter-rouge">Struct</code> and <code class="language-plaintext highlighter-rouge">List</code> types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting.</p>
+
+<p>Some libraries, such as Rust <a href="https://crates.io/crates/parquet">parquet</a> implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so.</p>
+
+<h1 id="structs-with-lists">Structs with Lists</h1>
+<p>Consider the following three json documents</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>                     <span class="c1"># &lt;-- First record
+</span>  <span class="s">"a"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span>           <span class="c1"># &lt;-- top-level field a containing list of integers
+</span>  <span class="s">"b"</span><span class="p">:</span> <span class="p">[</span>              <span class="c1"># &lt;-- top-level field b containing list of structures
+</span>    <span class="p">{</span>                 <span class="c1"># &lt;-- list element of b containing two field b1 and b2
+</span>      <span class="s">"b1"</span><span class="p">:</span> <span class="mi">1</span>         <span class="c1"># &lt;-- b1 is always provided (non nullable)
+</span>    <span class="p">},</span>
+    <span class="p">{</span>
+      <span class="s">"b1"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="s">"b2"</span><span class="p">:</span> <span class="p">[</span>         <span class="c1"># &lt;-- b2 contains list of integers
+</span>        <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span>          <span class="c1"># &lt;-- list elements of b.b2 always provided (non nullable)
+</span>      <span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
+  <span class="s">"b"</span><span class="p">:</span> <span class="p">[</span>              <span class="c1"># &lt;-- b is always provided (non nullable)
+</span>    <span class="p">{</span>
+      <span class="s">"b1"</span><span class="p">:</span> <span class="mi">2</span>
+    <span class="p">},</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
+  <span class="s">"a"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">,</span> <span class="n">null</span><span class="p">],</span>  <span class="c1"># &lt;-- list elements of a are nullable
+</span>  <span class="s">"b"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">]</span>         <span class="c1"># &lt;-- list elements of b are nullable
+</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>Documents of this format could be stored in this Arrow schema</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"a"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">List</span><span class="p">(</span>
+  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"element"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">List</span><span class="p">(</span>
+  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"element"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
+    <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b1"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
+    <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b2"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">List</span><span class="p">(</span>
+      <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"element"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
+    <span class="p">))</span>
+  <span class="p">])</span>
+<span class="p">))</span>
+</code></pre></div></div>
+
+<p>As explained previously, Arrow chooses to represent this in a hierarchical fashion. <code class="language-plaintext highlighter-rouge">StructArray</code>s are stored as child arrays that contain each field of the struct.  <code class="language-plaintext highlighter-rouge">ListArray</code>s are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index.</p>
+
+<p>The Arrow encoding of the example would be:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                     ┌──────────────────┐
+│ ┌─────┐   ┌─────┐  │ ┌─────┐   ┌─────┐│ │
+  │  1  │   │  0  │  │ │  1  │   │  1  ││
+│ ├─────┤   ├─────┤  │ ├─────┤   ├─────┤│ │
+  │  0  │   │  1  │  │ │  0  │   │ ??  ││
+│ ├─────┤   ├─────┤  │ ├─────┤   ├─────┤│ │
+  │  1  │   │  1  │  │ │  0  │   │ ??  ││
+│ └─────┘   ├─────┤  │ └─────┘   └─────┘│ │
+            │  3  │  │ Validity   Values│
+│ Validity  └─────┘  │                  │ │
+                     │ child[0]         │
+│ "a"       Offsets  │ PrimitiveArray   │ │
+  ListArray          └──────────────────┘
+└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+           ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │
+│                    ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  ┌─────┐  │ ┌─────┐ │ ┌─────┐  │   ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │
+│ │  0  │    │  1  │ │ │  1  │  │ │ │  0  │ │  0  │ │ ┌─────┐  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │ │  3  │  │ │ │ │
+│ │  2  │    │  1  │ │ │  1  │  │ │ │  1  │ │  0  │ │ ├─────┤  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │ │  4  │  │ │ │ │
+│ │  3  │    │  1  │ │ │  2  │  │ │ │  0  │ │  2  │ │ └─────┘  │
+  ├─────┤  │ ├─────┤ │ ├─────┤  │   ├─────┤ ├─────┤ │          │ │ │ │
+│ │  4  │    │  0  │ │ │ ??  │  │ │ │ ??  │ │  2  │ │  Values  │
+  └─────┘  │ └─────┘ │ └─────┘  │   └─────┘ ├─────┤ │          │ │ │ │
+│                    │          │ │         │  2  │ │          │
+  Offsets  │ Validity│ Values   │           └─────┘ │          │ │ │ │
+│                    │          │ │Validity         │ child[0] │
+           │         │ "b1"     │           Offsets │ Primitive│ │ │ │
+│                    │ Primitive│ │ "b2"            │ Array    │
+           │         │ Array    │   ListArray       └──────────┘ │ │ │
+│                    └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+           │ "element"                                             │ │
+│            StructArray
+  "b"      └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │
+│ ListArray
+ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+</code></pre></div></div>
+
+<p>Documents of this format could be stored in this Parquet schema</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">message</span> <span class="n">schema</span> <span class="p">{</span>
+  <span class="n">optional</span> <span class="n">group</span> <span class="n">a</span> <span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
+      <span class="n">optional</span> <span class="n">int32</span> <span class="n">element</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="n">required</span> <span class="n">group</span> <span class="n">b</span> <span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
+      <span class="n">optional</span> <span class="n">group</span> <span class="n">element</span> <span class="p">{</span>
+        <span class="n">required</span> <span class="n">int32</span> <span class="n">b1</span><span class="p">;</span>
+        <span class="n">optional</span> <span class="n">group</span> <span class="n">b2</span> <span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
+          <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
+            <span class="n">required</span> <span class="n">int32</span> <span class="n">element</span><span class="p">;</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability.</p>
+
+<p>Definition and repetition levels is a non trivial topic. For more detail, you can read the <a href="https://research.google/pubs/pub36632/">Google Dremel Paper</a> which offers an academic description of the algorithm. You can also explore this <a href="https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443">gist</a> to see Rust <a href="https://crates.io/crates/parquet">parquet</a> code which generates the example below.</p>
+
+<p>The Parquet encoding of the example would be:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌───────────────────────────────┐ ┌────────────────────────────────┐
+│ ┌─────┐    ┌─────┐    ┌─────┐ │ │  ┌─────┐    ┌─────┐    ┌─────┐ │
+│ │  3  │    │  0  │    │  1  │ │ │  │  2  │    │  0  │    │  1  │ │
+│ ├─────┤    ├─────┤    └─────┘ │ │  ├─────┤    ├─────┤    ├─────┤ │
+│ │  0  │    │  0  │            │ │  │  2  │    │  1  │    │  1  │ │
+│ ├─────┤    ├─────┤      Data  │ │  ├─────┤    ├─────┤    ├─────┤ │
+│ │  2  │    │  0  │            │ │  │  2  │    │  0  │    │  2  │ │
+│ ├─────┤    ├─────┤            │ │  ├─────┤    ├─────┤    └─────┘ │
+│ │  2  │    │  1  │            │ │  │  1  │    │  0  │            │
+│ └─────┘    └─────┘            │ │  └─────┘    └─────┘     Data   │
+│                               │ │                                │
+│Definition Repetition          │ │ Definition Repetition          │
+│  Levels     Levels            │ │   Levels     Levels            │
+│                               │ │                                │
+│ "a"                           │ │  "b.b1"                        │
+└───────────────────────────────┘ └────────────────────────────────┘
+
+┌───────────────────────────────┐
+│  ┌─────┐    ┌─────┐    ┌─────┐│
+│  │  2  │    │  0  │    │  3  ││
+│  ├─────┤    ├─────┤    ├─────┤│
+│  │  4  │    │  1  │    │  4  ││
+│  ├─────┤    ├─────┤    └─────┘│
+│  │  4  │    │  2  │           │
+│  ├─────┤    ├─────┤           │
+│  │  2  │    │  0  │           │
+│  ├─────┤    ├─────┤     Data  │
+│  │  1  │    │  0  │           │
+│  └─────┘    └─────┘           │
+│Definition  Repetition         │
+│  Levels      Levels           │
+│                               │
+│  "b.b2"                       │
+└───────────────────────────────┘
+</code></pre></div></div>
+
+<h2 id="additional-complications">Additional Complications</h2>
+
+<p>This series of posts has necessarily glossed over a number of details that further complicate actual implementations:</p>
+
+<ul>
+  <li>A <code class="language-plaintext highlighter-rouge">ListArray</code> may contain a non-empty offset range that is masked by a validity mask</li>
+  <li>Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present</li>
+  <li>Reading a given number of rows from a repeated field requires reading the repetition levels and detecting a new row based on a repetition level of 0</li>
+  <li>A Parquet file may contain multiple row groups, each containing multiple column chunks</li>
+  <li>A column chunk may contain multiple pages, and there is no relationship between pages across columns</li>
+  <li>Parquet has alternative schema for representing lists with varying degrees of nullability</li>
+  <li>And more…</li>
+</ul>
+
+<h2 id="summary">Summary</h2>
+<p>Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex.</p>
+
+<p>Fortunately, with the Rust <a href="https://crates.io/crates/parquet">parquet</a> implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for <a href="https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html">reading asynchronously</a> from <a href="https://docs.rs/object_store">object storage</a>, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!</p>]]></content><author><name>tustvold and alamb</name></author><category term="parquet" /><category term="arrow" /><summary type="html"><![CDATA[Introduction This is the third of a three part series exploring how projects such as Rust Apache Arrow support conversion between Apache Arrow for in memory processing and Apache Parquet for efficient storage. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. Arrow and Parquet Part 1: Primitive Types and Nullability covered the basics of primitive types. Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists covered the Struct and List types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting. Some libraries, such as Rust parquet implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so. Structs with Lists Consider the following three json documents { # &lt;-- First record "a": [1], # &lt;-- top-level field a containing list of integers "b": [ # &lt;-- top-level field b containing list of structures { # &lt;-- list element of b containing two field b1 and b2 "b1": 1 # &lt;-- b1 is always provided (non nullable) }, { "b1": 1, "b2": [ # &lt;-- b2 contains list of integers 3, 4 # &lt;-- list elements of b.b2 always provided (non nullable) ] } ] } { "b": [ # &lt;-- b is always provided (non nullable) { "b1": 2 }, ] } { "a": [null, null], # &lt;-- list elements of a are nullable "b": [null] # &lt;-- list elements of b are nullable } Documents of this format could be stored in this Arrow schema Field(name: "a", nullable: true, datatype: List( Field(name: "element", nullable: true, datatype: Int32), ) Field(name: "b"), nullable: false, datatype: List( Field(name: "element", nullable: true, datatype: Struct[ Field(name: "b1", nullable: false, datatype: Int32), Field(name: "b2", nullable: true, datatype: List( Field(name: "element", nullable: false, datatype: Int32) )) ]) )) As explained previously, Arrow chooses to represent this in a hierarchical fashion. StructArrays are stored as child arrays that contain each field of the struct. ListArrays are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index. The Arrow encoding of the example would be: ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌──────────────────┐ │ ┌─────┐ ┌─────┐ │ ┌─────┐ ┌─────┐│ │ │ 1 │ │ 0 │ │ │ 1 │ │ 1 ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 0 │ │ 1 │ │ │ 0 │ │ ?? ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 1 │ │ 1 │ │ │ 0 │ │ ?? ││ │ └─────┘ ├─────┤ │ └─────┘ └─────┘│ │ │ 3 │ │ Validity Values│ │ Validity └─────┘ │ │ │ │ child[0] │ │ "a" Offsets │ PrimitiveArray │ │ ListArray └──────────────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │ ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌─────┐ │ ┌─────┐ │ ┌─────┐ │ ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │ │ │ 0 │ │ 1 │ │ │ 1 │ │ │ │ 0 │ │ 0 │ │ ┌─────┐ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 3 │ │ │ │ │ │ │ 2 │ │ 1 │ │ │ 1 │ │ │ │ 1 │ │ 0 │ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 4 │ │ │ │ │ │ │ 3 │ │ 1 │ │ │ 2 │ │ │ │ 0 │ │ 2 │ │ └─────┘ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ │ │ │ │ │ 4 │ │ 0 │ │ │ ?? │ │ │ │ ?? │ │ 2 │ │ Values │ └─────┘ │ └─────┘ │ └─────┘ │ └─────┘ ├─────┤ │ │ │ │ │ │ │ │ │ │ 2 │ │ │ Offsets │ Validity│ Values │ └─────┘ │ │ │ │ │ │ │ │ │Validity │ child[0] │ │ │ "b1" │ Offsets │ Primitive│ │ │ │ │ │ Primitive│ │ "b2" │ Array │ │ │ Array │ ListArray └──────────┘ │ │ │ │ └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ "element" │ │ │ StructArray "b" └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │ ListArray ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ Documents of this format could be stored in this Parquet schema message schema { optional group a (LIST) { repeated group list { optional int32 element; } } required group b (LIST) { repeated group list { optional group element { required int32 b1; optional group b2 (LIST) { repeated group list { required int32 element; } } } } } } As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability. Definition and repetition levels is a non trivial topic. For more detail, you can read the Google Dremel Paper which offers an academic description of the algorithm. You can also explore this gist to see Rust parquet code which generates the example below. The Parquet encoding of the example would be: ┌───────────────────────────────┐ ┌────────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ 3 │ │ 0 │ │ 1 │ │ │ │ 2 │ │ 0 │ │ 1 │ │ │ ├─────┤ ├─────┤ └─────┘ │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 0 │ │ 0 │ │ │ │ 2 │ │ 1 │ │ 1 │ │ │ ├─────┤ ├─────┤ Data │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ │ 2 │ │ 0 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ ├─────┤ ├─────┤ └─────┘ │ │ │ 2 │ │ 1 │ │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │ └─────┘ └─────┘ Data │ │ │ │ │ │Definition Repetition │ │ Definition Repetition │ │ Levels Levels │ │ Levels Levels │ │ │ │ │ │ "a" │ │ "b.b1" │ └───────────────────────────────┘ └────────────────────────────────┘ ┌───────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐│ │ │ 2 │ │ 0 │ │ 3 ││ │ ├─────┤ ├─────┤ ├─────┤│ │ │ 4 │ │ 1 │ │ 4 ││ │ ├─────┤ ├─────┤ └─────┘│ │ │ 4 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ ├─────┤ ├─────┤ Data │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │Definition Repetition │ │ Levels Levels │ │ │ │ "b.b2" │ └───────────────────────────────┘ Additional Complications This series of posts has necessarily glossed over a number of details that further complicate actual implementations: A ListArray may contain a non-empty offset range that is masked by a validity mask Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present Reading a given number of rows from a repeated field requires reading the repetition levels and detecting a new row based on a repetition level of 0 A Parquet file may contain multiple row groups, each containing multiple column chunks A column chunk may contain multiple pages, and there is no relationship between pages across columns Parquet has alternative schema for representing lists with varying degrees of nullability And more… Summary Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex. Fortunately, with the Rust parquet implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for reading asynchronously from object storage, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists</title><link href="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/" rel="alternate" type="text/html" title="Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists" /><published>2022-10-08T00:00:00-04:00</published><updated>2022-10-08T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/"><![CDATA[<!--
 
 -->
 
@@ -1698,189 +1887,4 @@ the art query processing, we would love to have you join us on the journey! You
 can help by trying out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is <a href="https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">here</a></p>
 
 <p>Check out our new <a href="https://arrow.apache.org/datafusion/community/communication.html">Communication Doc</a> on more
-ways to engage with the community.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction DataFusion is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format. When you want to extend your Rust project with SQL support, a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth checking out. DataFusion’s SQL, DataFrame, and manual PlanBuilder API let users access a sophisticated query optimizer and execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of todays multicore hardware. Being written in Rust means DataFusion can offer both the safety of dynamic languages as well as the resource efficiency of a compiled language. The Apache Arrow team is pleased to announce the DataFusion 7.0.0 release. This covers 4 months of development work and includes 195 commits from the following 37 distinct contributors. 44 Andrew Lamb 24 Kun Liu 23 Jiayu Liu 17 xudong.w 11 Yijie Shen 9 Matthew Turner 7 Liang-Chi Hsieh 5 Lin Ma 4 Stephen Carman 4 James Katz 4 Dmitry Patsura 4 QP Hou 3 dependabot[bot] 3 Remzi Yang 3 Yang 3 ic4y 3 Daniël Heres 2 Andy Grove 2 Raphael Taylor-Davies 2 Jason Tianyi Wang 2 Dan Harris 2 Sergey Melnychuk 1 Nitish Tiwari 1 Dom 1 Eduard Karacharov 1 Javier Goday 1 Boaz 1 Marko Mikulicic 1 Max Burke 1 Carol (Nichols || Goulding) 1 Phillip Cloud 1 Rich 1 Toby Hede 1 Will Jones 1 r.4ntix 1 rdettai The following section highlights some of the improvements in this release. Of course, many other bug fixes and improvements have also been made and we refer you to the complete changelog for the full detail. Summary DataFusion Crate The DataFusion crate is being split into multiple crates to decrease compilation times and improve the development experience. Initially, datafusion-common (the core DataFusion components) and datafusion-expr (DataFusion expressions, functions, and operators) have been split out. There will be additional splits after the 7.0 release. Performance Improvements and Optimizations Arrow’s dyn scalar kernels are now used to enable efficient operations on DictionaryArrays #1685 Switch from std::sync::Mutex to parking_lot::Mutex #1720 New Features Support for memory tracking and spilling to disk MemoryMananger and DiskManager #1526 Out of core sort #1526 New metrics Gauge and CurrentMemoryUsage #1682 Spill_count and spilled_bytes #1641 New math functions Approx_quantile #1529 stddev and variance (sample and population) #1525 corr #1561 Support decimal type #1394#1407#1408#1431#1483#1554#1640 Support for reading Parquet files with evolved schemas #1622#1709 Support for registering DataFrame as table #1699 Support for the substring function #1621 Support array_agg(distinct ...) #1579 Support sort on unprojected columns #1415 Additional Integration Points A new public Expression simplification API #1717 DataFusion-Contrib A new GitHub organization created as a home for both DataFusion extensions and as a testing ground for new features. Extensions DataFusion-Python DataFusion-Java DataFusion-hdsfs-native DataFusion-ObjectStore-s3 New Features DataFusion-Streams Arrow2 An Arrow2 Branch has been created. There are ongoing discussions in DataFusion and arrow-rs about migrating DataFusion to Arrow2 Documentation and Roadmap We are working to consolidate the documentation into the official site. You can find more details there on topics such as the SQL status and a user guide. This is also an area we would love to get help from the broader community #1821. To provide transparency on DataFusion’s priorities to users and developers a three month roadmap will be published at the beginning of each quarter. This can be found here here. Upcoming Attractions Ballista is gaining momentum, and several groups are now evaluating and contributing to the project. Some of the proposed improvements Improvements Overview Extensibility File system access Cluster state Continued improvements for working with limited resources and large datasets Memory limited joins#1599 Sort-merge join#141#1776 Introduce row based bytes representation #1708 How to Get Involved If you are interested in contributing to DataFusion, and learning about state of the art query processing, we would love to have you join us on the journey! You can help by trying out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is here Check out our new Communication Doc on more ways to engage with the community.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Introducing Apache Arrow Flight SQL: Accelerating Database Access</title><link href="https://arrow.apache.org/blog/2022/02/16/introducing-arrow-flight-sql/" rel="alternate" type="text/html" title="Introducing Apache Arrow Flight SQL: Accelerating Database Access" /><published>2022-02-16T00:00:00-05:00</published><updated>2022-02-16T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2022/02/16/introducing-arrow-flight-sql</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/02/16/introducing-arrow-flight-sql/"><![CDATA[<!--
-
--->
-
-<p>We would like to introduce Flight SQL, a new client-server protocol developed by the Apache Arrow community for interacting with SQL databases that makes use of the Arrow in-memory columnar format and the Flight RPC framework.</p>
-
-<p>Flight SQL aims to provide broadly similar functionality to existing APIs like JDBC and ODBC, including executing queries; creating prepared statements; and fetching metadata about the supported SQL dialect, available types, defined tables, and so on.
-By building on Apache Arrow, however, Flight SQL makes it easy for clients to talk to Arrow-native databases without converting data.
-And by using <a href="/blog/2019/10/13/introducing-arrow-flight/">Flight</a>, it provides an efficient implementation of a wire format that supports features like encryption and authentication out of the box, while allowing for further optimizations like parallel data access.</p>
-
-<p>While it can be directly used for database access, it is not a direct replacement for JDBC/ODBC. Instead, Flight SQL serves as a concrete wire protocol/driver implementation that can support a JDBC/ODBC driver and reduces implementation burden on databases.</p>
-
-<!-- mermaidjs:
-
-graph LR
-    JDBC[JDBC]
-    ODBC
-    FlightSQL[Flight SQL<br>libraries]
-    ANA[Arrow-native app]
-    DB[(Database with<br>Flight SQL endpoint)]
-
-    JDBC --&gt; FlightSQL
-    ODBC --&gt; FlightSQL
-    ANA --&gt; FlightSQL
-
-    FlightSQL --&gt;|Flight RPC| DB
-
--->
-
-<div align="center">
-<img src="/img/20220216-flight-sql-jdbc-odbc.svg" alt="Illustration of where Flight SQL sits in the stack. JDBC and ODBC drivers can wrap Flight SQL, or an Arrow-native application can directly use the Flight SQL libraries. Flight SQL in turn talks over Arrow Flight to a database exposing a Flight SQL endpoint." width="90%" class="img-responsive" />
-</div>
-
-<h2 id="motivation">Motivation</h2>
-
-<p>While standards like <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jdbc/">JDBC</a> and <a href="https://docs.microsoft.com/en-us/sql/odbc/reference/odbc-overview?view=sql-server-ver15">ODBC</a> have served users well for decades, they fall short for databases and clients which wish to use Apache Arrow or columnar data in general.
-Row-based APIs like JDBC or <a href="https://www.python.org/dev/peps/pep-0249/">PEP 249</a> require transposing data in this case, and for a database which is itself columnar, this means that data has to be transposed twice—once to present it in rows for the API, and once to get it back into columns for the consumer.
-Meanwhile, while APIs like ODBC do provide bulk access to result buffers, this data must still be copied into Arrow arrays for use with the broader Arrow ecosystem, as implemented by projects like <a href="https://turbodbc.readthedocs.io/en/latest/">Turbodbc</a>.
-Flight SQL aims to get rid of these intermediate steps.</p>
-
-<p>Flight SQL means database servers can implement a standard interface that is designed around Apache Arrow and columnar data from the start.
-Just like how Arrow provides a standard in-memory format, Flight SQL saves developers from having to design and implement an entirely new wire protocol.
-As mentioned, Flight already implements features like encryption on the wire and authentication of requests, which databases do not need to re-implement.</p>
-
-<p>For clients, Flight SQL provides bulk access to query results without having to convert data from another API or format.
-Additionally, by pushing the work of implementing the wire protocol into the Flight and Flight SQL libraries, less code has to be written for each client language or driver.
-And by using Flight underneath, clients and servers can cooperate to implement optimizations like parallel data access, <a href="/blog/2019/10/13/introducing-arrow-flight/#horizontal-scalability-parallel-and-partitioned-data-access">one of the original goals of Flight itself</a>.
-Databases can return multiple “endpoints” to a Flight SQL client, which can then pull data from all of them in parallel, enabling the database backend to horizontally scale.</p>
-
-<h2 id="flight-sql-basics">Flight SQL Basics</h2>
-
-<p>Flight SQL makes full use of the Flight RPC framework and its extensibility, defining additional request/response messages via <a href="https://developers.google.com/protocol-buffers/">Protobuf</a>.
-We’ll go over the Flight SQL protocol briefly, but C++ and Java already implement clients that manage much of this work.
-The full <a href="https://github.com/apache/arrow/blob/release-7.0.0/format/FlightSql.proto">protocol</a> can be found on GitHub.</p>
-
-<p>Most requests follow this pattern:</p>
-<ol>
-  <li>The client constructs a request using one of the defined Protobuf messages.</li>
-  <li>The client sends the request via the GetSchema RPC method (to get the schema of the response) or the GetFlightInfo RPC method (to execute the request).</li>
-  <li>The client makes request(s) to the endpoints returned from GetFlightInfo to get the response.</li>
-</ol>
-
-<p>Flight SQL defines methods to query database metadata, execute queries, or manipulate prepared statements.</p>
-
-<p>Metadata requests:</p>
-<ul>
-  <li>CommandGetCatalogs: list catalogs in a database.</li>
-  <li>CommandGetCrossReference: list foreign key columns that reference a particular other table.</li>
-  <li>CommandGetDbSchemas: list schemas in a catalog.</li>
-  <li>CommandGetExportedKeys: list foreign keys referencing a table.</li>
-  <li>CommandGetImportedKeys: list foreign keys of a table.</li>
-  <li>CommandGetPrimaryKeys: list primary keys of a table.</li>
-  <li>CommandGetSqlInfo: get information about the database itself and its supported SQL dialect.</li>
-  <li>CommandGetTables: list tables in a catalog/schema.</li>
-  <li>CommandGetTableTypes: list table types supported (e.g. table, view, system table).</li>
-</ul>
-
-<p>Queries:</p>
-<ul>
-  <li>CommandStatementQuery: execute a one-off SQL query.</li>
-  <li>CommandStatementUpdate: execute a one-off SQL update query.</li>
-</ul>
-
-<p>Prepared statements:</p>
-<ul>
-  <li>ActionClosePreparedStatementRequest: close a prepared statement.</li>
-  <li>ActionCreatePreparedStatementRequest: create a new prepared statement.</li>
-  <li>CommandPreparedStatementQuery: execute a prepared statement.</li>
-  <li>CommandPreparedStatementUpdate: execute a prepared statement that updates data.</li>
-</ul>
-
-<p>For example, to list all tables:</p>
-
-<!-- mermaidjs:
-
-sequenceDiagram
-    Client->>Server: GetFlightInfo(CommandGetTables)
-    Server->>Client: FlightInfo{..., Ticket, ...}
-    Client->>Server: DoGet(Ticket)
-    Server->>Client: list of tables as Arrow data
-
--->
-
-<div align="center">
-<img src="/img/20220216-flight-sql-gettables.svg" alt="Sequence diagram showing how to use CommandGetTables. First, the client calls the GetFlightInfo RPC method with a serialized CommandGetTables message as the argument. The server returns a FlightInfo message containing a Ticket message. The client then calls the DoGet RPC method with the Ticket as the argument, and gets back a stream of Arrow record batches containing the tables in the database." height="363" class="img-responsive" />
-</div>
-
-<p>To execute a query:</p>
-
-<!-- mermaidjs:
-
-sequenceDiagram
-    Client->>Server: GetFlightInfo(CommandStatementQuery)
-    Server->>Client: FlightInfo{..., Ticket, ...}
-    Client->>Server: DoGet(Ticket)
-    Server->>Client: query results as Arrow data
-
--->
-
-<div align="center">
-<img src="/img/20220216-flight-sql-query.svg" alt="Sequence diagram showing how to use CommandStatementQuery. First, the client calls the GetFlightInfo RPC method with a serialized CommandStatementQuery message as the argument. This message contains the SQL query. The server returns a FlightInfo message containing a Ticket message. The client then calls the DoGet RPC method with the Ticket as the argument, and gets back a stream of Arrow record batches containing the query results." height="363" class="img-responsive" />
-</div>
-
-<p>To create and execute a prepared statement to insert rows:</p>
-
-<!-- mermaidjs:
-
-sequenceDiagram
-    Client->>Server: DoAction(ActionCreatePreparedStatementRequest)
-    Server->>Client: ActionCreatePreparedStatementResult
-    Client->>Server: DoPut(CommandPreparedStatementUpdate)
-    Client--&gt;>Server: Arrow data representing parameter values
-    Server->>Client: DoPutUpdateResult
-    Client->>Server: DoAction(ActionClosePreparedStatementRequest)
--->
-
-<div align="center">
-<img src="/img/20220216-flight-sql-prepared.svg" alt="Sequence diagram showing how to use ActionCreatePreparedStatementResult. First, the client calls the DoAction RPC method with a serialized ActionCreatePreparedStatementResult message as the argument. This message contains the SQL query. The server returns a serialized ActionCreatePreparedStatementResult message containing an opaque handle for the prepared statement. The client then calls the DoPut RPC method with a CommandPreparedStatementUpdate message, containing the opaque handle, as the argument, and uploads a stream of Arrow record batches containing query parameters. The server responds with a serialized DoPutUpdateResult message containing the number of affected rows. Finally, the client calls DoAction again with ActionClosePreparedStatementRequest to clean up the prepared statement." height="459" class="img-responsive" />
-</div>
-
-<h2 id="getting-started">Getting Started</h2>
-
-<p>Note that while Flight SQL is shipping as part of Apache Arrow 7.0.0, it is still under development, and detailed documentation is forthcoming.
-However, implementations are already available in C++ and Java, which provide a low-level client that can be used as well as a server skeleton that can be implemented.</p>
-
-<p>For those interested, a <a href="https://github.com/apache/arrow/blob/release-7.0.0/java/flight/flight-sql/src/test/java/org/apache/arrow/flight/sql/example/FlightSqlExample.java">server implementation wrapping Apache Derby</a> and <a href="https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/example/sqlite_server.h">one wrapping SQLite</a> are available in the source.
-A <a href="https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/test_app_cli.cc">simple CLI demonstrating the client</a> is also available. Finally, we can look at a brief example of executing a query and fetching results:</p>
-
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">flight</span><span class="o">::</span><span class="n">FlightCallOptions</span> <span class="n">call_options</span><span class="p">;</span>
-
-<span class="c1">// Execute the query, getting a FlightInfo describing how to fetch the results</span>
-<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Executing query: '"</span> <span class="o">&lt;&lt;</span> <span class="n">FLAGS_query</span> <span class="o">&lt;&lt;</span> <span class="s">"'"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">flight</span><span class="o">::</span><span class="n">FlightInfo</span><span class="o">&gt;</span> <span class="n">flight_info</span><span class="p">,</span>
-                      <span class="n">client</span><span class="o">-&gt;</span><span class="n">Execute</span><span class="p">(</span><span class="n">call_options</span><span class="p">,</span> <span class="n">FLAGS_query</span><span class="p">));</span>
-
-<span class="c1">// Fetch each partition sequentially (though this can be done in parallel)</span>
-<span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">flight</span><span class="o">::</span><span class="n">FlightEndpoint</span><span class="o">&amp;</span> <span class="n">endpoint</span> <span class="o">:</span> <span class="n">flight_info</span><span class="o">-&gt;</span><span class="n">endpoints</span><span class="p">())</span> <span class="p">{</span>
-  <span class="c1">// Here we assume each partition is on the same server we originally queried, but this</span>
-  <span class="c1">// isn't true in general: the server may split the query results between multiple</span>
-  <span class="c1">// other servers, which we would have to connect to.</span>
-
-  <span class="c1">// The "ticket" in the endpoint is opaque to the client. The server uses it to</span>
-  <span class="c1">// identify which part of the query results to return.</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">stream</span><span class="p">,</span> <span class="n">client</span><span class="o">-&gt;</span><span class="n">DoGet</span><span class="p">(</span><span class="n">call_options</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">.</span><span class="n">ticket</span><span class="p">));</span>
-  <span class="c1">// Read all results into an Arrow Table, though we can iteratively process record</span>
-  <span class="c1">// batches as they arrive as well</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span> <span class="n">table</span><span class="p">;</span>
-  <span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">stream</span><span class="o">-&gt;</span><span class="n">ReadAll</span><span class="p">(</span><span class="o">&amp;</span><span class="n">table</span><span class="p">));</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Read one partition:"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">table</span><span class="o">-&gt;</span><span class="n">ToString</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>The full source is <a href="https://github.com/apache/arrow/blob/master/cpp/examples/arrow/flight_sql_example.cc">available on GitHub</a>.</p>
-
-<h2 id="whats-next--getting-involved">What’s Next &amp; Getting Involved</h2>
-
-<p>Compared to existing libraries like PyODBC, <a href="https://www.dremio.com/subsurface/arrow-flight-and-flight-sql-accelerating-data-movement/">Arrow Flight is already as much as 20x faster</a> (~00:21:00).
-Flight SQL will package these performance advantages into a standard interface, ready for clients and databases to implement.</p>
-
-<p>Further protocol refinements and extensions are expected.
-Some of this work is to make it possible to implement APIs like JDBC on top of Flight SQL; a JDBC driver is being actively worked on.
-While this again introduces the overhead of data conversion, it means a database can make itself accessible to both Arrow-native clients and traditional clients by implementing Flight SQL.
-Other improvements in the future may include Python bindings, an ODBC driver, and more.</p>
-
-<p>For anyone interested in getting involved, either as a contributor or adopter, please reach out on the <a href="/community/#mailing-lists">mailing list</a> or join the discussion on <a href="https://github.com/apache/arrow">GitHub</a>.</p>]]></content><author><name>José Almeida, James Duong, Vinicius Fraga, Juscelino Junior, David Li, Kyle Porter, Rafael Telles</name></author><category term="application" /><summary type="html"><![CDATA[This post introduces Arrow Flight SQL, a protocol for interacting with SQL databases over Arrow Flight. We have been working on this protocol over the last six months, and are looking for feedback, interested contributors, and early adopters.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+ways to engage with the community.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction DataFusion is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format. When you want to extend your Rust project with SQL support, a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth checking out. DataFusion’s SQL, DataFrame, and manual PlanBuilder API let users access a sophisticated query optimizer and execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of todays multicore hardware. Being written in Rust means DataFusion can offer both the safety of dynamic languages as well as the resource efficiency of a compiled language. The Apache Arrow team is pleased to announce the DataFusion 7.0.0 release. This covers 4 months of development work and includes 195 commits from the following 37 distinct contributors. 44 Andrew Lamb 24 Kun Liu 23 Jiayu Liu 17 xudong.w 11 Yijie Shen 9 Matthew Turner 7 Liang-Chi Hsieh 5 Lin Ma 4 Stephen Carman 4 James Katz 4 Dmitry Patsura 4 QP Hou 3 dependabot[bot] 3 Remzi Yang 3 Yang 3 ic4y 3 Daniël Heres 2 Andy Grove 2 Raphael Taylor-Davies 2 Jason Tianyi Wang 2 Dan Harris 2 Sergey Melnychuk 1 Nitish Tiwari 1 Dom 1 Eduard Karacharov 1 Javier Goday 1 Boaz 1 Marko Mikulicic 1 Max Burke 1 Carol (Nichols || Goulding) 1 Phillip Cloud 1 Rich 1 Toby Hede 1 Will Jones 1 r.4ntix 1 rdettai The following section highlights some of the improvements in this release. Of course, many other bug fixes and improvements have also been made and we refer you to the complete changelog for the full detail. Summary DataFusion Crate The DataFusion crate is being split into multiple crates to decrease compilation times and improve the development experience. Initially, datafusion-common (the core DataFusion components) and datafusion-expr (DataFusion expressions, functions, and operators) have been split out. There will be additional splits after the 7.0 release. Performance Improvements and Optimizations Arrow’s dyn scalar kernels are now used to enable efficient operations on DictionaryArrays #1685 Switch from std::sync::Mutex to parking_lot::Mutex #1720 New Features Support for memory tracking and spilling to disk MemoryMananger and DiskManager #1526 Out of core sort #1526 New metrics Gauge and CurrentMemoryUsage #1682 Spill_count and spilled_bytes #1641 New math functions Approx_quantile #1529 stddev and variance (sample and population) #1525 corr #1561 Support decimal type #1394#1407#1408#1431#1483#1554#1640 Support for reading Parquet files with evolved schemas #1622#1709 Support for registering DataFrame as table #1699 Support for the substring function #1621 Support array_agg(distinct ...) #1579 Support sort on unprojected columns #1415 Additional Integration Points A new public Expression simplification API #1717 DataFusion-Contrib A new GitHub organization created as a home for both DataFusion extensions and as a testing ground for new features. Extensions DataFusion-Python DataFusion-Java DataFusion-hdsfs-native DataFusion-ObjectStore-s3 New Features DataFusion-Streams Arrow2 An Arrow2 Branch has been created. There are ongoing discussions in DataFusion and arrow-rs about migrating DataFusion to Arrow2 Documentation and Roadmap We are working to consolidate the documentation into the official site. You can find more details there on topics such as the SQL status and a user guide. This is also an area we would love to get help from the broader community #1821. To provide transparency on DataFusion’s priorities to users and developers a three month roadmap will be published at the beginning of each quarter. This can be found here here. Upcoming Attractions Ballista is gaining momentum, and several groups are now evaluating and contributing to the project. Some of the proposed improvements Improvements Overview Extensibility File system access Cluster state Continued improvements for working with limited resources and large datasets Memory limited joins#1599 Sort-merge join#141#1776 Introduce row based bytes representation #1708 How to Get Involved If you are interested in contributing to DataFusion, and learning about state of the art query processing, we would love to have you join us on the journey! You can help by trying out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is here Check out our new Communication Doc on more ways to engage with the community.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
