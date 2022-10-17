@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Arrow and Parquet Part 3: Arbitrary Nesting with Lists of Structs and Structs of Lists"
-date: "2022-10-07 00:00:00"
+date: "2022-10-17 00:00:00"
 author: "tustvold and alamb"
 categories: [parquet, arrow]
 ---
@@ -29,7 +29,7 @@ limitations under the License.
 This is the third of a three part series exploring how projects such as [Rust Apache Arrow](https://github.com/apache/arrow-rs) support conversion between [Apache Arrow](https://arrow.apache.org/) for in memory processing and [Apache Parquet](https://parquet.apache.org/) for efficient storage. [Apache Arrow](https://arrow.apache.org/) is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. [Apache Parquet](https://parquet.apache.org/) is an open, column-oriented data file format designed for very efficient data encoding and retrieval.
 
 
-[Arrow and Parquet Part 1: Primitive Types and Nullability](https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/) covers the basics of primitive types.  [Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists](https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/) covers the `Struct` and `List` types,  and now this post gives an example of how both formats combine the topics to support arbitrary nesting.
+[Arrow and Parquet Part 1: Primitive Types and Nullability](https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/) covered the basics of primitive types.  [Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists](https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/) covered the `Struct` and `List` types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting.
 
 Some libraries, such as Rust [parquet](https://crates.io/crates/parquet) implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so.
 
@@ -88,7 +88,7 @@ Field(name: “b”), nullable: false, datatype: List(
 ```
 
 
-As explained previously, Arrow chooses to represent this in a hierarchical fashion.  `StructArray`s are stored as child arrays that contain each field of the struct.  `ListArray`s are stored as lists of monotonically increasing integers called offsets, and values are stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index.
+As explained previously, Arrow chooses to represent this in a hierarchical fashion. `StructArray`s are stored as child arrays that contain each field of the struct.  `ListArray`s are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index.
 
 The Arrow encoding of the example would be:
 
@@ -162,7 +162,7 @@ message schema {
 
 As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability.
 
-Definition and repetition levels is a non trivial topic. For more detail, you can read the [Google Dremel Paper](https://research.google/pubs/pub36632/) which is typically cited as the inspiration for Parquet repetition and definition levels, and offers an academic description of the algorithm. You can also explore this [gist](https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443) to see Rust [parquet](https://crates.io/crates/parquet) code which generates the example below.
+Definition and repetition levels is a non trivial topic. For more detail, you can read the [Google Dremel Paper](https://research.google/pubs/pub36632/) which offers an academic description of the algorithm. You can also explore this [gist](https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443) to see Rust [parquet](https://crates.io/crates/parquet) code which generates the example below.
 
 The Parquet encoding of the example would be:
 
