@@ -27,9 +27,9 @@ limitations under the License.
 We're excited to announce that the Arrow project now includes a
 [JDBC][jdbc] driver [implementation][impl] based on [Arrow Flight
 SQL][flight-sql].  This is courtesy of a software grant from
-[Dremio][dremio], a data lakehouse platform. Contributors from Dremio
-developed and open-sourced this driver implementation, in addition to
-designing and contributing Flight SQL itself.
+[Dremio][dremio-arrow], a data lakehouse platform. Contributors from
+Dremio developed and open-sourced this driver implementation, in
+addition to designing and contributing Flight SQL itself.
 
 Flight SQL is a protocol[^1] for client-server database interactions.
 It defines how a client should talk to a server and execute queries,
