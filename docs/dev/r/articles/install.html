@@ -184,6 +184,44 @@
 <p>Having trouble installing arrow? See the “Troubleshooting” section below.</p>
 </blockquote>
 <div class="section level2">
+<h2 id="system-dependencies">System dependencies<a class="anchor" aria-label="anchor" href="#system-dependencies"></a>
+</h2>
+<p>The arrow package is designed to work with very minimal system requirements, but there are a few things to note.</p>
+<div class="section level3">
+<h3 id="compilers">Compilers<a class="anchor" aria-label="anchor" href="#compilers"></a>
+</h3>
+<p>As of version 10.0.0, arrow requires a C++17 compiler to build. For <code>gcc</code>, this generally means version 7 or newer. Most contemporary Linux distributions have a new enough compiler; however, CentOS 7 is a notable exception, as it ships with gcc 4.8.</p>
+<p>If you are on CentOS 7, to build arrow you will need to install a newer <code>devtoolset</code>, and you’ll need to update R’s Makevars to define the <code>CXX17</code> variables. This script installs <code>devtoolset-8</code> and configures R to be able to use C++17:</p>
+<pre><code>#!/usr/bin/env bash
+
+yum install -y centos-release-scl
+yum install -y devtoolset-8
+# Optional: also install cloud storage dependencies, as described below
+yum install -y libcurl-devel openssl-devel
+
+source /opt/rh/devtoolset-8/enable
+
+if [ ! `R CMD config CXX17` ]; then
+  mkdir -p ~/.R
+  echo "CC = $(which gcc) -fPIC" &gt;&gt; ~/.R/Makevars
+  echo "CXX17 = $(which g++) -fPIC" &gt;&gt; ~/.R/Makevars
+  echo "CXX17STD = -std=c++17" &gt;&gt; ~/.R/Makevars
+  echo "CXX17FLAGS = ${CXX11FLAGS}" &gt;&gt; ~/.R/Makevars
+fi</code></pre>
+<p>Note that the C++17 compiler is only required at <em>build</em> time. You don’t need to enable the devtoolset every time you load the package. What’s more, if you install a binary package from RStudio Package Manager (see method 1a below), you do not need to set up any of this. Likewise, if you <code>R CMD INSTALL --build</code> arrow on a CentOS machine with the newer compilers, you can take the binary package it produces and install it on any other CentOS machine without those compilers.</p>
+</div>
+<div class="section level3">
+<h3 id="libraries">Libraries<a class="anchor" aria-label="anchor" href="#libraries"></a>
+</h3>
+<p>Optional support for reading from cloud storage–AWS S3 and Google Cloud Storage (GCS)–requires additional system dependencies:</p>
+<ul>
+<li>CURL: install <code>libcurl-devel</code> (rpm) or <code>libcurl4-openssl-dev</code> (deb)</li>
+<li>OpenSSL &gt;= 1.0.2: install <code>openssl-devel</code> (rpm) or <code>libssl-dev</code> (deb)</li>
+</ul>
+<p>The prebuilt binaries come with S3 and GCS support enabled, so you will need to meet these system requirements in order to use them. If you’re building everything from source, the install script will check for the presence of these dependencies and turn off S3 and GCS support in the build if the prerequisites are not met–installation will succeed but without S3 or GCS functionality. If afterwards you install the missing system requirements, you’ll need to reinstall the package in order to enable S3 and GCS support.</p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="installing-a-release-version-the-easy-way">Installing a release version (the easy way)<a class="anchor" aria-label="anchor" href="#installing-a-release-version-the-easy-way"></a>
 </h2>
 <div class="section level3">
@@ -197,7 +235,7 @@
 <p><img src="r_binary_libarrow_binary.png" alt="Graphic showing R and C++ logo inside the package icon" width="30%"></p>
 <p>If you want a quicker installation process, and by default a more fully-featured build, you could install arrow from <a href="https://packagemanager.rstudio.com/client/#/" class="external-link">RStudio’s public package manager</a>, which hosts binaries for both Windows and Linux.</p>
 <p>For example, if you are using Ubuntu 20.04 (Focal):</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span></span>
 <span>  HTTPUserAgent <span class="op">=</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
@@ -218,11 +256,12 @@
 </h4>
 <p><img src="r_source_libarrow_binary.png" alt="Graphic showing R logo in folder icon, then a plus sign, then C++ logo inside the package icon" width="50%"></p>
 <p>Another way of achieving faster installation with all key features enabled is to use static libarrow binaries we host. These are used automatically on many Linux distributions (x86_64 architecture only), according to the <a href="https://github.com/apache/arrow/blob/master/r/tools/nixlibs-allowlist.txt" class="external-link">allowlist</a>. If your distribution isn’t in the list, you can opt-in by setting the <code>NOT_CRAN</code> environment variable before you call <code><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages()</a></code>:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span><span class="st">"NOT_CRAN"</span> <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"arrow"</span><span class="op">)</span></span></code></pre></div>
 <p>This installs the source version of the R package, but during the installation process will check for compatible libarrow binaries that we host and use those if available. If no binary is available or can’t be found, then this option falls back onto method 2 below (full source build), but setting the environment variable results in a more fully-featured build than default.</p>
-<p>Except for the those built for gcc 4.8 (default on CentOS 7), the binaries include support for AWS S3 and Google Cloud Storage (GCS). These features require libcurl and openssl libraries installed separately; see below on how to install them. If you don’t have these installed, the libarrow binary won’t be used, and you will fall back to the full source build.</p>
+<p>The libarrow binaries include support for AWS S3 and GCS, so they require the libcurl and openssl libraries installed separately, as noted above. If you don’t have these installed, the libarrow binary won’t be used, and you will fall back to the full source build (with S3 and GCS support disabled).</p>
+<p>Users on CentOS 7 will also need to install and configure a C++17 compiler. See “System dependencies” above.</p>
 </div>
 </div>
 </div>
@@ -239,19 +278,19 @@
 <h4 id="basic-configuration-for-building-from-source-with-fully-featured-installation">Basic configuration for building from source with fully featured installation<a class="anchor" aria-label="anchor" href="#basic-configuration-for-building-from-source-with-fully-featured-installation"></a>
 </h4>
 <p>If you wish to install libarrow from source instead of looking for pre-compiled binaries, you can set the <code>LIBARROW_BINARY</code> variable.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span><span class="st">"LIBARROW_BINARY"</span> <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p>By default, this is set to <code>TRUE</code>, and so libarrow will only be built from source if this environment variable is set to <code>FALSE</code> or no compatible binary for your OS can be found.</p>
 <p>When compiling libarrow from source, you have the power to really fine-tune which features to install. You can set the environment variable <code>LIBARROW_MINIMAL</code> to <code>FALSE</code> to enable a more full-featured build including S3 support and alternative memory allocators.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span><span class="st">"LIBARROW_MINIMAL"</span> <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p>By default this variable is unset, which builds many commonly used features such as Parquet support but disables some features that are more costly to build, like S3 and GCS support. If set to <code>TRUE</code>, a trimmed-down version of arrow is installed with all optional features disabled.</p>
 <p>Note that in this guide, you will have seen us mention the environment variable <code>NOT_CRAN</code> - this is a convenience variable, which when set to <code>TRUE</code>, automatically sets <code>LIBARROW_MINIMAL</code> to <code>FALSE</code> and <code>LIBARROW_BINARY</code> to <code>TRUE</code>.</p>
 <p>Building libarrow from source requires more time and resources than installing a binary. We recommend that you set the environment variable <code>ARROW_R_DEV</code> to <code>TRUE</code> for more verbose output during the installation process if anything goes wrong.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span><span class="st">"ARROW_R_DEV"</span> <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>Once you have set these variables, call <code><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages()</a></code> to install arrow using this configuration.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"arrow"</span><span class="op">)</span></span></code></pre></div>
 <p>The section below discusses environment variables you can set before calling <code>install.packages("arrow")</code> to build from source and customise your configuration.</p>
 </div>
@@ -264,14 +303,8 @@
 <div class="section level5">
 <h5 id="dependencies-for-s3-and-gcs-support">Dependencies for S3 and GCS support<a class="anchor" aria-label="anchor" href="#dependencies-for-s3-and-gcs-support"></a>
 </h5>
-<p>The arrow package allows you to work with data in AWS S3 or in other cloud storage system that emulate S3, as well as Google Cloud Storage. However, support for working with S3 and GCS is not enabled in the default source build, and it has additional system requirements. To enable it, set the environment variable <code>LIBARROW_MINIMAL=false</code> or <code>NOT_CRAN=true</code> to choose the full-featured build, or more selectively set <code>ARROW_S3=ON</code> and/or <code>ARROW_GCS=ON</code>. You also need the following system dependencies:</p>
-<ul>
-<li>
-<code>gcc</code> &gt;= 4.9 or <code>clang</code> &gt;= 3.3; note that the default compiler on CentOS 7 is gcc 4.8.5, which is not sufficient</li>
-<li>CURL: install <code>libcurl-devel</code> (rpm) or <code>libcurl4-openssl-dev</code> (deb)</li>
-<li>OpenSSL &gt;= 1.0.2: install <code>openssl-devel</code> (rpm) or <code>libssl-dev</code> (deb)</li>
-</ul>
-<p>The prebuilt libarrow binaries come with S3 and GCS support enabled, so you will need to meet these system requirements in order to use them. If you’re building everything from source, the install script will check for the presence of these dependencies and turn off S3 and GCS support in the build if the prerequisites are not met–installation will succeed but without S3 or GCS functionality. If afterwards you install the missing system requirements, you’ll need to reinstall the package in order to enable S3 and GCS support.</p>
+<p>Support for working with data in S3 and GCS is not enabled in the default source build, and it has additional system requirements as described above. To enable it, set the environment variable <code>LIBARROW_MINIMAL=false</code> or <code>NOT_CRAN=true</code> to choose the full-featured build, or more selectively set <code>ARROW_S3=ON</code> and/or <code>ARROW_GCS=ON</code>.</p>
+<p>When either feature is enabled, the install script will check for the presence of the required dependencies, and if the prerequisites are met, it will turn off S3 and GCS support–installation will succeed but without S3 or GCS functionality. If afterwards you install the missing system requirements, you’ll need to reinstall the package in order to enable S3 and GCS support.</p>
 </div>
 </div>
 <div class="section level4">
@@ -434,7 +467,7 @@
 <p>See below for more in-depth explanations of these environment variables.</p>
 <ul>
 <li>
-<code>LIBARROW_BINARY</code> : By default on many distributions, or if explicitly set to <code>true</code>, the script will determine whether there is a prebuilt libarrow that will work with your system. You can set it to <code>false</code> to skip this option altogether, or you can specify a string “distro-version” that corresponds to a binary that is available, to override what this function may discover by default. Possible values are: “centos-7” (gcc 4.8, no AWS/GCS support); “ubuntu-18.04” (gcc 8, openssl 1); “ubuntu-22.04” (openssl 3).</li>
+<code>LIBARROW_BINARY</code> : By default on many distributions, or if explicitly set to <code>true</code>, the script will determine whether there is a prebuilt libarrow that will work with your system. You can set it to <code>false</code> to skip this option altogether, or you can specify a string “distro-version” that corresponds to a binary that is available, to override what this function may discover by default. Possible values are: “centos-7”, “ubuntu-18.04” (both with gcc 8, and openssl 1), “ubuntu-22.04” (openssl 3).</li>
 <li>
 <code>LIBARROW_BUILD</code> : If set to <code>false</code>, the build script will not attempt to build the C++ from source. This means you will only get a working arrow R package if a prebuilt binary is found. Use this if you want to avoid compiling the C++ library, which may be slow and resource-intensive, and ensure that you only use a prebuilt binary.</li>
 <li>
@@ -458,7 +491,7 @@
 <h2 id="install-the-nightly-build">Install the nightly build<a class="anchor" aria-label="anchor" href="#install-the-nightly-build"></a>
 </h2>
 <p>Daily development builds, which are not official releases, can be installed from the Ursa Labs repository:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>NOT_CRAN <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"arrow"</span>, repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>arrow <span class="op">=</span> <span class="st">"https://nightlies.apache.org/arrow/r"</span>, <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"repos"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>or for conda users via:</p>
@@ -484,24 +517,24 @@ R CMD INSTALL .</code></pre>
 </ul>
 <p><code><a href="../reference/install_arrow.html">install_arrow()</a></code> provides some convenience wrappers around the various environment variables described below.</p>
 <p>Although this function is part of the arrow package, it is also available as a standalone script, so you can access it for convenience without first installing the package:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"https://raw.githubusercontent.com/apache/arrow/master/r/R/install-arrow.R"</span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="install-the-latest-release">Install the latest release<a class="anchor" aria-label="anchor" href="#install-the-latest-release"></a>
 </h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/install_arrow.html">install_arrow</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="install-the-nightly-build-1">Install the nightly build<a class="anchor" aria-label="anchor" href="#install-the-nightly-build-1"></a>
 </h3>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/install_arrow.html">install_arrow</a></span><span class="op">(</span>nightly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="install-with-more-verbose-output-for-debugging-errors">Install with more verbose output for debugging errors<a class="anchor" aria-label="anchor" href="#install-with-more-verbose-output-for-debugging-errors"></a>
 </h3>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/install_arrow.html">install_arrow</a></span><span class="op">(</span>verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/install_arrow.html">install_arrow()</a></code> does not require environment variables to be set in order to satisfy C++ dependencies.</p>
 <blockquote>
@@ -589,7 +622,7 @@ See https://arrow.apache.org/docs/r/articles/install.html
 <h3 id="known-installation-issues">Known installation issues<a class="anchor" aria-label="anchor" href="#known-installation-issues"></a>
 </h3>
 <ul>
-<li><p>On CentOS, if you are using a more modern <code>devtoolset</code>, you may need to set the environment variables <code>CC</code> and <code>CXX</code> either in the shell or in R’s <code>Makeconf</code>. For CentOS 7 and above, both the Arrow system packages and the C++ binaries for R are built with the default system compilers. If you want to use either of these and you have a <code>devtoolset</code> installed, set <code>CC=/usr/bin/gcc CXX=/usr/bin/g++</code> to use the system compilers instead of the <code>devtoolset</code>. Alternatively, if you want to build arrow with the newer <code>devtoolset</code> compilers, set both <code>ARROW_USE_PKG_CONFIG</code> and <code>LIBARROW_BINARY</code> to <code>false</code> so that you build the Arrow C++ from source using those compilers. Compiler mismatch between the arrow system libraries and the R package may cause R to segfault when arrow package functions are used. See discussions <a href="https://issues.apache.org/jira/browse/ARROW-8586" class="external-link">here</a> and <a href="https://issues.apache.org/jira/browse/ARROW-10780" class="external-link">here</a>.</p></li>
+<li><p>On CentOS, building the package requires a more modern <code>devtoolset</code> than the default system compilers. See “System dependencies” above.</p></li>
 <li><p>If you have multiple versions of <code>zstd</code> installed on your system, installation by building libarrow from source may fail with an “undefined symbols” error. Workarounds include (1) setting <code>LIBARROW_BINARY</code> to use a C++ binary; (2) setting <code>ARROW_WITH_ZSTD=OFF</code> to build without <code>zstd</code>; or (3) uninstalling the conflicting <code>zstd</code>. See discussion <a href="https://issues.apache.org/jira/browse/ARROW-8556" class="external-link">here</a>.</p></li>
 </ul>
 </div>
