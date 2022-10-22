@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pyarrow.parquet.core &#8212; Apache Arrow v10.0.0.dev486</title>
+    <title>pyarrow.parquet.core &#8212; Apache Arrow v10.0.0.dev496</title>
     
     <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -92,7 +92,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        10.0.0.dev486
+        10.0.0.dev496
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4978,6 +4978,8 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">    common_metadata : FileMetaData, default None</span>
 <span class="sd">        Will be used in reads for pandas schema metadata if not found in the</span>
 <span class="sd">        main file&#39;s metadata, no other uses at the moment.</span>
+<span class="sd">    read_dictionary : list</span>
+<span class="sd">        List of column names to read directly as DictionaryArray.</span>
 <span class="sd">    memory_map : bool, default False</span>
 <span class="sd">        If the source is a file path, use a memory map to read file, which can</span>
 <span class="sd">        improve performance in some environments.</span>
@@ -4988,8 +4990,6 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">        Coalesce and issue file reads in parallel to improve performance on</span>
 <span class="sd">        high-latency filesystems (e.g. S3). If True, Arrow will use a</span>
 <span class="sd">        background I/O thread pool.</span>
-<span class="sd">    read_dictionary : list</span>
-<span class="sd">        List of column names to read directly as DictionaryArray.</span>
 <span class="sd">    coerce_int96_timestamp_unit : str, default None.</span>
 <span class="sd">        Cast timestamps that are stored in INT96 format to a particular</span>
 <span class="sd">        resolution (e.g. &#39;ms&#39;). Setting to None is equivalent to &#39;ns&#39;</span>
@@ -5486,6 +5486,12 @@ function checkPageExistsAndRedirect(event) {
 <span class="s2">use_dictionary : bool or list</span>
 <span class="s2">    Specify if we should use dictionary encoding in general or only for</span>
 <span class="s2">    some columns.</span>
+<span class="s2">compression : str or dict</span>
+<span class="s2">    Specify the compression codec, either on a general basis or per-column.</span>
+<span class="s2">    Valid values: {&#39;NONE&#39;, &#39;SNAPPY&#39;, &#39;GZIP&#39;, &#39;BROTLI&#39;, &#39;LZ4&#39;, &#39;ZSTD&#39;}.</span>
+<span class="s2">write_statistics : bool or list</span>
+<span class="s2">    Specify if we should write statistics in general (default is True) or only</span>
+<span class="s2">    for some columns.</span>
 <span class="s2">use_deprecated_int96_timestamps : bool, default None</span>
 <span class="s2">    Write timestamps to INT96 Parquet format. Defaults to False unless enabled</span>
 <span class="s2">    by flavor argument. This take priority over the coerce_timestamps option.</span>
@@ -5499,22 +5505,16 @@ function checkPageExistsAndRedirect(event) {
 <span class="s2">    If the casting results in loss of data, it will raise an exception</span>
 <span class="s2">    unless ``allow_truncated_timestamps=True`` is given.</span>
 <span class="s2">    Valid values: {None, &#39;ms&#39;, &#39;us&#39;}</span>
-<span class="s2">data_page_size : int, default None</span>
-<span class="s2">    Set a target threshold for the approximate encoded size of data</span>
-<span class="s2">    pages within a column chunk (in bytes). If None, use the default data page</span>
-<span class="s2">    size of 1MByte.</span>
 <span class="s2">allow_truncated_timestamps : bool, default False</span>
 <span class="s2">    Allow loss of data when coercing timestamps to a particular</span>
 <span class="s2">    resolution. E.g. if microsecond or nanosecond data is lost when coercing to</span>
 <span class="s2">    &#39;ms&#39;, do not raise an exception. Passing ``allow_truncated_timestamp=True``</span>
 <span class="s2">    will NOT result in the truncation exception being ignored unless</span>
 <span class="s2">    ``coerce_timestamps`` is not None.</span>
-<span class="s2">compression : str or dict</span>
-<span class="s2">    Specify the compression codec, either on a general basis or per-column.</span>
-<span class="s2">    Valid values: {&#39;NONE&#39;, &#39;SNAPPY&#39;, &#39;GZIP&#39;, &#39;BROTLI&#39;, &#39;LZ4&#39;, &#39;ZSTD&#39;}.</span>
-<span class="s2">write_statistics : bool or list</span>
-<span class="s2">    Specify if we should write statistics in general (default is True) or only</span>
-<span class="s2">    for some columns.</span>
+<span class="s2">data_page_size : int, default None</span>
+<span class="s2">    Set a target threshold for the approximate encoded size of data</span>
+<span class="s2">    pages within a column chunk (in bytes). If None, use the default data page</span>
+<span class="s2">    size of 1MByte.</span>
 <span class="s2">flavor : {&#39;spark&#39;}, default None</span>
 <span class="s2">    Sanitize schema or set other compatibility options to work with</span>
 <span class="s2">    various target systems.</span>
@@ -5844,12 +5844,12 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">        Path to file in the file system where this piece is located.</span>
 <span class="sd">    open_file_func : callable</span>
 <span class="sd">        Function to use for obtaining file handle to dataset piece.</span>
-<span class="sd">    partition_keys : list of tuples</span>
-<span class="sd">        Two-element tuples of ``(column name, ordinal index)``.</span>
-<span class="sd">    row_group : int, default None</span>
-<span class="sd">        Row group to load. By default, reads all row groups.</span>
 <span class="sd">    file_options : dict</span>
 <span class="sd">        Options</span>
+<span class="sd">    row_group : int, default None</span>
+<span class="sd">        Row group to load. By default, reads all row groups.</span>
+<span class="sd">    partition_keys : list of tuples</span>
+<span class="sd">        Two-element tuples of ``(column name, ordinal index)``.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">open_file_func</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span><span class="nb">open</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">),</span>
@@ -6399,11 +6399,11 @@ function checkPageExistsAndRedirect(event) {
 <span class="s2">    If nothing passed, will be inferred based on path.</span>
 <span class="s2">    Path will try to be found in the local on-disk filesystem otherwise</span>
 <span class="s2">    it will be parsed as an URI to determine the filesystem.</span>
-<span class="s2">metadata : pyarrow.parquet.FileMetaData</span>
-<span class="s2">    Use metadata obtained elsewhere to validate file schemas.</span>
 <span class="s2">schema : pyarrow.parquet.Schema</span>
 <span class="s2">    Use schema obtained elsewhere to validate file schemas. Alternative to</span>
 <span class="s2">    metadata parameter.</span>
+<span class="s2">metadata : pyarrow.parquet.FileMetaData</span>
+<span class="s2">    Use metadata obtained elsewhere to validate file schemas.</span>
 <span class="s2">split_row_groups : bool, default False</span>
 <span class="s2">    Divide files into pieces for each row group in the file.</span>
 <span class="s2">validate_schema : bool, default True</span>
@@ -7415,19 +7415,6 @@ function checkPageExistsAndRedirect(event) {
 <span class="s2">    Optionally provide the Schema for the parquet dataset, in which case it</span>
 <span class="s2">    will not be inferred from the source.</span>
 <span class="si">{1}</span><span class="s2"></span>
-<span class="s2">use_legacy_dataset : bool, default False</span>
-<span class="s2">    By default, `read_table` uses the new Arrow Datasets API since</span>
-<span class="s2">    pyarrow 1.0.0. Among other things, this allows to pass `filters`</span>
-<span class="s2">    for all columns and not only the partition keys, enables</span>
-<span class="s2">    different partitioning schemes, etc.</span>
-<span class="s2">    Set to True to use the legacy behaviour (this option is deprecated,</span>
-<span class="s2">    and the legacy implementation will be removed in a future version).</span>
-<span class="s2">ignore_prefixes : list, optional</span>
-<span class="s2">    Files matching any of these prefixes will be ignored by the</span>
-<span class="s2">    discovery process if use_legacy_dataset=False.</span>
-<span class="s2">    This is matched to the basename of a path.</span>
-<span class="s2">    By default this is [&#39;.&#39;, &#39;_&#39;].</span>
-<span class="s2">    Note that discovery happens only if a directory is passed as source.</span>
 <span class="s2">filesystem : FileSystem, default None</span>
 <span class="s2">    If nothing passed, will be inferred based on path.</span>
 <span class="s2">    Path will try to be found in the local on-disk filesystem otherwise</span>
@@ -7442,6 +7429,19 @@ function checkPageExistsAndRedirect(event) {
 <span class="s2">    and different partitioning schemes are supported.</span>
 
 <span class="s2">    </span><span class="si">{3}</span><span class="s2"></span>
+<span class="s2">use_legacy_dataset : bool, default False</span>
+<span class="s2">    By default, `read_table` uses the new Arrow Datasets API since</span>
+<span class="s2">    pyarrow 1.0.0. Among other things, this allows to pass `filters`</span>
+<span class="s2">    for all columns and not only the partition keys, enables</span>
+<span class="s2">    different partitioning schemes, etc.</span>
+<span class="s2">    Set to True to use the legacy behaviour (this option is deprecated,</span>
+<span class="s2">    and the legacy implementation will be removed in a future version).</span>
+<span class="s2">ignore_prefixes : list, optional</span>
+<span class="s2">    Files matching any of these prefixes will be ignored by the</span>
+<span class="s2">    discovery process if use_legacy_dataset=False.</span>
+<span class="s2">    This is matched to the basename of a path.</span>
+<span class="s2">    By default this is [&#39;.&#39;, &#39;_&#39;].</span>
+<span class="s2">    Note that discovery happens only if a directory is passed as source.</span>
 <span class="s2">pre_buffer : bool, default True</span>
 <span class="s2">    Coalesce and issue file reads in parallel to improve performance on</span>
 <span class="s2">    high-latency filesystems (e.g. S3). If True, Arrow will use a</span>
@@ -7554,9 +7554,9 @@ function checkPageExistsAndRedirect(event) {
 
 
 <div class="viewcode-block" id="read_table"><a class="viewcode-back" href="../../../python/generated/pyarrow.parquet.read_table.html#pyarrow.parquet.read_table">[docs]</a><span class="k">def</span> <span class="nf">read_table</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_threads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-               <span class="n">schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-               <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-               <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span> <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+               <span class="n">schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_pandas_metadata</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span>
+               <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                <span class="n">ignore_prefixes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pre_buffer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                <span class="n">coerce_int96_timestamp_unit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                <span class="n">decryption_properties</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">thrift_string_size_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -7663,10 +7663,9 @@ function checkPageExistsAndRedirect(event) {
 
 <span class="sd">Note: starting with pyarrow 1.0, the default for `use_legacy_dataset` is</span>
 <span class="sd">switched to False.&quot;&quot;&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">_read_docstring_common</span><span class="p">,</span>
-               <span class="sd">&quot;&quot;&quot;use_pandas_metadata : bool, default False</span>
-<span class="sd">    If True and file has custom pandas schema metadata, ensure that</span>
-<span class="sd">    index columns are also loaded.&quot;&quot;&quot;</span><span class="p">)),</span>
+    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s2">&quot;&quot;&quot;use_pandas_metadata : bool, default False</span>
+<span class="s2">    If True and file has custom pandas schema metadata, ensure that</span>
+<span class="s2">    index columns are also loaded.&quot;&quot;&quot;</span><span class="p">,</span> <span class="n">_read_docstring_common</span><span class="p">)),</span>
     <span class="sd">&quot;&quot;&quot;pyarrow.Table</span>
 <span class="sd">    Content of the file as a table (of columns)&quot;&quot;&quot;</span><span class="p">,</span>
     <span class="n">_DNF_filter_doc</span><span class="p">,</span> <span class="n">_read_table_example</span><span class="p">)</span>
@@ -7835,10 +7834,6 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">    table : pyarrow.Table</span>
 <span class="sd">    root_path : str, pathlib.Path</span>
 <span class="sd">        The root directory of the dataset</span>
-<span class="sd">    filesystem : FileSystem, default None</span>
-<span class="sd">        If nothing passed, will be inferred based on path.</span>
-<span class="sd">        Path will try to be found in the local on-disk filesystem otherwise</span>
-<span class="sd">        it will be parsed as an URI to determine the filesystem.</span>
 <span class="sd">    partition_cols : list,</span>
 <span class="sd">        Column names by which to partition the dataset.</span>
 <span class="sd">        Columns are partitioned in the order they are given</span>
@@ -7849,16 +7844,16 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">        This option is only supported for use_legacy_dataset=True.</span>
 <span class="sd">        When use_legacy_dataset=None and this option is specified,</span>
 <span class="sd">        use_legacy_datase will be set to True.</span>
+<span class="sd">    filesystem : FileSystem, default None</span>
+<span class="sd">        If nothing passed, will be inferred based on path.</span>
+<span class="sd">        Path will try to be found in the local on-disk filesystem otherwise</span>
+<span class="sd">        it will be parsed as an URI to determine the filesystem.</span>
 <span class="sd">    use_legacy_dataset : bool</span>
 <span class="sd">        Default is False. Set to True to use the the legacy behaviour</span>
 <span class="sd">        (this option is deprecated, and the legacy implementation will be</span>
 <span class="sd">        removed in a future version). The legacy implementation still</span>
 <span class="sd">        supports the `partition_filename_cb` keyword but is less efficient</span>
 <span class="sd">        when using partition columns.</span>
-<span class="sd">    use_threads : bool, default True</span>
-<span class="sd">        Write files in parallel. If enabled, then maximum parallelism will be</span>
-<span class="sd">        used determined by the number of available CPU cores.</span>
-<span class="sd">        This option is only supported for use_legacy_dataset=False.</span>
 <span class="sd">    schema : Schema, optional</span>
 <span class="sd">        This option is only supported for use_legacy_dataset=False.</span>
 <span class="sd">    partitioning : Partitioning or list[str], optional</span>
@@ -7872,6 +7867,10 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">        A template string used to generate basenames of written data files.</span>
 <span class="sd">        The token &#39;{i}&#39; will be replaced with an automatically incremented</span>
 <span class="sd">        integer. If not specified, it defaults to &quot;guid-{i}.parquet&quot;.</span>
+<span class="sd">        This option is only supported for use_legacy_dataset=False.</span>
+<span class="sd">    use_threads : bool, default True</span>
+<span class="sd">        Write files in parallel. If enabled, then maximum parallelism will be</span>
+<span class="sd">        used determined by the number of available CPU cores.</span>
 <span class="sd">        This option is only supported for use_legacy_dataset=False.</span>
 <span class="sd">    file_visitor : function</span>
 <span class="sd">        If set, this function will be called with a WrittenFile instance</span>
