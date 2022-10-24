@@ -31,13 +31,15 @@ from [Dremio][dremio-arrow], a data lakehouse platform. Contributors
 from Dremio developed and open-sourced this driver implementation, in
 addition to designing and contributing Flight SQL itself.
 
-Flight SQL is a protocol[^1] for client-server database interactions.
-It defines how a client should talk to a server and execute queries,
-fetch result sets, and so on.  Underneath, it builds on [Arrow Flight
-RPC][flight], a framework for efficient transfer of Arrow data across
-the network.  While Flight RPC is flexible and can be used in any type
-of application, from the beginning, it was designed with an eye
-towards the kinds of use cases that Flight SQL supports.
+Flight SQL is a protocol for client-server database interactions.  It
+defines how a client should talk to a server and execute queries,
+fetch result sets, and so on.  Note that despite the name, Flight SQL
+is *not* a SQL dialect, or even specific to SQL itself.  Underneath,
+it builds on [Arrow Flight RPC][flight], a framework for efficient
+transfer of Arrow data across the network.  While Flight RPC is
+flexible and can be used in any type of application, from the
+beginning, it was designed with an eye towards the kinds of use cases
+that Flight SQL supports.
 
 With this new JDBC driver, applications can talk to any database
 server implementing the Flight SQL protocol using familiar JDBC APIs.
@@ -45,9 +47,6 @@ Underneath, the driver sends queries to the server via Flight SQL and
 adapts the Arrow result set to the JDBC interface, so that the
 database can support JDBC users without implementing additional APIs
 or its own JDBC driver.
-
-[^1]: Despite the name, Flight SQL is **not** a SQL dialect, nor is it
-    even tied to SQL itself!
 
 ## Why use JDBC with Flight SQL?
 
@@ -84,15 +83,14 @@ Flight SQL is:
 
 ## Getting Involved
 
-The JDBC driver was merged for the Arrow 10.0.0 release, and the
-[source code][impl] can be found in the Arrow repository.  Once Arrow
-10.0.0 is released (which is planned for October/November 2022),
-official builds of the driver will be available as part of the Arrow
-libraries.  Dremio is already making use of the driver, and we're
-looking forward to seeing what else gets built on top.  Of course,
-there are still improvements to be made.  If you're interested in
-contributing, or have feedback or questions, please reach out on the
-[mailing list][ml] or [GitHub][github].
+The JDBC driver was merged for the [Arrow 10.0.0 release][TODO], and
+the [source code][impl] can be found in the Arrow repository.
+Official builds of the driver are [available on Maven Central][TODO].
+Dremio is already making use of the driver, and we're looking forward
+to seeing what else gets built on top.  Of course, there are still
+improvements to be made.  If you're interested in contributing, or
+have feedback or questions, please reach out on the [mailing list][ml]
+or [GitHub][github].
 
 To learn more about when to use the Flight SQL JDBC driver vs the
 Flight SQL native client libraries, see this section of Dremio's
