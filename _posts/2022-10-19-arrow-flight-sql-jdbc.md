@@ -24,11 +24,11 @@ limitations under the License.
 {% endcomment %}
 -->
 
-We're excited to announce that the Arrow project now includes a
-[JDBC][jdbc] driver [implementation][impl] based on [Arrow Flight
-SQL][flight-sql].  This is courtesy of a software grant from
-[Dremio][dremio-arrow], a data lakehouse platform. Contributors from
-Dremio developed and open-sourced this driver implementation, in
+We're excited to announce that as of version 10.0.0, the Arrow project
+now includes a [JDBC][jdbc] driver [implementation][impl] based on
+[Arrow Flight SQL][flight-sql].  This is courtesy of a software grant
+from [Dremio][dremio-arrow], a data lakehouse platform. Contributors
+from Dremio developed and open-sourced this driver implementation, in
 addition to designing and contributing Flight SQL itself.
 
 Flight SQL is a protocol[^1] for client-server database interactions.
@@ -51,9 +51,9 @@ or its own JDBC driver.
 
 ## Why use JDBC with Flight SQL?
 
-JDBC offers a row-oriented API which is at odds with Arrow's columnar
+JDBC offers a row-oriented API, which is opposite of Arrow's columnar
 structure.  However, it is a popular and time-tested choice for many
-applications.  For example, business intelligence (BI) tools take
+applications.  For example, many business intelligence (BI) tools take
 advantage of JDBC to interoperate generically with multiple databases.
 An Arrow-native database may still wish to be accessible to all of
 this existing software, without having to implement multiple client
@@ -86,8 +86,8 @@ Flight SQL is:
 
 The JDBC driver was merged for the Arrow 10.0.0 release, and the
 [source code][impl] can be found in the Arrow repository.  Once Arrow
-10.0.0 is released (which is planned for October 2022), official
-builds of the driver will be available alongside other Arrow
+10.0.0 is released (which is planned for October/November 2022),
+official builds of the driver will be available as part of the Arrow
 libraries.  Dremio is already making use of the driver, and we're
 looking forward to seeing what else gets built on top.  Of course,
 there are still improvements to be made.  If you're interested in
