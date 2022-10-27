@@ -49,19 +49,29 @@ with adbc_driver_postgres.dbapi.connect(uri) as conn:
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM customer")
         table = cur.fetch_arrow_table()
+        # Process the results
 ```
 
 The ADBC Python packages offer a familiar [DBAPI 2.0 (PEP 249)][pep-249]-style API, along with extensions to get Arrow data.
-These extensions are similar to those offered by projects like Turbodbc and DuckDB.
 
-We can talk to Postgres in C++ too. This uses the same underlying driver as the Python demo above:
-
-```cpp
-```
-
-In Java, we can pull Arrow data out of JDBC. The ADBC driver takes care of converting the data for the application:
+In Java, we can pull Arrow data out of a JDBC connection.
+The ADBC driver takes care of converting the data for the application:
 
 ```java
+final Map<String, Object> parameters = new HashMap<>();
+parameters.put(
+    AdbcDriver.PARAM_URL,
+    "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password");
+try (final AdbcDatabase database = JdbcDriver.INSTANCE.open(parameters);
+    final AdbcConnection connection = database.connect();
+    final AdbcStatement stmt = connection.createStatement()) {
+  stmt.setSqlQuery("SELECT * FROM " + tableName);
+  try (AdbcStatement.QueryResult queryResult = stmt.executeQuery()) {
+    while (queryResult.getReader().loadNextBatch()) {
+      // Process the results
+    }
+  }
+}
 ```
 
 ## Motivation
