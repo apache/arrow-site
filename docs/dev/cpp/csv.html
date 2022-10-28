@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Reading and Writing CSV files &#8212; Apache Arrow v10.0.0.dev512</title>
+    <title>Reading and Writing CSV files &#8212; Apache Arrow v11.0.0.dev9</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        10.0.0.dev512
+        11.0.0.dev9
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4748,8 +4748,30 @@ function checkPageExistsAndRedirect(event) {
 <nav id="bd-toc-nav">
     <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#basic-usage">
-   Basic usage
+  <a class="reference internal nav-link" href="#reading-csv-files">
+   Reading CSV files
+  </a>
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tablereader">
+     TableReader
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#streamingreader">
+     StreamingReader
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#tradeoffs">
+     Tradeoffs
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#writing-csv-files">
+   Writing CSV files
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
@@ -4837,14 +4859,23 @@ function checkPageExistsAndRedirect(event) {
   <section id="reading-and-writing-csv-files">
 <h1>Reading and Writing CSV files<a class="headerlink" href="#reading-and-writing-csv-files" title="Permalink to this heading">¶</a></h1>
 <p>Arrow provides a fast CSV reader allowing ingestion of external data
-as Arrow tables.</p>
+to create Arrow Tables or a stream of Arrow RecordBatches.</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="api/formats.html#cpp-api-csv"><span class="std std-ref">CSV reader/writer API reference</span></a>.</p>
 </div>
-<section id="basic-usage">
-<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this heading">¶</a></h2>
-<p>A CSV file is read from a <a class="reference internal" href="api/io.html#_CPPv4N5arrow2io11InputStreamE" title="arrow::io::InputStream"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">InputStream</span></code></a>.</p>
+<section id="reading-csv-files">
+<h2>Reading CSV files<a class="headerlink" href="#reading-csv-files" title="Permalink to this heading">¶</a></h2>
+<p>Data in a CSV file can either be read in as a single Arrow Table using
+<a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11TableReaderE" title="arrow::csv::TableReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TableReader</span></code></a> or streamed as RecordBatches using
+<a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv15StreamingReaderE" title="arrow::csv::StreamingReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamingReader</span></code></a>. See <a class="reference internal" href="#cpp-csv-tradeoffs"><span class="std std-ref">Tradeoffs</span></a> for a
+discussion of the tradeoffs between the two methods.</p>
+<p>Both these readers require an <a class="reference internal" href="api/io.html#_CPPv4N5arrow2io11InputStreamE" title="arrow::io::InputStream"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::io::InputStream</span></code></a> instance
+representing the input file. Their behavior can be customized using a
+combination of <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11ReadOptionsE" title="arrow::csv::ReadOptions"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ReadOptions</span></code></a>,
+<a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv12ParseOptionsE" title="arrow::csv::ParseOptions"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParseOptions</span></code></a>, and <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv14ConvertOptionsE" title="arrow::csv::ConvertOptions"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ConvertOptions</span></code></a>.</p>
+<section id="tablereader">
+<h3>TableReader<a class="headerlink" href="#tablereader" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/csv/api.h&quot;</span><span class="cp"></span>
 
 <span class="p">{</span><span class="w"></span>
@@ -4864,20 +4895,97 @@ as Arrow tables.</p>
 <span class="w">                                   </span><span class="n">parse_options</span><span class="p">,</span><span class="w"></span>
 <span class="w">                                   </span><span class="n">convert_options</span><span class="p">);</span><span class="w"></span>
 <span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">maybe_reader</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="c1">// Handle TableReader instantiation error...</span>
+<span class="w">     </span><span class="c1">// Handle TableReader instantiation error...</span>
 <span class="w">   </span><span class="p">}</span><span class="w"></span>
 <span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">csv</span><span class="o">::</span><span class="n">TableReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">reader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">maybe_reader</span><span class="p">;</span><span class="w"></span>
 
 <span class="w">   </span><span class="c1">// Read table from CSV file</span>
 <span class="w">   </span><span class="k">auto</span><span class="w"> </span><span class="n">maybe_table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reader</span><span class="o">-&gt;</span><span class="n">Read</span><span class="p">();</span><span class="w"></span>
 <span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">maybe_table</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="c1">// Handle CSV read error</span>
-<span class="w">      </span><span class="c1">// (for example a CSV syntax error or failed type conversion)</span>
+<span class="w">     </span><span class="c1">// Handle CSV read error</span>
+<span class="w">     </span><span class="c1">// (for example a CSV syntax error or failed type conversion)</span>
 <span class="w">   </span><span class="p">}</span><span class="w"></span>
 <span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span><span class="w"> </span><span class="n">table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">maybe_table</span><span class="p">;</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+</section>
+<section id="streamingreader">
+<h3>StreamingReader<a class="headerlink" href="#streamingreader" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/csv/api.h&quot;</span><span class="cp"></span>
+
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="c1">// ...</span>
+<span class="w">   </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">IOContext</span><span class="w"> </span><span class="n">io_context</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">default_io_context</span><span class="p">();</span><span class="w"></span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">InputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">auto</span><span class="w"> </span><span class="n">read_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">csv</span><span class="o">::</span><span class="n">ReadOptions</span><span class="o">::</span><span class="n">Defaults</span><span class="p">();</span><span class="w"></span>
+<span class="w">   </span><span class="k">auto</span><span class="w"> </span><span class="n">parse_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">csv</span><span class="o">::</span><span class="n">ParseOptions</span><span class="o">::</span><span class="n">Defaults</span><span class="p">();</span><span class="w"></span>
+<span class="w">   </span><span class="k">auto</span><span class="w"> </span><span class="n">convert_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">csv</span><span class="o">::</span><span class="n">ConvertOptions</span><span class="o">::</span><span class="n">Defaults</span><span class="p">();</span><span class="w"></span>
+
+<span class="w">   </span><span class="c1">// Instantiate StreamingReader from input stream and options</span>
+<span class="w">   </span><span class="k">auto</span><span class="w"> </span><span class="n">maybe_reader</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">     </span><span class="n">arrow</span><span class="o">::</span><span class="n">csv</span><span class="o">::</span><span class="n">StreamingReader</span><span class="o">::</span><span class="n">Make</span><span class="p">(</span><span class="n">io_context</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                       </span><span class="n">input</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                       </span><span class="n">read_options</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                       </span><span class="n">parse_options</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                       </span><span class="n">convert_options</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">maybe_reader</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">     </span><span class="c1">// Handle StreamingReader instantiation error...</span>
+<span class="w">   </span><span class="p">}</span><span class="w"></span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">csv</span><span class="o">::</span><span class="n">StreamingReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">reader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">maybe_reader</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="c1">// Set aside a RecordBatch pointer for re-use while streaming</span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">RecordBatch</span><span class="o">&gt;</span><span class="w"> </span><span class="n">batch</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="nb">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">       </span><span class="c1">// Attempt to read the first RecordBatch</span>
+<span class="w">       </span><span class="n">arrow</span><span class="o">::</span><span class="n">Status</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">reader</span><span class="o">-&gt;</span><span class="n">ReadNext</span><span class="p">(</span><span class="o">&amp;</span><span class="n">batch</span><span class="p">);</span><span class="w"></span>
+
+<span class="w">       </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">status</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">         </span><span class="c1">// Handle read error</span>
+<span class="w">       </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">       </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">batch</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">         </span><span class="c1">// Handle end of file</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="w">       </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">       </span><span class="c1">// Do something with the batch</span>
+<span class="w">   </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="tradeoffs">
+<span id="cpp-csv-tradeoffs"></span><h3>Tradeoffs<a class="headerlink" href="#tradeoffs" title="Permalink to this heading">¶</a></h3>
+<p>The choice between using <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11TableReaderE" title="arrow::csv::TableReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TableReader</span></code></a> or
+<a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv15StreamingReaderE" title="arrow::csv::StreamingReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamingReader</span></code></a> will ultimately depend on the use case
+but there are a few tradeoffs to be aware of:</p>
+<ol class="arabic simple">
+<li><p><strong>Memory usage:</strong> <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11TableReaderE" title="arrow::csv::TableReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TableReader</span></code></a> loads all of the data
+into memory at once and, depending on the amount of data, may require
+considerably more memory than <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv15StreamingReaderE" title="arrow::csv::StreamingReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamingReader</span></code></a> which
+only loads one <a class="reference internal" href="api/table.html#_CPPv4N5arrow11RecordBatchE" title="arrow::RecordBatch"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">RecordBatch</span></code></a> at a time. This is likely to be
+the most significant tradeoff for users.</p></li>
+<li><p><strong>Speed:</strong> When reading the entire contents of a CSV,
+<a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11TableReaderE" title="arrow::csv::TableReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TableReader</span></code></a> will tend to be faster than
+<a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv15StreamingReaderE" title="arrow::csv::StreamingReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamingReader</span></code></a> because it makes better use of
+available cores. See <a class="reference internal" href="#cpp-csv-performance"><span class="std std-ref">Performance</span></a> for more
+details.</p></li>
+<li><p><strong>Flexibility:</strong> <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv15StreamingReaderE" title="arrow::csv::StreamingReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamingReader</span></code></a> might be considered
+less flexible than <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11TableReaderE" title="arrow::csv::TableReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TableReader</span></code></a> because it performs type
+inference only on the first block that’s read in, after which point the types
+are frozen and any data in subsequent blocks that cannot be converted to
+those types will cause an error. Note that this can be remedied either by
+setting <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11ReadOptions10block_sizeE" title="arrow::csv::ReadOptions::block_size"><code class="xref cpp cpp-member docutils literal notranslate"><span class="pre">ReadOptions::block_size</span></code></a> to a large enough value or by using
+<a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv14ConvertOptions12column_typesE" title="arrow::csv::ConvertOptions::column_types"><code class="xref cpp cpp-member docutils literal notranslate"><span class="pre">ConvertOptions::column_types</span></code></a> to set the desired data types
+explicitly.</p></li>
+</ol>
+</section>
+</section>
+<section id="writing-csv-files">
+<h2>Writing CSV files<a class="headerlink" href="#writing-csv-files" title="Permalink to this heading">¶</a></h2>
 <p>A CSV file is written to a <a class="reference internal" href="api/io.html#_CPPv4N5arrow2io12OutputStreamE" title="arrow::io::OutputStream"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">OutputStream</span></code></a>.</p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;arrow/csv/api.h&gt;</span><span class="cp"></span>
 <span class="p">{</span><span class="w"></span>
@@ -5104,9 +5212,9 @@ is accepted for Binary columns.</p>
 Currently few options are available; more will be added in future releases.</p>
 </section>
 <section id="performance">
-<h2>Performance<a class="headerlink" href="#performance" title="Permalink to this heading">¶</a></h2>
-<p>By default, the CSV reader will parallelize reads in order to exploit all
-CPU cores on your machine.  You can change this setting in
+<span id="cpp-csv-performance"></span><h2>Performance<a class="headerlink" href="#performance" title="Permalink to this heading">¶</a></h2>
+<p>By default, <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11TableReaderE" title="arrow::csv::TableReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TableReader</span></code></a> will parallelize reads in order to
+exploit all CPU cores on your machine.  You can change this setting in
 <a class="reference internal" href="api/formats.html#_CPPv4N5arrow3csv11ReadOptions11use_threadsE" title="arrow::csv::ReadOptions::use_threads"><code class="xref cpp cpp-member docutils literal notranslate"><span class="pre">ReadOptions::use_threads</span></code></a>.  A reasonable expectation is at least
 100 MB/s per core on a performant desktop or laptop computer (measured in
 source CSV bytes, not target Arrow data bytes).</p>
