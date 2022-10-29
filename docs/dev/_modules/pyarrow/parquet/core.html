@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pyarrow.parquet.core &#8212; Apache Arrow v11.0.0.dev9</title>
+    <title>pyarrow.parquet.core &#8212; Apache Arrow v11.0.0.dev15</title>
     
     <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -92,7 +92,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        11.0.0.dev9
+        11.0.0.dev15
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4770,6 +4770,7 @@ function checkPageExistsAndRedirect(event) {
 <span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">nullcontext</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">reduce</span>
 
+<span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Collection</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -7912,9 +7913,9 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">        This option is only supported for use_legacy_dataset=False.</span>
 <span class="sd">    **kwargs : dict,</span>
 <span class="sd">        When use_legacy_dataset=False, used as additional kwargs for</span>
-<span class="sd">        `dataset.write_dataset` function (passed to</span>
-<span class="sd">        `ParquetFileFormat.make_write_options`). See the docstring</span>
-<span class="sd">        of `write_table` for the available options.</span>
+<span class="sd">        `dataset.write_dataset` function for matching kwargs, and remainder to</span>
+<span class="sd">        `ParquetFileFormat.make_write_options`. See the docstring</span>
+<span class="sd">        of `write_table` and `dataset.write_dataset` for the available options.</span>
 <span class="sd">        When use_legacy_dataset=True, used as additional kwargs for</span>
 <span class="sd">        `parquet.write_table` function (See docstring for `write_table`</span>
 <span class="sd">        or `ParquetWriter` for more information).</span>
@@ -7986,22 +7987,20 @@ function checkPageExistsAndRedirect(event) {
     <span class="k">if</span> <span class="ow">not</span> <span class="n">use_legacy_dataset</span><span class="p">:</span>
         <span class="kn">import</span> <span class="nn">pyarrow.dataset</span> <span class="k">as</span> <span class="nn">ds</span>
 
-        <span class="c1"># extract non-file format options</span>
-        <span class="n">schema</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;schema&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">use_threads</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;use_threads&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-        <span class="n">chunk_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;chunk_size&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">row_group_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;row_group_size&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-
-        <span class="n">row_group_size</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">row_group_size</span> <span class="k">if</span> <span class="n">row_group_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">chunk_size</span>
+        <span class="c1"># extract write_dataset specific options</span>
+        <span class="c1"># reset assumed to go to make_write_options</span>
+        <span class="n">write_dataset_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">write_dataset</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="n">write_dataset_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">write_dataset_kwargs</span><span class="p">[</span><span class="s1">&#39;max_rows_per_group&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span>
+            <span class="s1">&#39;row_group_size&#39;</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;chunk_size&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="p">)</span>
-
         <span class="c1"># raise for unsupported keywords</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
             <span class="s2">&quot;The &#39;</span><span class="si">{}</span><span class="s2">&#39; argument is not supported with the new dataset &quot;</span>
             <span class="s2">&quot;implementation.&quot;</span>
         <span class="p">)</span>
-
         <span class="k">if</span> <span class="n">metadata_collector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">def</span> <span class="nf">file_visitor</span><span class="p">(</span><span class="n">written_file</span><span class="p">):</span>
                 <span class="n">metadata_collector</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">written_file</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
@@ -8033,7 +8032,7 @@ function checkPageExistsAndRedirect(event) {
             <span class="n">file_visitor</span><span class="o">=</span><span class="n">file_visitor</span><span class="p">,</span>
             <span class="n">basename_template</span><span class="o">=</span><span class="n">basename_template</span><span class="p">,</span>
             <span class="n">existing_data_behavior</span><span class="o">=</span><span class="n">existing_data_behavior</span><span class="p">,</span>
-            <span class="n">max_rows_per_group</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span>
+            <span class="o">**</span><span class="n">write_dataset_kwargs</span><span class="p">)</span>
         <span class="k">return</span>
 
     <span class="c1"># warnings and errors when using legacy implementation</span>
