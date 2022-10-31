@@ -110,7 +110,7 @@ A straightforward implementation of lexsort_to_indices uses a comparator functio
 
 
 
-The comparator function compares each row a column at a time, based on the column types and sort options
+The comparator function compares each row a column at a time, based on the column types
 
 ```text
                          ┌────────────────────────────────┐
@@ -200,11 +200,15 @@ While this approach does require converting to/from the byte array representatio
 * Memory accesses are largely predictable
 * There is no dynamic dispatch overhead
 * Easily extensible to more sophisticated sorting strategies
-* Distribution-based sorting techniques such as radix sort, Parallel merge sort, External sort, etc
+    * Distribution-based sorting techniques such as radix sort, 
+    * Parallel merge sort
+    * External sort, etc
 
 You can find more information on how to leverage such representation in the “Binary String Comparison” section of the [DuckDB blog post](https://duckdb.org/2021/08/27/external-sorting.html) on the topic as well as [Graefe’s paper](https://dl.acm.org/doi/10.1145/1132960.1132964). However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next part of this article.
 
 
-## Next up: Nested and Hierarchical Data
+## Next up: Row Format
 
-This post has introduced the concept and challenges of multi column sorting. In Part 2,  <!-- to do make this a link when published -->  we explain how efficiently encode these rows.
+This post has introduced the concept and challenges of multi column sorting, and shown why a comparable byte array representation, such as the [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) introduced to the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/),  is such a compelling primitive.
+
+In the next post we explain how this encoding works, but if you just want to use it, check out the [docs](https://docs.rs/arrow/latest/arrow/row/index.html) for getting started, and report any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues). As always, the [Arrow community](https://github.com/apache/arrow-rs#arrow-rust-community) very much looks forward to seeing what you build with it!
