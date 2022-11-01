@@ -63,14 +63,16 @@ Let us take the example of a basic sort kernel which takes a set of columns as i
 
 ```python
 > lexsort_to_indices([
-  ["MA", "MA", "CA", "WA", "WA", "CA", "MA"]
-])
+    ["MA", "MA", "CA", "WA", "WA", "CA", "MA"]
+  ])
+
 [2, 5, 0, 1, 6, 3, 4]
 
 > lexsort_to_indices([
-  ["MA", "MA", "CA", "WA", "WA",   "CA", "MA"],
-  [10.10, 8.44, 3.25, 6.00, 132.50, 9.33, 1.30]
-])
+    ["MA", "MA", "CA", "WA", "WA",   "CA", "MA"],
+    [10.10, 8.44, 3.25, 6.00, 132.50, 9.33, 1.30]
+  ])
+
 [2, 5, 6, 1, 0, 3, 4]
 ```
 
