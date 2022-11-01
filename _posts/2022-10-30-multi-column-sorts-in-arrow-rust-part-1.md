@@ -34,7 +34,8 @@ In this blog post we explain in detail the new [row format](https://docs.rs/arro
 
 ## Multicolumn / Lexicographical Sort Problem
 
-Most languages have native optimized operations to sort a single column (array) of data and are specialized based on the type of data. The reason that sorting is typically more challenging in analytic systems is that they must:
+Most languages have native, optimized operations to sort a single column (array) of data, which are specialized based on the type of data being sorted. The reason that sorting is typically more challenging in analytic systems is that they must:
+
 1. Support sorting by multiple columns of data
 2. The column types are not knowable at compile time, and thus the compiler can not typically generate optimized code.
 
