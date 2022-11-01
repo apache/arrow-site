@@ -26,25 +26,25 @@ limitations under the License.
 
 ## Introduction
 
-In Part 1 <!-- TODO add link -->  of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) in the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/) enables faster sorting.
+In Part 1 <!-- TODO add link -->  of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) in the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/) works and is constructed.
 
 
 ## Row Format
 
-The Row Format is a variable length byte sequence created by concatenating the encoded form of each column. The encoding for each column depends on its datatype.
+The row format is a variable length byte sequence created by concatenating the encoded form of each column. The encoding for each column depends on its datatype (and sort options).
 
 ```
    ┌─────┐   ┌─────┐   ┌─────┐
    │     │   │     │   │     │
-   ├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐             ┏━━━━━┳━━━━━━━━┓
-   │     │   │     │   │     │  ────────────▶┃     ┃        ┃
-   ├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘             ┗━━━━━┻━━━━━━━━┛
+   ├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐              ┏━━━━━━━━━━━━━┓
+   │     │   │     │   │     │  ─────────────▶┃             ┃
+   ├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘              ┗━━━━━━━━━━━━━┛
    │     │   │     │   │     │
    └─────┘   └─────┘   └─────┘
                ...
-   ┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐             ┏━━━━━━━━┓
-   │     │   │     │   │     │  ────────────▶┃        ┃
-   └─────┘ └ ┴─────┴ ─ ┴─────┴ ┘             ┗━━━━━━━━┛
+   ┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐              ┏━━━━━━━━┓
+   │     │   │     │   │     │  ─────────────▶┃        ┃
+   └─────┘ └ ┴─────┴ ─ ┴─────┴ ┘              ┗━━━━━━━━┛
    Customer    State    Orders
     UInt64      Utf8     F64
 
@@ -210,6 +210,7 @@ The data structure also ensures that no values contain `0x00` and therefore we c
 
 A null value is encoded as a single `0x00` byte, and a non-null value encoded as a single `0x01` byte, followed by the `0x00` terminated byte array determined by the order preserving mapping
 
+```
                           ┌─────┬─────┬─────┬─────┐
    "Fabulous"             │ 01  │ 03  │ 05  │ 00  │
                           └─────┴─────┴─────┴─────┘
@@ -222,9 +223,8 @@ A null value is encoded as a single `0x00` byte, and a non-null value encoded as
     NULL                  │ 00  │
                           └─────┘
 
-
      Input                  Row Format
-
+```
 
 ### Sort Options
 

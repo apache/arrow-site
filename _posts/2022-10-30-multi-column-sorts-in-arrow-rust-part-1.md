@@ -26,22 +26,23 @@ limitations under the License.
 
 ## Introduction
 
-Sorting is one of the most fundamental operations in modern databases and other analytic systems, underpinning common operators such as aggregates, joins, window functions, merge, and more. By some estimates, more than half of the execution time in data processing systems is spent sorting. Optimizing sorts is therefore vital to improving query performance and overall system efficiency.
+Sorting is one of the most fundamental operations in modern databases and other analytic systems, underpinning important operators such as aggregates, joins, window functions, merge, and more. By some estimates, more than half of the execution time in data processing systems is spent sorting. Optimizing sorts is therefore vital to improving query performance and overall system efficiency.
 
-Sorting is also one of the most well studied topics in computer science. The classic survey paper for databases is [Implementing Sorting in Database Systems](https://dl.acm.org/doi/10.1145/1132960.1132964) by Goetz Graefe which provides a thorough academic treatment that is still very applicable today. However, it may not be obvious how to apply the wisdom and advanced techniques described in that paper to modern systems.
+Sorting is also one of the most well studied topics in computer science. The classic survey paper for databases is [Implementing Sorting in Database Systems](https://dl.acm.org/doi/10.1145/1132960.1132964) by Goetz Graefe which provides a thorough academic treatment and is still very applicable today. However, it may not be obvious how to apply the wisdom and advanced techniques described in that paper to modern systems. In addition, the excellent [DuckDB blog on sorting](https://duckdb.org/2021/08/27/external-sorting.html) highlights many sorting techniques, and mentions a comparable row format, but it does not explain how to efficiently sort variable length strings or dictionary encoded data.
 
-In this blog post we explain in detail the new [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) in the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/), and how this can be used to perform blazingly fast multi-column sorts. The excellent [DuckDB blog on sorting](https://duckdb.org/2021/08/27/external-sorting.html) highlights several sorting techniques, and mentions such a comparable row format, but it does not explain how to efficiently sort variable length strings or dictionary encoded data, which we do in this post.
+In this blog post we explain in detail the new [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) in the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/), and how we used to make sorting more than [3x](https://github.com/apache/arrow-rs/pull/2929) faster than an alternate comparator based approach. The benefits are especially pronounced for strings, dictionary encoded data, and sorts with large numbers of columns.
+
 
 ## Multicolumn / Lexicographical Sort Problem
 
-Most languages have native, optimized operations to sort a single column (array) of data, which are specialized based on the type of data being sorted. The reason that sorting is typically more challenging in analytic systems is that they must:
+Most languages have native, optimized operations to sort a single column (array) of data, which are specialized based on the type of data being sorted. The reason that sorting is typically more challenging in analytic systems is that it must:
 
-1. Support sorting by multiple columns of data
+1. Support multiple columns of data
 2. The column types are not knowable at compile time, and thus the compiler can not typically generate optimized code.
 
 Multicolumn sorting is also referred to as lexicographical sorting in some libraries.
 
-For example, given sales data for various customers and their state of residence, a user might want to find the lowest 10 orders for each state. One way to do so is to order the data first by `State` and then by `Orders`:
+For example, given sales data for various customers and their state of residence, a user might want to find the lowest 10 orders for each state.
 
 ```text
 Customer | State | Orders
@@ -55,7 +56,20 @@ Customer | State | Orders
 852353   |  MA   |  1.30
 ```
 
-(Note: While there are specialized ways for computing this particular query other that sorting the entire input (“TopK”), they typically need the same multi-column comparison operation described below, so we will use the simplified example in our post but it does apply more broadly)
+One way to do so is to order the data first by `State` and then by `Orders`:
+```text
+Customer | State | Orders
+—--------+-------+-------
+12345    |  CA   |  3.25
+7844     |  CA   |  9.33
+852353   |  MA   |  1.30
+532432   |  MA   |  8.44
+12345    |  MA   |  10.12
+56232    |  WA   |  6.00
+23442    |  WA   |  132.50
+```
+
+(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input such (e.g. "TopK"), they typically need the same multi-column comparison operation described below. Thus while  we will use the simplified example in our post, it applies much more broadly)
 
 ## Basic Implementation
 
@@ -89,9 +103,9 @@ A straightforward implementation of lexsort_to_indices uses a comparator functio
   index
         ┌─────┐   ┌─────┐   ┌─────┐          compare(left_index, right_index)
       0 │     │   │     │   │     │
-      ┌ ┼─────┼ ─ ┼─────┼ ─ ┼─────┼                    │             │
-        │     │   │     │   │     ││◀──────────────────┘             │
-      └ ┼─────┼ ─ ┼─────┼ ─ ┼─────┼                                  │
+       ┌├─────┤─ ─├─────┤─ ─├─────┤┐                   │             │
+        │     │   │     │   │     │ ◀──────────────────┘             │
+       └├─────┤─ ─├─────┤─ ─├─────┤┘                                 │
         │     │   │     │   │     │Comparator function compares one  │
         ├─────┤   ├─────┤   ├─────┤ multi-column row with another.   │
         │     │   │     │   │     │                                  │
@@ -100,9 +114,9 @@ A straightforward implementation of lexsort_to_indices uses a comparator functio
         └─────┘   └─────┘   └─────┘  known at compile time, only     │
                     ...                        runtime               │
                                                                      │
-       ┌┌─────┐─ ─┌─────┐─ ─┌─────┐─                                 │
-        │     │   │     │   │     │◀┼────────────────────────────────┘
-       └├─────┤─ ─├─────┤─ ─├─────┤─
+       ┌┌─────┐─ ─┌─────┐─ ─┌─────┐┐                                 │
+        │     │   │     │   │     │ ◀────────────────────────────────┘
+       └├─────┤─ ─├─────┤─ ─├─────┤┘
         │     │   │     │   │     │
         ├─────┤   ├─────┤   ├─────┤
     N-1 │     │   │     │   │     │
@@ -110,7 +124,6 @@ A straightforward implementation of lexsort_to_indices uses a comparator functio
         Customer    State    Orders
          UInt64      Utf8     F64
 ```
-
 
 
 The comparator function compares each row a column at a time, based on the column types
@@ -139,7 +152,8 @@ left_index  │     │   │     │   │     │                   │
                                     │                       │
                                     └───────────────────────┘
 ```
-Pseudocode might be
+
+Pseudocode for this operation might look something like
 
 ```python
 # Takes a list of columns and returns the lexicographically
@@ -180,9 +194,9 @@ def build_comparator(columns):
 
 Greater detail is beyond the scope of this post, but in general the more predictable the behavior of a block of code, the better its performance will be. In the case of this pseudocode,  there is clear room for improvement:
 
-1. comparator performs a large number of unpredictable conditional branches, where the path execution takes depends on the data values
-2. comparator and compare use dynamic dispatch, which not only adds further conditional branches, but also function call overheads
-3. The comparator perform large numbers of reads of memory at unpredictable locations
+1. `comparator` performs a large number of unpredictable conditional branches, where the path execution takes depends on the data values
+2. `comparator` and `compare` use dynamic dispatch, which not only adds further conditional branches, but also function call overhead
+3. `comparator` performs a large number of reads of memory at unpredictable locations
 
 You can find the complete implementation of multi-column comparator construction in arrow-rs in [sort.rs](https://github.com/apache/arrow-rs/blob/f629a2ebe08033e7b78585d82e98c50a4439e7a2/arrow/src/compute/kernels/sort.rs#L905-L1036) and [ord.rs](https://github.com/apache/arrow-rs/blob/f629a2e/arrow/src/array/ord.rs#L178-L313).
 
@@ -202,12 +216,13 @@ While this approach does require converting to/from the byte array representatio
 * Rows can be compared by comparing bytes in memory, which modern computer hardware excels at with the extremely well optimized [memcmp](https://www.man7.org/linux/man-pages/man3/memcmp.3.html)
 * Memory accesses are largely predictable
 * There is no dynamic dispatch overhead
-* Easily extensible to more sophisticated sorting strategies
-    * Distribution-based sorting techniques such as radix sort,
+* Extends straightforwardly to more sophisticated sorting strategies such as
+    * Distribution-based sorting techniques such as radix sort
     * Parallel merge sort
-    * External sort, etc
+    * External sort
+    * ...
 
-You can find more information on how to leverage such representation in the "Binary String Comparison" section of the [DuckDB blog post](https://duckdb.org/2021/08/27/external-sorting.html) on the topic as well as [Graefe’s paper](https://dl.acm.org/doi/10.1145/1132960.1132964). However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next part of this article.
+You can find more information on how to leverage such representation in the "Binary String Comparison" section of the [DuckDB blog post](https://duckdb.org/2021/08/27/external-sorting.html) on the topic as well as [Graefe’s paper](https://dl.acm.org/doi/10.1145/1132960.1132964). However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next section of this article.
 
 
 ## Next up: Row Format
