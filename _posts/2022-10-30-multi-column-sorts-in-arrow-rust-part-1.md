@@ -41,7 +41,7 @@ Most languages have native, optimized operations to sort a single column (array)
 
 Multicolumn sorting is also referred to as lexicographical sorting in some libraries.
 
-For example, given sales data for various customers and their state of residence, a user might want to find the top 10 orders for each state. One way to do so is to order the data first by State (ascending) and then by Orders (descending)
+For example, given sales data for various customers and their state of residence, a user might want to find the lowest 10 orders for each state. One way to do so is to order the data first by `State` and then by `Orders`:
 
 ```text
 Customer | State | Orders
@@ -68,10 +68,10 @@ Let us take the example of a basic sort kernel which takes a set of columns as i
 [2, 5, 0, 1, 6, 3, 4]
 
 > lexsort_to_indices([
-  ["MA",  "MA", "CA", "WA", "WA",   "CA", "MA"],
+  ["MA", "MA", "CA", "WA", "WA",   "CA", "MA"],
   [10.10, 8.44, 3.25, 6.00, 132.50, 9.33, 1.30]
 ])
-[5, 2, 0, 1, 6, 4, 3]
+[2, 5, 6, 1, 0, 3, 4]
 ```
 
 This function returns a list of indices instead of sorting the columns directly because it:
