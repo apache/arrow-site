@@ -43,7 +43,7 @@ Multicolumn sorting is also referred to as lexicographical sorting in some libra
 
 For example, given sales data for various customers and their state of residence, a user might want to find the top 10 orders for each state. One way to do so is to order the data first by State (ascending) and then by Orders (descending)
 
-```sql
+```text
 Customer | State | Orders
 —--------+-------+-------
 12345    |  MA   |  10.12
@@ -63,12 +63,12 @@ Let us take the example of a basic sort kernel which takes a set of columns as i
 
 ```python
 > lexsort_to_indices([
-  [“MA”, “MA”, “CA”, “WA”, “WA”, “CA”, “MA”]
+  ["MA", "MA", "CA", "WA", "WA", "CA", "MA"]
 ])
 [2, 5, 0, 1, 6, 3, 4]
 
 > lexsort_to_indices([
-  [“MA”,  “MA”, “CA”, “WA”, “WA”,   “CA”, “MA”],
+  ["MA",  "MA", "CA", "WA", "WA",   "CA", "MA"],
   [10.10, 8.44, 3.25, 6.00, 132.50, 9.33, 1.30]
 ])
 [5, 2, 0, 1, 6, 4, 3]
@@ -168,7 +168,7 @@ def build_comparator(columns):
 
   # compares the values in a single column at left_idx and right_idx
   def compare(column, left_idx, right_idx):
-    # Choose comparison based on type of column (“dynamic dispatch”)
+    # Choose comparison based on type of column ("dynamic dispatch")
     if column.type == Int:
      cmp(column[left_idx].as_int(), column[right_idx].as_int())
     elif column.type == Float:
@@ -201,11 +201,11 @@ While this approach does require converting to/from the byte array representatio
 * Memory accesses are largely predictable
 * There is no dynamic dispatch overhead
 * Easily extensible to more sophisticated sorting strategies
-    * Distribution-based sorting techniques such as radix sort, 
+    * Distribution-based sorting techniques such as radix sort,
     * Parallel merge sort
     * External sort, etc
 
-You can find more information on how to leverage such representation in the “Binary String Comparison” section of the [DuckDB blog post](https://duckdb.org/2021/08/27/external-sorting.html) on the topic as well as [Graefe’s paper](https://dl.acm.org/doi/10.1145/1132960.1132964). However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next part of this article.
+You can find more information on how to leverage such representation in the "Binary String Comparison" section of the [DuckDB blog post](https://duckdb.org/2021/08/27/external-sorting.html) on the topic as well as [Graefe’s paper](https://dl.acm.org/doi/10.1145/1132960.1132964). However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next part of this article.
 
 
 ## Next up: Row Format
