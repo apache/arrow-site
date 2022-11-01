@@ -79,14 +79,14 @@ To encode a non-null unsigned integer, the byte `0x01` is written, followed by t
 In Rust and most modern computer architectures, signed integers are encoded using [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement), where a number is negated by flipping all the bits, and adding 1. Therefore, flipping the top-most bit and treating the result as an unsigned integer preserves the order. This unsigned integer can then be encoded using the same encoding for unsigned integers described in the previous section. For example
 
 ```
-       ┌───┬───┬───┬───┐   ┌───┬───┬───┬───┐   ┌───┬───┬───┬───┬───┐
-    5  │05 │00 │00 │00 │   │05 │00 │00 │128│   │01 │128│00 │00 │05 │
-       └───┴───┴───┴───┘   └───┴───┴───┴───┘   └───┴───┴───┴───┴───┘
-       ┌───┬───┬───┬───┐   ┌───┬───┬───┬───┐   ┌───┬───┬───┬───┬───┐
-   -5  │251│255│255│255│   │251│255│255│127│   │01 │127│255│255│251│
-       └───┴───┴───┴───┘   └───┴───┴───┴───┘   └───┴───┴───┴───┴───┘
+       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐
+    5  │05│00│00│00│       │85│00│00│00│       │01│00│00│00│85│
+       └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘
+       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐
+   -5  │FB│FF│FF│FF│       │7B│FF│FF│FF│       │01│FF│FF│FF│FF│
+       └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘
 
- Value  32-bit (4 bytes)    High bit flipped         Row Format
+ Value  32-bit (4 bytes)    High bit flipped      Row Format
          Little Endian
 ```
 
@@ -236,8 +236,8 @@ Similarly, supporting SQL compatible sorting also requires a format that can spe
 
 Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the [docs](https://docs.rs/arrow/latest/arrow/row/index.html) for instructions on getting started, and report any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues).
 
-Using this format for lexicographic sorting is more than [3x](https://github.com/apache/arrow-rs/pull/2929) faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns. 
+Using this format for lexicographic sorting is more than [3x](https://github.com/apache/arrow-rs/pull/2929) faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns.
 
-We have also already used it to more than [double](https://github.com/apache/arrow-datafusion/pull/3386) the performance of sort preserving merge in the [DataFusion project](https://arrow.apache.org/datafusion/), and expect similar or greater performance uplift as we apply it to sort, grouping, join, and window function operators as well. 
+We have also already used it to more than [double](https://github.com/apache/arrow-datafusion/pull/3386) the performance of sort preserving merge in the [DataFusion project](https://arrow.apache.org/datafusion/), and expect similar or greater performance uplift as we apply it to sort, grouping, join, and window function operators as well.
 
 As always, the [Arrow community](https://github.com/apache/arrow-rs#arrow-rust-community) very much looks forward to seeing what you build with it!
