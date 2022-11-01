@@ -83,9 +83,9 @@ Flight SQL is:
 
 ## Getting Involved
 
-The JDBC driver was merged for the [Arrow 10.0.0 release][TODO], and
+The JDBC driver was merged for the [Arrow 10.0.0 release][arrow-10], and
 the [source code][impl] can be found in the Arrow repository.
-Official builds of the driver are [available on Maven Central][TODO].
+Official builds of the driver are [available on Maven Central][maven].
 Dremio is already making use of the driver, and we're looking forward
 to seeing what else gets built on top.  Of course, there are still
 improvements to be made.  If you're interested in contributing, or
@@ -100,6 +100,7 @@ performance data transfers from databases”][dremio-presentation]
 their [guide][dremio-arrow].
 
 [adbc]: htttps://github.com/apache/arrow-adbc
+[arrow-10]: {% link _posts/2022-10-31-10.0.0-release.md %}
 [dremio]: https://www.dremio.com/
 [dremio-arrow]: https://www.dremio.com/resources/guides/apache-arrow/
 [dremio-odbc]: https://docs.dremio.com/software/drivers/arrow-flight-sql-odbc-driver/
@@ -110,4 +111,5 @@ their [guide][dremio-arrow].
 [hannes]: https://ir.cwi.nl/pub/26415
 [impl]: https://github.com/apache/arrow/tree/master/java/flight/flight-sql-jdbc-driver
 [jdbc]: https://docs.oracle.com/javase/tutorial/jdbc/overview/index.html
+[maven]: https://search.maven.org/search?q=a:flight-sql-jdbc-driver
 [ml]: {% link community.md %}
