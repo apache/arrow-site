@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Expanding Arrow's Reach with a JDBC Driver for Arrow Flight SQL"
-date: "2022-11-01 09:00:00 -0500"
+date: "2022-11-01 00:00:00"
 author: pmc
 categories: [application]
 ---
