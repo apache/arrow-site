@@ -69,11 +69,11 @@ Customer | State | Orders
 23442    |  WA   |  132.50
 ```
 
-(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input such (e.g. "TopK"), they typically need the same multi-column comparison operation described below. Thus while  we will use the simplified example in our post, it applies much more broadly)
+(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input (e.g. "TopK"), they typically need the same multi-column comparison operation described below. Thus while  we will use the simplified example in our post, it applies much more broadly)
 
 ## Basic Implementation
 
-Let us take the example of a basic sort kernel which takes a set of columns as input, and returns a list of indices identifying the sorted order.
+Let us take the example of a basic sort kernel which takes a set of columns as input, and returns a list of indices identifying a sorted order.
 
 ```python
 > lexsort_to_indices([
