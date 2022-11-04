@@ -101,7 +101,7 @@ A straightforward implementation of lexsort_to_indices uses a comparator functio
 ```text
    row
   index
-        ┌─────┐   ┌─────┐   ┌─────┐          compare(left_index, right_index)
+        ┌─────┐   ┌─────┐   ┌─────┐     compare(left_index, right_index)
       0 │     │   │     │   │     │
        ┌├─────┤─ ─├─────┤─ ─├─────┤┐                   │             │
         │     │   │     │   │     │ ◀──────────────────┘             │
@@ -136,15 +136,15 @@ The comparator function compares each row a column at a time, based on the colum
                                                           │
             ┌─────┐  │┌─────┐│ │┌─────┐│                  │
 left_index  │     │   │     │   │     │                   │
-            └─────┘  │└─────┘│ │└─────┘│   Step 1: Compare values in State
-                                                   (UInt64) column
+            └─────┘  │└─────┘│ │└─────┘│   Step 1: Compare State
+                                                    (UInt64)
                      │       │ │       │
 
                      │       │ │       │
             ┌─────┐   ┌─────┐   ┌─────┐
  right_index│     │  ││     ││ ││     ││
-            └─────┘   └─────┘   └─────┘    Step 2: If values State are equal,
-                     │       │ │       │   then compare values in Orders (F64)
+            └─────┘   └─────┘   └─────┘    Step 2: If State values equal
+                     │       │ │       │   compare Orders (F64)
             Customer   State     Orders                     │
              UInt64  │  Utf8 │ │  F64  │                    │
                       ─ ─ ─ ─   ─ ─ ─ ─                     │

@@ -203,7 +203,7 @@ Therefore we can incrementally build an order-preserving mapping from dictionary
 │   "ZZ"   │ ───────────────▶│ 07  │
 └──────────┘                 └─────┘
 
-    Example Order preserving mapping
+    Example Order Preserving Mapping
 ```
 
 The details of the data structure used to generate this mapping are beyond the scope of this blog post, but may be the topic of a future post. You can find [the code here](https://github.com/apache/arrow-rs/blob/07024f6a16b870fda81cba5779b8817b20386ebf/arrow/src/row/interner.rs).
