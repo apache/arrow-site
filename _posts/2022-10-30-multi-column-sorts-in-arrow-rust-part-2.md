@@ -52,6 +52,8 @@ The row format is a variable length byte sequence created by concatenating the e
            (Columns)
 ```
 
+The encoding is carefully designed in such a way that escaping is unnecessary: it is never ambiguous as to whether a byte is part of a sentinel (e.g. null) or a value.
+
 ### Unsigned Integers
 
 To encode a non-null unsigned integer, the byte `0x01` is written, followed by the integer’s bytes starting with the most significant, i.e. big endian. A null is encoded as a `0x00` byte, followed by the encoded bytes of the integer’s zero value
