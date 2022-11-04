@@ -106,22 +106,22 @@ We need an encoding that unambiguously terminates the end of the byte array. Thi
 
 A null byte array is encoded as a single `0x00` byte. Similarly, an empty byte array is encoded as a single `0x01` byte.
 
-To encode a non-null, non-empty array, first a single `0x02` byte  is written. Then the array is written in 32-byte blocks, with each block followed by a `0xFF` byte as a continuation token. The final block is padded to 32-bytes with `0x00`, and is then followed by the unpadded length of this final block as a single byte.
+To encode a non-null, non-empty array, first a single `0x02` byte  is written. Then the array is written in 32-byte blocks, with each complete block followed by a `0xFF` byte as a continuation token. The final block is padded to 32-bytes with `0x00`, and is then followed by the unpadded length of this final block as a single byte in place of a continuation token
 
 Note the following example encodings use a block size of 4 bytes, as opposed to 32 bytes for brevity
 
 ```
-                      ┌───┬───┬───┬───┬───┬───┬───┐
- "MEEP"               │02 │'M'│'E'│'E'│'P'│FF │04 │
-                      └───┴───┴───┴───┴───┴───┴───┘
+                      ┌───┬───┬───┬───┬───┬───┐
+ "MEEP"               │02 │'M'│'E'│'E'│'P'│04 │
+                      └───┴───┴───┴───┴───┴───┘
 
-                      ┌───┬───┬───┬───┬───┬───┬───┐
- ""                   │02 │00 │00 │00 │00 │FF │00 │
-                      └───┴───┴───┴───┴───┴───┴───┘
+                      ┌───┐
+ ""                   │01 |
+                      └───┘
 
- NULL                 ┌───┬───┬───┬───┬───┬───┬───┐
-                      │00 │00 │00 │00 │00 │FF │00 │
-                      └───┴───┴───┴───┴───┴───┴───┘
+ NULL                 ┌───┐
+                      │00 │
+                      └───┘
 
 "Defenestration"      ┌───┬───┬───┬───┬───┬───┐
                       │02 │'D'│'e'│'f'│'e'│FF │
@@ -131,9 +131,9 @@ Note the following example encodings use a block size of 4 bytes, as opposed to 
                           │'r'│'a'│'t'│'r'│FF │
                           ├───┼───┼───┼───┼───┤
                           │'a'│'t'│'i'│'o'│FF │
-                          ├───┼───┼───┼───┼───┼───┐
-                          │'n'│00 │00 │00 │FF │17 │
-                          └───┴───┴───┴───┴───┴───┘
+                          ├───┼───┼───┼───┼───┤
+                          │'n'│00 │00 │00 │17 │
+                          └───┴───┴───┴───┴───┘
 ```
 
 This approach is loosely inspired by [COBS encoding](https://en.wikipedia.org/wiki/Consistent_Overhead_Byte_Stuffing), and chosen over more traditional [byte stuffing](https://en.wikipedia.org/wiki/High-Level_Data_Link_Control#Asynchronous_framing) as it is more amenable to vectorization, in particular hardware with AVX-256 can copy a 32-byte block in a single instruction.
