@@ -80,10 +80,10 @@ In Rust and most modern computer architectures, signed integers are encoded usin
 
 ```
        ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐
-    5  │05│00│00│00│       │85│00│00│00│       │01│00│00│00│85│
+    5  │05│00│00│00│       │05│00│00│80│       │01│80│00│00│05│
        └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘
        ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐
-   -5  │FB│FF│FF│FF│       │7B│FF│FF│FF│       │01│FF│FF│FF│FF│
+   -5  │FB│FF│FF│FF│       │FB│FF│FF│7F│       │01│7F│FF│FF│FB│
        └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘
 
  Value  32-bit (4 bytes)    High bit flipped      Row Format
