@@ -153,7 +153,7 @@ A definition level of `1` would imply a null at the level of `d.d2`
 
 ```python
 {
-  "d": { null }
+  "d": { }
 }
 ```
 
