@@ -69,7 +69,7 @@ Customer | State | Orders
 23442    |  WA   |  132.50
 ```
 
-(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input (e.g. "TopK"), they typically need the same multi-column comparison operation described below. Thus while  we will use the simplified example in our post, it applies much more broadly)
+(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input (e.g. "TopK"), they typically need the same multi-column comparison operation described below. Thus while we will use the simplified example in this post, it applies much more broadly)
 
 ## Basic Implementation
 
@@ -222,7 +222,7 @@ While this approach does require converting to/from the byte array representatio
     * External sort
     * ...
 
-You can find more information on how to leverage such representation in the "Binary String Comparison" section of the [DuckDB blog post](https://duckdb.org/2021/08/27/external-sorting.html) on the topic as well as [Graefe’s paper](https://dl.acm.org/doi/10.1145/1132960.1132964). However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next section of this article.
+You can find more information on how to leverage such representation in the "Binary String Comparison" section of the [DuckDB blog post](https://duckdb.org/2021/08/27/external-sorting.html) on the topic as well as [Graefe’s paper](https://dl.acm.org/doi/10.1145/1132960.1132964). However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next post in this series.
 
 
 ## Next up: Row Format
