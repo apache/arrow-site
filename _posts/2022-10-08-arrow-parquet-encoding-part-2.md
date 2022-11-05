@@ -149,11 +149,11 @@ A definition level of `0` would imply a null at the level of `d`:
 }
 ```
 
-A definition level of `1` would imply a null at the level of `d`
+A definition level of `1` would imply a null at the level of `d.d2`
 
 ```python
 {
-  "d": { null }
+  "d": { }
 }
 ```
 
