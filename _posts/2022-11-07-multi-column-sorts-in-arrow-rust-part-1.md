@@ -37,7 +37,7 @@ In this series we explain in detail the new [row format](https://docs.rs/arrow/2
 
 Most languages have native, optimized operations to sort a single column (array) of data, which are specialized based on the type of data being sorted. The reason that sorting is typically more challenging in analytic systems is that it must:
 
-1. Support multiple columns of data
+1. They must support multiple columns of data
 2. The column types are not knowable at compile time, and thus the compiler can not typically generate optimized code.
 
 Multicolumn sorting is also referred to as lexicographical sorting in some libraries.
@@ -69,7 +69,7 @@ Customer | State | Orders
 23442    |  WA   |  132.50
 ```
 
-(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input (e.g. "TopK"), they typically need the same multi-column comparison operation described below. Thus while we will use the simplified example in this post, it applies much more broadly)
+(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input (e.g. "TopK"), they typically need the same multi-column comparison operation described below. Thus while we will use the simplified example in this series, it applies much more broadly)
 
 ## Basic Implementation
 
