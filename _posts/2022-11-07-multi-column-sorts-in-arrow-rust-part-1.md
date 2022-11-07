@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 1"
-date: "2022-10-30 00:00:00"
+date: "2022-11-07 00:00:00"
 author: "tustvold and alamb"
 categories: [arrow]
 ---
@@ -229,4 +229,4 @@ You can find more information on how to leverage such representation in the "Bin
 
 This post has introduced the concept and challenges of multi column sorting, and shown why a comparable byte array representation, such as the [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) introduced to the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/), is such a compelling primitive.
 
-In [the next post]({% post_url 2022-10-30-multi-column-sorts-in-arrow-rust-part-2 %}) we explain how this encoding works, but if you just want to use it, check out the [docs](https://docs.rs/arrow/latest/arrow/row/index.html) for getting started, and report any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues). As always, the [Arrow community](https://github.com/apache/arrow-rs#arrow-rust-community) very much looks forward to seeing what you build with it!
+In [the next post]({% post_url 2022-11-07-multi-column-sorts-in-arrow-rust-part-2 %}) we explain how this encoding works, but if you just want to use it, check out the [docs](https://docs.rs/arrow/latest/arrow/row/index.html) for getting started, and report any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues). As always, the [Arrow community](https://github.com/apache/arrow-rs#arrow-rust-community) very much looks forward to seeing what you build with it!

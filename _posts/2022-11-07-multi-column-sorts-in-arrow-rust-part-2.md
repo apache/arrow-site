@@ -26,7 +26,7 @@ limitations under the License.
 
 ## Introduction
 
-In [Part 1]({% post_url 2022-10-30-multi-column-sorts-in-arrow-rust-part-1 %}) of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) in the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/) works and is constructed.
+In [Part 1]({% post_url 2022-11-07-multi-column-sorts-in-arrow-rust-part-1 %}) of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) in the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/) works and is constructed.
 
 
 ## Row Format
