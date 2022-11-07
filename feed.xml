@@ -1,4 +1,212 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2022-11-05T05:58:12-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Expanding Arrow’s Reach with a JDBC Driver for Arrow Flight SQL</title><link href="https://arrow.apache.org/blog/2022/11/01/arrow-flight-sql-jdbc/" rel="alternate" type="text/html" title="Expanding Arrow’s Reach with a JDBC Driver for Arrow Flight SQL" /><published>2022-11-01T00:00:00-04:00</published><updated>2022-11-01T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/11/01/arrow-flight-sql-jdbc</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/11/01/arrow-flight-sql-jdbc/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2022-11-07T07:19:02-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 1</title><link href="https://arrow.apache.org/blog/2022/11/07/multi-column-sorts-in-arrow-rust-part-1/" rel="alternate" type="text/html" title="Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 1" /><published>2022-11-07T00:00:00-05:00</published><updated>2022-11-07T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2022/11/07/multi-column-sorts-in-arrow-rust-part-1</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/11/07/multi-column-sorts-in-arrow-rust-part-1/"><![CDATA[<!--
+
+-->
+
+<h2 id="introduction">Introduction</h2>
+
+<p>Sorting is one of the most fundamental operations in modern databases and other analytic systems, underpinning important operators such as aggregates, joins, window functions, merge, and more. By some estimates, more than half of the execution time in data processing systems is spent sorting. Optimizing sorts is therefore vital to improving query performance and overall system efficiency.</p>
+
+<p>Sorting is also one of the most well studied topics in computer science. The classic survey paper for databases is <a href="https://dl.acm.org/doi/10.1145/1132960.1132964">Implementing Sorting in Database Systems</a> by Goetz Graefe which provides a thorough academic treatment and is still very applicable today. However, it may not be obvious how to apply the wisdom and advanced techniques described in that paper to modern systems. In addition, the excellent <a href="https://duckdb.org/2021/08/27/external-sorting.html">DuckDB blog on sorting</a> highlights many sorting techniques, and mentions a comparable row format, but it does not explain how to efficiently sort variable length strings or dictionary encoded data.</p>
+
+<p>In this series we explain in detail the new <a href="https://docs.rs/arrow/25.0.0/arrow/row/index.html">row format</a> in the <a href="https://github.com/apache/arrow-rs">Rust implementation</a> of <a href="https://arrow.apache.org/">Apache Arrow</a>, and how we used to make sorting more than <a href="https://github.com/apache/arrow-rs/pull/2929">3x</a> faster than an alternate comparator based approach. The benefits are especially pronounced for strings, dictionary encoded data, and sorts with large numbers of columns.</p>
+
+<h2 id="multicolumn--lexicographical-sort-problem">Multicolumn / Lexicographical Sort Problem</h2>
+
+<p>Most languages have native, optimized operations to sort a single column (array) of data, which are specialized based on the type of data being sorted. The reason that sorting is typically more challenging in analytic systems is that it must:</p>
+
+<ol>
+  <li>They must support multiple columns of data</li>
+  <li>The column types are not knowable at compile time, and thus the compiler can not typically generate optimized code.</li>
+</ol>
+
+<p>Multicolumn sorting is also referred to as lexicographical sorting in some libraries.</p>
+
+<p>For example, given sales data for various customers and their state of residence, a user might want to find the lowest 10 orders for each state.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Customer | State | Orders
+—--------+-------+-------
+12345    |  MA   |  10.12
+532432   |  MA   |  8.44
+12345    |  CA   |  3.25
+56232    |  WA   |  6.00
+23442    |  WA   |  132.50
+7844     |  CA   |  9.33
+852353   |  MA   |  1.30
+</code></pre></div></div>
+
+<p>One way to do so is to order the data first by <code class="language-plaintext highlighter-rouge">State</code> and then by <code class="language-plaintext highlighter-rouge">Orders</code>:</p>
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Customer | State | Orders
+—--------+-------+-------
+12345    |  CA   |  3.25
+7844     |  CA   |  9.33
+852353   |  MA   |  1.30
+532432   |  MA   |  8.44
+12345    |  MA   |  10.12
+56232    |  WA   |  6.00
+23442    |  WA   |  132.50
+</code></pre></div></div>
+
+<p>(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input (e.g. “TopK”), they typically need the same multi-column comparison operation described below. Thus while we will use the simplified example in this series, it applies much more broadly)</p>
+
+<h2 id="basic-implementation">Basic Implementation</h2>
+
+<p>Let us take the example of a basic sort kernel which takes a set of columns as input, and returns a list of indices identifying a sorted order.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> <span class="n">lexsort_to_indices</span><span class="p">([</span>
+    <span class="p">[</span><span class="s">"MA"</span><span class="p">,</span> <span class="s">"MA"</span><span class="p">,</span> <span class="s">"CA"</span><span class="p">,</span> <span class="s">"WA"</span><span class="p">,</span> <span class="s">"WA"</span><span class="p">,</span> <span class="s">"CA"</span><span class="p">,</span> <span class="s">"MA"</span><span class="p">]</span>
+  <span class="p">])</span>
+
+<span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+
+<span class="o">&gt;</span> <span class="n">lexsort_to_indices</span><span class="p">([</span>
+    <span class="p">[</span><span class="s">"MA"</span><span class="p">,</span> <span class="s">"MA"</span><span class="p">,</span> <span class="s">"CA"</span><span class="p">,</span> <span class="s">"WA"</span><span class="p">,</span> <span class="s">"WA"</span><span class="p">,</span>   <span class="s">"CA"</span><span class="p">,</span> <span class="s">"MA"</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">10.10</span><span class="p">,</span> <span class="mf">8.44</span><span class="p">,</span> <span class="mf">3.25</span><span class="p">,</span> <span class="mf">6.00</span><span class="p">,</span> <span class="mf">132.50</span><span class="p">,</span> <span class="mf">9.33</span><span class="p">,</span> <span class="mf">1.30</span><span class="p">]</span>
+  <span class="p">])</span>
+
+<span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>This function returns a list of indices instead of sorting the columns directly because it:</p>
+<ol>
+  <li>Avoids expensive copying data during the sorting process</li>
+  <li>Allows deferring copying of values until the latest possible moment</li>
+  <li>Can be used to reorder additional columns that weren’t part of the sort key</li>
+</ol>
+
+<p>A straightforward implementation of lexsort_to_indices uses a comparator function,</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   row
+  index
+        ┌─────┐   ┌─────┐   ┌─────┐     compare(left_index, right_index)
+      0 │     │   │     │   │     │
+       ┌├─────┤─ ─├─────┤─ ─├─────┤┐                   │             │
+        │     │   │     │   │     │ ◀──────────────────┘             │
+       └├─────┤─ ─├─────┤─ ─├─────┤┘                                 │
+        │     │   │     │   │     │Comparator function compares one  │
+        ├─────┤   ├─────┤   ├─────┤ multi-column row with another.   │
+        │     │   │     │   │     │                                  │
+        ├─────┤   ├─────┤   ├─────┤ The data types of the columns    │
+        │     │   │     │   │     │  and the sort options are not    │
+        └─────┘   └─────┘   └─────┘  known at compile time, only     │
+                    ...                        runtime               │
+                                                                     │
+       ┌┌─────┐─ ─┌─────┐─ ─┌─────┐┐                                 │
+        │     │   │     │   │     │ ◀────────────────────────────────┘
+       └├─────┤─ ─├─────┤─ ─├─────┤┘
+        │     │   │     │   │     │
+        ├─────┤   ├─────┤   ├─────┤
+    N-1 │     │   │     │   │     │
+        └─────┘   └─────┘   └─────┘
+        Customer    State    Orders
+         UInt64      Utf8     F64
+</code></pre></div></div>
+
+<p>The comparator function compares each row a column at a time, based on the column types</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                         ┌────────────────────────────────┐
+                         │                                │
+                         ▼                                │
+                     ┌ ─ ─ ─ ┐ ┌ ─ ─ ─ ┐                  │
+                                                          │
+            ┌─────┐  │┌─────┐│ │┌─────┐│                  │
+left_index  │     │   │     │   │     │                   │
+            └─────┘  │└─────┘│ │└─────┘│   Step 1: Compare State
+                                                    (UInt64)
+                     │       │ │       │
+
+                     │       │ │       │
+            ┌─────┐   ┌─────┐   ┌─────┐
+ right_index│     │  ││     ││ ││     ││
+            └─────┘   └─────┘   └─────┘    Step 2: If State values equal
+                     │       │ │       │   compare Orders (F64)
+            Customer   State     Orders                     │
+             UInt64  │  Utf8 │ │  F64  │                    │
+                      ─ ─ ─ ─   ─ ─ ─ ─                     │
+                                    ▲                       │
+                                    │                       │
+                                    └───────────────────────┘
+</code></pre></div></div>
+
+<p>Pseudocode for this operation might look something like</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Takes a list of columns and returns the lexicographically
+# sorted order as a list of indices
+</span><span class="k">def</span> <span class="nf">lexsort_to_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">):</span>
+  <span class="n">comparator</span> <span class="o">=</span> <span class="n">build_comparator</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+
+  <span class="c1"># Construct a list of integers from 0 to the number of rows
+</span>  <span class="c1"># and sort it according to the comparator
+</span>  <span class="p">[</span><span class="mf">0.</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="n">num_rows</span><span class="p">()].</span><span class="n">sort_by</span><span class="p">(</span><span class="n">comparator</span><span class="p">)</span>
+
+<span class="c1"># Build a function that given indexes (left_idx, right_idx)
+# returns the comparison of the sort keys at the left
+# and right indices respectively
+</span><span class="k">def</span> <span class="nf">build_comparator</span><span class="p">(</span><span class="n">columns</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">comparator</span><span class="p">(</span><span class="n">left_idx</span><span class="p">,</span> <span class="n">right_idx</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+      <span class="c1"># call a compare function which performs
+</span>      <span class="c1"># dynamic dispatch on type of left and right columns
+</span>      <span class="n">ordering</span> <span class="o">=</span> <span class="n">compare</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">left_idx</span><span class="p">,</span><span class="n">right_idx</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">ordering</span> <span class="o">!=</span> <span class="n">Equal</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">ordering</span>
+      <span class="p">}</span>
+    <span class="c1"># All values equal
+</span>    <span class="n">Equal</span>
+  <span class="c1"># Return comparator function
+</span>  <span class="n">comparator</span>
+
+  <span class="c1"># compares the values in a single column at left_idx and right_idx
+</span>  <span class="k">def</span> <span class="nf">compare</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">left_idx</span><span class="p">,</span> <span class="n">right_idx</span><span class="p">):</span>
+    <span class="c1"># Choose comparison based on type of column ("dynamic dispatch")
+</span>    <span class="k">if</span> <span class="n">column</span><span class="p">.</span><span class="nb">type</span> <span class="o">==</span> <span class="n">Int</span><span class="p">:</span>
+     <span class="nb">cmp</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="n">left_idx</span><span class="p">].</span><span class="n">as_int</span><span class="p">(),</span> <span class="n">column</span><span class="p">[</span><span class="n">right_idx</span><span class="p">].</span><span class="n">as_int</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="n">column</span><span class="p">.</span><span class="nb">type</span> <span class="o">==</span> <span class="n">Float</span><span class="p">:</span>
+     <span class="nb">cmp</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="n">left_idx</span><span class="p">].</span><span class="n">as_float</span><span class="p">(),</span> <span class="n">column</span><span class="p">[</span><span class="n">right_idx</span><span class="p">].</span><span class="n">as_float</span><span class="p">())</span>
+    <span class="p">...</span>
+</code></pre></div></div>
+
+<p>Greater detail is beyond the scope of this post, but in general the more predictable the behavior of a block of code, the better its performance will be. In the case of this pseudocode,  there is clear room for improvement:</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">comparator</code> performs a large number of unpredictable conditional branches, where the path execution takes depends on the data values</li>
+  <li><code class="language-plaintext highlighter-rouge">comparator</code> and <code class="language-plaintext highlighter-rouge">compare</code> use dynamic dispatch, which not only adds further conditional branches, but also function call overhead</li>
+  <li><code class="language-plaintext highlighter-rouge">comparator</code> performs a large number of reads of memory at unpredictable locations</li>
+</ol>
+
+<p>You can find the complete implementation of multi-column comparator construction in arrow-rs in <a href="https://github.com/apache/arrow-rs/blob/f629a2ebe08033e7b78585d82e98c50a4439e7a2/arrow/src/compute/kernels/sort.rs#L905-L1036">sort.rs</a> and <a href="https://github.com/apache/arrow-rs/blob/f629a2e/arrow/src/array/ord.rs#L178-L313">ord.rs</a>.</p>
+
+<h1 id="normalized-keys--byte-array-comparisons">Normalized Keys / Byte Array Comparisons</h1>
+
+<p>Now imagine we had a way to represent each logical row of data as a sequence of bytes, and that byte-wise comparison of that sequence yielded the same result as comparing the actual column values using the code above. Such a representation would require no switching on column types, and the kernel would become</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">lexsort_to_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">):</span>
+  <span class="n">rows</span> <span class="o">=</span> <span class="n">convert_to_rows</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+  <span class="p">[</span><span class="mf">0.</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="n">num_rows</span><span class="p">()].</span><span class="n">sort_by</span><span class="p">(</span><span class="k">lambda</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">:</span> <span class="nb">cmp</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">rows</span><span class="p">[</span><span class="n">r</span><span class="p">]))</span>
+</code></pre></div></div>
+
+<p>While this approach does require converting to/from the byte array representation, it has some major advantages:</p>
+
+<ul>
+  <li>Rows can be compared by comparing bytes in memory, which modern computer hardware excels at with the extremely well optimized <a href="https://www.man7.org/linux/man-pages/man3/memcmp.3.html">memcmp</a></li>
+  <li>Memory accesses are largely predictable</li>
+  <li>There is no dynamic dispatch overhead</li>
+  <li>Extends straightforwardly to more sophisticated sorting strategies such as
+    <ul>
+      <li>Distribution-based sorting techniques such as radix sort</li>
+      <li>Parallel merge sort</li>
+      <li>External sort</li>
+      <li>…</li>
+    </ul>
+  </li>
+</ul>
+
+<p>You can find more information on how to leverage such representation in the “Binary String Comparison” section of the <a href="https://duckdb.org/2021/08/27/external-sorting.html">DuckDB blog post</a> on the topic as well as <a href="https://dl.acm.org/doi/10.1145/1132960.1132964">Graefe’s paper</a>. However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next post in this series.</p>
+
+<h2 id="next-up-row-format">Next up: Row Format</h2>
+
+<p>This post has introduced the concept and challenges of multi column sorting, and shown why a comparable byte array representation, such as the <a href="https://docs.rs/arrow/25.0.0/arrow/row/index.html">row format</a> introduced to the <a href="https://github.com/apache/arrow-rs">Rust implementation</a> of <a href="https://arrow.apache.org/">Apache Arrow</a>, is such a compelling primitive.</p>
+
+<p>In <a href="/blog/2022/10/30/multi-column-sorts-in-arrow-rust-part-2/">the next post</a> we explain how this encoding works, but if you just want to use it, check out the <a href="https://docs.rs/arrow/latest/arrow/row/index.html">docs</a> for getting started, and report any issues on our <a href="https://github.com/apache/arrow-rs/issues">bugtracker</a>. As always, the <a href="https://github.com/apache/arrow-rs#arrow-rust-community">Arrow community</a> very much looks forward to seeing what you build with it!</p>]]></content><author><name>tustvold and alamb</name></author><category term="arrow" /><summary type="html"><![CDATA[Introduction Sorting is one of the most fundamental operations in modern databases and other analytic systems, underpinning important operators such as aggregates, joins, window functions, merge, and more. By some estimates, more than half of the execution time in data processing systems is spent sorting. Optimizing sorts is therefore vital to improving query performance and overall system efficiency. Sorting is also one of the most well studied topics in computer science. The classic survey paper for databases is Implementing Sorting in Database Systems by Goetz Graefe which provides a thorough academic treatment and is still very applicable today. However, it may not be obvious how to apply the wisdom and advanced techniques described in that paper to modern systems. In addition, the excellent DuckDB blog on sorting highlights many sorting techniques, and mentions a comparable row format, but it does not explain how to efficiently sort variable length strings or dictionary encoded data. In this series we explain in detail the new row format in the Rust implementation of Apache Arrow, and how we used to make sorting more than 3x faster than an alternate comparator based approach. The benefits are especially pronounced for strings, dictionary encoded data, and sorts with large numbers of columns. Multicolumn / Lexicographical Sort Problem Most languages have native, optimized operations to sort a single column (array) of data, which are specialized based on the type of data being sorted. The reason that sorting is typically more challenging in analytic systems is that it must: They must support multiple columns of data The column types are not knowable at compile time, and thus the compiler can not typically generate optimized code. Multicolumn sorting is also referred to as lexicographical sorting in some libraries. For example, given sales data for various customers and their state of residence, a user might want to find the lowest 10 orders for each state. Customer | State | Orders —--------+-------+------- 12345 | MA | 10.12 532432 | MA | 8.44 12345 | CA | 3.25 56232 | WA | 6.00 23442 | WA | 132.50 7844 | CA | 9.33 852353 | MA | 1.30 One way to do so is to order the data first by State and then by Orders: Customer | State | Orders —--------+-------+------- 12345 | CA | 3.25 7844 | CA | 9.33 852353 | MA | 1.30 532432 | MA | 8.44 12345 | MA | 10.12 56232 | WA | 6.00 23442 | WA | 132.50 (Note: While there are specialized ways for computing this particular query other than fully sorting the entire input (e.g. “TopK”), they typically need the same multi-column comparison operation described below. Thus while we will use the simplified example in this series, it applies much more broadly) Basic Implementation Let us take the example of a basic sort kernel which takes a set of columns as input, and returns a list of indices identifying a sorted order. &gt; lexsort_to_indices([ ["MA", "MA", "CA", "WA", "WA", "CA", "MA"] ]) [2, 5, 0, 1, 6, 3, 4] &gt; lexsort_to_indices([ ["MA", "MA", "CA", "WA", "WA", "CA", "MA"], [10.10, 8.44, 3.25, 6.00, 132.50, 9.33, 1.30] ]) [2, 5, 6, 1, 0, 3, 4] This function returns a list of indices instead of sorting the columns directly because it: Avoids expensive copying data during the sorting process Allows deferring copying of values until the latest possible moment Can be used to reorder additional columns that weren’t part of the sort key A straightforward implementation of lexsort_to_indices uses a comparator function, row index ┌─────┐ ┌─────┐ ┌─────┐ compare(left_index, right_index) 0 │ │ │ │ │ │ ┌├─────┤─ ─├─────┤─ ─├─────┤┐ │ │ │ │ │ │ │ │ ◀──────────────────┘ │ └├─────┤─ ─├─────┤─ ─├─────┤┘ │ │ │ │ │ │ │Comparator function compares one │ ├─────┤ ├─────┤ ├─────┤ multi-column row with another. │ │ │ │ │ │ │ │ ├─────┤ ├─────┤ ├─────┤ The data types of the columns │ │ │ │ │ │ │ and the sort options are not │ └─────┘ └─────┘ └─────┘ known at compile time, only │ ... runtime │ │ ┌┌─────┐─ ─┌─────┐─ ─┌─────┐┐ │ │ │ │ │ │ │ ◀────────────────────────────────┘ └├─────┤─ ─├─────┤─ ─├─────┤┘ │ │ │ │ │ │ ├─────┤ ├─────┤ ├─────┤ N-1 │ │ │ │ │ │ └─────┘ └─────┘ └─────┘ Customer State Orders UInt64 Utf8 F64 The comparator function compares each row a column at a time, based on the column types ┌────────────────────────────────┐ │ │ ▼ │ ┌ ─ ─ ─ ┐ ┌ ─ ─ ─ ┐ │ │ ┌─────┐ │┌─────┐│ │┌─────┐│ │ left_index │ │ │ │ │ │ │ └─────┘ │└─────┘│ │└─────┘│ Step 1: Compare State (UInt64) │ │ │ │ │ │ │ │ ┌─────┐ ┌─────┐ ┌─────┐ right_index│ │ ││ ││ ││ ││ └─────┘ └─────┘ └─────┘ Step 2: If State values equal │ │ │ │ compare Orders (F64) Customer State Orders │ UInt64 │ Utf8 │ │ F64 │ │ ─ ─ ─ ─ ─ ─ ─ ─ │ ▲ │ │ │ └───────────────────────┘ Pseudocode for this operation might look something like # Takes a list of columns and returns the lexicographically # sorted order as a list of indices def lexsort_to_indices(columns): comparator = build_comparator(columns) # Construct a list of integers from 0 to the number of rows # and sort it according to the comparator [0..columns.num_rows()].sort_by(comparator) # Build a function that given indexes (left_idx, right_idx) # returns the comparison of the sort keys at the left # and right indices respectively def build_comparator(columns): def comparator(left_idx, right_idx): for column in columns: # call a compare function which performs # dynamic dispatch on type of left and right columns ordering = compare(column, left_idx,right_idx) if ordering != Equal { return ordering } # All values equal Equal # Return comparator function comparator # compares the values in a single column at left_idx and right_idx def compare(column, left_idx, right_idx): # Choose comparison based on type of column ("dynamic dispatch") if column.type == Int: cmp(column[left_idx].as_int(), column[right_idx].as_int()) elif column.type == Float: cmp(column[left_idx].as_float(), column[right_idx].as_float()) ... Greater detail is beyond the scope of this post, but in general the more predictable the behavior of a block of code, the better its performance will be. In the case of this pseudocode, there is clear room for improvement: comparator performs a large number of unpredictable conditional branches, where the path execution takes depends on the data values comparator and compare use dynamic dispatch, which not only adds further conditional branches, but also function call overhead comparator performs a large number of reads of memory at unpredictable locations You can find the complete implementation of multi-column comparator construction in arrow-rs in sort.rs and ord.rs. Normalized Keys / Byte Array Comparisons Now imagine we had a way to represent each logical row of data as a sequence of bytes, and that byte-wise comparison of that sequence yielded the same result as comparing the actual column values using the code above. Such a representation would require no switching on column types, and the kernel would become def lexsort_to_indices(columns): rows = convert_to_rows(columns) [0..columns.num_rows()].sort_by(lambda l, r: cmp(rows[l], rows[r])) While this approach does require converting to/from the byte array representation, it has some major advantages: Rows can be compared by comparing bytes in memory, which modern computer hardware excels at with the extremely well optimized memcmp Memory accesses are largely predictable There is no dynamic dispatch overhead Extends straightforwardly to more sophisticated sorting strategies such as Distribution-based sorting techniques such as radix sort Parallel merge sort External sort … You can find more information on how to leverage such representation in the “Binary String Comparison” section of the DuckDB blog post on the topic as well as Graefe’s paper. However, we found it wasn’t immediately obvious how to apply this technique to variable length string or dictionary encoded data, which we will explain in the next post in this series. Next up: Row Format This post has introduced the concept and challenges of multi column sorting, and shown why a comparable byte array representation, such as the row format introduced to the Rust implementation of Apache Arrow, is such a compelling primitive. In the next post we explain how this encoding works, but if you just want to use it, check out the docs for getting started, and report any issues on our bugtracker. As always, the Arrow community very much looks forward to seeing what you build with it!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Expanding Arrow’s Reach with a JDBC Driver for Arrow Flight SQL</title><link href="https://arrow.apache.org/blog/2022/11/01/arrow-flight-sql-jdbc/" rel="alternate" type="text/html" title="Expanding Arrow’s Reach with a JDBC Driver for Arrow Flight SQL" /><published>2022-11-01T00:00:00-04:00</published><updated>2022-11-01T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/11/01/arrow-flight-sql-jdbc</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/11/01/arrow-flight-sql-jdbc/"><![CDATA[<!--
 
 -->
 
@@ -376,7 +584,221 @@ enable the necessary components explicitly
 
 <p>The Rust projects have moved to separate repositories outside the
 main Arrow monorepo. For notes on the latest release of the Rust
-implementation, see the latest <a href="https://github.com/apache/arrow-rs/tags">Arrow Rust changelog</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 10.0.0 release. This covers over 3 months of development work and includes 473 resolved issues from 100 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 9.0.0 release, Yanghong Zhong, Remzi Yang, Dan Harris and Bogumił Kamińsk have been invited to be committers. L.C. Hsieh, Weston Pace, Raphael Taylor-Davies, Nicola Crane and Jacob Quinn have joined the Project Management Committee (PMC). Thanks for your contributions and participation in the project! Columnar Format Notes Arrow Flight RPC notes A JDBC driver based on Arrow Flight SQL is now available, courtesy of a code donation from Dremio (ARROW-7744). For more details, see “Expanding Arrow’s Reach with a JDBC Driver for Arrow Flight SQL”. Flight SQL is now supported in Go (ARROW-17326). Protocol definitions for transactions and Substrait plans were added to Flight SQL and are implemented in C++ and Java (ARROW-17688). General “best practices” documentation was added for C++ (ARROW-17407). The C++ implementation now has basic OpenTelemetry integration (ARROW-14958). C++ notes C++11 is no longer supported The Arrow C++ codebase has moved to C++17 as its language compatibility standard (ARROW-17545). This means Arrow C++, including its header files, now requires a C++17-compliant compiler and standard library to be used. Such compilers are widely available on most platforms. Compatibility backports of C++14 and C++17 features, such as std::string_view or std::variant, have been removed in favor of the standard library version of these APIs (ARROW-17546). This will also make integration of Arrow C++ with other codebases easier. It is expected that the Arrow C++ codebase will be gradually modernized to use C++17 features in subsequent releases, when the need arises. Plasma is deprecated The Plasma module is deprecated and will be removed in a future release. Compute / Acero Extension types are now supported in hash joins (ARROW-16695). Datasets The fragments of a dataset can now be iterated in an asynchronous fashion, using Dataset::GetFragmentsAsync (ARROW-17318). Filesystems It is now possible to configure a timeout policy for S3 (ARROW-16521). Error messages for S3 have been improved to give more context about the error (ARROW-17079). GetFileInfoGenerator has been optimized for local filesystems, with dedicated options to tune chunking and readahead (ARROW-17306). JSON Previously, the JSON reader could only read Decimal fields from JSON strings (i.e. quoted). Now it can also read Decimal fields from JSON numbers as well (ARROW-17847). Parquet Before Arrow 3.0.0, data pages version 2 were incorrectly written out, making them unreadable with spec-compliant readers. A compatibility fix has been introduced so that they can still be read with contemporary versions of Arrow (ARROW-17100). Substrait The Substrait consumer, which allows Substrait plans to be executed by the Acero execution engine, has received some improvements: Aggregations are now supported (ARROW-15591). Conversion options have been added so that the level of compliance and rountrippability can be chosen when converting between Substrait and Acero representations of a plan (ARROW-16988). Support for many standard Substrait functions has been added (ARROW-15582, ARROW-17523) Some work has also been done in the reverse direction, to allow Acero execution plans to be serialized as Substrait plans (ARROW-16855). Other changes Our CMake package files have been overhauled (ARROW-12175). As a result, namespaced targets are now exported, such as Arrow::arrow_shared. Legacy (non-namespaced) names are still available, for example arrow_shared. Compiling in release mode now uses -O2, not -O3, by default (ARROW-17436). The RISC-V architecture is now recongnized at build time (ARROW-17440). The PyArrow-specific C++ code was moved into the PyArrow source tree (see below, ARROW-16340). The ARROW_PYTHON CMake variable has been deprecated and will be removed in a later release; you should instead enable the necessary components explicitly (ARROW-17868). Some classes with a Equals method now also support operator== (ARROW-6772). It was decided to only do this when equality is computationally cheap (i.e. not on data collections such as Array, RecordBatch…). C# notes Bug Fixes DecimalArray incorrectly appends values very large and very small values. (ARROW-17223) Gandiva notes Gandiva has been migrated to use LLVM opaque pointer types, as typed pointers had been deprecated (ARROW-17790). Go notes A new CI job has been added to run all of the tests with the -asan option using go1.18 (ARROW-17324) Go now passes all integration tests on data types and IPC handling. The Go Arrow and Parquet packages now require go1.17+ (ARROW-17646) Compute The compute package that was importable via github.com/apache/arrow/go/v9/arrow/compute is now a separate module which requires go1.18+ (only the compute module, the rest of the packages still work fine under go1.17). (ARROW-17456). Scalar and Vector kernel infrastructure has been implemented for performing compute operations providing the following functionality: casting Arrow Arrays from one type to another (ARROW-17454) Using Filter and Take functions on an Arrow Array, Record Batch, or Table (ARROW-17669) Arrow Sparse and Dense Union Arrays have been implemented along with appropriate builders and data type support including in IPC reading and writing. (ARROW-3678, ARROW-17276). This includes scalar types for Dense and Sparse union (ARROW-17390) LargeBinary, LargeString and LargeList arrays have been implemented for handling arrays with 64-bit offsets. This also included fixing a bug so that binary builders are correctly resettable. (ARROW-8226, ARROW-17275) Support for Decimal256 arrays has been implemented (ARROW-10600) Automatic Endianness Conversion for non-native endianness is now an option for IPC streams (ARROW-17219) CSV Writer now supports Timestamp, Date32 and Date64 types (ARROW-17273) CSV Writer now supports custom formatting for boolean values (ARROW-17277) The Go Arrow Library now provides a FlightSQL client and server implementation (ARROW-17326). An example server implementation is provided for a FlightSQL server using SQLite (ARROW-17359) CSV Reader now supports schema type inference via NewInferringReader, along with options for specifying the type of some columns and skipping columns (ARROW-17778) Parquet RowGroupReader.Column(index int) no longer panics if provided an invalid column index. Instead the signature has been changed to now return (PageReader, error) similar to other methods in the codebase. (ARROW-17274) Bitpacking and other internal required implementations for ppc64le have been added for the Parquet library (ARROW-17372) A bug has been fixed that caused inconsistent row information data from a table written by Athena (ARROW-17453) Fixed a bug that caused panics when writing a Nullable List of Structs (ARROW-17169) Key Value metadata in an Arrow Schema will be propagated to the Parquet file when using pqarrow even when not using StoreSchema (ARROW-17627) A memory leak when using statistics on ByteArray columns has been fixed (ARROW-17573) Java notes Many important features, enhancements, and bug fixes are included in this release, as are documentation enhancements, and a large number of improvements to build processes and project infrastructure. Selected highlights can be found below. New Features and Enhancements JDBC Driver for Arrow Flight SQL (13800) Initial implementation of immutable Table API (14316) Substrait, transaction, cancellation for Flight SQL (13492) Read Arrow IPC, CSV, and ORC files by NativeDatasetFactory (13811, 13973, 14182) Add utility to bind Arrow data to JDBC parameters (13589) Build enhancements Add Windows build script that produces DLLs (14203) C Data Interface and Dataset libraries can now be built with mvn commands (13881, 13889) Java notes: Java Plasma JNI bindings have been deprecated (14262) JavaScript notes No major changes. Python notes Compatibility notes: Some deprecated APIs (deprecated at least since pyarrow 1.0.0) have been removed: the RecordBatchReader.get_next_batch method, DataType.num_children attribute, etc (ARROW-17649). When writing to Arrow IPC file format with pyarrow.dataset.write_dataset using format="ipc" or format="arrow", the default extension for the resulting files is changed to .arrow instead of .feather. You can still use format="feather" to write identical files but using the .feather extension (ARROW-17089). New features and improvements: Filters in pq.read_table() can be passed as an expression in addition to the legacy list of tuples. For example, filters=pc.field("col") &lt; 4 is equivalent to filters=[("col", "&lt;", 4)] (ARROW-17483). The batch_readahead and fragment_readahead arguments for scanning Datasets are exposed in Python (ARROW-17299). ExtensionArrays can now be created from a storage array through the pa.array(..) constructor (ARROW-17834). Converting ListArrays containing ExtensionArray values to numpy or pandas works by falling back to the storage array (ARROW-17813). The pyarrow.substrait.run_query() function gained a table_provider keyword to run the query against in-memory tables (ARROW-17521). The StructType class gained a field() method to retrieve a child field (ARROW-17131). Casting Tables to a new schema now honors the nullability flag in the target schema (ARROW-16651). Parquet files are now explicitly closed after reading (ARROW-13763). Further, the Python bindings benefit from improvements in the C++ library (e.g. new compute functions); see the C++ notes above for additional details. Build notes The PyArrow-specific C++ code, previously part of Arrow C++ codebase, is now integrated into PyArrow. The tests are run automatically as part of the PyArrow test suite. See: ARROW-16340, ARROW-17122 and PyArrow C++ API notes). The build process is generally not affected by the change, but the ARROW_PYTHON CMake variable has been deprecated and will be removed in a later release; you should instead enable the necessary components explicitly (ARROW-17868). R notes Many improvements to Arrow dplyr queries are added in this version, including: dplyr::across() can be used to apply the same computation across multiple columns; long-running queries can now be cancelled; the data source file name can be added as a column when reading multi-file datasets with add_filename(); joins now support extension arrays; and all supported Arrow dplyr functions are now documented on the R documentation site. For more on what’s in the 10.0.0 R package, see the R changelog. Ruby and C GLib notes Ruby Plasma binding has been deprecated (ARROW-17864) C GLib Plasma binding has been deprecated (ARROW-17862) Rust notes The Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Rust implementation, see the latest Arrow Rust changelog.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow Ballista 0.9.0 Release</title><link href="https://arrow.apache.org/blog/2022/10/28/ballista-0.9.0/" rel="alternate" type="text/html" title="Apache Arrow Ballista 0.9.0 Release" /><published>2022-10-28T00:00:00-04:00</published><updated>2022-10-28T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/10/28/ballista-0.9.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/28/ballista-0.9.0/"><![CDATA[<!--
+implementation, see the latest <a href="https://github.com/apache/arrow-rs/tags">Arrow Rust changelog</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 10.0.0 release. This covers over 3 months of development work and includes 473 resolved issues from 100 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 9.0.0 release, Yanghong Zhong, Remzi Yang, Dan Harris and Bogumił Kamińsk have been invited to be committers. L.C. Hsieh, Weston Pace, Raphael Taylor-Davies, Nicola Crane and Jacob Quinn have joined the Project Management Committee (PMC). Thanks for your contributions and participation in the project! Columnar Format Notes Arrow Flight RPC notes A JDBC driver based on Arrow Flight SQL is now available, courtesy of a code donation from Dremio (ARROW-7744). For more details, see “Expanding Arrow’s Reach with a JDBC Driver for Arrow Flight SQL”. Flight SQL is now supported in Go (ARROW-17326). Protocol definitions for transactions and Substrait plans were added to Flight SQL and are implemented in C++ and Java (ARROW-17688). General “best practices” documentation was added for C++ (ARROW-17407). The C++ implementation now has basic OpenTelemetry integration (ARROW-14958). C++ notes C++11 is no longer supported The Arrow C++ codebase has moved to C++17 as its language compatibility standard (ARROW-17545). This means Arrow C++, including its header files, now requires a C++17-compliant compiler and standard library to be used. Such compilers are widely available on most platforms. Compatibility backports of C++14 and C++17 features, such as std::string_view or std::variant, have been removed in favor of the standard library version of these APIs (ARROW-17546). This will also make integration of Arrow C++ with other codebases easier. It is expected that the Arrow C++ codebase will be gradually modernized to use C++17 features in subsequent releases, when the need arises. Plasma is deprecated The Plasma module is deprecated and will be removed in a future release. Compute / Acero Extension types are now supported in hash joins (ARROW-16695). Datasets The fragments of a dataset can now be iterated in an asynchronous fashion, using Dataset::GetFragmentsAsync (ARROW-17318). Filesystems It is now possible to configure a timeout policy for S3 (ARROW-16521). Error messages for S3 have been improved to give more context about the error (ARROW-17079). GetFileInfoGenerator has been optimized for local filesystems, with dedicated options to tune chunking and readahead (ARROW-17306). JSON Previously, the JSON reader could only read Decimal fields from JSON strings (i.e. quoted). Now it can also read Decimal fields from JSON numbers as well (ARROW-17847). Parquet Before Arrow 3.0.0, data pages version 2 were incorrectly written out, making them unreadable with spec-compliant readers. A compatibility fix has been introduced so that they can still be read with contemporary versions of Arrow (ARROW-17100). Substrait The Substrait consumer, which allows Substrait plans to be executed by the Acero execution engine, has received some improvements: Aggregations are now supported (ARROW-15591). Conversion options have been added so that the level of compliance and rountrippability can be chosen when converting between Substrait and Acero representations of a plan (ARROW-16988). Support for many standard Substrait functions has been added (ARROW-15582, ARROW-17523) Some work has also been done in the reverse direction, to allow Acero execution plans to be serialized as Substrait plans (ARROW-16855). Other changes Our CMake package files have been overhauled (ARROW-12175). As a result, namespaced targets are now exported, such as Arrow::arrow_shared. Legacy (non-namespaced) names are still available, for example arrow_shared. Compiling in release mode now uses -O2, not -O3, by default (ARROW-17436). The RISC-V architecture is now recongnized at build time (ARROW-17440). The PyArrow-specific C++ code was moved into the PyArrow source tree (see below, ARROW-16340). The ARROW_PYTHON CMake variable has been deprecated and will be removed in a later release; you should instead enable the necessary components explicitly (ARROW-17868). Some classes with a Equals method now also support operator== (ARROW-6772). It was decided to only do this when equality is computationally cheap (i.e. not on data collections such as Array, RecordBatch…). C# notes Bug Fixes DecimalArray incorrectly appends values very large and very small values. (ARROW-17223) Gandiva notes Gandiva has been migrated to use LLVM opaque pointer types, as typed pointers had been deprecated (ARROW-17790). Go notes A new CI job has been added to run all of the tests with the -asan option using go1.18 (ARROW-17324) Go now passes all integration tests on data types and IPC handling. The Go Arrow and Parquet packages now require go1.17+ (ARROW-17646) Compute The compute package that was importable via github.com/apache/arrow/go/v9/arrow/compute is now a separate module which requires go1.18+ (only the compute module, the rest of the packages still work fine under go1.17). (ARROW-17456). Scalar and Vector kernel infrastructure has been implemented for performing compute operations providing the following functionality: casting Arrow Arrays from one type to another (ARROW-17454) Using Filter and Take functions on an Arrow Array, Record Batch, or Table (ARROW-17669) Arrow Sparse and Dense Union Arrays have been implemented along with appropriate builders and data type support including in IPC reading and writing. (ARROW-3678, ARROW-17276). This includes scalar types for Dense and Sparse union (ARROW-17390) LargeBinary, LargeString and LargeList arrays have been implemented for handling arrays with 64-bit offsets. This also included fixing a bug so that binary builders are correctly resettable. (ARROW-8226, ARROW-17275) Support for Decimal256 arrays has been implemented (ARROW-10600) Automatic Endianness Conversion for non-native endianness is now an option for IPC streams (ARROW-17219) CSV Writer now supports Timestamp, Date32 and Date64 types (ARROW-17273) CSV Writer now supports custom formatting for boolean values (ARROW-17277) The Go Arrow Library now provides a FlightSQL client and server implementation (ARROW-17326). An example server implementation is provided for a FlightSQL server using SQLite (ARROW-17359) CSV Reader now supports schema type inference via NewInferringReader, along with options for specifying the type of some columns and skipping columns (ARROW-17778) Parquet RowGroupReader.Column(index int) no longer panics if provided an invalid column index. Instead the signature has been changed to now return (PageReader, error) similar to other methods in the codebase. (ARROW-17274) Bitpacking and other internal required implementations for ppc64le have been added for the Parquet library (ARROW-17372) A bug has been fixed that caused inconsistent row information data from a table written by Athena (ARROW-17453) Fixed a bug that caused panics when writing a Nullable List of Structs (ARROW-17169) Key Value metadata in an Arrow Schema will be propagated to the Parquet file when using pqarrow even when not using StoreSchema (ARROW-17627) A memory leak when using statistics on ByteArray columns has been fixed (ARROW-17573) Java notes Many important features, enhancements, and bug fixes are included in this release, as are documentation enhancements, and a large number of improvements to build processes and project infrastructure. Selected highlights can be found below. New Features and Enhancements JDBC Driver for Arrow Flight SQL (13800) Initial implementation of immutable Table API (14316) Substrait, transaction, cancellation for Flight SQL (13492) Read Arrow IPC, CSV, and ORC files by NativeDatasetFactory (13811, 13973, 14182) Add utility to bind Arrow data to JDBC parameters (13589) Build enhancements Add Windows build script that produces DLLs (14203) C Data Interface and Dataset libraries can now be built with mvn commands (13881, 13889) Java notes: Java Plasma JNI bindings have been deprecated (14262) JavaScript notes No major changes. Python notes Compatibility notes: Some deprecated APIs (deprecated at least since pyarrow 1.0.0) have been removed: the RecordBatchReader.get_next_batch method, DataType.num_children attribute, etc (ARROW-17649). When writing to Arrow IPC file format with pyarrow.dataset.write_dataset using format="ipc" or format="arrow", the default extension for the resulting files is changed to .arrow instead of .feather. You can still use format="feather" to write identical files but using the .feather extension (ARROW-17089). New features and improvements: Filters in pq.read_table() can be passed as an expression in addition to the legacy list of tuples. For example, filters=pc.field("col") &lt; 4 is equivalent to filters=[("col", "&lt;", 4)] (ARROW-17483). The batch_readahead and fragment_readahead arguments for scanning Datasets are exposed in Python (ARROW-17299). ExtensionArrays can now be created from a storage array through the pa.array(..) constructor (ARROW-17834). Converting ListArrays containing ExtensionArray values to numpy or pandas works by falling back to the storage array (ARROW-17813). The pyarrow.substrait.run_query() function gained a table_provider keyword to run the query against in-memory tables (ARROW-17521). The StructType class gained a field() method to retrieve a child field (ARROW-17131). Casting Tables to a new schema now honors the nullability flag in the target schema (ARROW-16651). Parquet files are now explicitly closed after reading (ARROW-13763). Further, the Python bindings benefit from improvements in the C++ library (e.g. new compute functions); see the C++ notes above for additional details. Build notes The PyArrow-specific C++ code, previously part of Arrow C++ codebase, is now integrated into PyArrow. The tests are run automatically as part of the PyArrow test suite. See: ARROW-16340, ARROW-17122 and PyArrow C++ API notes). The build process is generally not affected by the change, but the ARROW_PYTHON CMake variable has been deprecated and will be removed in a later release; you should instead enable the necessary components explicitly (ARROW-17868). R notes Many improvements to Arrow dplyr queries are added in this version, including: dplyr::across() can be used to apply the same computation across multiple columns; long-running queries can now be cancelled; the data source file name can be added as a column when reading multi-file datasets with add_filename(); joins now support extension arrays; and all supported Arrow dplyr functions are now documented on the R documentation site. For more on what’s in the 10.0.0 R package, see the R changelog. Ruby and C GLib notes Ruby Plasma binding has been deprecated (ARROW-17864) C GLib Plasma binding has been deprecated (ARROW-17862) Rust notes The Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Rust implementation, see the latest Arrow Rust changelog.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 2</title><link href="https://arrow.apache.org/blog/2022/10/30/multi-column-sorts-in-arrow-rust-part-2/" rel="alternate" type="text/html" title="Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 2" /><published>2022-10-30T00:00:00-04:00</published><updated>2022-10-30T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/10/30/multi-column-sorts-in-arrow-rust-part-2</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/30/multi-column-sorts-in-arrow-rust-part-2/"><![CDATA[<!--
+
+-->
+
+<h2 id="introduction">Introduction</h2>
+
+<p>In <a href="/blog/2022/11/07/multi-column-sorts-in-arrow-rust-part-1/">Part 1</a> of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new <a href="https://docs.rs/arrow/25.0.0/arrow/row/index.html">row format</a> in the <a href="https://github.com/apache/arrow-rs">Rust implementation</a> of <a href="https://arrow.apache.org/">Apache Arrow</a> works and is constructed.</p>
+
+<h2 id="row-format">Row Format</h2>
+
+<p>The row format is a variable length byte sequence created by concatenating the encoded form of each column. The encoding for each column depends on its datatype (and sort options).</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   ┌─────┐   ┌─────┐   ┌─────┐
+   │     │   │     │   │     │
+   ├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐              ┏━━━━━━━━━━━━━┓
+   │     │   │     │   │     │  ─────────────▶┃             ┃
+   ├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘              ┗━━━━━━━━━━━━━┛
+   │     │   │     │   │     │
+   └─────┘   └─────┘   └─────┘
+               ...
+   ┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐              ┏━━━━━━━━┓
+   │     │   │     │   │     │  ─────────────▶┃        ┃
+   └─────┘ └ ┴─────┴ ─ ┴─────┴ ┘              ┗━━━━━━━━┛
+   Customer    State    Orders
+    UInt64      Utf8     F64
+
+          Input Arrays                          Row Format
+           (Columns)
+</code></pre></div></div>
+
+<p>The encoding is carefully designed in such a way that escaping is unnecessary: it is never ambiguous as to whether a byte is part of a sentinel (e.g. null) or a value.</p>
+
+<h3 id="unsigned-integers">Unsigned Integers</h3>
+
+<p>To encode a non-null unsigned integer, the byte <code class="language-plaintext highlighter-rouge">0x01</code> is written, followed by the integer’s bytes starting with the most significant, i.e. big endian. A null is encoded as a <code class="language-plaintext highlighter-rouge">0x00</code> byte, followed by the encoded bytes of the integer’s zero value</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>              ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐
+   3          │03│00│00│00│      │01│00│00│00│03│
+              └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘
+              ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐
+  258         │02│01│00│00│      │01│00│00│01│02│
+              └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘
+              ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐
+ 23423        │7F│5B│00│00│      │01│00│00│5B│7F│
+              └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘
+              ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐
+ NULL         │??│??│??│??│      │00│00│00│00│00│
+              └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘
+
+             32-bit (4 bytes)        Row Format
+ Value        Little Endian
+</code></pre></div></div>
+
+<h3 id="signed-integers">Signed Integers</h3>
+
+<p>In Rust and most modern computer architectures, signed integers are encoded using <a href="https://en.wikipedia.org/wiki/Two%27s_complement">two’s complement</a>, where a number is negated by flipping all the bits, and adding 1. Therefore, flipping the top-most bit and treating the result as an unsigned integer preserves the order. This unsigned integer can then be encoded using the same encoding for unsigned integers described in the previous section. For example</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐
+    5  │05│00│00│00│       │05│00│00│80│       │01│80│00│00│05│
+       └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘
+       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐
+   -5  │FB│FF│FF│FF│       │FB│FF│FF│7F│       │01│7F│FF│FF│FB│
+       └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘
+
+ Value  32-bit (4 bytes)    High bit flipped      Row Format
+         Little Endian
+</code></pre></div></div>
+
+<h3 id="floating-point">Floating Point</h3>
+
+<p>Floating point values can be ordered according to the <a href="https://en.wikipedia.org/wiki/IEEE_754#Total-ordering_predicate">IEEE 754 totalOrder predicate</a> (implemented in Rust by <a href="https://doc.rust-lang.org/std/primitive.f32.html#method.total_cmp">f32::total_cmp</a>). This ordering interprets the bytes of the floating point value as the correspondingly sized, signed, little-endian integer, flipping all the bits except the sign bit in the case of negatives.</p>
+
+<p>Floating point values are therefore encoded to row format by converting them to the appropriate sized signed integer representation, and then using the same encoding for signed integers described in the previous section.</p>
+
+<h3 id="byte-arrays-including-strings">Byte Arrays (Including Strings)</h3>
+
+<p>Unlike primitive types above, byte arrays are variable length. For short strings, such as <code class="language-plaintext highlighter-rouge">state</code> in our example above, it is possible to pad all values to the length of the longest one with some fixed value such as <code class="language-plaintext highlighter-rouge">0x00</code> and produce a fixed length row. This is the approach described in the DuckDB blog for encoding <code class="language-plaintext highlighter-rouge">c_birth_country</code>.</p>
+
+<p>However, often values in string columns differ substantially in length or the maximum length is not known at the start of execution, making it inadvisable and/or impractical to pad the strings to a fixed length. The Rust Arrow row format therefore uses a variable length encoding.</p>
+
+<p>We need an encoding that unambiguously terminates the end of the byte array. This not only permits recovering the original value from the row format, but ensures that bytes of a longer byte array are not compared against bytes from a different column when compared against a row containing a shorter byte array.</p>
+
+<p>A null byte array is encoded as a single <code class="language-plaintext highlighter-rouge">0x00</code> byte. Similarly, an empty byte array is encoded as a single <code class="language-plaintext highlighter-rouge">0x01</code> byte.</p>
+
+<p>To encode a non-null, non-empty array, first a single <code class="language-plaintext highlighter-rouge">0x02</code> byte  is written. Then the array is written in 32-byte blocks, with each complete block followed by a <code class="language-plaintext highlighter-rouge">0xFF</code> byte as a continuation token. The final block is padded to 32-bytes with <code class="language-plaintext highlighter-rouge">0x00</code>, and is then followed by the unpadded length of this final block as a single byte in place of a continuation token</p>
+
+<p>Note the following example encodings use a block size of 4 bytes, as opposed to 32 bytes for brevity</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                      ┌───┬───┬───┬───┬───┬───┐
+ "MEEP"               │02 │'M'│'E'│'E'│'P'│04 │
+                      └───┴───┴───┴───┴───┴───┘
+
+                      ┌───┐
+ ""                   │01 |
+                      └───┘
+
+ NULL                 ┌───┐
+                      │00 │
+                      └───┘
+
+"Defenestration"      ┌───┬───┬───┬───┬───┬───┐
+                      │02 │'D'│'e'│'f'│'e'│FF │
+                      └───┼───┼───┼───┼───┼───┤
+                          │'n'│'e'│'s'│'t'│FF │
+                          ├───┼───┼───┼───┼───┤
+                          │'r'│'a'│'t'│'r'│FF │
+                          ├───┼───┼───┼───┼───┤
+                          │'a'│'t'│'i'│'o'│FF │
+                          ├───┼───┼───┼───┼───┤
+                          │'n'│00 │00 │00 │17 │
+                          └───┴───┴───┴───┴───┘
+</code></pre></div></div>
+
+<p>This approach is loosely inspired by <a href="https://en.wikipedia.org/wiki/Consistent_Overhead_Byte_Stuffing">COBS encoding</a>, and chosen over more traditional <a href="https://en.wikipedia.org/wiki/High-Level_Data_Link_Control#Asynchronous_framing">byte stuffing</a> as it is more amenable to vectorization, in particular hardware with AVX-256 can copy a 32-byte block in a single instruction.</p>
+
+<h3 id="dictionary-arrays">Dictionary Arrays</h3>
+<p>Dictionary Encoded Data (called <a href="https://pandas.pydata.org/docs/user_guide/categorical.html">categorical</a> in pandas) is increasingly important because they can store and process low cardinality data very efficiently.</p>
+
+<p>A simple approach to encoding dictionary arrays would be to encode the logical values directly using the encodings for primitive values described previously. However, this would lose the benefits of dictionary encoding to reduce memory and CPU consumption.</p>
+
+<p>To further complicate matters, the <a href="https://arrow.apache.org/docs/format/Columnar.html#dictionary-encoded-layout">Arrow implementation of Dictionary encoding</a> is quite general, and we can make no assumptions about the contents of the dictionaries. In particular, we cannot assume that the dictionary values are sorted, nor that the same dictionary is used for all arrays within a column</p>
+
+<p>The following example shows how a string column might be encoded in two arrays using two different dictionaries. The dictionary keys <code class="language-plaintext highlighter-rouge">0</code>, <code class="language-plaintext highlighter-rouge">1</code>, and <code class="language-plaintext highlighter-rouge">2</code> in the first batch correspond to different values than the same keys in the second dictionary.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  ┌───────────┐ ┌─────┐    │
+│ │"Fabulous" │ │  0  │
+  ├───────────┤ ├─────┤    │
+│ │   "Bar"   │ │  2  │
+  ├───────────┤ ├─────┤    │       ┌───────────┐
+│ │  "Soup"   │ │  2  │            │"Fabulous" │
+  └───────────┘ ├─────┤    │       ├───────────┤
+│               │  0  │            │  "Soup"   │
+                ├─────┤    │       ├───────────┤
+│               │  1  │            │  "Soup"   │
+                └─────┘    │       ├───────────┤
+│                                  │"Fabulous" │
+                 Values    │       ├───────────┤
+│ Dictionary   (indexes in         │   "Bar"   │
+               dictionary) │       ├───────────┤
+│                                  │   "ZZ"    │
+ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘       ├───────────┤
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─        │   "Bar"   │
+                           │       ├───────────┤
+│ ┌───────────┐ ┌─────┐            │   "ZZ"    │
+  │"Fabulous" │ │  1  │    │       ├───────────┤
+│ ├───────────┤ ├─────┤            │"Fabulous" │
+  │   "ZZ"    │ │  2  │    │       └───────────┘
+│ ├───────────┤ ├─────┤
+  │   "Bar"   │ │  1  │    │
+│ └───────────┘ ├─────┤
+                │  0  │    │      Logical column
+│               └─────┘               values
+                Values     │
+│  Dictionary (indexes in
+              dictionary)  │
+ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+</code></pre></div></div>
+
+<p>The key observation which allows us to efficiently create a row format for this kind of data is that given a byte array, a new byte array can always be created which comes before or after it in the sort order by adding an additional byte.</p>
+
+<p>Therefore we can incrementally build an order-preserving mapping from dictionary values to variable length byte arrays, without needing to know all possible dictionary values beforehand, instead introducing mappings for new dictionary values as we encounter them.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌──────────┐                 ┌─────┐
+│  "Bar"   │ ───────────────▶│ 01  │
+└──────────┘                 └─────┘
+┌──────────┐                 ┌─────┬─────┐
+│"Fabulous"│ ───────────────▶│ 01  │ 02  │
+└──────────┘                 └─────┴─────┘
+┌──────────┐                 ┌─────┐
+│  "Soup"  │ ───────────────▶│ 05  │
+└──────────┘                 └─────┘
+┌──────────┐                 ┌─────┐
+│   "ZZ"   │ ───────────────▶│ 07  │
+└──────────┘                 └─────┘
+
+    Example Order Preserving Mapping
+</code></pre></div></div>
+
+<p>The details of the data structure used to generate this mapping are beyond the scope of this blog post, but may be the topic of a future post. You can find <a href="https://github.com/apache/arrow-rs/blob/07024f6a16b870fda81cba5779b8817b20386ebf/arrow/src/row/interner.rs">the code here</a>.</p>
+
+<p>The data structure also ensures that no values contain <code class="language-plaintext highlighter-rouge">0x00</code> and therefore we can encode the arrays directly using <code class="language-plaintext highlighter-rouge">0x00</code> as an end-delimiter.</p>
+
+<p>A null value is encoded as a single <code class="language-plaintext highlighter-rouge">0x00</code> byte, and a non-null value encoded as a single <code class="language-plaintext highlighter-rouge">0x01</code> byte, followed by the <code class="language-plaintext highlighter-rouge">0x00</code> terminated byte array determined by the order preserving mapping</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                          ┌─────┬─────┬─────┬─────┐
+   "Fabulous"             │ 01  │ 03  │ 05  │ 00  │
+                          └─────┴─────┴─────┴─────┘
+
+                          ┌─────┬─────┬─────┐
+   "ZZ"                   │ 01  │ 07  │ 00  │
+                          └─────┴─────┴─────┘
+
+                          ┌─────┐
+    NULL                  │ 00  │
+                          └─────┘
+
+     Input                  Row Format
+</code></pre></div></div>
+
+<h3 id="sort-options">Sort Options</h3>
+
+<p>One detail we have so far ignored over is how to support ascending and descending sorts (e.g. <code class="language-plaintext highlighter-rouge">ASC</code> or <code class="language-plaintext highlighter-rouge">DESC</code> in SQL). The Arrow Rust row format supports these options by simply inverting the bytes of the encoded representation, except the initial byte used for nullability encoding, on a per column basis.</p>
+
+<p>Similarly, supporting SQL compatible sorting also requires a format that can specify the order of <code class="language-plaintext highlighter-rouge">NULL</code>s (before or after all non <code class="language-plaintext highlighter-rouge">NULL</code> values). The row format supports this option by optionally encoding nulls as <code class="language-plaintext highlighter-rouge">0xFF</code> instead of <code class="language-plaintext highlighter-rouge">0x00</code> on a per column basis.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the <a href="https://docs.rs/arrow/latest/arrow/row/index.html">docs</a> for instructions on getting started, and report any issues on our <a href="https://github.com/apache/arrow-rs/issues">bugtracker</a>.</p>
+
+<p>Using this format for lexicographic sorting is more than <a href="https://github.com/apache/arrow-rs/pull/2929">3x</a> faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns.</p>
+
+<p>We have also already used it to more than <a href="https://github.com/apache/arrow-datafusion/pull/3386">double</a> the performance of sort preserving merge in the <a href="https://arrow.apache.org/datafusion/">DataFusion project</a>, and expect similar or greater performance uplift as we apply it to sort, grouping, join, and window function operators as well.</p>
+
+<p>As always, the <a href="https://github.com/apache/arrow-rs#arrow-rust-community">Arrow community</a> very much looks forward to seeing what you build with it!</p>]]></content><author><name>tustvold and alamb</name></author><category term="arrow" /><summary type="html"><![CDATA[Introduction In Part 1 of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new row format in the Rust implementation of Apache Arrow works and is constructed. Row Format The row format is a variable length byte sequence created by concatenating the encoded form of each column. The encoding for each column depends on its datatype (and sort options). ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ │ │ │ ├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐ ┏━━━━━━━━━━━━━┓ │ │ │ │ │ │ ─────────────▶┃ ┃ ├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘ ┗━━━━━━━━━━━━━┛ │ │ │ │ │ │ └─────┘ └─────┘ └─────┘ ... ┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐ ┏━━━━━━━━┓ │ │ │ │ │ │ ─────────────▶┃ ┃ └─────┘ └ ┴─────┴ ─ ┴─────┴ ┘ ┗━━━━━━━━┛ Customer State Orders UInt64 Utf8 F64 Input Arrays Row Format (Columns) The encoding is carefully designed in such a way that escaping is unnecessary: it is never ambiguous as to whether a byte is part of a sentinel (e.g. null) or a value. Unsigned Integers To encode a non-null unsigned integer, the byte 0x01 is written, followed by the integer’s bytes starting with the most significant, i.e. big endian. A null is encoded as a 0x00 byte, followed by the encoded bytes of the integer’s zero value ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 3 │03│00│00│00│ │01│00│00│00│03│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 258 │02│01│00│00│ │01│00│00│01│02│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 23423 │7F│5B│00│00│ │01│00│00│5B│7F│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ NULL │??│??│??│??│ │00│00│00│00│00│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ 32-bit (4 bytes) Row Format Value Little Endian Signed Integers In Rust and most modern computer architectures, signed integers are encoded using two’s complement, where a number is negated by flipping all the bits, and adding 1. Therefore, flipping the top-most bit and treating the result as an unsigned integer preserves the order. This unsigned integer can then be encoded using the same encoding for unsigned integers described in the previous section. For example ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 5 │05│00│00│00│ │05│00│00│80│ │01│80│00│00│05│ └──┴──┴──┴──┘ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ -5 │FB│FF│FF│FF│ │FB│FF│FF│7F│ │01│7F│FF│FF│FB│ └──┴──┴──┴──┘ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ Value 32-bit (4 bytes) High bit flipped Row Format Little Endian Floating Point Floating point values can be ordered according to the IEEE 754 totalOrder predicate (implemented in Rust by f32::total_cmp). This ordering interprets the bytes of the floating point value as the correspondingly sized, signed, little-endian integer, flipping all the bits except the sign bit in the case of negatives. Floating point values are therefore encoded to row format by converting them to the appropriate sized signed integer representation, and then using the same encoding for signed integers described in the previous section. Byte Arrays (Including Strings) Unlike primitive types above, byte arrays are variable length. For short strings, such as state in our example above, it is possible to pad all values to the length of the longest one with some fixed value such as 0x00 and produce a fixed length row. This is the approach described in the DuckDB blog for encoding c_birth_country. However, often values in string columns differ substantially in length or the maximum length is not known at the start of execution, making it inadvisable and/or impractical to pad the strings to a fixed length. The Rust Arrow row format therefore uses a variable length encoding. We need an encoding that unambiguously terminates the end of the byte array. This not only permits recovering the original value from the row format, but ensures that bytes of a longer byte array are not compared against bytes from a different column when compared against a row containing a shorter byte array. A null byte array is encoded as a single 0x00 byte. Similarly, an empty byte array is encoded as a single 0x01 byte. To encode a non-null, non-empty array, first a single 0x02 byte is written. Then the array is written in 32-byte blocks, with each complete block followed by a 0xFF byte as a continuation token. The final block is padded to 32-bytes with 0x00, and is then followed by the unpadded length of this final block as a single byte in place of a continuation token Note the following example encodings use a block size of 4 bytes, as opposed to 32 bytes for brevity ┌───┬───┬───┬───┬───┬───┐ "MEEP" │02 │'M'│'E'│'E'│'P'│04 │ └───┴───┴───┴───┴───┴───┘ ┌───┐ "" │01 | └───┘ NULL ┌───┐ │00 │ └───┘ "Defenestration" ┌───┬───┬───┬───┬───┬───┐ │02 │'D'│'e'│'f'│'e'│FF │ └───┼───┼───┼───┼───┼───┤ │'n'│'e'│'s'│'t'│FF │ ├───┼───┼───┼───┼───┤ │'r'│'a'│'t'│'r'│FF │ ├───┼───┼───┼───┼───┤ │'a'│'t'│'i'│'o'│FF │ ├───┼───┼───┼───┼───┤ │'n'│00 │00 │00 │17 │ └───┴───┴───┴───┴───┘ This approach is loosely inspired by COBS encoding, and chosen over more traditional byte stuffing as it is more amenable to vectorization, in particular hardware with AVX-256 can copy a 32-byte block in a single instruction. Dictionary Arrays Dictionary Encoded Data (called categorical in pandas) is increasingly important because they can store and process low cardinality data very efficiently. A simple approach to encoding dictionary arrays would be to encode the logical values directly using the encodings for primitive values described previously. However, this would lose the benefits of dictionary encoding to reduce memory and CPU consumption. To further complicate matters, the Arrow implementation of Dictionary encoding is quite general, and we can make no assumptions about the contents of the dictionaries. In particular, we cannot assume that the dictionary values are sorted, nor that the same dictionary is used for all arrays within a column The following example shows how a string column might be encoded in two arrays using two different dictionaries. The dictionary keys 0, 1, and 2 in the first batch correspond to different values than the same keys in the second dictionary. ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌───────────┐ ┌─────┐ │ │ │"Fabulous" │ │ 0 │ ├───────────┤ ├─────┤ │ │ │ "Bar" │ │ 2 │ ├───────────┤ ├─────┤ │ ┌───────────┐ │ │ "Soup" │ │ 2 │ │"Fabulous" │ └───────────┘ ├─────┤ │ ├───────────┤ │ │ 0 │ │ "Soup" │ ├─────┤ │ ├───────────┤ │ │ 1 │ │ "Soup" │ └─────┘ │ ├───────────┤ │ │"Fabulous" │ Values │ ├───────────┤ │ Dictionary (indexes in │ "Bar" │ dictionary) │ ├───────────┤ │ │ "ZZ" │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ├───────────┤ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ "Bar" │ │ ├───────────┤ │ ┌───────────┐ ┌─────┐ │ "ZZ" │ │"Fabulous" │ │ 1 │ │ ├───────────┤ │ ├───────────┤ ├─────┤ │"Fabulous" │ │ "ZZ" │ │ 2 │ │ └───────────┘ │ ├───────────┤ ├─────┤ │ "Bar" │ │ 1 │ │ │ └───────────┘ ├─────┤ │ 0 │ │ Logical column │ └─────┘ values Values │ │ Dictionary (indexes in dictionary) │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ The key observation which allows us to efficiently create a row format for this kind of data is that given a byte array, a new byte array can always be created which comes before or after it in the sort order by adding an additional byte. Therefore we can incrementally build an order-preserving mapping from dictionary values to variable length byte arrays, without needing to know all possible dictionary values beforehand, instead introducing mappings for new dictionary values as we encounter them. ┌──────────┐ ┌─────┐ │ "Bar" │ ───────────────▶│ 01 │ └──────────┘ └─────┘ ┌──────────┐ ┌─────┬─────┐ │"Fabulous"│ ───────────────▶│ 01 │ 02 │ └──────────┘ └─────┴─────┘ ┌──────────┐ ┌─────┐ │ "Soup" │ ───────────────▶│ 05 │ └──────────┘ └─────┘ ┌──────────┐ ┌─────┐ │ "ZZ" │ ───────────────▶│ 07 │ └──────────┘ └─────┘ Example Order Preserving Mapping The details of the data structure used to generate this mapping are beyond the scope of this blog post, but may be the topic of a future post. You can find the code here. The data structure also ensures that no values contain 0x00 and therefore we can encode the arrays directly using 0x00 as an end-delimiter. A null value is encoded as a single 0x00 byte, and a non-null value encoded as a single 0x01 byte, followed by the 0x00 terminated byte array determined by the order preserving mapping ┌─────┬─────┬─────┬─────┐ "Fabulous" │ 01 │ 03 │ 05 │ 00 │ └─────┴─────┴─────┴─────┘ ┌─────┬─────┬─────┐ "ZZ" │ 01 │ 07 │ 00 │ └─────┴─────┴─────┘ ┌─────┐ NULL │ 00 │ └─────┘ Input Row Format Sort Options One detail we have so far ignored over is how to support ascending and descending sorts (e.g. ASC or DESC in SQL). The Arrow Rust row format supports these options by simply inverting the bytes of the encoded representation, except the initial byte used for nullability encoding, on a per column basis. Similarly, supporting SQL compatible sorting also requires a format that can specify the order of NULLs (before or after all non NULL values). The row format supports this option by optionally encoding nulls as 0xFF instead of 0x00 on a per column basis. Conclusion Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the docs for instructions on getting started, and report any issues on our bugtracker. Using this format for lexicographic sorting is more than 3x faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns. We have also already used it to more than double the performance of sort preserving merge in the DataFusion project, and expect similar or greater performance uplift as we apply it to sort, grouping, join, and window function operators as well. As always, the Arrow community very much looks forward to seeing what you build with it!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow Ballista 0.9.0 Release</title><link href="https://arrow.apache.org/blog/2022/10/28/ballista-0.9.0/" rel="alternate" type="text/html" title="Apache Arrow Ballista 0.9.0 Release" /><published>2022-10-28T00:00:00-04:00</published><updated>2022-10-28T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/10/28/ballista-0.9.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/28/ballista-0.9.0/"><![CDATA[<!--
 
 -->
 
@@ -1606,314 +2028,4 @@ eOptions</code> is added. (<a href="https://issues.apache.org/jira/browse/ARROW-
 
 <p>The Rust projects have moved to separate repositories outside the
 main Arrow monorepo. For notes on the 19.0.0 release of the Rust
-implementation, see the <a href="https://github.com/apache/arrow-rs/blob/19.0.0/CHANGELOG.md">Arrow Rust changelog</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 9.0.0 release. This covers over 3 months of development work and includes 509 resolved issues from 114 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bug fixes and improvements have been made: we refer you to the complete changelog. Community Since the 8.0.0 release, Dewey Dunnington, Alenka Frim and Rok Mihevc have been invited to be committers. Thanks for your contributions and participation in the project! Columnar Format Notes Arrow Flight RPC notes Arrow Flight is now available in MacOS M1 Python wheels (ARROW-16779). Arrow Flight SQL is now buildable on Windows (ARROW-16902). Ruby now exposes more of the Flight and Flight SQL APIs (various JIRAs). Linux packages notes AlmaLinux 9 is now supported. (ARROW-16745) AmazonLinux 2 aarch64 is now supported. (ARROW-16477) C++ notes STL-like iteration is now provided over chunked arrays (ARROW-602). Compute The C++ compute and execution engine is now officially named “Acero”, though its C++ namespaces have not changed. New light-weight data holder abstractions have been introduced in order to reduce the overhead of invoking compute functions and kernels, especially at the small data sizes desirable for efficient parallelization (typically L1- or L2-sized). Specifically, the non-owning ArraySpan and ExecSpan structures have internally superseded the much heavier ExecBatch, which is still supported for compatibility at the API level (ARROW-16756, ARROW-16824, ARROW-16852). In a similar vein, the ValueDescr class was removed and ScalarKernel implementations now always receive at least one non-scalar input, removing the special case where a ScalarKernel needs to output a scalar rather than an array. The higher-level compute APIs still allow executing a scalar function over all-scalar inputs; but those scalars are internally broadcasted to 1-element arrays so as to simplify kernel implementation (ARROW-16757). Some performance improvements were made to the hash join node. These changes do not require additional configuration. The hash join exec node has been improved to more efficiently use CPU cache and make better use of available vectorization hardware (ARROW-14182). Some plans containing a sequence of hash join operators will now use bloom filters to eliminate rows earlier in the plan, reducing the overall CPU cost of the plan (ARROW-15498). Timestamp comparison is now supported (ARROW-16425). A cumulative sum function is implemented over numeric inputs (ARROW-13530). Note that this is a vector function so cannot be used in an Acero ExecPlan. A rank vector kernel has been added (ARROW-16234). Temporal rounding functions received additional options to control how rounding is done (ARROW-14821). Improper computation of the “mode” function on boolean input was fixed (ARROW-17096). Function registries can now be nested (ARROW-16677). Dataset The autogenerate_column_names option for CSV reading is now handled correctly (ARROW-16436). Fix InMemoryDataset::ReplaceSchema to actually replace the schema (ARROW-16085). Fix FilenamePartitioning to properly support null values (ARROW-16302). Filesystem A number of bug fixes and improvements were made to the Google Cloud Storage filesystem implementation (ARROW-14892). By default, the S3 filesystem implementation does not create or drop buckets anymore (ARROW-15906). This is a compatibility-breaking change intended to prevent user errors from having potentially catastrophic consequences. Options have been added to restore the previous behavior if necessary. Parquet The default Parquet version is now 2.4 for writing, enabling use of more recent logical types by default (ARROW-12203). Non-nullable fields are now handled correctly by the Parquet reader (ARROW-16116). Reading encrypted files should now be thread-safe (ARROW-14114). Statistics equality now works correctly with minmax (ARROW-16487). The minimum Thrift version required for building is now 0.13 (ARROW-16721). The Thrift deserialization limits can now be configured to accommodate for data files with very large metadata (ARROW-16546). Substrait The Substrait spec has been updated to 0.6.0 (ARROW-16816). In addition, a larger subset of the Substrait specification is now supported (ARROW-15587, ARROW-15590, ARROW-15901, ARROW-16657, ARROW-15591). C# notes New Features Added support for Time32Array and Time64Array (ARROW-16660) Bug Fixes When using TableFromRecordBatches, the resulting table columns have no data array. (ARROW-13129) Fix intermittent test failures due to async memory management bug. (ARROW-16978) Go notes Security Updated testify dependency to address CVE-2022-28948. (ARROW-16759) (This was also backported to previous versions and released as patch versions v6.0.2, v7.0.1, and v8.0.1) Arrow New Features Dictionary Scalars are now available (ARROW-16323) Introduced a DictionaryUnifier object along with functions for unifying Chunked Arrays and Tables (ARROW-16324) New CSV examples added to documentation to demonstrate error handling (ARROW-16450) CSV Reader now supports arrow.TimestampType (ARROW-16504) JSON parsing for Temporal Types now allow passing numeric values in addition to strings for parsing. Timezones will be properly parsed if they exist in the string and a function was added to retrieve a time.Location object from a TimestampType (ARROW-16551) New utilities added to decimal128 for rescaling and easy conversion to and from float32/float64 (ARROW-16552) Arrow DataType interface now has a LayoutMethod which returns the physical layout of the given datatype such as the number of buffers, types, etc. This matches the behavior of the layout() methods in C++ for data types. (ARROW-16556) Added a SliceBuffer function to the memory package to allow better re-using of memory across buffer objects (ARROW-16557) Dictionary Arrays can now be concatenated using array.Concatenate (ARROW-17095) Bug Fixes ipc.FileReader now properly uses the memory.Allocator interface (ARROW-16002) Addressed issue with Integration tests between Go and Java (ARROW-16441) RecordBuilder.UnmarshalJSON now properly ignores extra unknown fields rather than panicking (ARROW-16456) StructBuilder.UnmarshalJSON will no longer fail and panic when Nullable fields are missing (ARROW-16502) ipc.Reader no longer silently accepts string columns with invalid offsets, preventing unexpected panics later when writing or accessing the resulting arrays. (ARROW-16831) Arrow CSV reader no longer clobbers its reported errors and properly surfaces them (ARROW-16926) Parquet New Features The CreatedBy version string for the Parquet writer will now correctly reflect the library version, and will be updated by the release scripts (ARROW-16484) Parquet bit_packing functions now have ARM64 NEON implementations for performance (ARROW-16486) It is now possible to customize the root node in the Parquet writer instead of hardcoding it to be named “schema” with a repetition type of Repeated. This was needed to allow producing files similar to Apache Spark where the root node has a repetition type of Required. It still defaults to the spec definition of Repeated. (ARROW-16561) parquet_reader CLI mainprog has been enhanced to dump values out as JSON and CSV along with setting an output file instead of just dumping to the terminal. (ARROW-16934) Bug Fixes Fixed a memory leak with Parquet page reading (ARROW-16473) Parquet Reader properly parallelizes column reads when the parallel option is set to true. (ARROW-16530) Fixed bug in the Bool decoder for plain encoding (ARROW-16563) Fixed a bug in the Parquet bool column reader where it failed to properly skip rows (ARROW-16638) Fixed the flakey travis ARM64 builds by reducing the size of a test case in the pqarrow unit tests to reduce the memory usage for the tests. (ARROW-16669) Parquet writer now properly handles writing arrow.NULL type arrays (ARROW-16749) Column level dictionary encoding configuration for Parquet writing now correctly respects the input value (ARROW-16813) Memory leak in DeltaByteArray encoding fixed (ARROW-16983) Java notes New Features Allow overriding column nullability in arrow-jdbc (#13558) Enable skip BOUNDS_CHECKING with setBytes and getBytes of ArrowBuf (#13161) Initialize JNI components on use instead of statically (#13146) Provide explicit JDBC column type mapping (#13166) Allow duplicated field names in Java C data interface (#13247) Improve and document StackTrace (#12656) Keep more context when marshaling errors through JNI (#13246) Make RoundingMode configurable to handle inconsistent scale in BigDecimals (#13433) Improve Java dev experience with IntelliJ (#13017) Implement ArrowArrayStream (#13465)) Bug Fixes Fix variable-width vectors in integration JSON writer (#13676) Handle empty JDBC ResultSet (#13049) Fix hasNext() in ArrowVectorIterator (#13107) Fix ArrayConsumer when using ArrowVectorIterator (#12692) Update Gandiva Protobuf library to enable builds on Apple M1 (#13121) Patch dataset module testing failure with JSE11+ (#13200) Don’t duplicate generated Protobuf classes between flight-core and flight-sql (#13596) JavaScript notes Fix error iterating tables with no batches (ARROW-16371) Handle case where tableFromIPC input is an async RecordBatchReader (ARROW-16704) Python notes Compatibility notes: PyArrow now requires Python &gt;= 3.7 (ARROW-16474). The default behaviour regarding memory mapping has changed in several APIs (reading of Feather or Parquet files, IPC RecordBatchFileReader and RecordBatchStreamReader) to disable memory mapping by default (ARROW-16382). The default Parquet version is now 2.4 for writing, enabling use of more recent logical types by default such as unsigned integers (ARROW-12203). One can specify version="2.6" to also enable support for nanosecond timestamps. Use version="1.0" to restore the old behaviour and maximizes file compatibility. Some deprecated APIs (deprecated at least since pyarrow 1.0.0) have been removed: IPC methods in the top-level namespace, the Value scalar classes and the pyarrow.compat module (ARROW-17010). New features: Google Cloud Storage (GCS) File System support is now available in the Python bindings (ARROW-14892). The Table.filter() method now supports passing an expression in addition to a boolean array (ARROW-16469). When implementing extension types in Python, it is now possible to also customize which Python scalar gets returned (in Array.to_pylist() or Scalar.as_py()) by subclassing ExtensionScalar (ARROW-13612, (ARROW-17065)). It is now possible to register User Defined Functions (UDF) for scalar functions using register_scalar_function (ARROW-15639). Basic support for consuming a Substrait plan has been exposed in Python as pyarrow.substrait.run_query (ARROW-15779). The cast method and compute kernel now exposes the fine grained options in addition to safe/unsafe casting (ARROW-15365). In addition, this release includes several bug fixes and documention improvements (such as expanded examples in docstrings (ARROW-16091)). Further, the Python bindings benefit from improvements in the C++ library (e.g. new compute functions); see the C++ notes above for additional details. R notes Highlights include several new dplyr verbs, including glimpse() and union_all(), as well as many more datetime functions from lubridate. There is also experimental support for user-defined scalar functions in the query engine, and most packages include native support for datasets in Google Cloud Storage (opt-in in the Linux full source build). For more on what’s in the 9.0.0 R package, see the R changelog. Ruby and C GLib notes FlightSQL is now supported but there are minimum features for now. More Flight features are now supported. Ruby Enumerable compatible methods such as #min and #max on Arrow::Array, Arrow::ChunkedArray and Arrow::Column are implemented by C++’s compute functions. This improves performance. (ARROW-15222) This release fixed some memory leaks. (ARROW-14790) This release improved support for interval type arrays such as Arrow::MonthIntervalArray. (ARROW-16206) This release improved auto data type conversion. (ARROW-16874) C GLib Vala is now supported. (ARROW-15671). See c_glib/example/vala/ for examples. GArrowQuantil eOptions is added. (ARROW-16623) Rust notes The Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the 19.0.0 release of the Rust implementation, see the Arrow Rust changelog.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">June 2022 Rust Apache Arrow and Parquet 16.0.0 Highlights</title><link href="https://arrow.apache.org/blog/2022/06/16/rust-16.0.0/" rel="alternate" type="text/html" title="June 2022 Rust Apache Arrow and Parquet 16.0.0 Highlights" /><published>2022-06-16T02:00:00-04:00</published><updated>2022-06-16T02:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/06/16/rust-16.0.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/06/16/rust-16.0.0/"><![CDATA[<!--
-
--->
-
-<h1 id="introduction">Introduction</h1>
-
-<p>We recently celebrated releasing version 16.0.0 of the Rust implementation of <a href="https://arrow.apache.org/">Apache Arrow</a>. While we still get a few comments on “most rust libraries use versions 0.x.0, why are you at 16.0.0?”, our versioning scheme appears to be working well, and permits quick releases of new features and API evolution in a semver compatible way without breaking downstream projects.</p>
-
-<p>This post contains highlights from the last four months (versions
-10.0.0 to 16.0.0) of
-<a href="https://github.com/apache/arrow-rs/arrow">arrow-rs</a> and
-<a href="https://github.com/apache/arrow-rs/parquet">parquet-rs</a> development
-as well as a roadmap of future work. The full list of awesomeness can
-be found in the
-<a href="https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md">CHANGELOG</a>.</p>
-
-<p>As you <a href="https://github.com/apache/arrow-rs/issues/1715">may remember</a>, the arrow and parquet implementations are in the same crate, on the same release schedule, and in this same blog. This is not for technical reasons, but helps to keep the maintenance burden for delivering great Apache software reasonable, and allows easier development of optimized conversion between Arrow &lt;–&gt; Parquet formats.</p>
-
-<h1 id="parquet">Parquet</h1>
-<p>The <a href="https://crates.io/crates/parquet">parquet crate</a> has seen a return to substantial improvements after being relatively dormant for several years. The current major areas of focus are</p>
-
-<ol>
-  <li><strong>Performance</strong>: Improving the raw performance for reading and writing mirroring the efforts that went into the C++ version a few years ago.</li>
-  <li><strong>API Ease of Use</strong>: Improving the API so it is easy to use efficiently with modern Rust for two preeminent use cases: 1) reading from local disk and 2) reading <code class="language-plaintext highlighter-rouge">async</code>hronously from remote object stores.</li>
-</ol>
-
-<p>Some Major Highlights:</p>
-
-<ul>
-  <li><strong>Advanced Metadata Access</strong>: API access to advanced parquet metadata, such as <a href="https://github.com/apache/arrow-rs/pull/1322">PageEncoding</a>, <a href="https://github.com/apache/arrow-rs/pull/1309">BloomFilters</a> and <a href="https://github.com/apache/arrow-rs/pull/1762">PageIndex</a>.</li>
-  <li><strong>Improved API Usability</strong>: For example, the <a href="https://github.com/apache/arrow-rs/pull/1719">parquet writer now uses <code class="language-plaintext highlighter-rouge">std:io::Write</code></a> rather than a custom <code class="language-plaintext highlighter-rouge">ParquetWriter</code> trait, making it more interoperable with the rest of the Rust ecosystem and the <a href="https://github.com/apache/arrow-rs/pull/1716">projection API is easier to use with nested types</a>.</li>
-  <li><strong>Rewritten support for nested types (e.g. struct, lists)</strong> : @tustvold has revamped / rewritten support for <a href="https://github.com/apache/arrow-rs/pull/1682">reading</a> and <a href="https://github.com/apache/arrow-rs/pull/1746">writing</a> structured types, which both improved the support for arbitrary nested schemas, and is 30% faster.</li>
-</ul>
-
-<p>Looking Forward:</p>
-
-<ul>
-  <li><strong>Even Faster</strong>: We are actively working to make <a href="https://github.com/apache/arrow-rs/issues/1764">writing even faster</a> and expect to see some major improvements over the next few releases.</li>
-  <li><strong>Object Store Integration</strong>: Support for easily and efficiently reading/writing to/from object storage is improving, and we expect it will soon work well out of the box, fetching the minimal bytes, etc… More on this to follow in a separate blog post.</li>
-  <li><strong>Parallel Decode</strong>: We intend to transparently support high performance parallel decoding of parquet to arrow arrays, when invoked from a <a href="https://crates.io/crates/rayon">rayon</a> threadpool.</li>
-</ul>
-
-<h1 id="arrow">Arrow</h1>
-
-<p>The Rust arrow implementation has also had substantial improvements, in addition to bug fixes and performance improvements.</p>
-
-<p>Some Major Highlights:</p>
-
-<ul>
-  <li><strong>Ecosystem Compatibility</strong>: <a href="https://github.com/viirya">@viriya</a> has put in a massive effort to improve (and prove) compatibility with other Arrow implementations via the Rust IPC integration tests. There have been major improvements for corner cases involving nested structures, nullability, nested dictionaries, etc.</li>
-  <li><strong>Safety</strong>: We continue to improve the safety of arrow, and it is not possible to trigger undefined behavior using <code class="language-plaintext highlighter-rouge">safe</code> apis – checkout the <a href="https://github.com/apache/arrow-rs/tree/master/arrow#safety">README</a> and the <a href="https://docs.rs/arrow/16.0.0/arrow/#safety-and-security">module level rustdocs</a> for more details. Among other things, we have added additional validation checking to <a href="https://github.com/apache/arrow-rs/issues/1575">string kernels</a> and <a href="https://github.com/apache/arrow-rs/pull/1767"><code class="language-plaintext highlighter-rouge">DecimalArrays</code></a> and <a href="https://github.com/apache/arrow-rs/pull/1819">sealed some sensitive traits</a>.</li>
-  <li><strong>Performance</strong>: There have been several major performance improvements such as <a href="https://github.com/apache/arrow-rs/issues/1288">much faster filter kernels</a>, thanks to <a href="https://github.com/tustvold">@tustvold</a>.</li>
-  <li><strong>Easier to Use APIs</strong>: Several of the APIs are now easier to use (e.g. <a href="https://github.com/apache/arrow-rs/pull/1645">#1645</a> and <a href="https://github.com/apache/arrow-rs/pull/1739">#1739</a> which lowers the barrier to entry of using <code class="language-plaintext highlighter-rouge">arrow-rs</code>, thanks to <a href="https://github.com/HaoYang670">@HaoYang670</a>.</li>
-  <li><strong>DataType::Null support</strong>: is much improved, such as <a href="https://github.com/apache/arrow-rs/pull/1572">in the cast kernels</a>, thanks to <a href="https://github.com/WinkerDu">@WinkerDu</a>.</li>
-  <li><strong>Improved JSON reader</strong>: The JSON reader is <a href="https://github.com/apache/arrow-rs/pull/1451">now easier to use</a> thanks to <a href="https://github.com/sum12">@sum12</a>.</li>
-</ul>
-
-<p>Looking Forward:</p>
-<ul>
-  <li><strong>Make ArrayData Easier to use Safely</strong>: Some amount of <code class="language-plaintext highlighter-rouge">unsafe</code> will likely always be required in arrow (for fast IPC, for example), but we are also working to improve the underlying <code class="language-plaintext highlighter-rouge">ArrayData</code> structure to make it more compatible with the ecosystem (e.g. use <code class="language-plaintext highlighter-rouge">Bytes</code>), support faster to decode from parquet, and to avoid bugs related to offsets (slicing) which are a <a href="https://github.com/apache/arrow-rs/issues/1799">frequent pain point</a>.</li>
-  <li><strong>FlightSQL</strong> – we have some <a href="https://github.com/apache/arrow-rs/pulls?q=flightsql">initial support for Flight SQL</a> thank to <a href="https://github.com/wangfenjin">@wangfenjin</a> and <a href="https://github.com/timvw">@timvw</a>, though we would love to see some additional contributors. Such help can include a basic FlightSQL server, and starting work on clients.</li>
-</ul>
-
-<p>Some areas looking for help include:</p>
-
-<ul>
-  <li><strong>Decimal 256 support</strong>: <a href="https://github.com/apache/arrow-rs/issues/131">https://github.com/apache/arrow-rs/issues/131</a></li>
-  <li><strong>Support for negative Decimal scale</strong>: <a href="https://github.com/apache/arrow-rs/issues/1785">https://github.com/apache/arrow-rs/issues/1785</a></li>
-  <li><strong>Support IPC file compression</strong>: <a href="https://github.com/apache/arrow-rs/issues/1709">https://github.com/apache/arrow-rs/issues/1709</a></li>
-  <li><strong>Zero-copy bitmap slicing</strong>: <a href="https://github.com/apache/arrow-rs/issues/1802">https://github.com/apache/arrow-rs/issues/1802</a></li>
-</ul>
-
-<h1 id="contributors">Contributors:</h1>
-
-<p>While some open source software can be created mostly by a single contributor, we believe the greatest software with the largest impact and reach is built around its community. Thus, Arrow is part of the <a href="https://www.apache.org/">Apache Software Foundation</a> and our releases both past and present are a result of our amazing community’s effort.</p>
-
-<p>We would like to thank everyone who has contributed to the arrow-rs repository since the <code class="language-plaintext highlighter-rouge">9.0.2</code> release. Keep up the great work and we look forward to continued improvements:</p>
-
-<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="go">git shortlog -sn 9.0.0..16.0.0
-    47  Liang-Chi Hsieh
-    45  Raphael Taylor-Davies
-    43  Andrew Lamb
-    40  Remzi Yang
-     8  Sergey Glushchenko
-     7  Jörn Horstmann
-     6  Shani Solomon
-     6  dependabot[bot]
-     5  Yang Jiang
-     4  jakevin
-     4  Chao Sun
-     4  Yijie Shen
-     3  kazuhiko kikuchi
-     2  Sumit
-     2  Ismail-Maj
-     2  Kamil Konior
-     2  tfeda
-     2  Matthew Turner
-     1  iyupeng
-     1  ryan-jacobs1
-     1  Alex Qyoun-ae
-     1  tjwilson90
-     1  Andy Grove
-     1  Atef Sawaed
-     1  Daniël Heres
-     1  DuRipeng
-     1  Helgi Kristvin Sigurbjarnarson
-     1  Kun Liu
-     1  Kyle Barron
-     1  Marc Garcia
-     1  Peter C. Jentsch
-     1  Remco Verhoef
-     1  Sven Cattell
-     1  Thomas Peiselt
-     1  Tiphaine Ruy
-     1  Trent Feda
-     1  Wang Fenjin
-     1  Ze'ev Maor
-     1  diana
-</span></code></pre></div></div>
-
-<h1 id="join-the-community">Join the community</h1>
-
-<p>If you are interested in contributing to the Rust subproject in Apache Arrow, you can find a list of open issues
-suitable for beginners <a href="https://github.com/apache/arrow-rs/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">here</a>
-and the full list <a href="https://github.com/apache/arrow-rs/issues">here</a>.</p>
-
-<p>Other ways to get involved include trying out Arrow on some of your data and filing bug reports, and helping to
-improve the documentation.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction We recently celebrated releasing version 16.0.0 of the Rust implementation of Apache Arrow. While we still get a few comments on “most rust libraries use versions 0.x.0, why are you at 16.0.0?”, our versioning scheme appears to be working well, and permits quick releases of new features and API evolution in a semver compatible way without breaking downstream projects. This post contains highlights from the last four months (versions 10.0.0 to 16.0.0) of arrow-rs and parquet-rs development as well as a roadmap of future work. The full list of awesomeness can be found in the CHANGELOG. As you may remember, the arrow and parquet implementations are in the same crate, on the same release schedule, and in this same blog. This is not for technical reasons, but helps to keep the maintenance burden for delivering great Apache software reasonable, and allows easier development of optimized conversion between Arrow &lt;–&gt; Parquet formats. Parquet The parquet crate has seen a return to substantial improvements after being relatively dormant for several years. The current major areas of focus are Performance: Improving the raw performance for reading and writing mirroring the efforts that went into the C++ version a few years ago. API Ease of Use: Improving the API so it is easy to use efficiently with modern Rust for two preeminent use cases: 1) reading from local disk and 2) reading asynchronously from remote object stores. Some Major Highlights: Advanced Metadata Access: API access to advanced parquet metadata, such as PageEncoding, BloomFilters and PageIndex. Improved API Usability: For example, the parquet writer now uses std:io::Write rather than a custom ParquetWriter trait, making it more interoperable with the rest of the Rust ecosystem and the projection API is easier to use with nested types. Rewritten support for nested types (e.g. struct, lists) : @tustvold has revamped / rewritten support for reading and writing structured types, which both improved the support for arbitrary nested schemas, and is 30% faster. Looking Forward: Even Faster: We are actively working to make writing even faster and expect to see some major improvements over the next few releases. Object Store Integration: Support for easily and efficiently reading/writing to/from object storage is improving, and we expect it will soon work well out of the box, fetching the minimal bytes, etc… More on this to follow in a separate blog post. Parallel Decode: We intend to transparently support high performance parallel decoding of parquet to arrow arrays, when invoked from a rayon threadpool. Arrow The Rust arrow implementation has also had substantial improvements, in addition to bug fixes and performance improvements. Some Major Highlights: Ecosystem Compatibility: @viriya has put in a massive effort to improve (and prove) compatibility with other Arrow implementations via the Rust IPC integration tests. There have been major improvements for corner cases involving nested structures, nullability, nested dictionaries, etc. Safety: We continue to improve the safety of arrow, and it is not possible to trigger undefined behavior using safe apis – checkout the README and the module level rustdocs for more details. Among other things, we have added additional validation checking to string kernels and DecimalArrays and sealed some sensitive traits. Performance: There have been several major performance improvements such as much faster filter kernels, thanks to @tustvold. Easier to Use APIs: Several of the APIs are now easier to use (e.g. #1645 and #1739 which lowers the barrier to entry of using arrow-rs, thanks to @HaoYang670. DataType::Null support: is much improved, such as in the cast kernels, thanks to @WinkerDu. Improved JSON reader: The JSON reader is now easier to use thanks to @sum12. Looking Forward: Make ArrayData Easier to use Safely: Some amount of unsafe will likely always be required in arrow (for fast IPC, for example), but we are also working to improve the underlying ArrayData structure to make it more compatible with the ecosystem (e.g. use Bytes), support faster to decode from parquet, and to avoid bugs related to offsets (slicing) which are a frequent pain point. FlightSQL – we have some initial support for Flight SQL thank to @wangfenjin and @timvw, though we would love to see some additional contributors. Such help can include a basic FlightSQL server, and starting work on clients. Some areas looking for help include: Decimal 256 support: https://github.com/apache/arrow-rs/issues/131 Support for negative Decimal scale: https://github.com/apache/arrow-rs/issues/1785 Support IPC file compression: https://github.com/apache/arrow-rs/issues/1709 Zero-copy bitmap slicing: https://github.com/apache/arrow-rs/issues/1802 Contributors: While some open source software can be created mostly by a single contributor, we believe the greatest software with the largest impact and reach is built around its community. Thus, Arrow is part of the Apache Software Foundation and our releases both past and present are a result of our amazing community’s effort. We would like to thank everyone who has contributed to the arrow-rs repository since the 9.0.2 release. Keep up the great work and we look forward to continued improvements: git shortlog -sn 9.0.0..16.0.0 47 Liang-Chi Hsieh 45 Raphael Taylor-Davies 43 Andrew Lamb 40 Remzi Yang 8 Sergey Glushchenko 7 Jörn Horstmann 6 Shani Solomon 6 dependabot[bot] 5 Yang Jiang 4 jakevin 4 Chao Sun 4 Yijie Shen 3 kazuhiko kikuchi 2 Sumit 2 Ismail-Maj 2 Kamil Konior 2 tfeda 2 Matthew Turner 1 iyupeng 1 ryan-jacobs1 1 Alex Qyoun-ae 1 tjwilson90 1 Andy Grove 1 Atef Sawaed 1 Daniël Heres 1 DuRipeng 1 Helgi Kristvin Sigurbjarnarson 1 Kun Liu 1 Kyle Barron 1 Marc Garcia 1 Peter C. Jentsch 1 Remco Verhoef 1 Sven Cattell 1 Thomas Peiselt 1 Tiphaine Ruy 1 Trent Feda 1 Wang Fenjin 1 Ze'ev Maor 1 diana Join the community If you are interested in contributing to the Rust subproject in Apache Arrow, you can find a list of open issues suitable for beginners here and the full list here. Other ways to get involved include trying out Arrow on some of your data and filing bug reports, and helping to improve the documentation.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow DataFusion 8.0.0 Release</title><link href="https://arrow.apache.org/blog/2022/05/16/datafusion-8.0.0/" rel="alternate" type="text/html" title="Apache Arrow DataFusion 8.0.0 Release" /><published>2022-05-16T00:00:00-04:00</published><updated>2022-05-16T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/05/16/datafusion-8.0.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/05/16/datafusion-8.0.0/"><![CDATA[<!--
-
--->
-
-<h1 id="introduction">Introduction</h1>
-
-<p><a href="https://arrow.apache.org/datafusion/">DataFusion</a> is an extensible query execution framework, written in Rust, that
-uses Apache Arrow as its in-memory format.</p>
-
-<p>When you want to extend your Rust project with <a href="https://arrow.apache.org/datafusion/user-guide/sql/sql_status.html">SQL support</a>,
-a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth
-checking out.</p>
-
-<p>DataFusion’s SQL, <code class="language-plaintext highlighter-rouge">DataFrame</code>, and manual <code class="language-plaintext highlighter-rouge">PlanBuilder</code> API let users access a sophisticated query optimizer and
-execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of
-today’s multicore hardware. Being written in Rust means DataFusion can offer <em>both</em> the safety of a dynamic language and
-the resource efficiency of a compiled language.</p>
-
-<p>The Apache Arrow team is pleased to announce the DataFusion 8.0.0 release (and also the release of version 0.7.0 of
-the Ballista subproject). This covers 3 months of development work and includes 279 commits from the following 49
-distinct contributors.</p>
-
-<!--
-$ git log --pretty=oneline 7.0.0..8.0.0 datafusion datafusion-cli datafusion-examples ballista ballista-cli ballista-examples | wc -l
-279
-
-$ git shortlog -sn 7.0.0..8.0.0 datafusion datafusion-cli datafusion-examples ballista ballista-cli ballista-examples | wc -l
-49
-
-(feynman han, feynman.h, Feynman Han were assumed to be the same person)
--->
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    39  Andy Grove
-    33  Andrew Lamb
-    21  DuRipeng
-    20  Yijie Shen
-    19  Yang Jiang
-    17  Raphael Taylor-Davies
-    11  Dan Harris
-    11  Matthew Turner
-    11  yahoNanJing
-     9  dependabot[bot]
-     8  jakevin
-     6  Kun Liu
-     5  Jiayu Liu
-     4  Daniël Heres
-     4  mingmwang
-     4  xudong.w
-     3  Carol (Nichols || Goulding)
-     3  Dmitry Patsura
-     3  Eduard Karacharov
-     3  Jeremy Dyer
-     3  Kaushik
-     3  Rich
-     3  comphead
-     3  gaojun2048
-     3  Feynman Han
-     2  Jie Han
-     2  Jon Mease
-     2  Tim Van Wassenhove
-     2  Yt
-     2  Zhang Li
-     2  silence-coding
-     1  Alexander Spies
-     1  George Andronchik
-     1  Guillaume Balaine
-     1  Hao Xin
-     1  Jiacai Liu
-     1  Jörn Horstmann
-     1  Liang-Chi Hsieh
-     1  Max Burke
-     1  NaincyKumariKnoldus
-     1  Nga Tran
-     1  Patrick More
-     1  Pierre Zemb
-     1  Remzi Yang
-     1  Sergey Melnychuk
-     1  Stephen Carman
-     1  doki
-</code></pre></div></div>
-
-<p>The following sections highlight some of the changes in this release. Of course, many other bug fixes and
-improvements have been made and we encourage you to check out the
-<a href="https://github.com/apache/arrow-datafusion/blob/8.0.0/datafusion/CHANGELOG.md">changelog</a> for full details.</p>
-
-<h1 id="summary">Summary</h1>
-
-<h2 id="ddl-support">DDL Support</h2>
-
-<p>DDL support has been expanded to include the following commands for creating databases, schemas, and views. This
-allows DataFusion to be used more effectively from the CLI.</p>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">CREATE DATABASE</code></li>
-  <li><code class="language-plaintext highlighter-rouge">CREATE VIEW</code></li>
-  <li><code class="language-plaintext highlighter-rouge">CREATE SCHEMA</code></li>
-  <li><code class="language-plaintext highlighter-rouge">CREATE EXTERNAL TABLE</code> now supports JSON files, <code class="language-plaintext highlighter-rouge">IF NOT EXISTS</code>, and partition columns</li>
-</ul>
-
-<h2 id="sql-support">SQL Support</h2>
-
-<p>The SQL query planner now supports a number of new SQL features, including:</p>
-
-<ul>
-  <li><em>Subqueries</em>: when used via <code class="language-plaintext highlighter-rouge">IN</code>, <code class="language-plaintext highlighter-rouge">EXISTS</code>, and as scalars</li>
-  <li><em>Grouping Sets</em>: <code class="language-plaintext highlighter-rouge">CUBE</code> and <code class="language-plaintext highlighter-rouge">ROLLUP</code> grouping sets.</li>
-  <li><em>Aggregate functions</em>: <code class="language-plaintext highlighter-rouge">approx_percentile</code>, <code class="language-plaintext highlighter-rouge">approx_percentile_cont</code>, <code class="language-plaintext highlighter-rouge">approx_percentile_cont_with_weight</code>, <code class="language-plaintext highlighter-rouge">approx_distinct</code>, <code class="language-plaintext highlighter-rouge">approx_median</code> and <code class="language-plaintext highlighter-rouge">array</code></li>
-  <li><em><code class="language-plaintext highlighter-rouge">null</code> literals</em></li>
-  <li><em>bitwise operations</em>: for example ‘<code class="language-plaintext highlighter-rouge">|</code>’</li>
-</ul>
-
-<p>There are also many bug fixes and improvements around normalizing identifiers consistently.</p>
-
-<p>We continue our tradition of incrementally releasing support for new
-features as they are developed. Thus, while the physical plan may not yet
-support all new features, it gets more complete each release. These
-changes also make DataFusion an increasingly compelling choice for
-projects looking for a SQL parser and query planner that can produce
-optimized logical plans that can be translated to
-their own execution engine.</p>
-
-<h2 id="query-execution--internals">Query Execution &amp; Internals</h2>
-
-<p>There are several notable improvements and new features in the query execution engine:</p>
-
-<ul>
-  <li>The <code class="language-plaintext highlighter-rouge">ExecutionContext</code> has been renamed to <code class="language-plaintext highlighter-rouge">SessionContext</code> and now supports multi-tenancy</li>
-  <li>The <code class="language-plaintext highlighter-rouge">ExecutionPlan</code> trait is no longer <code class="language-plaintext highlighter-rouge">async</code></li>
-  <li>A new serialization API for serializing plans to bytes (based on protobuf)</li>
-</ul>
-
-<p>In addition, we have added several foundational features to drive even
-more advanced query processing into DataFusion, focusing on running
-arbitrary queries larger than available memory, and pushing the
-envelope for performance of sorting, grouping, and joining even
-further:</p>
-
-<ul>
-  <li>Morsel-Driven Scheduler based on <a href="https://15721.courses.cs.cmu.edu/spring2016/papers/p743-leis.pdf">“Morsel-Driven Parallelism: A NUMA-Aware Query
-Evaluation Framework for the Many-Core Age”</a></li>
-  <li>Consolidated object store implementation and integration with parquet decoding</li>
-  <li>Memory Limited Spilling sort operator</li>
-  <li>Memory Limited Sort-Merge join operator</li>
-  <li>High performance JIT code generation for tuple comparisons</li>
-  <li>Memory efficient Row Format</li>
-</ul>
-
-<h2 id="improved-file-support">Improved file support</h2>
-
-<p>DataFusion now supports JSON, both for reading and writing. There are also new DataFrame methods for writing query
-results to files in CSV, Parquet, and JSON format.</p>
-
-<h2 id="ballista">Ballista</h2>
-
-<p>Ballista continues to mature and now supports a wider range of operators and expressions. There are also improvements
-to the scheduler to support UDFs, and there are some robustness improvements, such as cleaning up work directories
-and persisting session configs to allow schedulers to restart and continue processing in-flight jobs.</p>
-
-<h2 id="upcoming-work">Upcoming Work</h2>
-
-<p>Here are some of the initiatives that the community plans on working on prior to the next release.</p>
-
-<ul>
-  <li>There is a <a href="https://docs.google.com/document/d/1jNRbadyStSrV5kifwn0khufAwq6OnzGczG4z8oTQJP4/edit?usp=sharing">proposal to move Ballista to its own top-level arrow-ballista repository</a>
- to decouple DataFusion and Ballista releases and to allow each project to have documentation better targeted at
-its particular audience.</li>
-  <li>We plan on increasing the frequency of DataFusion releases, with monthly releases now instead of quarterly. This
-is driven by requests from the increasing number of projects that now depend on DataFusion.</li>
-  <li>There is ongoing work to implement new optimizer rules to rewrite queries containing subquery expressions as
-joins, to support a wider range of queries.</li>
-  <li>The new scheduler based on morsel-driven execution will continue to evolve in this next release, with work to
-refine IO abstractions to improve performance and integration with the new scheduler.</li>
-  <li>Improved performance for Sort, Grouping and Joins</li>
-</ul>
-
-<h1 id="how-to-get-involved">How to Get Involved</h1>
-
-<p>If you are interested in contributing to DataFusion, and learning about state-of-the-art query processing, we would
-love to have you join us on the journey! You can help by trying out DataFusion on some of your own data and projects
-and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable
-for beginners is <a href="https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">here</a></p>
-
-<p>Check out our new <a href="https://arrow.apache.org/datafusion/community/communication.html">Communication Doc</a> on more
-ways to engage with the community.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction DataFusion is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format. When you want to extend your Rust project with SQL support, a DataFrame API, or the ability to read and process Parquet, JSON, Avro or CSV data, DataFusion is definitely worth checking out. DataFusion’s SQL, DataFrame, and manual PlanBuilder API let users access a sophisticated query optimizer and execution engine capable of fast, resource efficient, and parallel execution that takes optimal advantage of today’s multicore hardware. Being written in Rust means DataFusion can offer both the safety of a dynamic language and the resource efficiency of a compiled language. The Apache Arrow team is pleased to announce the DataFusion 8.0.0 release (and also the release of version 0.7.0 of the Ballista subproject). This covers 3 months of development work and includes 279 commits from the following 49 distinct contributors. 39 Andy Grove 33 Andrew Lamb 21 DuRipeng 20 Yijie Shen 19 Yang Jiang 17 Raphael Taylor-Davies 11 Dan Harris 11 Matthew Turner 11 yahoNanJing 9 dependabot[bot] 8 jakevin 6 Kun Liu 5 Jiayu Liu 4 Daniël Heres 4 mingmwang 4 xudong.w 3 Carol (Nichols || Goulding) 3 Dmitry Patsura 3 Eduard Karacharov 3 Jeremy Dyer 3 Kaushik 3 Rich 3 comphead 3 gaojun2048 3 Feynman Han 2 Jie Han 2 Jon Mease 2 Tim Van Wassenhove 2 Yt 2 Zhang Li 2 silence-coding 1 Alexander Spies 1 George Andronchik 1 Guillaume Balaine 1 Hao Xin 1 Jiacai Liu 1 Jörn Horstmann 1 Liang-Chi Hsieh 1 Max Burke 1 NaincyKumariKnoldus 1 Nga Tran 1 Patrick More 1 Pierre Zemb 1 Remzi Yang 1 Sergey Melnychuk 1 Stephen Carman 1 doki The following sections highlight some of the changes in this release. Of course, many other bug fixes and improvements have been made and we encourage you to check out the changelog for full details. Summary DDL Support DDL support has been expanded to include the following commands for creating databases, schemas, and views. This allows DataFusion to be used more effectively from the CLI. CREATE DATABASE CREATE VIEW CREATE SCHEMA CREATE EXTERNAL TABLE now supports JSON files, IF NOT EXISTS, and partition columns SQL Support The SQL query planner now supports a number of new SQL features, including: Subqueries: when used via IN, EXISTS, and as scalars Grouping Sets: CUBE and ROLLUP grouping sets. Aggregate functions: approx_percentile, approx_percentile_cont, approx_percentile_cont_with_weight, approx_distinct, approx_median and array null literals bitwise operations: for example ‘|’ There are also many bug fixes and improvements around normalizing identifiers consistently. We continue our tradition of incrementally releasing support for new features as they are developed. Thus, while the physical plan may not yet support all new features, it gets more complete each release. These changes also make DataFusion an increasingly compelling choice for projects looking for a SQL parser and query planner that can produce optimized logical plans that can be translated to their own execution engine. Query Execution &amp; Internals There are several notable improvements and new features in the query execution engine: The ExecutionContext has been renamed to SessionContext and now supports multi-tenancy The ExecutionPlan trait is no longer async A new serialization API for serializing plans to bytes (based on protobuf) In addition, we have added several foundational features to drive even more advanced query processing into DataFusion, focusing on running arbitrary queries larger than available memory, and pushing the envelope for performance of sorting, grouping, and joining even further: Morsel-Driven Scheduler based on “Morsel-Driven Parallelism: A NUMA-Aware Query Evaluation Framework for the Many-Core Age” Consolidated object store implementation and integration with parquet decoding Memory Limited Spilling sort operator Memory Limited Sort-Merge join operator High performance JIT code generation for tuple comparisons Memory efficient Row Format Improved file support DataFusion now supports JSON, both for reading and writing. There are also new DataFrame methods for writing query results to files in CSV, Parquet, and JSON format. Ballista Ballista continues to mature and now supports a wider range of operators and expressions. There are also improvements to the scheduler to support UDFs, and there are some robustness improvements, such as cleaning up work directories and persisting session configs to allow schedulers to restart and continue processing in-flight jobs. Upcoming Work Here are some of the initiatives that the community plans on working on prior to the next release. There is a proposal to move Ballista to its own top-level arrow-ballista repository to decouple DataFusion and Ballista releases and to allow each project to have documentation better targeted at its particular audience. We plan on increasing the frequency of DataFusion releases, with monthly releases now instead of quarterly. This is driven by requests from the increasing number of projects that now depend on DataFusion. There is ongoing work to implement new optimizer rules to rewrite queries containing subquery expressions as joins, to support a wider range of queries. The new scheduler based on morsel-driven execution will continue to evolve in this next release, with work to refine IO abstractions to improve performance and integration with the new scheduler. Improved performance for Sort, Grouping and Joins How to Get Involved If you are interested in contributing to DataFusion, and learning about state-of-the-art query processing, we would love to have you join us on the journey! You can help by trying out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is here Check out our new Communication Doc on more ways to engage with the community.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+implementation, see the <a href="https://github.com/apache/arrow-rs/blob/19.0.0/CHANGELOG.md">Arrow Rust changelog</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 9.0.0 release. This covers over 3 months of development work and includes 509 resolved issues from 114 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bug fixes and improvements have been made: we refer you to the complete changelog. Community Since the 8.0.0 release, Dewey Dunnington, Alenka Frim and Rok Mihevc have been invited to be committers. Thanks for your contributions and participation in the project! Columnar Format Notes Arrow Flight RPC notes Arrow Flight is now available in MacOS M1 Python wheels (ARROW-16779). Arrow Flight SQL is now buildable on Windows (ARROW-16902). Ruby now exposes more of the Flight and Flight SQL APIs (various JIRAs). Linux packages notes AlmaLinux 9 is now supported. (ARROW-16745) AmazonLinux 2 aarch64 is now supported. (ARROW-16477) C++ notes STL-like iteration is now provided over chunked arrays (ARROW-602). Compute The C++ compute and execution engine is now officially named “Acero”, though its C++ namespaces have not changed. New light-weight data holder abstractions have been introduced in order to reduce the overhead of invoking compute functions and kernels, especially at the small data sizes desirable for efficient parallelization (typically L1- or L2-sized). Specifically, the non-owning ArraySpan and ExecSpan structures have internally superseded the much heavier ExecBatch, which is still supported for compatibility at the API level (ARROW-16756, ARROW-16824, ARROW-16852). In a similar vein, the ValueDescr class was removed and ScalarKernel implementations now always receive at least one non-scalar input, removing the special case where a ScalarKernel needs to output a scalar rather than an array. The higher-level compute APIs still allow executing a scalar function over all-scalar inputs; but those scalars are internally broadcasted to 1-element arrays so as to simplify kernel implementation (ARROW-16757). Some performance improvements were made to the hash join node. These changes do not require additional configuration. The hash join exec node has been improved to more efficiently use CPU cache and make better use of available vectorization hardware (ARROW-14182). Some plans containing a sequence of hash join operators will now use bloom filters to eliminate rows earlier in the plan, reducing the overall CPU cost of the plan (ARROW-15498). Timestamp comparison is now supported (ARROW-16425). A cumulative sum function is implemented over numeric inputs (ARROW-13530). Note that this is a vector function so cannot be used in an Acero ExecPlan. A rank vector kernel has been added (ARROW-16234). Temporal rounding functions received additional options to control how rounding is done (ARROW-14821). Improper computation of the “mode” function on boolean input was fixed (ARROW-17096). Function registries can now be nested (ARROW-16677). Dataset The autogenerate_column_names option for CSV reading is now handled correctly (ARROW-16436). Fix InMemoryDataset::ReplaceSchema to actually replace the schema (ARROW-16085). Fix FilenamePartitioning to properly support null values (ARROW-16302). Filesystem A number of bug fixes and improvements were made to the Google Cloud Storage filesystem implementation (ARROW-14892). By default, the S3 filesystem implementation does not create or drop buckets anymore (ARROW-15906). This is a compatibility-breaking change intended to prevent user errors from having potentially catastrophic consequences. Options have been added to restore the previous behavior if necessary. Parquet The default Parquet version is now 2.4 for writing, enabling use of more recent logical types by default (ARROW-12203). Non-nullable fields are now handled correctly by the Parquet reader (ARROW-16116). Reading encrypted files should now be thread-safe (ARROW-14114). Statistics equality now works correctly with minmax (ARROW-16487). The minimum Thrift version required for building is now 0.13 (ARROW-16721). The Thrift deserialization limits can now be configured to accommodate for data files with very large metadata (ARROW-16546). Substrait The Substrait spec has been updated to 0.6.0 (ARROW-16816). In addition, a larger subset of the Substrait specification is now supported (ARROW-15587, ARROW-15590, ARROW-15901, ARROW-16657, ARROW-15591). C# notes New Features Added support for Time32Array and Time64Array (ARROW-16660) Bug Fixes When using TableFromRecordBatches, the resulting table columns have no data array. (ARROW-13129) Fix intermittent test failures due to async memory management bug. (ARROW-16978) Go notes Security Updated testify dependency to address CVE-2022-28948. (ARROW-16759) (This was also backported to previous versions and released as patch versions v6.0.2, v7.0.1, and v8.0.1) Arrow New Features Dictionary Scalars are now available (ARROW-16323) Introduced a DictionaryUnifier object along with functions for unifying Chunked Arrays and Tables (ARROW-16324) New CSV examples added to documentation to demonstrate error handling (ARROW-16450) CSV Reader now supports arrow.TimestampType (ARROW-16504) JSON parsing for Temporal Types now allow passing numeric values in addition to strings for parsing. Timezones will be properly parsed if they exist in the string and a function was added to retrieve a time.Location object from a TimestampType (ARROW-16551) New utilities added to decimal128 for rescaling and easy conversion to and from float32/float64 (ARROW-16552) Arrow DataType interface now has a LayoutMethod which returns the physical layout of the given datatype such as the number of buffers, types, etc. This matches the behavior of the layout() methods in C++ for data types. (ARROW-16556) Added a SliceBuffer function to the memory package to allow better re-using of memory across buffer objects (ARROW-16557) Dictionary Arrays can now be concatenated using array.Concatenate (ARROW-17095) Bug Fixes ipc.FileReader now properly uses the memory.Allocator interface (ARROW-16002) Addressed issue with Integration tests between Go and Java (ARROW-16441) RecordBuilder.UnmarshalJSON now properly ignores extra unknown fields rather than panicking (ARROW-16456) StructBuilder.UnmarshalJSON will no longer fail and panic when Nullable fields are missing (ARROW-16502) ipc.Reader no longer silently accepts string columns with invalid offsets, preventing unexpected panics later when writing or accessing the resulting arrays. (ARROW-16831) Arrow CSV reader no longer clobbers its reported errors and properly surfaces them (ARROW-16926) Parquet New Features The CreatedBy version string for the Parquet writer will now correctly reflect the library version, and will be updated by the release scripts (ARROW-16484) Parquet bit_packing functions now have ARM64 NEON implementations for performance (ARROW-16486) It is now possible to customize the root node in the Parquet writer instead of hardcoding it to be named “schema” with a repetition type of Repeated. This was needed to allow producing files similar to Apache Spark where the root node has a repetition type of Required. It still defaults to the spec definition of Repeated. (ARROW-16561) parquet_reader CLI mainprog has been enhanced to dump values out as JSON and CSV along with setting an output file instead of just dumping to the terminal. (ARROW-16934) Bug Fixes Fixed a memory leak with Parquet page reading (ARROW-16473) Parquet Reader properly parallelizes column reads when the parallel option is set to true. (ARROW-16530) Fixed bug in the Bool decoder for plain encoding (ARROW-16563) Fixed a bug in the Parquet bool column reader where it failed to properly skip rows (ARROW-16638) Fixed the flakey travis ARM64 builds by reducing the size of a test case in the pqarrow unit tests to reduce the memory usage for the tests. (ARROW-16669) Parquet writer now properly handles writing arrow.NULL type arrays (ARROW-16749) Column level dictionary encoding configuration for Parquet writing now correctly respects the input value (ARROW-16813) Memory leak in DeltaByteArray encoding fixed (ARROW-16983) Java notes New Features Allow overriding column nullability in arrow-jdbc (#13558) Enable skip BOUNDS_CHECKING with setBytes and getBytes of ArrowBuf (#13161) Initialize JNI components on use instead of statically (#13146) Provide explicit JDBC column type mapping (#13166) Allow duplicated field names in Java C data interface (#13247) Improve and document StackTrace (#12656) Keep more context when marshaling errors through JNI (#13246) Make RoundingMode configurable to handle inconsistent scale in BigDecimals (#13433) Improve Java dev experience with IntelliJ (#13017) Implement ArrowArrayStream (#13465)) Bug Fixes Fix variable-width vectors in integration JSON writer (#13676) Handle empty JDBC ResultSet (#13049) Fix hasNext() in ArrowVectorIterator (#13107) Fix ArrayConsumer when using ArrowVectorIterator (#12692) Update Gandiva Protobuf library to enable builds on Apple M1 (#13121) Patch dataset module testing failure with JSE11+ (#13200) Don’t duplicate generated Protobuf classes between flight-core and flight-sql (#13596) JavaScript notes Fix error iterating tables with no batches (ARROW-16371) Handle case where tableFromIPC input is an async RecordBatchReader (ARROW-16704) Python notes Compatibility notes: PyArrow now requires Python &gt;= 3.7 (ARROW-16474). The default behaviour regarding memory mapping has changed in several APIs (reading of Feather or Parquet files, IPC RecordBatchFileReader and RecordBatchStreamReader) to disable memory mapping by default (ARROW-16382). The default Parquet version is now 2.4 for writing, enabling use of more recent logical types by default such as unsigned integers (ARROW-12203). One can specify version="2.6" to also enable support for nanosecond timestamps. Use version="1.0" to restore the old behaviour and maximizes file compatibility. Some deprecated APIs (deprecated at least since pyarrow 1.0.0) have been removed: IPC methods in the top-level namespace, the Value scalar classes and the pyarrow.compat module (ARROW-17010). New features: Google Cloud Storage (GCS) File System support is now available in the Python bindings (ARROW-14892). The Table.filter() method now supports passing an expression in addition to a boolean array (ARROW-16469). When implementing extension types in Python, it is now possible to also customize which Python scalar gets returned (in Array.to_pylist() or Scalar.as_py()) by subclassing ExtensionScalar (ARROW-13612, (ARROW-17065)). It is now possible to register User Defined Functions (UDF) for scalar functions using register_scalar_function (ARROW-15639). Basic support for consuming a Substrait plan has been exposed in Python as pyarrow.substrait.run_query (ARROW-15779). The cast method and compute kernel now exposes the fine grained options in addition to safe/unsafe casting (ARROW-15365). In addition, this release includes several bug fixes and documention improvements (such as expanded examples in docstrings (ARROW-16091)). Further, the Python bindings benefit from improvements in the C++ library (e.g. new compute functions); see the C++ notes above for additional details. R notes Highlights include several new dplyr verbs, including glimpse() and union_all(), as well as many more datetime functions from lubridate. There is also experimental support for user-defined scalar functions in the query engine, and most packages include native support for datasets in Google Cloud Storage (opt-in in the Linux full source build). For more on what’s in the 9.0.0 R package, see the R changelog. Ruby and C GLib notes FlightSQL is now supported but there are minimum features for now. More Flight features are now supported. Ruby Enumerable compatible methods such as #min and #max on Arrow::Array, Arrow::ChunkedArray and Arrow::Column are implemented by C++’s compute functions. This improves performance. (ARROW-15222) This release fixed some memory leaks. (ARROW-14790) This release improved support for interval type arrays such as Arrow::MonthIntervalArray. (ARROW-16206) This release improved auto data type conversion. (ARROW-16874) C GLib Vala is now supported. (ARROW-15671). See c_glib/example/vala/ for examples. GArrowQuantil eOptions is added. (ARROW-16623) Rust notes The Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the 19.0.0 release of the Rust implementation, see the Arrow Rust changelog.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>

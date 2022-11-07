@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 2 | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 2" />
+<meta name="author" content="tustvold and alamb" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Introduction In Part 1 of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new row format in the Rust implementation of Apache Arrow works and is constructed. Row Format The row format is a variable length byte sequence created by concatenating the encoded form of each column. The encoding for each column depends on its datatype (and sort options). ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ │ │ │ ├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐ ┏━━━━━━━━━━━━━┓ │ │ │ │ │ │ ─────────────▶┃ ┃ ├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘ ┗━━━━━━━━━━━━━┛ │ │ │ │ │ │ └─────┘ └─────┘ └─────┘ ... ┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐ ┏━━━━━━━━┓ │ │ │ │ │ │ ─────────────▶┃ ┃ └─────┘ └ ┴─────┴ ─ ┴─────┴ ┘ ┗━━━━━━━━┛ Customer State Orders UInt64 Utf8 F64 Input Arrays Row Format (Columns) The encoding is carefully designed in such a way that escaping is unnecessary: it is never ambiguous as to whether a byte is part of a sentinel (e.g. null) or a value. Unsigned Integers To encode a non-null unsigned integer, the byte 0x01 is written, followed by the integer’s bytes starting with the most significant, i.e. big endian. A null is encoded as a 0x00 byte, followed by the encoded bytes of the integer’s zero value ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 3 │03│00│00│00│ │01│00│00│00│03│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 258 │02│01│00│00│ │01│00│00│01│02│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 23423 │7F│5B│00│00│ │01│00│00│5B│7F│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ NULL │??│??│??│??│ │00│00│00│00│00│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ 32-bit (4 bytes) Row Format Value Little Endian Signed Integers In Rust and most modern computer architectures, signed integers are encoded using two’s complement, where a number is negated by flipping all the bits, and adding 1. Therefore, flipping the top-most bit and treating the result as an unsigned integer preserves the order. This unsigned integer can then be encoded using the same encoding for unsigned integers described in the previous section. For example ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 5 │05│00│00│00│ │05│00│00│80│ │01│80│00│00│05│ └──┴──┴──┴──┘ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ -5 │FB│FF│FF│FF│ │FB│FF│FF│7F│ │01│7F│FF│FF│FB│ └──┴──┴──┴──┘ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ Value 32-bit (4 bytes) High bit flipped Row Format Little Endian Floating Point Floating point values can be ordered according to the IEEE 754 totalOrder predicate (implemented in Rust by f32::total_cmp). This ordering interprets the bytes of the floating point value as the correspondingly sized, signed, little-endian integer, flipping all the bits except the sign bit in the case of negatives. Floating point values are therefore encoded to row format by converting them to the appropriate sized signed integer representation, and then using the same encoding for signed integers described in the previous section. Byte Arrays (Including Strings) Unlike primitive types above, byte arrays are variable length. For short strings, such as state in our example above, it is possible to pad all values to the length of the longest one with some fixed value such as 0x00 and produce a fixed length row. This is the approach described in the DuckDB blog for encoding c_birth_country. However, often values in string columns differ substantially in length or the maximum length is not known at the start of execution, making it inadvisable and/or impractical to pad the strings to a fixed length. The Rust Arrow row format therefore uses a variable length encoding. We need an encoding that unambiguously terminates the end of the byte array. This not only permits recovering the original value from the row format, but ensures that bytes of a longer byte array are not compared against bytes from a different column when compared against a row containing a shorter byte array. A null byte array is encoded as a single 0x00 byte. Similarly, an empty byte array is encoded as a single 0x01 byte. To encode a non-null, non-empty array, first a single 0x02 byte is written. Then the array is written in 32-byte blocks, with each complete block followed by a 0xFF byte as a continuation token. The final block is padded to 32-bytes with 0x00, and is then followed by the unpadded length of this final block as a single byte in place of a continuation token Note the following example encodings use a block size of 4 bytes, as opposed to 32 bytes for brevity ┌───┬───┬───┬───┬───┬───┐ &quot;MEEP&quot; │02 │&#39;M&#39;│&#39;E&#39;│&#39;E&#39;│&#39;P&#39;│04 │ └───┴───┴───┴───┴───┴───┘ ┌───┐ &quot;&quot; │01 | └───┘ NULL ┌───┐ │00 │ └───┘ &quot;Defenestration&quot; ┌───┬───┬───┬───┬───┬───┐ │02 │&#39;D&#39;│&#39;e&#39;│&#39;f&#39;│&#39;e&#39;│FF │ └───┼───┼───┼───┼───┼───┤ │&#39;n&#39;│&#39;e&#39;│&#39;s&#39;│&#39;t&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;r&#39;│&#39;a&#39;│&#39;t&#39;│&#39;r&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;a&#39;│&#39;t&#39;│&#39;i&#39;│&#39;o&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;n&#39;│00 │00 │00 │17 │ └───┴───┴───┴───┴───┘ This approach is loosely inspired by COBS encoding, and chosen over more traditional byte stuffing as it is more amenable to vectorization, in particular hardware with AVX-256 can copy a 32-byte block in a single instruction. Dictionary Arrays Dictionary Encoded Data (called categorical in pandas) is increasingly important because they can store and process low cardinality data very efficiently. A simple approach to encoding dictionary arrays would be to encode the logical values directly using the encodings for primitive values described previously. However, this would lose the benefits of dictionary encoding to reduce memory and CPU consumption. To further complicate matters, the Arrow implementation of Dictionary encoding is quite general, and we can make no assumptions about the contents of the dictionaries. In particular, we cannot assume that the dictionary values are sorted, nor that the same dictionary is used for all arrays within a column The following example shows how a string column might be encoded in two arrays using two different dictionaries. The dictionary keys 0, 1, and 2 in the first batch correspond to different values than the same keys in the second dictionary. ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌───────────┐ ┌─────┐ │ │ │&quot;Fabulous&quot; │ │ 0 │ ├───────────┤ ├─────┤ │ │ │ &quot;Bar&quot; │ │ 2 │ ├───────────┤ ├─────┤ │ ┌───────────┐ │ │ &quot;Soup&quot; │ │ 2 │ │&quot;Fabulous&quot; │ └───────────┘ ├─────┤ │ ├───────────┤ │ │ 0 │ │ &quot;Soup&quot; │ ├─────┤ │ ├───────────┤ │ │ 1 │ │ &quot;Soup&quot; │ └─────┘ │ ├───────────┤ │ │&quot;Fabulous&quot; │ Values │ ├───────────┤ │ Dictionary (indexes in │ &quot;Bar&quot; │ dictionary) │ ├───────────┤ │ │ &quot;ZZ&quot; │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ├───────────┤ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ &quot;Bar&quot; │ │ ├───────────┤ │ ┌───────────┐ ┌─────┐ │ &quot;ZZ&quot; │ │&quot;Fabulous&quot; │ │ 1 │ │ ├───────────┤ │ ├───────────┤ ├─────┤ │&quot;Fabulous&quot; │ │ &quot;ZZ&quot; │ │ 2 │ │ └───────────┘ │ ├───────────┤ ├─────┤ │ &quot;Bar&quot; │ │ 1 │ │ │ └───────────┘ ├─────┤ │ 0 │ │ Logical column │ └─────┘ values Values │ │ Dictionary (indexes in dictionary) │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ The key observation which allows us to efficiently create a row format for this kind of data is that given a byte array, a new byte array can always be created which comes before or after it in the sort order by adding an additional byte. Therefore we can incrementally build an order-preserving mapping from dictionary values to variable length byte arrays, without needing to know all possible dictionary values beforehand, instead introducing mappings for new dictionary values as we encounter them. ┌──────────┐ ┌─────┐ │ &quot;Bar&quot; │ ───────────────▶│ 01 │ └──────────┘ └─────┘ ┌──────────┐ ┌─────┬─────┐ │&quot;Fabulous&quot;│ ───────────────▶│ 01 │ 02 │ └──────────┘ └─────┴─────┘ ┌──────────┐ ┌─────┐ │ &quot;Soup&quot; │ ───────────────▶│ 05 │ └──────────┘ └─────┘ ┌──────────┐ ┌─────┐ │ &quot;ZZ&quot; │ ───────────────▶│ 07 │ └──────────┘ └─────┘ Example Order Preserving Mapping The details of the data structure used to generate this mapping are beyond the scope of this blog post, but may be the topic of a future post. You can find the code here. The data structure also ensures that no values contain 0x00 and therefore we can encode the arrays directly using 0x00 as an end-delimiter. A null value is encoded as a single 0x00 byte, and a non-null value encoded as a single 0x01 byte, followed by the 0x00 terminated byte array determined by the order preserving mapping ┌─────┬─────┬─────┬─────┐ &quot;Fabulous&quot; │ 01 │ 03 │ 05 │ 00 │ └─────┴─────┴─────┴─────┘ ┌─────┬─────┬─────┐ &quot;ZZ&quot; │ 01 │ 07 │ 00 │ └─────┴─────┴─────┘ ┌─────┐ NULL │ 00 │ └─────┘ Input Row Format Sort Options One detail we have so far ignored over is how to support ascending and descending sorts (e.g. ASC or DESC in SQL). The Arrow Rust row format supports these options by simply inverting the bytes of the encoded representation, except the initial byte used for nullability encoding, on a per column basis. Similarly, supporting SQL compatible sorting also requires a format that can specify the order of NULLs (before or after all non NULL values). The row format supports this option by optionally encoding nulls as 0xFF instead of 0x00 on a per column basis. Conclusion Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the docs for instructions on getting started, and report any issues on our bugtracker. Using this format for lexicographic sorting is more than 3x faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns. We have also already used it to more than double the performance of sort preserving merge in the DataFusion project, and expect similar or greater performance uplift as we apply it to sort, grouping, join, and window function operators as well. As always, the Arrow community very much looks forward to seeing what you build with it!" />
+<meta property="og:description" content="Introduction In Part 1 of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new row format in the Rust implementation of Apache Arrow works and is constructed. Row Format The row format is a variable length byte sequence created by concatenating the encoded form of each column. The encoding for each column depends on its datatype (and sort options). ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ │ │ │ ├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐ ┏━━━━━━━━━━━━━┓ │ │ │ │ │ │ ─────────────▶┃ ┃ ├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘ ┗━━━━━━━━━━━━━┛ │ │ │ │ │ │ └─────┘ └─────┘ └─────┘ ... ┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐ ┏━━━━━━━━┓ │ │ │ │ │ │ ─────────────▶┃ ┃ └─────┘ └ ┴─────┴ ─ ┴─────┴ ┘ ┗━━━━━━━━┛ Customer State Orders UInt64 Utf8 F64 Input Arrays Row Format (Columns) The encoding is carefully designed in such a way that escaping is unnecessary: it is never ambiguous as to whether a byte is part of a sentinel (e.g. null) or a value. Unsigned Integers To encode a non-null unsigned integer, the byte 0x01 is written, followed by the integer’s bytes starting with the most significant, i.e. big endian. A null is encoded as a 0x00 byte, followed by the encoded bytes of the integer’s zero value ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 3 │03│00│00│00│ │01│00│00│00│03│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 258 │02│01│00│00│ │01│00│00│01│02│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 23423 │7F│5B│00│00│ │01│00│00│5B│7F│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ NULL │??│??│??│??│ │00│00│00│00│00│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ 32-bit (4 bytes) Row Format Value Little Endian Signed Integers In Rust and most modern computer architectures, signed integers are encoded using two’s complement, where a number is negated by flipping all the bits, and adding 1. Therefore, flipping the top-most bit and treating the result as an unsigned integer preserves the order. This unsigned integer can then be encoded using the same encoding for unsigned integers described in the previous section. For example ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 5 │05│00│00│00│ │05│00│00│80│ │01│80│00│00│05│ └──┴──┴──┴──┘ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ -5 │FB│FF│FF│FF│ │FB│FF│FF│7F│ │01│7F│FF│FF│FB│ └──┴──┴──┴──┘ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ Value 32-bit (4 bytes) High bit flipped Row Format Little Endian Floating Point Floating point values can be ordered according to the IEEE 754 totalOrder predicate (implemented in Rust by f32::total_cmp). This ordering interprets the bytes of the floating point value as the correspondingly sized, signed, little-endian integer, flipping all the bits except the sign bit in the case of negatives. Floating point values are therefore encoded to row format by converting them to the appropriate sized signed integer representation, and then using the same encoding for signed integers described in the previous section. Byte Arrays (Including Strings) Unlike primitive types above, byte arrays are variable length. For short strings, such as state in our example above, it is possible to pad all values to the length of the longest one with some fixed value such as 0x00 and produce a fixed length row. This is the approach described in the DuckDB blog for encoding c_birth_country. However, often values in string columns differ substantially in length or the maximum length is not known at the start of execution, making it inadvisable and/or impractical to pad the strings to a fixed length. The Rust Arrow row format therefore uses a variable length encoding. We need an encoding that unambiguously terminates the end of the byte array. This not only permits recovering the original value from the row format, but ensures that bytes of a longer byte array are not compared against bytes from a different column when compared against a row containing a shorter byte array. A null byte array is encoded as a single 0x00 byte. Similarly, an empty byte array is encoded as a single 0x01 byte. To encode a non-null, non-empty array, first a single 0x02 byte is written. Then the array is written in 32-byte blocks, with each complete block followed by a 0xFF byte as a continuation token. The final block is padded to 32-bytes with 0x00, and is then followed by the unpadded length of this final block as a single byte in place of a continuation token Note the following example encodings use a block size of 4 bytes, as opposed to 32 bytes for brevity ┌───┬───┬───┬───┬───┬───┐ &quot;MEEP&quot; │02 │&#39;M&#39;│&#39;E&#39;│&#39;E&#39;│&#39;P&#39;│04 │ └───┴───┴───┴───┴───┴───┘ ┌───┐ &quot;&quot; │01 | └───┘ NULL ┌───┐ │00 │ └───┘ &quot;Defenestration&quot; ┌───┬───┬───┬───┬───┬───┐ │02 │&#39;D&#39;│&#39;e&#39;│&#39;f&#39;│&#39;e&#39;│FF │ └───┼───┼───┼───┼───┼───┤ │&#39;n&#39;│&#39;e&#39;│&#39;s&#39;│&#39;t&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;r&#39;│&#39;a&#39;│&#39;t&#39;│&#39;r&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;a&#39;│&#39;t&#39;│&#39;i&#39;│&#39;o&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;n&#39;│00 │00 │00 │17 │ └───┴───┴───┴───┴───┘ This approach is loosely inspired by COBS encoding, and chosen over more traditional byte stuffing as it is more amenable to vectorization, in particular hardware with AVX-256 can copy a 32-byte block in a single instruction. Dictionary Arrays Dictionary Encoded Data (called categorical in pandas) is increasingly important because they can store and process low cardinality data very efficiently. A simple approach to encoding dictionary arrays would be to encode the logical values directly using the encodings for primitive values described previously. However, this would lose the benefits of dictionary encoding to reduce memory and CPU consumption. To further complicate matters, the Arrow implementation of Dictionary encoding is quite general, and we can make no assumptions about the contents of the dictionaries. In particular, we cannot assume that the dictionary values are sorted, nor that the same dictionary is used for all arrays within a column The following example shows how a string column might be encoded in two arrays using two different dictionaries. The dictionary keys 0, 1, and 2 in the first batch correspond to different values than the same keys in the second dictionary. ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌───────────┐ ┌─────┐ │ │ │&quot;Fabulous&quot; │ │ 0 │ ├───────────┤ ├─────┤ │ │ │ &quot;Bar&quot; │ │ 2 │ ├───────────┤ ├─────┤ │ ┌───────────┐ │ │ &quot;Soup&quot; │ │ 2 │ │&quot;Fabulous&quot; │ └───────────┘ ├─────┤ │ ├───────────┤ │ │ 0 │ │ &quot;Soup&quot; │ ├─────┤ │ ├───────────┤ │ │ 1 │ │ &quot;Soup&quot; │ └─────┘ │ ├───────────┤ │ │&quot;Fabulous&quot; │ Values │ ├───────────┤ │ Dictionary (indexes in │ &quot;Bar&quot; │ dictionary) │ ├───────────┤ │ │ &quot;ZZ&quot; │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ├───────────┤ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ &quot;Bar&quot; │ │ ├───────────┤ │ ┌───────────┐ ┌─────┐ │ &quot;ZZ&quot; │ │&quot;Fabulous&quot; │ │ 1 │ │ ├───────────┤ │ ├───────────┤ ├─────┤ │&quot;Fabulous&quot; │ │ &quot;ZZ&quot; │ │ 2 │ │ └───────────┘ │ ├───────────┤ ├─────┤ │ &quot;Bar&quot; │ │ 1 │ │ │ └───────────┘ ├─────┤ │ 0 │ │ Logical column │ └─────┘ values Values │ │ Dictionary (indexes in dictionary) │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ The key observation which allows us to efficiently create a row format for this kind of data is that given a byte array, a new byte array can always be created which comes before or after it in the sort order by adding an additional byte. Therefore we can incrementally build an order-preserving mapping from dictionary values to variable length byte arrays, without needing to know all possible dictionary values beforehand, instead introducing mappings for new dictionary values as we encounter them. ┌──────────┐ ┌─────┐ │ &quot;Bar&quot; │ ───────────────▶│ 01 │ └──────────┘ └─────┘ ┌──────────┐ ┌─────┬─────┐ │&quot;Fabulous&quot;│ ───────────────▶│ 01 │ 02 │ └──────────┘ └─────┴─────┘ ┌──────────┐ ┌─────┐ │ &quot;Soup&quot; │ ───────────────▶│ 05 │ └──────────┘ └─────┘ ┌──────────┐ ┌─────┐ │ &quot;ZZ&quot; │ ───────────────▶│ 07 │ └──────────┘ └─────┘ Example Order Preserving Mapping The details of the data structure used to generate this mapping are beyond the scope of this blog post, but may be the topic of a future post. You can find the code here. The data structure also ensures that no values contain 0x00 and therefore we can encode the arrays directly using 0x00 as an end-delimiter. A null value is encoded as a single 0x00 byte, and a non-null value encoded as a single 0x01 byte, followed by the 0x00 terminated byte array determined by the order preserving mapping ┌─────┬─────┬─────┬─────┐ &quot;Fabulous&quot; │ 01 │ 03 │ 05 │ 00 │ └─────┴─────┴─────┴─────┘ ┌─────┬─────┬─────┐ &quot;ZZ&quot; │ 01 │ 07 │ 00 │ └─────┴─────┴─────┘ ┌─────┐ NULL │ 00 │ └─────┘ Input Row Format Sort Options One detail we have so far ignored over is how to support ascending and descending sorts (e.g. ASC or DESC in SQL). The Arrow Rust row format supports these options by simply inverting the bytes of the encoded representation, except the initial byte used for nullability encoding, on a per column basis. Similarly, supporting SQL compatible sorting also requires a format that can specify the order of NULLs (before or after all non NULL values). The row format supports this option by optionally encoding nulls as 0xFF instead of 0x00 on a per column basis. Conclusion Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the docs for instructions on getting started, and report any issues on our bugtracker. Using this format for lexicographic sorting is more than 3x faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns. We have also already used it to more than double the performance of sort preserving merge in the DataFusion project, and expect similar or greater performance uplift as we apply it to sort, grouping, join, and window function operators as well. As always, the Arrow community very much looks forward to seeing what you build with it!" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2022/10/30/multi-column-sorts-in-arrow-rust-part-2/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2022/10/30/multi-column-sorts-in-arrow-rust-part-2/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-10-30T00:00:00-04:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 2" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@tustvold and alamb" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"tustvold and alamb"},"dateModified":"2022-10-30T00:00:00-04:00","datePublished":"2022-10-30T00:00:00-04:00","description":"Introduction In Part 1 of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new row format in the Rust implementation of Apache Arrow works and is constructed. Row Format The row format is a variable length byte sequence created by concatenating the encoded form of each column. The encoding for each column depends on its datatype (and sort options). ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ │ │ │ ├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐ ┏━━━━━━━━━━━━━┓ │ │ │ │ │ │ ─────────────▶┃ ┃ ├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘ ┗━━━━━━━━━━━━━┛ │ │ │ │ │ │ └─────┘ └─────┘ └─────┘ ... ┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐ ┏━━━━━━━━┓ │ │ │ │ │ │ ─────────────▶┃ ┃ └─────┘ └ ┴─────┴ ─ ┴─────┴ ┘ ┗━━━━━━━━┛ Customer State Orders UInt64 Utf8 F64 Input Arrays Row Format (Columns) The encoding is carefully designed in such a way that escaping is unnecessary: it is never ambiguous as to whether a byte is part of a sentinel (e.g. null) or a value. Unsigned Integers To encode a non-null unsigned integer, the byte 0x01 is written, followed by the integer’s bytes starting with the most significant, i.e. big endian. A null is encoded as a 0x00 byte, followed by the encoded bytes of the integer’s zero value ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 3 │03│00│00│00│ │01│00│00│00│03│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 258 │02│01│00│00│ │01│00│00│01│02│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 23423 │7F│5B│00│00│ │01│00│00│5B│7F│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ NULL │??│??│??│??│ │00│00│00│00│00│ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ 32-bit (4 bytes) Row Format Value Little Endian Signed Integers In Rust and most modern computer architectures, signed integers are encoded using two’s complement, where a number is negated by flipping all the bits, and adding 1. Therefore, flipping the top-most bit and treating the result as an unsigned integer preserves the order. This unsigned integer can then be encoded using the same encoding for unsigned integers described in the previous section. For example ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ 5 │05│00│00│00│ │05│00│00│80│ │01│80│00│00│05│ └──┴──┴──┴──┘ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┐ ┌──┬──┬──┬──┬──┐ -5 │FB│FF│FF│FF│ │FB│FF│FF│7F│ │01│7F│FF│FF│FB│ └──┴──┴──┴──┘ └──┴──┴──┴──┘ └──┴──┴──┴──┴──┘ Value 32-bit (4 bytes) High bit flipped Row Format Little Endian Floating Point Floating point values can be ordered according to the IEEE 754 totalOrder predicate (implemented in Rust by f32::total_cmp). This ordering interprets the bytes of the floating point value as the correspondingly sized, signed, little-endian integer, flipping all the bits except the sign bit in the case of negatives. Floating point values are therefore encoded to row format by converting them to the appropriate sized signed integer representation, and then using the same encoding for signed integers described in the previous section. Byte Arrays (Including Strings) Unlike primitive types above, byte arrays are variable length. For short strings, such as state in our example above, it is possible to pad all values to the length of the longest one with some fixed value such as 0x00 and produce a fixed length row. This is the approach described in the DuckDB blog for encoding c_birth_country. However, often values in string columns differ substantially in length or the maximum length is not known at the start of execution, making it inadvisable and/or impractical to pad the strings to a fixed length. The Rust Arrow row format therefore uses a variable length encoding. We need an encoding that unambiguously terminates the end of the byte array. This not only permits recovering the original value from the row format, but ensures that bytes of a longer byte array are not compared against bytes from a different column when compared against a row containing a shorter byte array. A null byte array is encoded as a single 0x00 byte. Similarly, an empty byte array is encoded as a single 0x01 byte. To encode a non-null, non-empty array, first a single 0x02 byte is written. Then the array is written in 32-byte blocks, with each complete block followed by a 0xFF byte as a continuation token. The final block is padded to 32-bytes with 0x00, and is then followed by the unpadded length of this final block as a single byte in place of a continuation token Note the following example encodings use a block size of 4 bytes, as opposed to 32 bytes for brevity ┌───┬───┬───┬───┬───┬───┐ &quot;MEEP&quot; │02 │&#39;M&#39;│&#39;E&#39;│&#39;E&#39;│&#39;P&#39;│04 │ └───┴───┴───┴───┴───┴───┘ ┌───┐ &quot;&quot; │01 | └───┘ NULL ┌───┐ │00 │ └───┘ &quot;Defenestration&quot; ┌───┬───┬───┬───┬───┬───┐ │02 │&#39;D&#39;│&#39;e&#39;│&#39;f&#39;│&#39;e&#39;│FF │ └───┼───┼───┼───┼───┼───┤ │&#39;n&#39;│&#39;e&#39;│&#39;s&#39;│&#39;t&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;r&#39;│&#39;a&#39;│&#39;t&#39;│&#39;r&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;a&#39;│&#39;t&#39;│&#39;i&#39;│&#39;o&#39;│FF │ ├───┼───┼───┼───┼───┤ │&#39;n&#39;│00 │00 │00 │17 │ └───┴───┴───┴───┴───┘ This approach is loosely inspired by COBS encoding, and chosen over more traditional byte stuffing as it is more amenable to vectorization, in particular hardware with AVX-256 can copy a 32-byte block in a single instruction. Dictionary Arrays Dictionary Encoded Data (called categorical in pandas) is increasingly important because they can store and process low cardinality data very efficiently. A simple approach to encoding dictionary arrays would be to encode the logical values directly using the encodings for primitive values described previously. However, this would lose the benefits of dictionary encoding to reduce memory and CPU consumption. To further complicate matters, the Arrow implementation of Dictionary encoding is quite general, and we can make no assumptions about the contents of the dictionaries. In particular, we cannot assume that the dictionary values are sorted, nor that the same dictionary is used for all arrays within a column The following example shows how a string column might be encoded in two arrays using two different dictionaries. The dictionary keys 0, 1, and 2 in the first batch correspond to different values than the same keys in the second dictionary. ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌───────────┐ ┌─────┐ │ │ │&quot;Fabulous&quot; │ │ 0 │ ├───────────┤ ├─────┤ │ │ │ &quot;Bar&quot; │ │ 2 │ ├───────────┤ ├─────┤ │ ┌───────────┐ │ │ &quot;Soup&quot; │ │ 2 │ │&quot;Fabulous&quot; │ └───────────┘ ├─────┤ │ ├───────────┤ │ │ 0 │ │ &quot;Soup&quot; │ ├─────┤ │ ├───────────┤ │ │ 1 │ │ &quot;Soup&quot; │ └─────┘ │ ├───────────┤ │ │&quot;Fabulous&quot; │ Values │ ├───────────┤ │ Dictionary (indexes in │ &quot;Bar&quot; │ dictionary) │ ├───────────┤ │ │ &quot;ZZ&quot; │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ├───────────┤ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ &quot;Bar&quot; │ │ ├───────────┤ │ ┌───────────┐ ┌─────┐ │ &quot;ZZ&quot; │ │&quot;Fabulous&quot; │ │ 1 │ │ ├───────────┤ │ ├───────────┤ ├─────┤ │&quot;Fabulous&quot; │ │ &quot;ZZ&quot; │ │ 2 │ │ └───────────┘ │ ├───────────┤ ├─────┤ │ &quot;Bar&quot; │ │ 1 │ │ │ └───────────┘ ├─────┤ │ 0 │ │ Logical column │ └─────┘ values Values │ │ Dictionary (indexes in dictionary) │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ The key observation which allows us to efficiently create a row format for this kind of data is that given a byte array, a new byte array can always be created which comes before or after it in the sort order by adding an additional byte. Therefore we can incrementally build an order-preserving mapping from dictionary values to variable length byte arrays, without needing to know all possible dictionary values beforehand, instead introducing mappings for new dictionary values as we encounter them. ┌──────────┐ ┌─────┐ │ &quot;Bar&quot; │ ───────────────▶│ 01 │ └──────────┘ └─────┘ ┌──────────┐ ┌─────┬─────┐ │&quot;Fabulous&quot;│ ───────────────▶│ 01 │ 02 │ └──────────┘ └─────┴─────┘ ┌──────────┐ ┌─────┐ │ &quot;Soup&quot; │ ───────────────▶│ 05 │ └──────────┘ └─────┘ ┌──────────┐ ┌─────┐ │ &quot;ZZ&quot; │ ───────────────▶│ 07 │ └──────────┘ └─────┘ Example Order Preserving Mapping The details of the data structure used to generate this mapping are beyond the scope of this blog post, but may be the topic of a future post. You can find the code here. The data structure also ensures that no values contain 0x00 and therefore we can encode the arrays directly using 0x00 as an end-delimiter. A null value is encoded as a single 0x00 byte, and a non-null value encoded as a single 0x01 byte, followed by the 0x00 terminated byte array determined by the order preserving mapping ┌─────┬─────┬─────┬─────┐ &quot;Fabulous&quot; │ 01 │ 03 │ 05 │ 00 │ └─────┴─────┴─────┴─────┘ ┌─────┬─────┬─────┐ &quot;ZZ&quot; │ 01 │ 07 │ 00 │ └─────┴─────┴─────┘ ┌─────┐ NULL │ 00 │ └─────┘ Input Row Format Sort Options One detail we have so far ignored over is how to support ascending and descending sorts (e.g. ASC or DESC in SQL). The Arrow Rust row format supports these options by simply inverting the bytes of the encoded representation, except the initial byte used for nullability encoding, on a per column basis. Similarly, supporting SQL compatible sorting also requires a format that can specify the order of NULLs (before or after all non NULL values). The row format supports this option by optionally encoding nulls as 0xFF instead of 0x00 on a per column basis. Conclusion Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the docs for instructions on getting started, and report any issues on our bugtracker. Using this format for lexicographic sorting is more than 3x faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns. We have also already used it to more than double the performance of sort preserving merge in the DataFusion project, and expect similar or greater performance uplift as we apply it to sort, grouping, join, and window function operators as well. As always, the Arrow community very much looks forward to seeing what you build with it!","headline":"Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 2","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2022/10/30/multi-column-sorts-in-arrow-rust-part-2/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"tustvold and alamb"},"url":"https://arrow.apache.org/blog/2022/10/30/multi-column-sorts-in-arrow-rust-part-2/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/master/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="/datafusion">DataFusion</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://issues.apache.org/jira/browse/ARROW">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 2
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    30 Oct 2022
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    tustvold and alamb
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<h2 id="introduction">Introduction</h2>
+
+<p>In <a href="/blog/2022/11/07/multi-column-sorts-in-arrow-rust-part-1/">Part 1</a> of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new <a href="https://docs.rs/arrow/25.0.0/arrow/row/index.html">row format</a> in the <a href="https://github.com/apache/arrow-rs">Rust implementation</a> of <a href="https://arrow.apache.org/">Apache Arrow</a> works and is constructed.</p>
+
+<h2 id="row-format">Row Format</h2>
+
+<p>The row format is a variable length byte sequence created by concatenating the encoded form of each column. The encoding for each column depends on its datatype (and sort options).</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   ┌─────┐   ┌─────┐   ┌─────┐
+   │     │   │     │   │     │
+   ├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐              ┏━━━━━━━━━━━━━┓
+   │     │   │     │   │     │  ─────────────▶┃             ┃
+   ├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘              ┗━━━━━━━━━━━━━┛
+   │     │   │     │   │     │
+   └─────┘   └─────┘   └─────┘
+               ...
+   ┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐              ┏━━━━━━━━┓
+   │     │   │     │   │     │  ─────────────▶┃        ┃
+   └─────┘ └ ┴─────┴ ─ ┴─────┴ ┘              ┗━━━━━━━━┛
+   Customer    State    Orders
+    UInt64      Utf8     F64
+
+          Input Arrays                          Row Format
+           (Columns)
+</code></pre></div></div>
+
+<p>The encoding is carefully designed in such a way that escaping is unnecessary: it is never ambiguous as to whether a byte is part of a sentinel (e.g. null) or a value.</p>
+
+<h3 id="unsigned-integers">Unsigned Integers</h3>
+
+<p>To encode a non-null unsigned integer, the byte <code class="language-plaintext highlighter-rouge">0x01</code> is written, followed by the integer’s bytes starting with the most significant, i.e. big endian. A null is encoded as a <code class="language-plaintext highlighter-rouge">0x00</code> byte, followed by the encoded bytes of the integer’s zero value</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>              ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐
+   3          │03│00│00│00│      │01│00│00│00│03│
+              └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘
+              ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐
+  258         │02│01│00│00│      │01│00│00│01│02│
+              └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘
+              ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐
+ 23423        │7F│5B│00│00│      │01│00│00│5B│7F│
+              └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘
+              ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐
+ NULL         │??│??│??│??│      │00│00│00│00│00│
+              └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘
+
+             32-bit (4 bytes)        Row Format
+ Value        Little Endian
+</code></pre></div></div>
+
+<h3 id="signed-integers">Signed Integers</h3>
+
+<p>In Rust and most modern computer architectures, signed integers are encoded using <a href="https://en.wikipedia.org/wiki/Two%27s_complement">two’s complement</a>, where a number is negated by flipping all the bits, and adding 1. Therefore, flipping the top-most bit and treating the result as an unsigned integer preserves the order. This unsigned integer can then be encoded using the same encoding for unsigned integers described in the previous section. For example</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐
+    5  │05│00│00│00│       │05│00│00│80│       │01│80│00│00│05│
+       └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘
+       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐
+   -5  │FB│FF│FF│FF│       │FB│FF│FF│7F│       │01│7F│FF│FF│FB│
+       └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘
+
+ Value  32-bit (4 bytes)    High bit flipped      Row Format
+         Little Endian
+</code></pre></div></div>
+
+<h3 id="floating-point">Floating Point</h3>
+
+<p>Floating point values can be ordered according to the <a href="https://en.wikipedia.org/wiki/IEEE_754#Total-ordering_predicate">IEEE 754 totalOrder predicate</a> (implemented in Rust by <a href="https://doc.rust-lang.org/std/primitive.f32.html#method.total_cmp">f32::total_cmp</a>). This ordering interprets the bytes of the floating point value as the correspondingly sized, signed, little-endian integer, flipping all the bits except the sign bit in the case of negatives.</p>
+
+<p>Floating point values are therefore encoded to row format by converting them to the appropriate sized signed integer representation, and then using the same encoding for signed integers described in the previous section.</p>
+
+<h3 id="byte-arrays-including-strings">Byte Arrays (Including Strings)</h3>
+
+<p>Unlike primitive types above, byte arrays are variable length. For short strings, such as <code class="language-plaintext highlighter-rouge">state</code> in our example above, it is possible to pad all values to the length of the longest one with some fixed value such as <code class="language-plaintext highlighter-rouge">0x00</code> and produce a fixed length row. This is the approach described in the DuckDB blog for encoding <code class="language-plaintext highlighter-rouge">c_birth_country</code>.</p>
+
+<p>However, often values in string columns differ substantially in length or the maximum length is not known at the start of execution, making it inadvisable and/or impractical to pad the strings to a fixed length. The Rust Arrow row format therefore uses a variable length encoding.</p>
+
+<p>We need an encoding that unambiguously terminates the end of the byte array. This not only permits recovering the original value from the row format, but ensures that bytes of a longer byte array are not compared against bytes from a different column when compared against a row containing a shorter byte array.</p>
+
+<p>A null byte array is encoded as a single <code class="language-plaintext highlighter-rouge">0x00</code> byte. Similarly, an empty byte array is encoded as a single <code class="language-plaintext highlighter-rouge">0x01</code> byte.</p>
+
+<p>To encode a non-null, non-empty array, first a single <code class="language-plaintext highlighter-rouge">0x02</code> byte  is written. Then the array is written in 32-byte blocks, with each complete block followed by a <code class="language-plaintext highlighter-rouge">0xFF</code> byte as a continuation token. The final block is padded to 32-bytes with <code class="language-plaintext highlighter-rouge">0x00</code>, and is then followed by the unpadded length of this final block as a single byte in place of a continuation token</p>
+
+<p>Note the following example encodings use a block size of 4 bytes, as opposed to 32 bytes for brevity</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                      ┌───┬───┬───┬───┬───┬───┐
+ "MEEP"               │02 │'M'│'E'│'E'│'P'│04 │
+                      └───┴───┴───┴───┴───┴───┘
+
+                      ┌───┐
+ ""                   │01 |
+                      └───┘
+
+ NULL                 ┌───┐
+                      │00 │
+                      └───┘
+
+"Defenestration"      ┌───┬───┬───┬───┬───┬───┐
+                      │02 │'D'│'e'│'f'│'e'│FF │
+                      └───┼───┼───┼───┼───┼───┤
+                          │'n'│'e'│'s'│'t'│FF │
+                          ├───┼───┼───┼───┼───┤
+                          │'r'│'a'│'t'│'r'│FF │
+                          ├───┼───┼───┼───┼───┤
+                          │'a'│'t'│'i'│'o'│FF │
+                          ├───┼───┼───┼───┼───┤
+                          │'n'│00 │00 │00 │17 │
+                          └───┴───┴───┴───┴───┘
+</code></pre></div></div>
+
+<p>This approach is loosely inspired by <a href="https://en.wikipedia.org/wiki/Consistent_Overhead_Byte_Stuffing">COBS encoding</a>, and chosen over more traditional <a href="https://en.wikipedia.org/wiki/High-Level_Data_Link_Control#Asynchronous_framing">byte stuffing</a> as it is more amenable to vectorization, in particular hardware with AVX-256 can copy a 32-byte block in a single instruction.</p>
+
+<h3 id="dictionary-arrays">Dictionary Arrays</h3>
+<p>Dictionary Encoded Data (called <a href="https://pandas.pydata.org/docs/user_guide/categorical.html">categorical</a> in pandas) is increasingly important because they can store and process low cardinality data very efficiently.</p>
+
+<p>A simple approach to encoding dictionary arrays would be to encode the logical values directly using the encodings for primitive values described previously. However, this would lose the benefits of dictionary encoding to reduce memory and CPU consumption.</p>
+
+<p>To further complicate matters, the <a href="https://arrow.apache.org/docs/format/Columnar.html#dictionary-encoded-layout">Arrow implementation of Dictionary encoding</a> is quite general, and we can make no assumptions about the contents of the dictionaries. In particular, we cannot assume that the dictionary values are sorted, nor that the same dictionary is used for all arrays within a column</p>
+
+<p>The following example shows how a string column might be encoded in two arrays using two different dictionaries. The dictionary keys <code class="language-plaintext highlighter-rouge">0</code>, <code class="language-plaintext highlighter-rouge">1</code>, and <code class="language-plaintext highlighter-rouge">2</code> in the first batch correspond to different values than the same keys in the second dictionary.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+  ┌───────────┐ ┌─────┐    │
+│ │"Fabulous" │ │  0  │
+  ├───────────┤ ├─────┤    │
+│ │   "Bar"   │ │  2  │
+  ├───────────┤ ├─────┤    │       ┌───────────┐
+│ │  "Soup"   │ │  2  │            │"Fabulous" │
+  └───────────┘ ├─────┤    │       ├───────────┤
+│               │  0  │            │  "Soup"   │
+                ├─────┤    │       ├───────────┤
+│               │  1  │            │  "Soup"   │
+                └─────┘    │       ├───────────┤
+│                                  │"Fabulous" │
+                 Values    │       ├───────────┤
+│ Dictionary   (indexes in         │   "Bar"   │
+               dictionary) │       ├───────────┤
+│                                  │   "ZZ"    │
+ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘       ├───────────┤
+┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─        │   "Bar"   │
+                           │       ├───────────┤
+│ ┌───────────┐ ┌─────┐            │   "ZZ"    │
+  │"Fabulous" │ │  1  │    │       ├───────────┤
+│ ├───────────┤ ├─────┤            │"Fabulous" │
+  │   "ZZ"    │ │  2  │    │       └───────────┘
+│ ├───────────┤ ├─────┤
+  │   "Bar"   │ │  1  │    │
+│ └───────────┘ ├─────┤
+                │  0  │    │      Logical column
+│               └─────┘               values
+                Values     │
+│  Dictionary (indexes in
+              dictionary)  │
+ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+</code></pre></div></div>
+
+<p>The key observation which allows us to efficiently create a row format for this kind of data is that given a byte array, a new byte array can always be created which comes before or after it in the sort order by adding an additional byte.</p>
+
+<p>Therefore we can incrementally build an order-preserving mapping from dictionary values to variable length byte arrays, without needing to know all possible dictionary values beforehand, instead introducing mappings for new dictionary values as we encounter them.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌──────────┐                 ┌─────┐
+│  "Bar"   │ ───────────────▶│ 01  │
+└──────────┘                 └─────┘
+┌──────────┐                 ┌─────┬─────┐
+│"Fabulous"│ ───────────────▶│ 01  │ 02  │
+└──────────┘                 └─────┴─────┘
+┌──────────┐                 ┌─────┐
+│  "Soup"  │ ───────────────▶│ 05  │
+└──────────┘                 └─────┘
+┌──────────┐                 ┌─────┐
+│   "ZZ"   │ ───────────────▶│ 07  │
+└──────────┘                 └─────┘
+
+    Example Order Preserving Mapping
+</code></pre></div></div>
+
+<p>The details of the data structure used to generate this mapping are beyond the scope of this blog post, but may be the topic of a future post. You can find <a href="https://github.com/apache/arrow-rs/blob/07024f6a16b870fda81cba5779b8817b20386ebf/arrow/src/row/interner.rs">the code here</a>.</p>
+
+<p>The data structure also ensures that no values contain <code class="language-plaintext highlighter-rouge">0x00</code> and therefore we can encode the arrays directly using <code class="language-plaintext highlighter-rouge">0x00</code> as an end-delimiter.</p>
+
+<p>A null value is encoded as a single <code class="language-plaintext highlighter-rouge">0x00</code> byte, and a non-null value encoded as a single <code class="language-plaintext highlighter-rouge">0x01</code> byte, followed by the <code class="language-plaintext highlighter-rouge">0x00</code> terminated byte array determined by the order preserving mapping</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                          ┌─────┬─────┬─────┬─────┐
+   "Fabulous"             │ 01  │ 03  │ 05  │ 00  │
+                          └─────┴─────┴─────┴─────┘
+
+                          ┌─────┬─────┬─────┐
+   "ZZ"                   │ 01  │ 07  │ 00  │
+                          └─────┴─────┴─────┘
+
+                          ┌─────┐
+    NULL                  │ 00  │
+                          └─────┘
+
+     Input                  Row Format
+</code></pre></div></div>
+
+<h3 id="sort-options">Sort Options</h3>
+
+<p>One detail we have so far ignored over is how to support ascending and descending sorts (e.g. <code class="language-plaintext highlighter-rouge">ASC</code> or <code class="language-plaintext highlighter-rouge">DESC</code> in SQL). The Arrow Rust row format supports these options by simply inverting the bytes of the encoded representation, except the initial byte used for nullability encoding, on a per column basis.</p>
+
+<p>Similarly, supporting SQL compatible sorting also requires a format that can specify the order of <code class="language-plaintext highlighter-rouge">NULL</code>s (before or after all non <code class="language-plaintext highlighter-rouge">NULL</code> values). The row format supports this option by optionally encoding nulls as <code class="language-plaintext highlighter-rouge">0xFF</code> instead of <code class="language-plaintext highlighter-rouge">0x00</code> on a per column basis.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the <a href="https://docs.rs/arrow/latest/arrow/row/index.html">docs</a> for instructions on getting started, and report any issues on our <a href="https://github.com/apache/arrow-rs/issues">bugtracker</a>.</p>
+
+<p>Using this format for lexicographic sorting is more than <a href="https://github.com/apache/arrow-rs/pull/2929">3x</a> faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns.</p>
+
+<p>We have also already used it to more than <a href="https://github.com/apache/arrow-datafusion/pull/3386">double</a> the performance of sort preserving merge in the <a href="https://arrow.apache.org/datafusion/">DataFusion project</a>, and expect similar or greater performance uplift as we apply it to sort, grouping, join, and window function operators as well.</p>
+
+<p>As always, the <a href="https://github.com/apache/arrow-rs#arrow-rust-community">Arrow community</a> very much looks forward to seeing what you build with it!</p>
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2022 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
