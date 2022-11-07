@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Fast and Memory Efficient Multi-Column Sorts in Apache Arrow Rust, Part 2"
-date: "2022-10-30 00:00:00"
+date: "2022-11-07 00:00:00"
 author: "tustvold and alamb"
 categories: [arrow]
 ---
