@@ -134,7 +134,7 @@ Note the following example encodings use a block size of 4 bytes, as opposed to 
                           ├───┼───┼───┼───┼───┤
                           │'a'│'t'│'i'│'o'│FF │
                           ├───┼───┼───┼───┼───┤
-                          │'n'│00 │00 │00 │17 │
+                          │'n'│00 │00 │00 │01 │
                           └───┴───┴───┴───┴───┘
 ```
 
