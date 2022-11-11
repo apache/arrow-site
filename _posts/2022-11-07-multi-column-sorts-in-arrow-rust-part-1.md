@@ -35,10 +35,10 @@ In this series we explain in detail the new [row format](https://docs.rs/arrow/2
 
 ## Multicolumn / Lexicographical Sort Problem
 
-Most languages have native, optimized operations to sort a single column (array) of data, which are specialized based on the type of data being sorted. The reason that sorting is typically more challenging in analytic systems is that it must:
+Most languages have native, optimized operations to sort a single column (array) of data, which are specialized based on the type of data being sorted. The reason that sorting is typically more challenging in analytic systems is that:
 
 1. They must support multiple columns of data
-2. The column types are not knowable at compile time, and thus the compiler can not typically generate optimized code.
+2. The column types are not knowable at compile time, and thus the compiler can not typically generate optimized code
 
 Multicolumn sorting is also referred to as lexicographical sorting in some libraries.
 
