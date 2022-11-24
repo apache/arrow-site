@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pyarrow.parquet.core &#8212; Apache Arrow v11.0.0.dev138</title>
+    <title>pyarrow.parquet.core &#8212; Apache Arrow v11.0.0.dev150</title>
     
     <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -92,7 +92,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        11.0.0.dev138
+        11.0.0.dev150
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -8153,7 +8153,8 @@ function checkPageExistsAndRedirect(event) {
             <span class="n">metadata_collector</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_file_path</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="write_metadata"><a class="viewcode-back" href="../../../python/generated/pyarrow.parquet.write_metadata.html#pyarrow.parquet.write_metadata">[docs]</a><span class="k">def</span> <span class="nf">write_metadata</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">metadata_collector</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="write_metadata"><a class="viewcode-back" href="../../../python/generated/pyarrow.parquet.write_metadata.html#pyarrow.parquet.write_metadata">[docs]</a><span class="k">def</span> <span class="nf">write_metadata</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">where</span><span class="p">,</span> <span class="n">metadata_collector</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Write metadata-only Parquet file from schema. This can be used with</span>
 <span class="sd">    `write_to_dataset` to generate `_common_metadata` and `_metadata` sidecar</span>
@@ -8165,6 +8166,9 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">    where : string or pyarrow.NativeFile</span>
 <span class="sd">    metadata_collector : list</span>
 <span class="sd">        where to collect metadata information.</span>
+<span class="sd">    filesystem : FileSystem, default None</span>
+<span class="sd">        If nothing passed, will be inferred from `where` if path-like, else</span>
+<span class="sd">        `where` is already a file-like object so no filesystem is needed.</span>
 <span class="sd">    **kwargs : dict,</span>
 <span class="sd">        Additional kwargs for ParquetWriter class. See docstring for</span>
 <span class="sd">        `ParquetWriter` for more information.</span>
@@ -8197,16 +8201,28 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">    ...     table.schema, &#39;dataset_metadata/_metadata&#39;,</span>
 <span class="sd">    ...     metadata_collector=metadata_collector)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">filesystem</span><span class="p">,</span> <span class="n">where</span> <span class="o">=</span> <span class="n">_resolve_filesystem_and_path</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">filesystem</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="s2">&quot;seek&quot;</span><span class="p">):</span>  <span class="c1"># file-like</span>
+        <span class="n">cursor_position</span> <span class="o">=</span> <span class="n">where</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">ParquetWriter</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">filesystem</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">if</span> <span class="n">metadata_collector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># ParquetWriter doesn&#39;t expose the metadata until it&#39;s written. Write</span>
         <span class="c1"># it and read it again.</span>
-        <span class="n">metadata</span> <span class="o">=</span> <span class="n">read_metadata</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">read_metadata</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="s2">&quot;seek&quot;</span><span class="p">):</span>
+            <span class="n">where</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">cursor_position</span><span class="p">)</span>  <span class="c1"># file-like, set cursor back.</span>
+
         <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">metadata_collector</span><span class="p">:</span>
             <span class="n">metadata</span><span class="o">.</span><span class="n">append_row_groups</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
-        <span class="n">metadata</span><span class="o">.</span><span class="n">write_metadata_file</span><span class="p">(</span><span class="n">where</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open_output_stream</span><span class="p">(</span><span class="n">where</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">metadata</span><span class="o">.</span><span class="n">write_metadata_file</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">metadata</span><span class="o">.</span><span class="n">write_metadata_file</span><span class="p">(</span><span class="n">where</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="read_metadata"><a class="viewcode-back" href="../../../python/generated/pyarrow.parquet.read_metadata.html#pyarrow.parquet.read_metadata">[docs]</a><span class="k">def</span> <span class="nf">read_metadata</span><span class="p">(</span><span class="n">where</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">decryption_properties</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
