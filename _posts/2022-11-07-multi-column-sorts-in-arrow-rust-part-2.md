@@ -26,7 +26,7 @@ limitations under the License.
 
 ## Introduction
 
-In [Part 1]({% post_url 2022-11-07-multi-column-sorts-in-arrow-rust-part-1 %}) of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new [row format](https://docs.rs/arrow/25.0.0/arrow/row/index.html) in the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/) works and is constructed.
+In [Part 1]({% post_url 2022-11-07-multi-column-sorts-in-arrow-rust-part-1 %}) of this post, we described the problem of Multi-Column Sorting and the challenges of implementing it efficiently. This second post explains how the new [row format](https://docs.rs/arrow/27.0.0/arrow/row/index.html) in the [Rust implementation](https://github.com/apache/arrow-rs) of [Apache Arrow](https://arrow.apache.org/) works and is constructed.
 
 
 ## Row Format
@@ -236,7 +236,7 @@ Similarly, supporting SQL compatible sorting also requires a format that can spe
 
 ## Conclusion
 
-Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the [docs](https://docs.rs/arrow/latest/arrow/row/index.html) for instructions on getting started, and report any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues).
+Hopefully these two articles have given you a flavor of what is possible with a comparable row format and how it works. Feel free to check out the [docs](https://docs.rs/arrow/27.0.0/arrow/row/index.html) for instructions on getting started, and report any issues on our [bugtracker](https://github.com/apache/arrow-rs/issues).
 
 Using this format for lexicographic sorting is more than [3x](https://github.com/apache/arrow-rs/pull/2929) faster than the comparator based approach, with the benefits especially pronounced for strings, dictionaries and sorts with large numbers of columns.
 
