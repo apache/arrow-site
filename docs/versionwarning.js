@@ -8,19 +8,22 @@
         // Switch button message
         var switch_dev = `Switch to unstable development release version`;
         var switch_stable = `latest stable release (version ${latestStable})`;
+
+        var location_array = location.pathname.split('/');
+        var versionPath = location_array[2];
+        var subPath = location_array[3];
+        var filePath = location_array.slice(3).join('/');
+
         // Links to stable or dev versions
-        var uri_dev_developers = "https://arrow.apache.org/docs/dev/developers/contributing.html";
-        var uri_dev = "https://arrow.apache.org/docs/dev/index.html";
-        var uri_stable = "https://arrow.apache.org/docs/index.html";
-
-
-        var versionPath = location.pathname.split('/')[2];
-        var subPath = location.pathname.split('/')[3];
+        var uri_dev = `https://arrow.apache.org/docs/dev/${filePath}`;
+        var uri_stable = `https://arrow.apache.org/docs/${filePath}`;
         if (versionPath == 'developers') {
+            var filePath = location_array.slice(2).join('/');
+            var uri_dev = `https://arrow.apache.org/docs/dev/${filePath}`;
             // developers section in the stable version
             var showWarning = `${pre}This is documentation for the stable version ` +
                               `of Apache Arrow (version ${latestStable}). For latest development practices: ` +
-                              `<a ${anchor} href=${uri_dev_developers}>${switch_dev} </a>${post}`
+                              `<a ${anchor} href=${uri_dev}>${switch_dev} </a>${post}`
             $('.container-fluid').prepend(`${showWarning}`)
         } else if (versionPath.match(/^\d/) < "4") {
             // old versions 1.0,. 2.0 or 3.0
@@ -37,7 +40,7 @@
             // older versions of developers section (with numbered version in the URL)
             var showWarning = `${pre}This is documentation for an old release of Apache Arrow ` +
                               `(version ${versionPath}). For latest development practices: ` +
-                              `<a ${anchor} href=${uri_dev_developers}>${switch_dev} </a>${post}`
+                              `<a ${anchor} href=${uri_dev}>${switch_dev} </a>${post}`
             $('.container-fluid').prepend(`${showWarning}`)
         } else if (versionPath.match(/^\d/)) {
             // older versions (with numbered version in the URL)
