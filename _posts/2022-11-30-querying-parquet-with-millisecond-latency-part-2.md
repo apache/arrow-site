@@ -26,10 +26,8 @@ limitations under the License.
 
 ## Introduction
 
-In the previous installment, we explained the high level structure of parquet files are structured, in this part we explain the various techniques needed to decode
 
-
-
+In [Part 1]({% post_url 2022-11-30-querying-parquet-with-millisecond-latency-part-1 %}) of this series, we reviewed how Parquet files are structured, and in this part explain commonly implemented decode optimizations as well as projection pushdown.
 
 
 # Optimizing Queries
@@ -177,3 +175,7 @@ skipping any Data          │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ �
                                      ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
                                      ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
+
+# Next up
+
+In [Part 3]({% post_url 2022-11-30-querying-parquet-with-millisecond-latency-part-3 %}) we explain how the concept of projection pushdown can be extended to filtering as well as how to push IO.

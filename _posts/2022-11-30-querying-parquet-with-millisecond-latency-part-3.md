@@ -26,8 +26,8 @@ limitations under the License.
 
 ## Introduction
 
-In our third and final part of this series, we explain predicate pushdown as well
 
+In [Part 1]({% post_url 2022-11-30-querying-parquet-with-millisecond-latency-part-1 %}) of this series, reviews Parquet file structure, and [Part 2]({% post_url 2022-11-30-querying-parquet-with-millisecond-latency-part-1 %}) explains commonly implemented decode optimizations and projection pushdown. In this part, we explain several forms of predicate pushdown and additional IO pushdown.
 
 
 # Predicate Pushdown
@@ -91,18 +91,12 @@ This last point is highly non-trivial to implement, especially for nested lists 
 
 For example, to scan Columns A and B,  stored in 5 Data Pages as shown in the figure below:
 
-If the predicate is A > 35,
-
-
-
+If the predicate is `A > 35`,
 * Page 1 is pruned using the page index (max value is 20), leaving a RowSelection of  [200->onwards],
 * Parquet reader skips Page 3 entirely (as its last row index is 99)
 * (Only) the relevant rows are read by reading pages 2, 4 and 5.
 
-If the predicate is instead A > 35 AND B = "F" the page index is even more effective
-
-
-
+If the predicate is instead `A > 35 AND B = "F"` the page index is even more effective
 * Using A > 35, yields a RowSelection of [200->onwards] as before
 * Using B = "F" on the remaining Page 4 and Page 5 of B, yields a RowSelection of [100-244]
 * Intersecting the two RowSelections leaves a combined RowSelection [200-244]
@@ -155,9 +149,6 @@ Support for reading and writing these indexes from Arrow C++, and by extension p
 The two previous forms of predicate pushdown have only operated on metadata stored for RowGroups, ColumnChunks, and Data Pages prior to decoding values. However, the same techniques also extend to values of one or more columns *after* they have been decoded but prior to decoding other columns,  which is often called “late materialization”.
 
 This technique is especially effective when:
-
-
-
 * The predicate is very selective, i.e. filters out large numbers of rows
 * Each row is large, either due to wide rows (e.g. JSON blobs) or many columns
 * The selected data is clustered together

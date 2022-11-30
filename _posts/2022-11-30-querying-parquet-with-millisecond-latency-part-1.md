@@ -184,8 +184,10 @@ For example, the logical structure of 2 Row Groups and 6 ColumnChunks in the pre
 ```
 
 
-There are many important criteria to consider when creating Parquet files such as how to optimally order / cluster data and structure it into RowGroups and Data Pages. Such “physical design” considerations are complex, worthy of their own series of articles, and not addressed in this blog. We will instead focus on how to use the available structure to make queries very fast.
+There are many important criteria to consider when creating Parquet files such as how to optimally order / cluster data and structure it into RowGroups and Data Pages for expected query patterns. Such “physical design” considerations are complex, worthy of their own series of articles, and not addressed in this blog. We will instead focus on how to use the available structure to make queries very fast.
+
 
 
 # Next up
-XXXX
+
+Now that we have explained how Parquet files are structured, [Part 2]({% post_url 2022-11-30-querying-parquet-with-millisecond-latency-part-2 %}) explains important decode optimizations as well as Projection Pushdown.
