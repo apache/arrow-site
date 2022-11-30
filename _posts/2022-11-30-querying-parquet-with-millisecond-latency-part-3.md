@@ -81,27 +81,24 @@ This optimization is complicated by the fact that pages in different ColumnChunk
 
 Page pruning proceeds as follows::
 
-
-
 * Use the predicates in combination with the page index to identify pages to skip
 * Use the offset index to determine what row ranges correspond to non-skipped pages
 * Computes the intersection of ranges across non-skipped pages, and decodes only those rows
 
 This last point is highly non-trivial to implement, especially for nested lists where [a single row may correspond to multiple values](https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/). Fortunately, the Rust Parquet reader hides this complexity internally, and can decode arbitrary [RowSelection](https://docs.rs/parquet/27.0.0/parquet/arrow/arrow_reader/struct.RowSelection.html)s.
 
-For example, to scan Columns A and B,  stored in 5 Data Pages as shown in the figure below:
+For example, to scan Columns `A` and `B`,  stored in 5 Data Pages as shown in the figure below:
 
 If the predicate is `A > 35`,
-* Page 1 is pruned using the page index (max value is 20), leaving a RowSelection of  [200->onwards],
-* Parquet reader skips Page 3 entirely (as its last row index is 99)
+* Page 1 is pruned using the page index (max value is `20`), leaving a RowSelection of `[200->onwards]`,
+* Parquet reader skips Page 3 entirely (as its last row index is `99`)
 * (Only) the relevant rows are read by reading pages 2, 4 and 5.
 
 If the predicate is instead `A > 35 AND B = "F"` the page index is even more effective
-* Using A > 35, yields a RowSelection of [200->onwards] as before
-* Using B = "F" on the remaining Page 4 and Page 5 of B, yields a RowSelection of [100-244]
-* Intersecting the two RowSelections leaves a combined RowSelection [200-244]
-* Parquet reader only decodes those 50 rows from Page 2 and Page 4.
-
+* Using `A > 35`, yields a RowSelection of `[200->onwards]` as before
+* Using `B = "F"` on the remaining Page 4 and Page 5 of `B`, yields a RowSelection of `[100-244]`
+* Intersecting the two RowSelections leaves a combined RowSelection `[200-244]`
+* Parquet reader only decodes those `50` rows from Page 2 and Page 4.
 
 ```
 ┏━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━
@@ -156,23 +153,18 @@ This technique is especially effective when:
 
 There is additional discussion in [SPARK-36527](https://issues.apache.org/jira/browse/SPARK-36527) and[ Impala](https://docs.cloudera.com/cdw-runtime/cloud/impala-reference/topics/impala-lazy-materialization.html).
 
-For example, given the predicate A > 35 AND B = "F" from above where the engine has used the page index to determine only 50 rows within RowSelection of [100-244] could match, using late materialization, the Parquet decoder:
+For example, given the predicate `A > 35` AND `B = "F"` from above where the engine has used the page index to determine only 50 rows within RowSelection of `[100-244]` could match, using late materialization, the Parquet decoder:
 
-
-
-* Decodes the 50 values of Column A
-* Evaluates  A > 35 on those 50 values
+* Decodes the `50` values of Column `A`
+* Evaluates `A > 35` on those 50 values
 * In this case, only 5 rows pass, resulting in the RowSelection:
-    * RowSelection[205-206]
-    * RowSelection[238-240]
-* Only decodes the 5 rows for column B for those selections
-
+    * RowSelection `[205-206]`
+    * RowSelection `[238-240]`
+* Only decodes the `5` rows for Column `B` for those selections
 
 
 
 ```
-
-
   Row Index
              ┌────────────────────┐            ┌────────────────────┐
        200   │         30         │            │        "F"         │
@@ -199,8 +191,6 @@ For example, given the predicate A > 35 AND B = "F" from above where the engine 
 
                    Column A                          Column B
                     Values                            Values
-
-
 ```
 
 
@@ -212,7 +202,6 @@ While it is outside the scope of this document, the same technique can be applie
 # IO Pushdown
 
 While Parquet was designed for efficient access on the [HDFS distributed file system](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html), it works very well with commodity blob storage systems such as AWS S3 as they have very similar characteristics:
-
 
 
 * **Relatively slow “random access” reads**: it is much more efficient to read large (MBs) sections of data in each request than issue many requests for smaller portions
@@ -229,8 +218,6 @@ To read optimally from such systems, a Parquet reader must:
 As these are substantial engineering and integration challenges, many Parquet readers still require the files to be fetched in their entirety to local storage.
 
 Fetching the entire files in order to process them is not ideal for several reasons:
-
-
 
 1. **High Latency**: Decoding can not begin until the entire file to be fetched (Parquet metadata is at the end of the file, so the decoder must see the end prior to decoding the rest)
 2. **Wasted work**: Fetching the entire file fetches all necessary data, but also potentially lots of unnecessary data that will be skipped after reading the footer. This increases the cost unnecessarily.
