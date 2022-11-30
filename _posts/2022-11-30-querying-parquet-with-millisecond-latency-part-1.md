@@ -111,7 +111,7 @@ The footer may also contain other specialized data structures as well:
 * Optional pointers to [ColumnIndex](https://github.com/apache/parquet-format/blob/54e53e5d7794d383529dd30746378f19a12afd58/src/main/thrift/parquet.thrift#L938) containing row counts and summary statistics for each Page
 * Optional pointers to [BloomFilterData](https://github.com/apache/parquet-format/blob/54e53e5d7794d383529dd30746378f19a12afd58/src/main/thrift/parquet.thrift#L621-L630), which can quickly check if a value is present in a ColumnChunk
 
-For example, the logical structure of 2 Row Groups and 6 ColumnChunks in the previous diagram might be stored as in a Parquet file as shown in the following diagram (not to scale).  The Pages for the ColumnChunks come first, followed by the footer. The number of and size of the Pages needed for each ColumnChunk is determined by the data, the effectiveness of the encoding scheme, and the settings of the Parquet encoder. In this case, ColumnChunk 1 required 2 pages while ColumnChunk 6 required only 1 page. In addition to other information, the  footer contains the locations of each Data Page and the types of the columns.
+For example, the logical structure of 2 Row Groups and 6 ColumnChunks in the previous diagram might be stored as in a Parquet file as shown in the following diagram (not to scale).  The Pages for the ColumnChunks come first, followed by the footer. The number of and size of the Pages needed for each ColumnChunk is determined by the data, the effectiveness of the encoding scheme, and the settings of the Parquet encoder. In this case, ColumnChunk 1 required 2 pages while ColumnChunk 6 required only 1 page. In addition to other information, the footer contains the locations of each Data Page and the types of the columns.
 
 
 ```
@@ -184,6 +184,7 @@ For example, the logical structure of 2 Row Groups and 6 ColumnChunks in the pre
 ```
 
 
+# Physical Design
 There are many important criteria to consider when creating Parquet files such as how to optimally order / cluster data and structure it into RowGroups and Data Pages for expected query patterns. Such “physical design” considerations are complex, worthy of their own series of articles, and not addressed in this blog. We will instead focus on how to use the available structure to make queries very fast.
 
 
