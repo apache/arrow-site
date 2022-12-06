@@ -1,7 +1,10 @@
 (function() {
     // adapted 2022-11 from https://mne.tools/versionwarning.js
     if (location.hostname == 'arrow.apache.org') {
-        var latestStable = '10.0.0';
+        var latestStable;
+        $.getJSON("https://arrow.apache.org/docs/_static/versions.json", function(data){
+            latestStable = data[1].name.replace(" (stable)","");
+        });
         // HTML tags
         var pre = '<div class="container-fluid alert-danger devbar"><div class="row no-gutters"><div class="col-12 text-center">';
         var post = '</div></div></div>';
