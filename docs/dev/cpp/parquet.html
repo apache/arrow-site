@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Reading and writing Parquet files &#8212; Apache Arrow v11.0.0.dev198</title>
+    <title>Reading and writing Parquet files &#8212; Apache Arrow v11.0.0.dev216</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        11.0.0.dev198
+        11.0.0.dev216
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4773,6 +4773,52 @@ function checkPageExistsAndRedirect(event) {
 <nav id="bd-toc-nav">
     <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#reading-parquet-files">
+   Reading Parquet files
+  </a>
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#filereader">
+     FileReader
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#performance-and-memory-efficiency">
+       Performance and Memory Efficiency
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#streamreader">
+     StreamReader
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#writing-parquet-files">
+   Writing Parquet files
+  </a>
+  <ul class="visible nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#writetable">
+     WriteTable
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#streamwriter">
+     StreamWriter
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#writer-properties">
+     Writer properties
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#supported-parquet-features">
    Supported Parquet features
   </a>
@@ -4843,40 +4889,6 @@ function checkPageExistsAndRedirect(event) {
    </li>
   </ul>
  </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#reading-parquet-files">
-   Reading Parquet files
-  </a>
-  <ul class="visible nav section-nav flex-column">
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#filereader">
-     FileReader
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#streamreader">
-     StreamReader
-    </a>
-   </li>
-  </ul>
- </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#writing-parquet-files">
-   Writing Parquet files
-  </a>
-  <ul class="visible nav section-nav flex-column">
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#writetable">
-     WriteTable
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#streamwriter">
-     StreamWriter
-    </a>
-   </li>
-  </ul>
- </li>
 </ul>
 
 </nav>
@@ -4915,6 +4927,355 @@ function checkPageExistsAndRedirect(event) {
 is a space-efficient columnar storage format for complex data.  The Parquet
 C++ implementation is part of the Apache Arrow project and benefits
 from tight integration with the Arrow C++ classes and facilities.</p>
+<section id="reading-parquet-files">
+<h2>Reading Parquet files<a class="headerlink" href="#reading-parquet-files" title="Permalink to this heading">¶</a></h2>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReaderE" title="parquet::arrow::FileReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReader</span></code></a> class reads data into Arrow Tables and Record
+Batches.</p>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> class allows for data to be read using a C++ input
+stream approach to read fields column by column and row by row.  This approach
+is offered for ease of use and type-safety.  It is of course also useful when
+data must be streamed as files are read and written incrementally.</p>
+<p>Please note that the performance of the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> will not
+be as good due to the type checking and the fact that column values
+are processed one at a time.</p>
+<section id="filereader">
+<h3>FileReader<a class="headerlink" href="#filereader" title="Permalink to this heading">¶</a></h3>
+<p>To read Parquet data into Arrow structures, use <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReaderE" title="parquet::arrow::FileReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReader</span></code></a>.
+To construct, it requires a <a class="reference internal" href="api/io.html#_CPPv4N5arrow2io16RandomAccessFileE" title="arrow::io::RandomAccessFile"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::io::RandomAccessFile</span></code></a> instance
+representing the input file. To read the whole file at once,
+use <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReader9ReadTableEPNSt10shared_ptrIN5arrow5TableEEE" title="parquet::arrow::FileReader::ReadTable"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::FileReader::ReadTable()</span></code></a>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// #include &quot;arrow/io/api.h&quot;</span>
+<span class="c1">// #include &quot;arrow/parquet/arrow/reader.h&quot;</span>
+
+<span class="n">arrow</span><span class="o">::</span><span class="n">MemoryPool</span><span class="o">*</span><span class="w"> </span><span class="n">pool</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">();</span><span class="w"></span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">RandomAccessFile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">input</span><span class="p">;</span><span class="w"></span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">ReadableFile</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">path_to_file</span><span class="p">));</span><span class="w"></span>
+
+<span class="c1">// Open Parquet file reader</span>
+<span class="hll"><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_reader</span><span class="p">;</span><span class="w"></span>
+</span><span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">OpenFile</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">pool</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">arrow_reader</span><span class="p">));</span><span class="w"></span>
+</span>
+<span class="c1">// Read entire file as a single Arrow table</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span><span class="w"> </span><span class="n">table</span><span class="p">;</span><span class="w"></span>
+<span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">arrow_reader</span><span class="o">-&gt;</span><span class="n">ReadTable</span><span class="p">(</span><span class="o">&amp;</span><span class="n">table</span><span class="p">));</span><span class="w"></span>
+</span></pre></div>
+</div>
+<p>Finer-grained options are available through the
+<a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow17FileReaderBuilderE" title="parquet::arrow::FileReaderBuilder"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReaderBuilder</span></code></a> helper class, which accepts the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet16ReaderPropertiesE" title="parquet::ReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ReaderProperties</span></code></a>
+and <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ArrowReaderProperties</span></code></a> classes.</p>
+<p>For reading as a stream of batches, use the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReader20GetRecordBatchReaderEPNSt10unique_ptrIN5arrow17RecordBatchReaderEEE" title="parquet::arrow::FileReader::GetRecordBatchReader"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::FileReader::GetRecordBatchReader()</span></code></a>
+method to retrieve a <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::RecordBatchReader</span></code>. It will use the batch
+size set in <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ArrowReaderProperties</span></code></a>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// #include &quot;arrow/io/api.h&quot;</span>
+<span class="c1">// #include &quot;arrow/parquet/arrow/reader.h&quot;</span>
+
+<span class="n">arrow</span><span class="o">::</span><span class="n">MemoryPool</span><span class="o">*</span><span class="w"> </span><span class="n">pool</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">();</span><span class="w"></span>
+
+<span class="c1">// Configure general Parquet reader settings</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">reader_properties</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ReaderProperties</span><span class="p">(</span><span class="n">pool</span><span class="p">);</span><span class="w"></span>
+<span class="n">reader_properties</span><span class="p">.</span><span class="n">set_buffer_size</span><span class="p">(</span><span class="mi">4096</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span><span class="w"></span>
+<span class="n">reader_properties</span><span class="p">.</span><span class="n">enable_buffered_stream</span><span class="p">();</span><span class="w"></span>
+
+<span class="c1">// Configure Arrow-specific Parquet reader settings</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">arrow_reader_props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowReaderProperties</span><span class="p">();</span><span class="w"></span>
+<span class="n">arrow_reader_props</span><span class="p">.</span><span class="n">set_batch_size</span><span class="p">(</span><span class="mi">128</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span><span class="w">  </span><span class="c1">// default 64 * 1024</span>
+
+<span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileReaderBuilder</span><span class="w"> </span><span class="n">reader_builder</span><span class="p">;</span><span class="w"></span>
+<span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">reader_builder</span><span class="p">.</span><span class="n">OpenFile</span><span class="p">(</span><span class="n">path_to_file</span><span class="p">,</span><span class="w"> </span><span class="cm">/*memory_map=*/</span><span class="nb">false</span><span class="p">,</span><span class="w"> </span><span class="n">reader_properties</span><span class="p">));</span><span class="w"></span>
+<span class="n">reader_builder</span><span class="p">.</span><span class="n">memory_pool</span><span class="p">(</span><span class="n">pool</span><span class="p">);</span><span class="w"></span>
+<span class="n">reader_builder</span><span class="p">.</span><span class="n">properties</span><span class="p">(</span><span class="n">arrow_reader_props</span><span class="p">);</span><span class="w"></span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_reader</span><span class="p">;</span><span class="w"></span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">arrow_reader</span><span class="p">,</span><span class="w"> </span><span class="n">reader_builder</span><span class="p">.</span><span class="n">Build</span><span class="p">());</span><span class="w"></span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;::</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatchReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">rb_reader</span><span class="p">;</span><span class="w"></span>
+<span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">arrow_reader</span><span class="o">-&gt;</span><span class="n">GetRecordBatchReader</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rb_reader</span><span class="p">));</span><span class="w"></span>
+</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Result</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatch</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">maybe_batch</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">rb_reader</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="c1">// Operate on each batch...</span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>For reading multi-file datasets or pushing down filters to prune row groups,
+see <a class="reference internal" href="dataset.html#cpp-dataset"><span class="std std-ref">Tabular Datasets</span></a>.</p>
+</div>
+<section id="performance-and-memory-efficiency">
+<h4>Performance and Memory Efficiency<a class="headerlink" href="#performance-and-memory-efficiency" title="Permalink to this heading">¶</a></h4>
+<p>For remote filesystems, use read coalescing (pre-buffering) to reduce number of API calls:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">arrow_reader_props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowReaderProperties</span><span class="p">();</span><span class="w"></span>
+<span class="n">reader_properties</span><span class="p">.</span><span class="n">set_prebuffer</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The defaults are generally tuned towards good performance, but parallel column
+decoding is off by default. Enable it in the constructor of <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ArrowReaderProperties</span></code></a>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">arrow_reader_props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowReaderProperties</span><span class="p">(</span><span class="cm">/*use_threads=*/</span><span class="nb">true</span><span class="p">);</span><span class="w"></span>
+</pre></div>
+</div>
+<p>If memory efficiency is more important than performance, then:</p>
+<ol class="arabic simple">
+<li><p>Do <em>not</em> turn on read coalescing (pre-buffering) in <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">parquet::ArrowReaderProperties</span></code></a>.</p></li>
+<li><p>Read data in batches using <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReader20GetRecordBatchReaderEPNSt10unique_ptrIN5arrow17RecordBatchReaderEEE" title="parquet::arrow::FileReader::GetRecordBatchReader"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::FileReader::GetRecordBatchReader()</span></code></a>.</p></li>
+<li><p>Turn on <code class="docutils literal notranslate"><span class="pre">enable_buffered_stream</span></code> in <a class="reference internal" href="api/formats.html#_CPPv4N7parquet16ReaderPropertiesE" title="parquet::ReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">parquet::ReaderProperties</span></code></a>.</p></li>
+</ol>
+<p>In addition, if you know certain columns contain many repeated values, you can
+read them as <a class="reference internal" href="../format/Glossary.html#term-dictionary-encoding"><span class="xref std std-term">dictionary encoded</span></a> columns. This is
+enabled with the <code class="docutils literal notranslate"><span class="pre">set_read_dictionary</span></code> setting on <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ArrowReaderProperties</span></code></a>.
+If the files were written with Arrow C++ and the <code class="docutils literal notranslate"><span class="pre">store_schema</span></code> was activated,
+then the original Arrow schema will be automatically read and will override this
+setting.</p>
+</section>
+</section>
+<section id="streamreader">
+<h3>StreamReader<a class="headerlink" href="#streamreader" title="Permalink to this heading">¶</a></h3>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> allows for Parquet files to be read using
+standard C++ input operators which ensures type-safety.</p>
+<p>Please note that types must match the schema exactly i.e. if the
+schema field is an unsigned 16-bit integer then you must supply a
+<code class="docutils literal notranslate"><span class="pre">uint16_t</span></code> type.</p>
+<p>Exceptions are used to signal errors.  A <a class="reference internal" href="api/support.html#_CPPv4N7parquet16ParquetExceptionE" title="parquet::ParquetException"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParquetException</span></code></a> is
+thrown in the following circumstances:</p>
+<ul class="simple">
+<li><p>Attempt to read field by supplying the incorrect type.</p></li>
+<li><p>Attempt to read beyond end of row.</p></li>
+<li><p>Attempt to read beyond end of file.</p></li>
+</ul>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/io/file.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/stream_reader.h&quot;</span><span class="cp"></span>
+
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">ReadableFile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">infile</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span><span class="w"></span>
+<span class="w">      </span><span class="n">infile</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">ReadableFile</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">StreamReader</span><span class="w"> </span><span class="n">stream</span><span class="p">{</span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetFileReader</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">infile</span><span class="p">)};</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">article</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="kt">float</span><span class="w"> </span><span class="n">price</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">quantity</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="o">!</span><span class="n">stream</span><span class="p">.</span><span class="n">eof</span><span class="p">()</span><span class="w"> </span><span class="p">)</span><span class="w"></span>
+<span class="w">   </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">stream</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">article</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">quantity</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">EndRow</span><span class="p">;</span><span class="w"></span>
+<span class="w">      </span><span class="c1">// ...</span>
+<span class="w">   </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="writing-parquet-files">
+<h2>Writing Parquet files<a class="headerlink" href="#writing-parquet-files" title="Permalink to this heading">¶</a></h2>
+<section id="writetable">
+<h3>WriteTable<a class="headerlink" href="#writetable" title="Permalink to this heading">¶</a></h3>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10WriteTableERKN5arrow5TableEP10MemoryPoolNSt10shared_ptrIN5arrow2io12OutputStreamEEE7int64_tNSt10shared_ptrI16WriterPropertiesEENSt10shared_ptrI21ArrowWriterPropertiesEE" title="parquet::arrow::WriteTable"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::WriteTable()</span></code></a> function writes an entire
+<a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Table</span></code></a> to an output file.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// #include &quot;parquet/arrow/writer.h&quot;</span>
+<span class="c1">// #include &quot;arrow/util/type_fwd.h&quot;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowWriterProperties</span><span class="p">;</span><span class="w"></span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="p">;</span><span class="w"></span>
+
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span><span class="w"> </span><span class="n">table</span><span class="p">,</span><span class="w"> </span><span class="n">GetTable</span><span class="p">());</span><span class="w"></span>
+
+<span class="c1">// Choose compression</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">WriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">props</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">    </span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">().</span><span class="n">compression</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Compression</span><span class="o">::</span><span class="n">SNAPPY</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span><span class="w"></span>
+
+<span class="c1">// Opt to store Arrow schema for easier reads back into Arrow</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">ArrowWriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_props</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">    </span><span class="n">ArrowWriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">().</span><span class="n">store_schema</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span><span class="w"></span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outfile</span><span class="p">;</span><span class="w"></span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">path_to_file</span><span class="p">));</span><span class="w"></span>
+
+<span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">WriteTable</span><span class="p">(</span><span class="o">*</span><span class="n">table</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span><span class="w"></span>
+</span><span class="hll"><span class="w">                                               </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">(),</span><span class="w"> </span><span class="n">outfile</span><span class="p">,</span><span class="w"></span>
+</span><span class="hll"><span class="w">                                               </span><span class="cm">/*chunk_size=*/</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="n">arrow_props</span><span class="p">));</span><span class="w"></span>
+</span></pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Column compression is off by default in C++. See <a class="reference internal" href="#parquet-writer-properties"><span class="std std-ref">below</span></a>
+for how to choose a compression codec in the writer properties.</p>
+</div>
+<p>To write out data batch-by-batch, use <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileWriterE" title="parquet::arrow::FileWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileWriter</span></code></a>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// #include &quot;parquet/arrow/writer.h&quot;</span>
+<span class="c1">// #include &quot;arrow/util/type_fwd.h&quot;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowWriterProperties</span><span class="p">;</span><span class="w"></span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">// Data is in RBR</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatchReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">batch_stream</span><span class="p">;</span><span class="w"></span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">batch_stream</span><span class="p">,</span><span class="w"> </span><span class="n">GetRBR</span><span class="p">());</span><span class="w"></span>
+
+<span class="c1">// Choose compression</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">WriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">props</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">    </span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">().</span><span class="n">compression</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Compression</span><span class="o">::</span><span class="n">SNAPPY</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span><span class="w"></span>
+
+<span class="c1">// Opt to store Arrow schema for easier reads back into Arrow</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">ArrowWriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_props</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">    </span><span class="n">ArrowWriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">().</span><span class="n">store_schema</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span><span class="w"></span>
+
+<span class="c1">// Create a writer</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outfile</span><span class="p">;</span><span class="w"></span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">path_to_file</span><span class="p">));</span><span class="w"></span>
+<span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileWriter</span><span class="o">&gt;</span><span class="w"> </span><span class="n">writer</span><span class="p">;</span><span class="w"></span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="w"></span>
+<span class="hll"><span class="w">    </span><span class="n">writer</span><span class="p">,</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileWriter</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="o">*</span><span class="n">batch_stream</span><span class="o">-&gt;</span><span class="n">schema</span><span class="p">().</span><span class="n">get</span><span class="p">(),</span><span class="w"></span>
+</span><span class="hll"><span class="w">                                             </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">(),</span><span class="w"> </span><span class="n">outfile</span><span class="p">,</span><span class="w"></span>
+</span><span class="hll"><span class="w">                                             </span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="n">arrow_props</span><span class="p">));</span><span class="w"></span>
+</span>
+<span class="c1">// Write each batch as a row_group</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Result</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatch</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">maybe_batch</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">batch_stream</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">batch</span><span class="p">,</span><span class="w"> </span><span class="n">maybe_batch</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">table</span><span class="p">,</span><span class="w"></span>
+<span class="w">                        </span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">::</span><span class="n">FromRecordBatches</span><span class="p">(</span><span class="n">batch</span><span class="o">-&gt;</span><span class="n">schema</span><span class="p">(),</span><span class="w"> </span><span class="p">{</span><span class="n">batch</span><span class="p">}));</span><span class="w"></span>
+<span class="hll"><span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">writer</span><span class="o">-&gt;</span><span class="n">WriteTable</span><span class="p">(</span><span class="o">*</span><span class="n">table</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span><span class="w"> </span><span class="n">batch</span><span class="o">-&gt;</span><span class="n">num_rows</span><span class="p">()));</span><span class="w"></span>
+</span><span class="p">}</span><span class="w"></span>
+
+<span class="c1">// Write file footer and close</span>
+<span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">writer</span><span class="o">-&gt;</span><span class="n">Close</span><span class="p">());</span><span class="w"></span>
+</span></pre></div>
+</div>
+</section>
+<section id="streamwriter">
+<h3>StreamWriter<a class="headerlink" href="#streamwriter" title="Permalink to this heading">¶</a></h3>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamWriterE" title="parquet::StreamWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamWriter</span></code></a> allows for Parquet files to be written using
+standard C++ output operators, similar to reading with the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a>
+class. This type-safe approach also ensures that rows are written without
+omitting fields and allows for new row groups to be created automatically
+(after certain volume of data) or explicitly by using the <code class="xref cpp cpp-type docutils literal notranslate"><span class="pre">EndRowGroup</span></code>
+stream modifier.</p>
+<p>Exceptions are used to signal errors.  A <a class="reference internal" href="api/support.html#_CPPv4N7parquet16ParquetExceptionE" title="parquet::ParquetException"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParquetException</span></code></a> is
+thrown in the following circumstances:</p>
+<ul class="simple">
+<li><p>Attempt to write a field using an incorrect type.</p></li>
+<li><p>Attempt to write too many fields in a row.</p></li>
+<li><p>Attempt to skip a required field.</p></li>
+</ul>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/io/file.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/stream_writer.h&quot;</span><span class="cp"></span>
+
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outfile</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span><span class="w"></span>
+<span class="w">      </span><span class="n">outfile</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="w"> </span><span class="n">builder</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">schema</span><span class="o">::</span><span class="n">GroupNode</span><span class="o">&gt;</span><span class="w"> </span><span class="n">schema</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="c1">// Set up builder with required compression type etc.</span>
+<span class="w">   </span><span class="c1">// Define schema.</span>
+<span class="w">   </span><span class="c1">// ...</span>
+
+<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">StreamWriter</span><span class="w"> </span><span class="n">os</span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetFileWriter</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="w"> </span><span class="n">schema</span><span class="p">,</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="n">build</span><span class="p">())};</span><span class="w"></span>
+
+<span class="w">   </span><span class="c1">// Loop over some data structure which provides the required</span>
+<span class="w">   </span><span class="c1">// fields to be written and write each row.</span>
+<span class="w">   </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">getArticles</span><span class="p">())</span><span class="w"></span>
+<span class="w">   </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">os</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">name</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">price</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">quantity</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">EndRow</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="writer-properties">
+<span id="parquet-writer-properties"></span><h3>Writer properties<a class="headerlink" href="#writer-properties" title="Permalink to this heading">¶</a></h3>
+<p>To configure how Parquet files are written, use the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet16WriterProperties7BuilderE" title="parquet::WriterProperties::Builder"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">WriterProperties::Builder</span></code></a>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/arrow/writer.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/util/type_fwd.h&quot;</span><span class="cp"></span>
+
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="p">;</span><span class="w"></span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetVersion</span><span class="p">;</span><span class="w"></span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetDataPageVersion</span><span class="p">;</span><span class="w"></span>
+<span class="k">using</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">Compression</span><span class="p">;</span><span class="w"></span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">WriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">()</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">max_row_group_length</span><span class="p">(</span><span class="mi">64</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">created_by</span><span class="p">(</span><span class="s">&quot;My Application&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">version</span><span class="p">(</span><span class="n">ParquetVersion</span><span class="o">::</span><span class="n">PARQUET_2_6</span><span class="p">)</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">data_page_version</span><span class="p">(</span><span class="n">ParquetDataPageVersion</span><span class="o">::</span><span class="n">V2</span><span class="p">)</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">compression</span><span class="p">(</span><span class="n">Compression</span><span class="o">::</span><span class="n">SNAPPY</span><span class="p">)</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">build</span><span class="p">();</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">max_row_group_length</span></code> sets an upper bound on the number of rows per row
+group that takes precedent over the <code class="docutils literal notranslate"><span class="pre">chunk_size</span></code> passed in the write methods.</p>
+<p>You can set the version of Parquet to write with <code class="docutils literal notranslate"><span class="pre">version</span></code>, which determines
+which logical types are available. In addition, you can set the data page version
+with <code class="docutils literal notranslate"><span class="pre">data_page_version</span></code>. It’s V1 by default; setting to V2 will allow more
+optimal compression (skipping compressing pages where there isn’t a space
+benefit), but not all readers support this data page version.</p>
+<p>Compression is off by default, but to get the most out of Parquet, you should
+also choose a compression codec. You can choose one for the whole file or
+choose one for individual columns. If you choose a mix, the file-level option
+will apply to columns that don’t have a specific compression codec. See
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Compression</span></code> for options.</p>
+<p>Column data encodings can likewise be applied at the file-level or at the
+column level. By default, the writer will attempt to dictionary encode all
+supported columns, unless the dictionary grows too large. This behavior can
+be changed at file-level or at the column level with <code class="docutils literal notranslate"><span class="pre">disable_dictionary()</span></code>.
+When not using dictionary encoding, it will fallback to the encoding set for
+the column or the overall file; by default <code class="docutils literal notranslate"><span class="pre">Encoding::PLAIN</span></code>, but this can
+be changed with <code class="docutils literal notranslate"><span class="pre">encoding()</span></code>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/arrow/writer.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/util/type_fwd.h&quot;</span><span class="cp"></span>
+
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="p">;</span><span class="w"></span>
+<span class="k">using</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">Compression</span><span class="p">;</span><span class="w"></span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">Encoding</span><span class="p">;</span><span class="w"></span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">WriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">()</span><span class="w"></span>
+<span class="w">  </span><span class="p">.</span><span class="n">compression</span><span class="p">(</span><span class="n">Compression</span><span class="o">::</span><span class="n">SNAPPY</span><span class="p">)</span><span class="w">        </span><span class="c1">// Fallback</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">compression</span><span class="p">(</span><span class="s">&quot;colA&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Compression</span><span class="o">::</span><span class="n">ZSTD</span><span class="p">)</span><span class="w"> </span><span class="c1">// Only applies to column &quot;colA&quot;</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">encoding</span><span class="p">(</span><span class="n">Encoding</span><span class="o">::</span><span class="n">BIT_PACKED</span><span class="p">)</span><span class="w">         </span><span class="c1">// Fallback</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">encoding</span><span class="p">(</span><span class="s">&quot;colB&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Encoding</span><span class="o">::</span><span class="n">RLE</span><span class="p">)</span><span class="w">        </span><span class="c1">// Only applies to column &quot;colB&quot;</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">disable_dictionary</span><span class="p">(</span><span class="s">&quot;colB&quot;</span><span class="p">)</span><span class="w">             </span><span class="c1">// Never dictionary-encode column &quot;colB&quot;</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Statistics are enabled by default for all columns. You can disable statistics for
+all columns or specific columns using <code class="docutils literal notranslate"><span class="pre">disable_statistics</span></code> on the builder.
+There is a <code class="docutils literal notranslate"><span class="pre">max_statistics_size</span></code> which limits the maximum number of bytes that
+may be used for min and max values, useful for types like strings or binary blobs.</p>
+<p>There are also Arrow-specific settings that can be configured with
+<a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowWriterPropertiesE" title="parquet::ArrowWriterProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">parquet::ArrowWriterProperties</span></code></a>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/arrow/writer.h&quot;</span><span class="cp"></span>
+
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowWriterProperties</span><span class="p">;</span><span class="w"></span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">ArrowWriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrowWriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">()</span><span class="w"></span>
+<span class="w">   </span><span class="p">.</span><span class="n">enable_deprecated_int96_timestamps</span><span class="p">()</span><span class="w"> </span><span class="c1">// default False</span>
+<span class="w">   </span><span class="o">-&gt;</span><span class="n">store_schema</span><span class="p">()</span><span class="w"> </span><span class="c1">// default False</span>
+<span class="w">   </span><span class="o">-&gt;</span><span class="n">enable_compliant_nested_types</span><span class="p">()</span><span class="w"> </span><span class="c1">// default False</span>
+<span class="w">   </span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span><span class="w"></span>
+</pre></div>
+</div>
+<p>These options mostly dictate how Arrow types are converted to Parquet types.
+Turning on <code class="docutils literal notranslate"><span class="pre">store_schema</span></code> will cause the writer to store the serialized Arrow
+schema within the file metadata. Since there is no bijection between Parquet
+schemas and Arrow schemas, storing the Arrow schema allows the Arrow reader
+to more faithfully recreate the original data. This mapping from Parquet types
+back to original Arrow types includes:</p>
+<ul class="simple">
+<li><p>Reading timestamps with original timezone information (Parquet does not
+support time zones);</p></li>
+<li><p>Reading Arrow types from their storage types (such as Duration from int64
+columns);</p></li>
+<li><p>Reading string and binary columns back into large variants with 64-bit offsets;</p></li>
+<li><p>Reading back columns as dictionary encoded (whether an Arrow column and
+the serialized Parquet version are dictionary encoded are independent).</p></li>
+</ul>
+</section>
+</section>
 <section id="supported-parquet-features">
 <h2>Supported Parquet features<a class="headerlink" href="#supported-parquet-features" title="Permalink to this heading">¶</a></h2>
 <p>The Parquet format has many features, and Parquet C++ supports a subset of them.</p>
@@ -5242,156 +5603,6 @@ supported.</p></li>
 <li><p>EncryptionWithFooterKey and EncryptionWithColumnKey modes.</p></li>
 <li><p>Encrypted Footer and Plaintext Footer modes.</p></li>
 </ul>
-</section>
-</section>
-<section id="reading-parquet-files">
-<h2>Reading Parquet files<a class="headerlink" href="#reading-parquet-files" title="Permalink to this heading">¶</a></h2>
-<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReaderE" title="parquet::arrow::FileReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReader</span></code></a> class reads data for an entire
-file or row group into an <a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Table</span></code></a>.</p>
-<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> and <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamWriterE" title="parquet::StreamWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamWriter</span></code></a> classes allow for
-data to be written using a C++ input/output streams approach to
-read/write fields column by column and row by row.  This approach is
-offered for ease of use and type-safety.  It is of course also useful
-when data must be streamed as files are read and written
-incrementally.</p>
-<p>Please note that the performance of the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> and
-<a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamWriterE" title="parquet::StreamWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamWriter</span></code></a> classes will not be as good due to the type
-checking and the fact that column values are processed one at a time.</p>
-<section id="filereader">
-<h3>FileReader<a class="headerlink" href="#filereader" title="Permalink to this heading">¶</a></h3>
-<p>The Parquet <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReaderE" title="parquet::arrow::FileReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReader</span></code></a> requires a
-<a class="reference internal" href="api/io.html#_CPPv4N5arrow2io16RandomAccessFileE" title="arrow::io::RandomAccessFile"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::io::RandomAccessFile</span></code></a> instance representing the input
-file.</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/parquet/arrow/reader.h&quot;</span><span class="cp"></span>
-
-<span class="p">{</span><span class="w"></span>
-<span class="w">   </span><span class="c1">// ...</span>
-<span class="w">   </span><span class="n">arrow</span><span class="o">::</span><span class="n">Status</span><span class="w"> </span><span class="n">st</span><span class="p">;</span><span class="w"></span>
-<span class="w">   </span><span class="n">arrow</span><span class="o">::</span><span class="n">MemoryPool</span><span class="o">*</span><span class="w"> </span><span class="n">pool</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">default_memory_pool</span><span class="p">();</span><span class="w"></span>
-<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">RandomAccessFile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span><span class="w"></span>
-
-<span class="w">   </span><span class="c1">// Open Parquet file reader</span>
-<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_reader</span><span class="p">;</span><span class="w"></span>
-<span class="w">   </span><span class="n">st</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">OpenFile</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">pool</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">arrow_reader</span><span class="p">);</span><span class="w"></span>
-<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">st</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="c1">// Handle error instantiating file reader...</span>
-<span class="w">   </span><span class="p">}</span><span class="w"></span>
-
-<span class="w">   </span><span class="c1">// Read entire file as a single Arrow table</span>
-<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span><span class="w"> </span><span class="n">table</span><span class="p">;</span><span class="w"></span>
-<span class="w">   </span><span class="n">st</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow_reader</span><span class="o">-&gt;</span><span class="n">ReadTable</span><span class="p">(</span><span class="o">&amp;</span><span class="n">table</span><span class="p">);</span><span class="w"></span>
-<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">st</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="c1">// Handle error reading Parquet data...</span>
-<span class="w">   </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-<p>Finer-grained options are available through the
-<a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow17FileReaderBuilderE" title="parquet::arrow::FileReaderBuilder"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReaderBuilder</span></code></a> helper class.</p>
-</section>
-<section id="streamreader">
-<h3>StreamReader<a class="headerlink" href="#streamreader" title="Permalink to this heading">¶</a></h3>
-<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> allows for Parquet files to be read using
-standard C++ input operators which ensures type-safety.</p>
-<p>Please note that types must match the schema exactly i.e. if the
-schema field is an unsigned 16-bit integer then you must supply a
-uint16_t type.</p>
-<p>Exceptions are used to signal errors.  A <a class="reference internal" href="api/support.html#_CPPv4N7parquet16ParquetExceptionE" title="parquet::ParquetException"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParquetException</span></code></a> is
-thrown in the following circumstances:</p>
-<ul class="simple">
-<li><p>Attempt to read field by supplying the incorrect type.</p></li>
-<li><p>Attempt to read beyond end of row.</p></li>
-<li><p>Attempt to read beyond end of file.</p></li>
-</ul>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/io/file.h&quot;</span><span class="cp"></span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/stream_reader.h&quot;</span><span class="cp"></span>
-
-<span class="p">{</span><span class="w"></span>
-<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">ReadableFile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">infile</span><span class="p">;</span><span class="w"></span>
-
-<span class="w">   </span><span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span><span class="w"></span>
-<span class="w">      </span><span class="n">infile</span><span class="p">,</span><span class="w"></span>
-<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">ReadableFile</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span><span class="w"></span>
-
-<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">StreamReader</span><span class="w"> </span><span class="n">os</span><span class="p">{</span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetFileReader</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">infile</span><span class="p">)};</span><span class="w"></span>
-
-<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">article</span><span class="p">;</span><span class="w"></span>
-<span class="w">   </span><span class="kt">float</span><span class="w"> </span><span class="n">price</span><span class="p">;</span><span class="w"></span>
-<span class="w">   </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">quantity</span><span class="p">;</span><span class="w"></span>
-
-<span class="w">   </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="o">!</span><span class="n">os</span><span class="p">.</span><span class="n">eof</span><span class="p">()</span><span class="w"> </span><span class="p">)</span><span class="w"></span>
-<span class="w">   </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="n">os</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">article</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">quantity</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">EndRow</span><span class="p">;</span><span class="w"></span>
-<span class="w">      </span><span class="c1">// ...</span>
-<span class="w">   </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-</section>
-</section>
-<section id="writing-parquet-files">
-<h2>Writing Parquet files<a class="headerlink" href="#writing-parquet-files" title="Permalink to this heading">¶</a></h2>
-<section id="writetable">
-<h3>WriteTable<a class="headerlink" href="#writetable" title="Permalink to this heading">¶</a></h3>
-<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10WriteTableERKN5arrow5TableEP10MemoryPoolNSt10shared_ptrIN5arrow2io12OutputStreamEEE7int64_tNSt10shared_ptrI16WriterPropertiesEENSt10shared_ptrI21ArrowWriterPropertiesEE" title="parquet::arrow::WriteTable"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::WriteTable()</span></code></a> function writes an entire
-<a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Table</span></code></a> to an output file.</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/arrow/writer.h&quot;</span><span class="cp"></span>
-
-<span class="p">{</span><span class="w"></span>
-<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outfile</span><span class="p">;</span><span class="w"></span>
-<span class="w">   </span><span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span><span class="w"></span>
-<span class="w">      </span><span class="n">outfile</span><span class="p">,</span><span class="w"></span>
-<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span><span class="w"></span>
-
-<span class="w">   </span><span class="n">PARQUET_THROW_NOT_OK</span><span class="p">(</span><span class="w"></span>
-<span class="w">      </span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">WriteTable</span><span class="p">(</span><span class="n">table</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">(),</span><span class="w"> </span><span class="n">outfile</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">));</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-</section>
-<section id="streamwriter">
-<h3>StreamWriter<a class="headerlink" href="#streamwriter" title="Permalink to this heading">¶</a></h3>
-<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamWriterE" title="parquet::StreamWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamWriter</span></code></a> allows for Parquet files to be written using
-standard C++ output operators.  This type-safe approach also ensures
-that rows are written without omitting fields and allows for new row
-groups to be created automatically (after certain volume of data) or
-explicitly by using the <code class="xref cpp cpp-type docutils literal notranslate"><span class="pre">EndRowGroup</span></code> stream modifier.</p>
-<p>Exceptions are used to signal errors.  A <a class="reference internal" href="api/support.html#_CPPv4N7parquet16ParquetExceptionE" title="parquet::ParquetException"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParquetException</span></code></a> is
-thrown in the following circumstances:</p>
-<ul class="simple">
-<li><p>Attempt to write a field using an incorrect type.</p></li>
-<li><p>Attempt to write too many fields in a row.</p></li>
-<li><p>Attempt to skip a required field.</p></li>
-</ul>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/io/file.h&quot;</span><span class="cp"></span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/stream_writer.h&quot;</span><span class="cp"></span>
-
-<span class="p">{</span><span class="w"></span>
-<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outfile</span><span class="p">;</span><span class="w"></span>
-
-<span class="w">   </span><span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span><span class="w"></span>
-<span class="w">      </span><span class="n">outfile</span><span class="p">,</span><span class="w"></span>
-<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span><span class="w"></span>
-
-<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="w"> </span><span class="n">builder</span><span class="p">;</span><span class="w"></span>
-<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">schema</span><span class="o">::</span><span class="n">GroupNode</span><span class="o">&gt;</span><span class="w"> </span><span class="n">schema</span><span class="p">;</span><span class="w"></span>
-
-<span class="w">   </span><span class="c1">// Set up builder with required compression type etc.</span>
-<span class="w">   </span><span class="c1">// Define schema.</span>
-<span class="w">   </span><span class="c1">// ...</span>
-
-<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">StreamWriter</span><span class="w"> </span><span class="n">os</span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetFileWriter</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="w"> </span><span class="n">schema</span><span class="p">,</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="n">build</span><span class="p">())};</span><span class="w"></span>
-
-<span class="w">   </span><span class="c1">// Loop over some data structure which provides the required</span>
-<span class="w">   </span><span class="c1">// fields to be written and write each row.</span>
-<span class="w">   </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">getArticles</span><span class="p">())</span><span class="w"></span>
-<span class="w">   </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="n">os</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">name</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">price</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">quantity</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">EndRow</span><span class="p">;</span><span class="w"></span>
-<span class="w">   </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
 </section>
 </section>
 </section>
