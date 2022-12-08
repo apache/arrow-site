@@ -51,7 +51,7 @@ message.
 You may also wish to subscribe to these lists, which capture some activity streams:
 
 <ul>
-  <li> <code>issues@</code> for the creation of JIRA issues {% include mailing_list_links.html list="issues" %} </li>
+  <li> <code>issues@</code> for the creation of GitHub issues {% include mailing_list_links.html list="issues" %} </li>
   <li> <code>commits@</code> for commits to the <a href="https://github.com/apache/arrow">apache/arrow</a> and <a href="https://github.com/apache/arrow-site">apache/arrow-site</a> repositories (typically to <code>master</code> only) {% include mailing_list_links.html list="commits" %} </li>
   <li> <code>builds@</code> for nightly build reports {% include mailing_list_links.html list="builds" %} </li>
 </ul>
@@ -60,7 +60,6 @@ In addition, we have some "firehose" lists, which exist so that development
 activity is captured in email form for archival purposes.
 
 <ul>
-  <li> <code>jira@</code> for all activity on JIRA issues {% include mailing_list_links.html list="jira" %} </li>
   <li> <code>github@</code> for all activity on the GitHub repositories {% include mailing_list_links.html list="github" %} </li>
 </ul>
 
@@ -75,18 +74,14 @@ their own tags (for example,
 
 ### GitHub issues
 
-We support GitHub issues as a lightweight way to ask questions and engage with
-the Arrow developer community.  That said, we use
-[JIRA](https://issues.apache.org/jira/browse/ARROW) for maintaining a queue of
-development work and as the public record for work on the project, and we use
-the mailing lists for development discussions, so to keep things in a single
-place, we prefer not to have lengthy discussions on GitHub issues.
-
-If you know your question is actually a bug report or feature request, we
-encourage you to go straight to JIRA. If you're not sure, feel free to make a
-GitHub issue to ask your question and we can triage/redirect your question
-there.
+We use GitHub issues as a way to ask questions and engage with the Arrow developer
+community but also for maintaining a queue of development work and as the public
+record for work on the project. We use the mailing lists for development discussions,
+so to keep things in a single place, we prefer not to have lengthy discussions on
+GitHub issues.
 
 ## Contributing
 
-As mentioned above, we use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue tracker and [GitHub](https://github.com/apache/arrow) for source control. See the [contribution guidelines]({{ site.baseurl }}/docs/developers/contributing.html) for more.
+As mentioned above, we use [GitHub](https://github.com/apache/arrow) for our issue
+tracker and for source control. See the
+[contribution guidelines]({{ site.baseurl }}/docs/developers/contributing.html) for more.
