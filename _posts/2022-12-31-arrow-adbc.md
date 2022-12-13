@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Introducing ADBC: Database Access for Apache Arrow"
-date: "2022-10-03 09:00:00 -0500"
+date: "2022-12-31 00:00:00"
 author: pmc
 categories: [application]
 ---
@@ -25,15 +25,15 @@ limitations under the License.
 -->
 
 The Arrow community has accepted version 1.0.0 of the [Arrow Database Connectivity (ADBC)][adbc] specification.
-ADBC is an API standard for Arrow-based database access in C/C++ (and related languages), Go, and Java.
-That includes APIs for common database tasks, like executing queries, fetching result sets in Arrow format, and getting basic metadata.
+ADBC is an API standard for Arrow-based database access.
+It defines abstract APIs in C, Go, and Java for performing common database tasks using Arrow data, like executing queries and getting basic metadata.
 
-ADBC is analogous to standards like JDBC and ODBC, which define database-independent interaction APIs, and rely on drivers to implement those APIs for particular databases.
-Similarly, the ADBC API standard is implemented by drivers that use some underlying protocol.
-This means that ADBC can abstract over Arrow-native protocols, like [Arrow Flight SQL][flight-sql]; vendor-specific APIs that offer Arrow data, such as those supported by ClickHouse or Google BigQuery; and even non-columnar standards like JDBC, which are still popular.
+Just like time-tested JDBC and ODBC, ADBC defines database-independent interaction APIs, and relies on drivers to implement those APIs for particular databases.
+It aims to provide a single API that works with Arrow-native protocols, like [Arrow Flight SQL][flight-sql]; vendor-specific APIs that offer Arrow data, such as those offered by ClickHouse or Google BigQuery; and non-columnar protocols and APIs like the PostgreSQL wire format or JDBC.
 
-In other words: **ADBC offers client applications a single API for getting Arrow data in and out of databases**.
-Underneath, ADBC driver implementations take care of bridging the actual system, whether it's Arrow-native or not.
+In other words: **ADBC is a single API for getting Arrow data in and out of databases**.
+Underneath, ADBC driver implementations take care of bridging the actual system.
+Arrow-native systems can directly pass through data without conversion, while the driver takes care of converting data in other cases, saving the application from doing the work.
 
 ## Examples
 
@@ -42,10 +42,10 @@ Underneath, ADBC driver implementations take care of bridging the actual system,
 We can get Arrow data out of a Postgres database in a few lines of Python:
 
 ```python
-import adbc_driver_postgres.dbapi
+import adbc_driver_postgresql.dbapi
 
-uri = "postgres://localhost:5432/postgres?user=postgres&password=password"
-with adbc_driver_postgres.dbapi.connect(uri) as conn:
+uri = "postgresql://localhost:5432/postgres?user=postgres&password=password"
+with adbc_driver_postgresql.dbapi.connect(uri) as conn:
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM customer")
         table = cur.fetch_arrow_table()
@@ -77,7 +77,7 @@ try (final AdbcDatabase database = JdbcDriver.INSTANCE.open(parameters);
 ## Motivation
 
 Applications often use API standards like JDBC and ODBC to work with databases.
-That way, they can use the same API regardless of the underlying database, saving on development time.
+This lets them use the same API regardless of the underlying database, saving on development time.
 Roughly speaking, when an application executes a query with these APIs:
 
 1. The application submits a SQL query via the JDBC/ODBC APIs.
@@ -91,30 +91,28 @@ Roughly speaking, when an application executes a query with these APIs:
   <figcaption>The query execution flow.</figcaption>
 </figure>
 
-These API standards don't hold up, however, when columnar Arrow data comes into play.
+When columnar data comes into play, however, problems arise.
 JDBC is a row-oriented API, and while ODBC can support columnar data, the type system and data representation is not a perfect match with Arrow.
 In both cases, this leads to data conversions around steps 4–5, spending resources without performing "useful" work.
 
-This mismatch is important for the many columnar database systems, such as ClickHouse, Dremio, DuckDB, Google BigQuery, and others.
-Clients, such as Apache Spark and Pandas, work best with columnar data, so they would like to get columnar data directly from these systems.
-But existing APIs don't offer an easy way to do this.
+This mismatch is important for columnar database systems, such as ClickHouse, Dremio, DuckDB, Google BigQuery, and others.
+Clients, such as Apache Spark and Pandas, would like to get columnar data directly from these systems.
 Meanwhile, traditional database systems aren't going away, and these clients still want to consume data from them.
-Currently, this means writing extra code to convert data into a columnar representation.
 
 In response, we've seen a few solutions:
 
 - *Just provide JDBC/ODBC drivers*.
   These standards are here to stay, and it makes sense to provide these interfaces for applications that want them.
-  But for an Arrow-native database system, the server or driver has to convert data from columns to rows, sacrificing the advantages of columnar data.
-  And an application that *does* want columnar data then has to spend more time converting the data back.
+  But if both sides are columnar, that means converting data into rows for JDBC/ODBC, only for the client to convert them back into columns!
 - *Provide converters from JDBC/ODBC to Arrow*.
-  This approach reduces the burden on client applications, but doesn't fundamentally solve the problem.
-  Unnecessary data conversions are still required in all cases.
   Some examples include [Turbodbc][turbodbc] and [arrow-jdbc][arrow-jdbc].
+  This approach reduces the burden on client applications, but doesn't fundamentally solve the problem.
+  Unnecessary data conversions are still required.
 - *Provide special SDKs*.
-  This means client applications need to spend time to integrate with each database they use.
+  All of the columnar systems listed above do offer ways to get Arrow data, such as via [Arrow Flight SQL][flight-sql].
+  But client applications need to spend time to integrate with each of them.
   (Just look at all the [connectors](https://trino.io/docs/current/connector.html) that Trino implements.)
-  And it doesn't help applications that want to work with systems that only support JDBC/ODBC.
+  And not every system offers this option.
 
 ADBC combines the latter two solutions under one API.
 In other words, ADBC provides a set of API definitions that client applications code to.
@@ -142,7 +140,7 @@ You can read the [C/C++ header][adbc.h], [Go interfaces][adbc-go], and the [Java
 The project has built several libraries around this standard:
 
 - Driver implementations implement the API standard on top of a particular protocol or vendor.
-  See the drivers for [libpq (Postgres)][adbc-libpq] and [JDBC][adbc-jdbc].
+  See the drivers for [libpq (PostgreSQL)][adbc-libpq] and [JDBC][adbc-jdbc].
 - The driver manager library provides an easy way to use multiple drivers from a single program, and also load drivers at runtime if desired.
 
 This infrastructure is reusable by other drivers/vendors and accessible to other languages.
@@ -206,7 +204,7 @@ In particular, we would like to thank members of the [DuckDB project][duckdb] an
 [adbc-go]: https://github.com/apache/arrow-adbc/blob/main/go/adbc/adbc.goin/
 [adbc-jdbc]: https://github.com/apache/arrow-adbc/tree/main/java/driver/jdbc
 [adbc-issues]: https://github.com/apache/arrow-adbc/issues
-[adbc-libpq]: https://github.com/apache/arrow-adbc/tree/main/c/driver/postgres
+[adbc-libpq]: https://github.com/apache/arrow-adbc/tree/main/c/driver/postgresql
 [adbc.h]: https://github.com/apache/arrow-adbc/blob/main/adbc.h
 [arrow-jdbc]: https://arrow.apache.org/docs/java/jdbc.html
 [c-data-interface]: {% link _posts/2020-05-04-introducing-arrow-c-data-interface.md %}
@@ -214,7 +212,7 @@ In particular, we would like to thank members of the [DuckDB project][duckdb] an
 [dev@arrow.apache.org]: https://arrow.apache.org/community/
 [duckdb]: https://duckdb.org/
 [flight-sql]: {% link _posts/2022-02-16-introducing-arrow-flight-sql.md %}
-[flight-sql-jdbc]: TODO
+[flight-sql-jdbc]: {% link _posts/2022-11-01-arrow-flight-sql-jdbc.md %}
 [nanoarrow]: https://github.com/apache/arrow-nanoarrow
 [pep-249]: https://www.python.org/dev/peps/pep-0249/
 [substrait]: https://substrait.io/
