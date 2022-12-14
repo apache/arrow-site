@@ -28,7 +28,7 @@ The Arrow community has accepted version 1.0.0 of the [Arrow Database Connectivi
 ADBC is an API standard for Arrow-based database access.
 It defines abstract APIs in C, Go, and Java for performing common database tasks using Arrow data, like executing queries and getting basic metadata.
 
-Just like time-tested JDBC and ODBC, ADBC defines database-independent interaction APIs, and relies on drivers to implement those APIs for particular databases.
+Just like time-tested [JDBC][jdbc] and [ODBC][odbc], ADBC defines database-independent interaction APIs, and relies on drivers to implement those APIs for particular databases.
 It aims to provide a single API that works with Arrow-native protocols, like [Arrow Flight SQL][flight-sql]; vendor-specific APIs that offer Arrow data, such as those offered by ClickHouse or Google BigQuery; and non-columnar protocols and APIs like the PostgreSQL wire format or JDBC.
 
 In other words: **ADBC is a single API for getting Arrow data in and out of databases**.
@@ -96,7 +96,7 @@ JDBC is a row-oriented API, and while ODBC can support columnar data, the type s
 In both cases, this leads to data conversions around steps 4–5, spending resources without performing "useful" work.
 
 This mismatch is important for columnar database systems, such as ClickHouse, Dremio, DuckDB, Google BigQuery, and others.
-Clients, such as Apache Spark and Pandas, would like to get columnar data directly from these systems.
+Clients, such as Apache Spark and pandas, would like to get columnar data directly from these systems.
 Meanwhile, traditional database systems aren't going away, and these clients still want to consume data from them.
 
 In response, we've seen a few solutions:
@@ -114,10 +114,11 @@ In response, we've seen a few solutions:
   (Just look at all the [connectors](https://trino.io/docs/current/connector.html) that Trino implements.)
   And not every system offers this option.
 
-ADBC combines the latter two solutions under one API.
+ADBC combines the advantages of the latter two solutions under one API.
 In other words, ADBC provides a set of API definitions that client applications code to.
 These API definitions are Arrow based.
-If the database is Arrow-native, that means the driver can pass the data through without conversion.
+The application then links to or loads drivers for the actual database, that implement the API definitions.
+If the database is Arrow-native, the driver can just pass the data through without conversion.
 Otherwise, the driver converts the data to Arrow format first.
 
 <figure style="text-align: center;">
@@ -213,7 +214,9 @@ In particular, we would like to thank members of the [DuckDB project][duckdb] an
 [duckdb]: https://duckdb.org/
 [flight-sql]: {% link _posts/2022-02-16-introducing-arrow-flight-sql.md %}
 [flight-sql-jdbc]: {% link _posts/2022-11-01-arrow-flight-sql-jdbc.md %}
+[jdbc]: https://docs.oracle.com/javase/tutorial/jdbc/overview/index.html
 [nanoarrow]: https://github.com/apache/arrow-nanoarrow
+[odbc]: https://learn.microsoft.com/en-us/sql/odbc/reference/what-is-odbc?view=sql-server-ver16
 [pep-249]: https://www.python.org/dev/peps/pep-0249/
 [substrait]: https://substrait.io/
 [turbodbc]: https://turbodbc.readthedocs.io/en/latest/
