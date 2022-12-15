@@ -24,25 +24,49 @@ limitations under the License.
 {% endcomment %}
 -->
 
-The nanoarrow library is a set of helper functions to interpret and generate
+The adoption of the
 [Arrow C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
-and [Arrow C Stream Interface](https://arrow.apache.org/docs/format/CStreamInterface.html)
-structures. The library is in active early development and users should update regularly
-from the main branch of this repository.
+and the [Arrow C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
+since their
+[introduction](https://arrow.apache.org/blog/2020/05/03/introducing-arrow-c-data-interface/)
+have been impressive and enthusiastic: not only have Arrow language bindings
+adopted the standard to pass data among themselves, a growing number of
+high-profile libraries like
+[GDAL](https://gdal.org/development/rfc/rfc86_column_oriented_api.html) and
+[DuckDB](https://duckdb.org/2021/12/03/duck-arrow.html) use the standard to
+improve performance and provide an ABI-stable interface to tabular input and output.
 
-Whereas the current suite of Arrow implementations provide the basis for a
-comprehensive data analysis toolkit, this library is intended to support clients
-that wish to produce or interpret Arrow C Data and/or Arrow C Stream structures
-where linking to a higher level Arrow binding is difficult or impossible.
+GDAL and DuckDB are fortunate to have hard-working and forward-thinking maintainers
+that were motivated to provide support for the Arrow C Data and Stream interfaces
+even though the code to do so required an intimate knowledge of both the interface
+and the columnar specification on which it is based.
 
-## Using the C library
+The vision of the [nanoarrow](https://github.com/apache/arrow-nanoarrow) project
+is that it should be trivial for a library or application to implement an Arrow-based
+interface: if a library consumes or produces tabular data, Arrow should be the
+first place developers look. Developers shouldn't have to be familiar with the
+details of the columnar specification---nor should they have to take on any
+build-time dependencies---to get started.
 
-The nanoarrow C library is intended to be copied and vendored. This can be done using
-CMake or by using the bundled nanoarrow.h/nanorrow.c distribution available in the
-dist/ directory in this repository. Examples of both can be found in the examples/
-directory in this repository.
+The [Arrow Database Connectivity (ADBC)](https://arrow.apache.org/docs/format/ADBC.html)
+specification is a good example of such a project, and provided a strong
+motivator for the development of nanoarrow: at the heart of ADBC is the
+idea of a core "driver manager" and database-specific drivers that are distributed
+as independent C/C++/Python/R/Java/Go projects. At least in R and Python, the
+embedding an existing Arrow implementation (e.g., Arrow C++) is challenging
+in the context of multiple packages intended to be loaded into the same process.
+As of this writing, ADBC includes nanoarrow-based SQLite and PostgreSQL drivers
+and a nanoarrow-based validation suite for drivers.
 
-A simple producer example:
+## Using nanoarrow in C
+
+The nanoarrow C library is distributed as
+[two files (nanoarrow.h and nanoarrow.c)](https://github.com/apache/arrow-nanoarrow/tree/main/dist)
+that can be copied and vendored into an existing code base. This results in
+a static library of about 50  KB and builds in less than a second. In addition to
+create an array directly from buffers (for those familiar with the columnar
+specification), nanoarrow includes an
+[API for building arrays element-wise](https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays):
 
 ```c
 #include "nanoarrow.h"
@@ -66,11 +90,12 @@ int make_simple_array(struct ArrowArray* array_out, struct ArrowSchema* schema_o
 }
 ```
 
-A simple consumer example:
+Similarly, nanoarrow provides an
+[API to extract elements element-wise](https://apache.github.io/arrow-nanoarrow/dev/c.html#reading-arrays)
+from an existing array.
 
 ```c
 #include <stdio.h>
-
 #include "nanoarrow.h"
 
 int print_simple_array(struct ArrowArray* array, struct ArrowSchema* schema) {
@@ -97,81 +122,65 @@ int print_simple_array(struct ArrowArray* array, struct ArrowSchema* schema) {
 }
 ```
 
-This folder contains a project that uses the bundled nanarrow.c and nanoarrow.h
-files included in the dist/ directory of this repository (or that can be generated
-using `cmake -DNANOARROW_BUNDLE=ON` from the root CMake project). Like the CMake
-example, you must be careful to not expose nanoarrow's header outside your project
-and make use of `#define NANOARROW_NAMESPACE MyProject` to prefix nanoarrow's symbol
-names to ensure they do not collide with another copy of nanoarrow potentially
-linked to by another project.
+## Using nanoarrow in C++, R, and Python
 
-The nanoarrow.c and nanoarrow.h files included in this example are stubs to illustrate
-how these files could fit in to a library and/or command-line application project.
-The easiest way is to use the pre-generated versions in the dist/ folder of this
-repository:
+Recognizing that many projects for which nanoarrow may be useful will have
+access a higher-level runtime than C, there are experiments to provide
+these users with a minimal set of useful tools.
 
-```bash
-git clone https://github.com/apache/arrow-nanoarrow.git
-cd arrow-nanoarrow/examples/vendored-minimal
-cp ../../dist/nanoarrow.h src/nanoarrow.h
-cp ../../dist/nanoarrow.c src/nanoarrow.c
+For C++ projects, an experimental
+["nanoarrow.hpp"](https://apache.github.io/arrow-nanoarrow/dev/cpp.html)
+interface provides `unique_ptr`-like wrappers for nanoarrow C objects to
+reduce the verbosity of using the nanoarrow API. For example, the previous
+`print_simple_array()` implementation would collapse to:
+
+```cpp
+#include <stdio.h>
+#include "nanoarrow.hpp"
+
+int print_simple_array2(struct ArrowArray* array, struct ArrowSchema* schema) {
+  struct ArrowError error;
+  nanoarrow::UniqueArrayView array_view;
+  NANOARROW_RETURN_NOT_OK(ArrowArrayViewInitFromSchema(array_view.get(), schema, &error));
+  NANOARROW_RETURN_NOT_OK(ArrowArrayViewSetArray(array_view.get(), array, &error));
+  for (int64_t i = 0; i < array->length; i++) {
+    printf("%d\n", (int)ArrowArrayViewGetIntUnsafe(array_view.get(), i));
+  }
+  return NANOARROW_OK;
+}
 ```
 
-If you use these, you will have to manually `#define NANOARROW_NAMESPACE MyProject`
-manually next to `#define NANOARROW_BUILD_ID` in the header.
+For R packages, experimental
+[R bindings](https://apache.github.io/arrow-nanoarrow/dev/r/index.html) provide
+a limited set of conversions between R vectors and Arrow arrays such that
+R bindings for a library with an Arrow-based interface do not need to provide
+this behaviour themselves. Additional features include printing and validating
+the content of the C structures at the heart of the C Data and C Stream
+interfaces to facilitate the development of bindings to Arrow-based libraries.
 
-You can also generate the bundled versions with the namespace defined using `cmake`:
+```r
+# install.packages("remotes")
+remotes::install_github("apache/arrow-nanoarrow/r", build = FALSE)
+library(nanoarrow)
 
-```bash
-git clone https://github.com/apache/arrow-nanoarrow.git
-cd arrow-nanoarrow
-mkdir build && cd build
-cmake .. -DNANOARROW_BUNDLE=ON -DNANOARROW_NAMESPACE=ExampleVendored
-cmake --build .
-cmake --install . --prefix=../examples/vendored-minimal/src
+as_nanoarrow_array(1:5)
+#> <nanoarrow_array int32[5]>
+#>  $ length    : int 5
+#>  $ null_count: int 0
+#>  $ offset    : int 0
+#>  $ buffers   :List of 2
+#>   ..$ :<nanoarrow_buffer_validity[0 b] at 0x0>
+#>   ..$ :<nanoarrow_buffer_data_int32[20 b] at 0x135d13c28>
+#>  $ dictionary: NULL
+#>  $ children  : list()
 ```
 
-Then you can build/link the application/library using the build tool of your choosing:
+A [Python package skeleton](https://github.com/apache/arrow-nanoarrow/tree/main/python)
+exists in the nanoarrow repository and further functionality may be added once
+the C library interface has stabilized.
 
-```bash
-cd src
-cc -c library.c nanoarrow.c
-ar rcs libexample_vendored_minimal_library.a library.o nanoarrow.o
-cc -o example_vendored_minimal_app app.c libexample_vendored_minimal_library.a
-```
+## Development roadmap
 
-This folder contains a CMake project that links to its own copy of
-nanoarrow using CMake's `FetchContent` module. Whether vendoring or
-using CMake, nanoarrow is intended to be vendored or statically
-linked in a way that does not expose its headers or symbols to other
-projects. To illustrate this, a small library is included (library.h
-and library.c) and built in this way, linked to by a program (app.c)
-that does not use nanoarrow (but does make use of the Arrow C Data
-interface header, since this is ABI stable and intended to be used
-in this way).
-
-To build the project:
-
-```bash
-git clone https://github.com/apache/arrow-nanoarrow.git
-cd arrow-nanoarrow/examples/cmake-minimal
-mkdir build && cd build
-cmake ..
-cmake --build .
-```
-
-
-I come at this, of course, as a maintainer of several R packages in the r-spatial universe, a contributor to the [arrow R package](https://arrow.apache.org/docs/r/), a huge fan of [Arrow Database Connectivity (ADBC)](https://github.com/apache/arrow-adbc), and a contributor to the [brand-new in-development nanoarrow library](https://github.com/apache/arrow-nanoarrow) whose vision is that it should be trivial for other libraries to follow in GDAL's footsteps.
-
-
-I hope I've painted a picture of a future where major library after major library has made its array- and table-like outputs available as fast and friendly (streams of) `ArrowArray`s. GDAL's 3.6 release is an example of how that future can provide immediate tangible benefits to users (via speed improvements) and developers (via code portability) alike. To get to that future, I think two things have to be true:
-
-- **Building `ArrowArray`s needs to be trivial**: GDAL is fortunate to have a talented, hard-working, and forward-thinking maintainer that implemented creating the C-data interface structures from scratch. Open source maintenance time is at a premimum and not every library maintainer has the time/motivation to do this.
-- **Converting `ArrowArray`s to data frames needs to be trivial**: Again, GDAL has a talented, hard-working, and forward-thinking maintainer that implemented his own conversions from `ArrowArray` streams into Python objects; not every library is going to do this. Many libraries can use the converters provided by Arrow implementations like [pyarrow](https://arrow.apache.org/docs/python), the [arrow R package](https://arrow.apache.org/docs/r), or the [Arrow C++ library](https://arrow.apache.org/docs/cpp) that powers them both; however, the size and scope of these libraries is often a poor fit for targets like GDAL (e.g., that have considerable install complexity to manage) or ADBC (e.g., that are composed of small components distributed as independent R/Python packages).
-
-The [nanoarrow C and C++ library](https://github.com/apache/arrow-nanoarrow) is all about building `ArrowArray`s. For example, the [ADBC Postgres driver](https://github.com/apache/arrow-adbc/tree/main/c/driver/postgres) uses nanoarrow to create `ArrowArray`s from PostgreSQL results and more nanoarrow-based drivers (e.g., for SQLite3) are [in the works](https://github.com/apache/arrow-adbc/issues/120). You can use nanoarrow in your C/C++ code by copy/pasting [two files from the nanoarrow repo](https://github.com/apache/arrow-nanoarrow/tree/main/dist); there are utilities to build data types, arrays, and streams of all kinds. It will take some iteration to realize the vision in its entirity, but the idea is simple: with minimal effort, your library can expose an Arrow-based API, with all the speed and portability that entails.
-
-The [nanoarrow R package](https://github.com/apache/arrow-nanoarrow/tree/main/r) is all about `data.frame()` conversion from (streams of) `ArrowArray`s. The dozen or so implementations I linked to above that were all doing various forms of creating the `data.frame()` from C/C++ are all solving the same rather hard problem of converting database/GDAL data row-by-row into R vector land. If you're the hard-working maintainer of a library that just made a super fast and flexible `ArrowArray`-based interface, the nanoarrow R package helps you make that that API to R users with minimal effort. For example, the [PR implementing GDAL's columnar interface in the sf package](https://github.com/r-spatial/sf/pull/2036) that I linked to earlier uses the nanoarrow R package.
-
-Experiments with nanoarrow in Python are ongoing...if you have ideas about what that package might look like or how it should be implemented there's [an issue just for you!](https://github.com/apache/arrow-nanoarrow/issues/53). Stay tuned to the repo for updates as we move development focus from the core C/C++ library to bindings and extensions.
-
+The nanoarrow library is very new and everything about it is experimental
+and contingent on user feedback! An initial 0.1 release is planned for January 2023
+to facilitate this feedback.
