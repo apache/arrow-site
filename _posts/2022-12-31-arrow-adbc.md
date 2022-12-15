@@ -25,10 +25,11 @@ limitations under the License.
 -->
 
 The Arrow community has accepted version 1.0.0 of the [Arrow Database Connectivity (ADBC)][adbc] specification.
-ADBC is an API standard for Arrow-based database access.
-It defines abstract APIs in C, Go, and Java for performing common database tasks using Arrow data, like executing queries and getting basic metadata.
+ADBC is a set of vendor-agnostic APIs for performing common database tasks using Arrow data, like executing queries and getting basic metadata.
+These APIs are available, either directly or via bindings, in C/C++, Go, Java, Python, Ruby, and soon R.
+ADBC aims to provide an alternative to APIs like JDBC and ODBC when bulk (columnar) data access with minimal overhead is desired.
 
-Just like time-tested [JDBC][jdbc] and [ODBC][odbc], ADBC defines database-independent interaction APIs, and relies on drivers to implement those APIs for particular databases.
+Like [JDBC][jdbc] and [ODBC][odbc], ADBC defines database-independent interaction APIs, and relies on drivers to implement those APIs for particular databases.
 It aims to provide a single API that works with Arrow-native protocols, like [Arrow Flight SQL][flight-sql]; vendor-specific APIs that offer Arrow data, such as those offered by ClickHouse or Google BigQuery; and non-columnar protocols and APIs like the PostgreSQL wire format or JDBC.
 
 In other words: **ADBC is a single API for getting Arrow data in and out of databases**.
@@ -164,13 +165,31 @@ ADBC fills a specific niche that related projects do not address. It is both:
   JDBC is row-oriented, and ODBC has implementation caveats, as discussed, that make it hard to use with Arrow.
 - **Vendor-agnostic**: ADBC drivers can implement the API using any underlying protocol, while Flight SQL requires server-side support that may not be easy to add.
 
-Plotted along these axes, we see that ADBC is both vendor-agnostic and Arrow-native, while Flight SQL is vendor-specific, and JDBC/ODBC are row-oriented:
+ADBC is both vendor-agnostic and columnar, while Flight SQL is vendor-specific, and JDBC/ODBC are row-oriented:
 
-<figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/ADBCQuadrants.svg"
-       alt="ADBC is Arrow-native and database-agnostic, while Flight SQL is Arrow-native and database-specific. JDBC and ODBC are row-oriented and database-agnostic, and wire protocols like Postgres's and SQL Server's are row-oriented and database-specific."
-       width="90%" class="img-responsive">
-</figure>
+<table class="table table-hover" style="table-layout: fixed">
+  <caption>Comparing database APIs and protocols</caption>
+  <thead class="thead-dark">
+    <tr>
+      <th></th>
+      <th class="align-top" style="width: 40%" scope="col">Vendor-neutral (database APIs)</th>
+      <th class="align-top" style="width: 40%" scope="col">Vendor-specific (database protocols)</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <th scope="row">Columnar</th>
+      <td class="table-success"><strong>ADBC</strong></td>
+      <td>Arrow Flight SQL<br>BigQuery Storage gRPC API</td>
+    </tr>
+    <tr>
+      <th scope="row">Row-oriented</th>
+      <td>JDBC<br>ODBC</td>
+      <td>Postgres wire protocol<br>Tabular Data Stream (Microsoft SQL Server)</td>
+    </tr>
+  </tbody>
+</table>
 
 **ADBC doesn't intend to replace JDBC or ODBC in general**, but we think ADBC makes more sense for applications that just want bulk columnar data access.
 
