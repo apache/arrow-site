@@ -24,17 +24,25 @@ limitations under the License.
 {% endcomment %}
 -->
 
-The Arrow community has accepted version 1.0.0 of the [Arrow Database Connectivity (ADBC)][adbc] specification.
-ADBC is a set of vendor-agnostic APIs for performing common database tasks using Arrow data, like executing queries and getting basic metadata.
+The Arrow community would like to introduce version 1.0.0 of the [Arrow Database Connectivity (ADBC)][adbc] specification.
+**ADBC aims to be an columnar, minimal-overhead alternative JDBC/ODBC for analytical applications**.
+It defines vendor-agnostic and Arrow-based APIs for common database tasks, like executing queries and getting basic metadata.
 These APIs are available, either directly or via bindings, in C/C++, Go, Java, Python, Ruby, and soon R.
-ADBC aims to provide an alternative to APIs like JDBC and ODBC when bulk (columnar) data access with minimal overhead is desired.
 
-Like [JDBC][jdbc] and [ODBC][odbc], ADBC defines database-independent interaction APIs, and relies on drivers to implement those APIs for particular databases.
-It aims to provide a single API that works with Arrow-native protocols, like [Arrow Flight SQL][flight-sql]; vendor-specific APIs that offer Arrow data, such as those offered by ClickHouse or Google BigQuery; and non-columnar protocols and APIs like the PostgreSQL wire format or JDBC.
+With ADBC, developers get both the benefits of using columnar Arrow data and having generic API abstractions.
+Like [JDBC][jdbc]/[ODBC][odbc], ADBC defines database-independent interaction APIs, and relies on drivers to implement those APIs for particular databases.
+ADBC aims to bring all of these together under a single API:
+
+- Vendor-specific Arrow-native protocols, like [Arrow Flight SQL][flight-sql] or those offered by ClickHouse or Google BigQuery;
+- Non-columnar protocols, like the PostgreSQL wire format;
+- Non-columnar API abstractions, like JDBC/ODBC.
 
 In other words: **ADBC is a single API for getting Arrow data in and out of databases**.
 Underneath, ADBC driver implementations take care of bridging the actual system.
-Arrow-native systems can directly pass through data without conversion, while the driver takes care of converting data in other cases, saving the application from doing the work.
+Systems using Arrow-native protocols can directly pass through data without conversion, so ADBC pairs naturally with Flight SQL.
+Drivers may also be built on row-based protocols, optimizing conversions to and from Arrow data as best as possible.
+Otherwise, drivers can be built that convert data from JDBC/ODBC, bridging existing databases into an Arrow-native API.
+In all cases, the application is saved the trouble of wrapping APIs and doing data conversions.
 
 ## Examples
 
