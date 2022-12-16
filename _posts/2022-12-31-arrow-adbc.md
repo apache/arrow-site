@@ -175,7 +175,7 @@ ADBC fills a specific niche that related projects do not address. It is both:
   JDBC is row-oriented, and ODBC has implementation caveats, as discussed, that make it hard to use with Arrow.
 - **Vendor-agnostic**: ADBC drivers can implement the API using any underlying protocol, while Flight SQL requires server-side support that may not be easy to add.
 
-ADBC is both vendor-agnostic and columnar, while Flight SQL is vendor-specific, and JDBC/ODBC are row-oriented:
+ADBC is both vendor-agnostic and columnar, while Flight SQL is vendor-specific, and JDBC/ODBC are (generally) row-oriented:
 
 <table class="table table-hover" style="table-layout: fixed">
   <caption>Comparing database APIs and protocols</caption>
@@ -204,8 +204,8 @@ ADBC is both vendor-agnostic and columnar, while Flight SQL is vendor-specific, 
 **ADBC doesn't intend to replace JDBC or ODBC in general**, but we think ADBC makes more sense for applications that just want bulk columnar data access.
 
 Similarly, within the Arrow project, ADBC does not replace Flight SQL, but instead *complements* it.
-ADBC targets client applications, giving them a uniform interface to multiple database protocols and APIs—including Flight SQL.
-Meanwhile, Flight SQL targets database servers, giving them a single protocol that can be implemented to simultaneously target ADBC users, [JDBC users][flight-sql-jdbc], and ODBC users.
+ADBC gives client applications a uniform **API** to multiple database protocols and APIs—including Flight SQL.
+Meanwhile, Flight SQL gives database servers a single **wire protocol** that can be implemented to simultaneously target ADBC users, [JDBC users][flight-sql-jdbc], and ODBC users.
 
 ## Conclusion/Getting Involved
 
