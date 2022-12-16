@@ -44,45 +44,6 @@ Drivers may also be built on row-based protocols, optimizing conversions to and 
 Otherwise, drivers can be built that convert data from JDBC/ODBC, bridging existing databases into an Arrow-native API.
 In all cases, the application is saved the trouble of wrapping APIs and doing data conversions.
 
-## Examples
-
-*Note: implementations are still under development, separate from the API standard itself. Examples are subject to change.*
-
-We can get Arrow data out of a Postgres database in a few lines of Python:
-
-```python
-import adbc_driver_postgresql.dbapi
-
-uri = "postgresql://localhost:5432/postgres?user=postgres&password=password"
-with adbc_driver_postgresql.dbapi.connect(uri) as conn:
-    with conn.cursor() as cur:
-        cur.execute("SELECT * FROM customer")
-        table = cur.fetch_arrow_table()
-        # Process the results
-```
-
-The ADBC Python packages offer a familiar [DBAPI 2.0 (PEP 249)][pep-249]-style API, along with extensions to get Arrow data.
-
-In Java, we can pull Arrow data out of a JDBC connection.
-The ADBC driver takes care of converting the data for the application:
-
-```java
-final Map<String, Object> parameters = new HashMap<>();
-parameters.put(
-    AdbcDriver.PARAM_URL,
-    "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password");
-try (final AdbcDatabase database = JdbcDriver.INSTANCE.open(parameters);
-    final AdbcConnection connection = database.connect();
-    final AdbcStatement stmt = connection.createStatement()) {
-  stmt.setSqlQuery("SELECT * FROM " + tableName);
-  try (AdbcStatement.QueryResult queryResult = stmt.executeQuery()) {
-    while (queryResult.getReader().loadNextBatch()) {
-      // Process the results
-    }
-  }
-}
-```
-
 ## Motivation
 
 Applications often use API standards like JDBC and ODBC to work with databases.
@@ -142,6 +103,45 @@ Otherwise, the driver converts the data to Arrow format first.
 5. The driver translates the result format into Arrow data if needed.
 
 So either way, the client can use a single API and get Arrow data in all cases.
+
+## Examples
+
+*Note: implementations are still under development, separate from the API standard itself. Examples are subject to change.*
+
+We can get Arrow data out of a Postgres database in a few lines of Python:
+
+```python
+import adbc_driver_postgresql.dbapi
+
+uri = "postgresql://localhost:5432/postgres?user=postgres&password=password"
+with adbc_driver_postgresql.dbapi.connect(uri) as conn:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM customer")
+        table = cur.fetch_arrow_table()
+        # Process the results
+```
+
+The ADBC Python packages offer a familiar [DBAPI 2.0 (PEP 249)][pep-249]-style API, along with extensions to get Arrow data.
+
+In Java, we can pull Arrow data out of a JDBC connection.
+The ADBC driver takes care of converting the data for the application:
+
+```java
+final Map<String, Object> parameters = new HashMap<>();
+parameters.put(
+    AdbcDriver.PARAM_URL,
+    "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password");
+try (final AdbcDatabase database = JdbcDriver.INSTANCE.open(parameters);
+    final AdbcConnection connection = database.connect();
+    final AdbcStatement stmt = connection.createStatement()) {
+  stmt.setSqlQuery("SELECT * FROM " + tableName);
+  try (AdbcStatement.QueryResult queryResult = stmt.executeQuery()) {
+    while (queryResult.getReader().loadNextBatch()) {
+      // Process the results
+    }
+  }
+}
+```
 
 ## In More Detail
 
