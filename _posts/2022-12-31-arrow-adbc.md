@@ -88,8 +88,8 @@ In response, we've seen a few solutions:
 
 ADBC combines the advantages of the latter two solutions under one API.
 In other words, ADBC provides a set of API definitions that client applications code to.
-These API definitions are Arrow based.
-The application then links to or loads drivers for the actual database, that implement the API definitions.
+These API definitions are Arrow-based.
+The application then links to or loads drivers for the actual database, which implement the API definitions.
 If the database is Arrow-native, the driver can just pass the data through without conversion.
 Otherwise, the driver converts the data to Arrow format first.
 
@@ -195,7 +195,7 @@ ADBC is both vendor-agnostic and columnar, while Flight SQL is vendor-specific, 
     </tr>
     <tr>
       <th scope="row">Row-oriented</th>
-      <td>JDBC<br>ODBC</td>
+      <td>JDBC<br>ODBC (typically row-oriented)</td>
       <td>Postgres wire protocol<br>Tabular Data Stream (Microsoft SQL Server)</td>
     </tr>
   </tbody>
