@@ -38,10 +38,12 @@ ADBC aims to bring all of these together under a single API:
 - Non-columnar API abstractions, like JDBC/ODBC.
 
 In other words: **ADBC is a single API for getting Arrow data in and out of databases**.
-Underneath, ADBC driver implementations take care of bridging the actual system.
-Systems using Arrow-native protocols can directly pass through data without conversion, so ADBC pairs naturally with Flight SQL.
-Drivers may also be built on row-based protocols, optimizing conversions to and from Arrow data as best as possible.
-Otherwise, drivers can be built that convert data from JDBC/ODBC, bridging existing databases into an Arrow-native API.
+Underneath, ADBC driver implementations take care of bridging the actual system:
+
+- Databases with Arrow-native protocols can directly pass data through without conversion.
+- Otherwise, drivers can be built for specific row-based protocols, optimizing conversions to and from Arrow data as best as possible for particular databases.
+- As a fallback, drivers can be built that convert data from JDBC/ODBC, bridging existing databases into an Arrow-native API.
+
 In all cases, the application is saved the trouble of wrapping APIs and doing data conversions.
 
 ## Motivation
