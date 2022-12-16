@@ -26,7 +26,7 @@ limitations under the License.
 
 The adoption of the
 [Arrow C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
-and the [Arrow C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
+and the [Arrow C Stream Interface](https://arrow.apache.org/docs/format/CStreamInterface.html)
 since their
 [introduction](https://arrow.apache.org/blog/2020/05/03/introducing-arrow-c-data-interface/)
 have been impressive and enthusiastic: not only have Arrow language bindings
@@ -64,7 +64,7 @@ The nanoarrow C library is distributed as
 [two files (nanoarrow.h and nanoarrow.c)](https://github.com/apache/arrow-nanoarrow/tree/main/dist)
 that can be copied and vendored into an existing code base. This results in
 a static library of about 50  KB and builds in less than a second. In addition to
-create an array directly from buffers (for those familiar with the columnar
+creating an array directly from buffers (for those familiar with the columnar
 specification), nanoarrow includes an
 [API for building arrays element-wise](https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays):
 
