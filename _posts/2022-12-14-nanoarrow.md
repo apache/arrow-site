@@ -52,7 +52,7 @@ The [Arrow Database Connectivity (ADBC)](https://arrow.apache.org/docs/format/AD
 specification is a good example of such a project, and provided a strong
 motivator for the development of nanoarrow: at the heart of ADBC is the
 idea of a core "driver manager" and database-specific drivers that are distributed
-as independent C/C++/Python/R/Java/Go projects. At least in R and Python, the
+as independent C/C++/Python/R/Java/Go projects. At least in R and Python,
 embedding an existing Arrow implementation (e.g., Arrow C++) is challenging
 in the context of multiple packages intended to be loaded into the same process.
 As of this writing, ADBC includes nanoarrow-based SQLite and PostgreSQL drivers
