@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Reading JSON files &#8212; Apache Arrow v11.0.0.dev216</title>
+    <title>Reading JSON files &#8212; Apache Arrow v11.0.0.dev282</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        11.0.0.dev216
+        11.0.0.dev282
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4773,8 +4773,13 @@ function checkPageExistsAndRedirect(event) {
 <nav id="bd-toc-nav">
     <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#basic-usage">
-   Basic usage
+  <a class="reference internal nav-link" href="#tablereader">
+   TableReader
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#streamingreader">
+   StreamingReader
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
@@ -4812,16 +4817,22 @@ function checkPageExistsAndRedirect(event) {
                 
   <section id="reading-json-files">
 <h1>Reading JSON files<a class="headerlink" href="#reading-json-files" title="Permalink to this heading">¶</a></h1>
-<p>Arrow allows reading line-separated JSON files as Arrow tables.  Each
-independent JSON object in the input file is converted to a row in
-the target Arrow table.</p>
+<p>Line-separated JSON files can either be read as a single Arrow Table
+with a <a class="reference internal" href="api/formats.html#_CPPv4N5arrow4json11TableReaderE" title="arrow::json::TableReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TableReader</span></code></a> or streamed as RecordBatches with a
+<a class="reference internal" href="api/formats.html#_CPPv4N5arrow4json15StreamingReaderE" title="arrow::json::StreamingReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamingReader</span></code></a>.</p>
+<p>Both of these readers require an <a class="reference internal" href="api/io.html#_CPPv4N5arrow2io11InputStreamE" title="arrow::io::InputStream"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::io::InputStream</span></code></a> instance
+representing the input file. Their behavior can be customized using a
+combination of <a class="reference internal" href="api/formats.html#_CPPv4N5arrow4json11ReadOptionsE" title="arrow::json::ReadOptions"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ReadOptions</span></code></a>, <a class="reference internal" href="api/formats.html#_CPPv4N5arrow4json12ParseOptionsE" title="arrow::json::ParseOptions"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParseOptions</span></code></a>, and
+other parameters.</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="api/formats.html#cpp-api-json"><span class="std std-ref">JSON reader API reference</span></a>.</p>
 </div>
-<section id="basic-usage">
-<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this heading">¶</a></h2>
-<p>A JSON file is read from a <a class="reference internal" href="api/io.html#_CPPv4N5arrow2io11InputStreamE" title="arrow::io::InputStream"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">InputStream</span></code></a>.</p>
+<section id="tablereader">
+<h2>TableReader<a class="headerlink" href="#tablereader" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference internal" href="api/formats.html#_CPPv4N5arrow4json11TableReaderE" title="arrow::json::TableReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TableReader</span></code></a> reads an entire file in one shot as a <a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">Table</span></code></a>. Each
+independent JSON object in the input file is converted to a row in
+the output table.</p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/json/api.h&quot;</span><span class="cp"></span>
 
 <span class="p">{</span><span class="w"></span>
@@ -4852,6 +4863,41 @@ the target Arrow table.</p>
 </pre></div>
 </div>
 </section>
+<section id="streamingreader">
+<h2>StreamingReader<a class="headerlink" href="#streamingreader" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference internal" href="api/formats.html#_CPPv4N5arrow4json15StreamingReaderE" title="arrow::json::StreamingReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamingReader</span></code></a> reads a file incrementally from blocks of a roughly equal byte size, each yielding a
+<a class="reference internal" href="api/table.html#_CPPv4N5arrow11RecordBatchE" title="arrow::RecordBatch"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">RecordBatch</span></code></a>. Each independent JSON object in a block
+is converted to a row in the output batch.</p>
+<p>All batches adhere to a consistent <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow:Schema</span></code>, which is
+derived from the first loaded batch. Alternatively, an explicit schema
+may be passed via <a class="reference internal" href="api/formats.html#_CPPv4N5arrow4json12ParseOptionsE" title="arrow::json::ParseOptions"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParseOptions</span></code></a>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/json/api.h&quot;</span><span class="cp"></span>
+
+<span class="p">{</span><span class="w"></span>
+<span class="w">   </span><span class="c1">// ...</span>
+<span class="w">   </span><span class="k">auto</span><span class="w"> </span><span class="n">read_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">ReadOptions</span><span class="o">::</span><span class="n">Defaults</span><span class="p">();</span><span class="w"></span>
+<span class="w">   </span><span class="k">auto</span><span class="w"> </span><span class="n">parse_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">ParseOptions</span><span class="o">::</span><span class="n">Defaults</span><span class="p">();</span><span class="w"></span>
+
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">InputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">stream</span><span class="p">;</span><span class="w"></span>
+<span class="w">   </span><span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">StreamingReader</span><span class="o">::</span><span class="n">Make</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                                    </span><span class="n">read_options</span><span class="p">,</span><span class="w"></span>
+<span class="w">                                                    </span><span class="n">parse_options</span><span class="p">);</span><span class="w"></span>
+<span class="w">   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">result</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="c1">// Handle instantiation error</span>
+<span class="w">   </span><span class="p">}</span><span class="w"></span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">StreamingReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">reader</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">result</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">   </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Result</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatch</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">maybe_batch</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">reader</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">maybe_batch</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">         </span><span class="c1">// Handle read/parse error</span>
+<span class="w">      </span><span class="p">}</span><span class="w"></span>
+<span class="w">      </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatch</span><span class="o">&gt;</span><span class="w"> </span><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">maybe_batch</span><span class="p">;</span><span class="w"></span>
+<span class="w">      </span><span class="c1">// Operate on each batch...</span>
+<span class="w">   </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
 <section id="data-types">
 <h2>Data types<a class="headerlink" href="#data-types" title="Permalink to this heading">¶</a></h2>
 <p>Since JSON values are typed, the possible Arrow data types on output
@@ -4860,7 +4906,7 @@ objects.  The fields of top-level objects are taken to represent columns
 in the Arrow data.  For each name/value pair in a JSON object, there are
 two possible modes of deciding the output data type:</p>
 <ul class="simple">
-<li><p>if the name is in <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ConvertOptions::explicit_schema</span></code>,
+<li><p>if the name is in <a class="reference internal" href="api/formats.html#_CPPv4N5arrow4json12ParseOptions15explicit_schemaE" title="arrow::json::ParseOptions::explicit_schema"><code class="xref cpp cpp-member docutils literal notranslate"><span class="pre">ParseOptions::explicit_schema</span></code></a>,
 conversion of the JSON value to the corresponding Arrow data type is
 attempted;</p></li>
 <li><p>otherwise, the Arrow data type is determined via type inference on
