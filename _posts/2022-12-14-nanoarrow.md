@@ -41,7 +41,7 @@ that were motivated to provide support for the Arrow C Data and Stream interface
 even though the code to do so required an intimate knowledge of both the interface
 and the columnar specification on which it is based.
 
-The vision of the [nanoarrow](https://github.com/apache/arrow-nanoarrow) project
+The vision of [nanoarrow](https://github.com/apache/arrow-nanoarrow)
 is that it should be trivial for a library or application to implement an Arrow-based
 interface: if a library consumes or produces tabular data, Arrow should be the
 first place developers look. Developers shouldn't have to be familiar with the
@@ -63,10 +63,19 @@ and a nanoarrow-based validation suite for drivers.
 The nanoarrow C library is distributed as
 [two files (nanoarrow.h and nanoarrow.c)](https://github.com/apache/arrow-nanoarrow/tree/main/dist)
 that can be copied and vendored into an existing code base. This results in
-a static library of about 50  KB and builds in less than a second. In addition to
-creating an array directly from buffers (for those familiar with the columnar
-specification), nanoarrow includes an
-[API for building arrays element-wise](https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays):
+a static library of about 50  KB and builds in less than a second. Some features
+that nanoarrow provides are:
+
+* [Helpers to create types, schemas, and metadata](https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-schemas)
+* [Growable buffers](https://apache.github.io/arrow-nanoarrow/dev/c.html#owning-growable-buffers),
+  including the option for custom allocators/deallocators.
+* [Bitmap (i.e., bitpacked boolean) utilities](https://apache.github.io/arrow-nanoarrow/dev/c.html#bitmap-utilities)
+* An [API for building arrays from buffers](https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays)
+* An [API for building arrays element-wise](https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays)
+* An [API to extract elements element-wise](https://apache.github.io/arrow-nanoarrow/dev/c.html#reading-arrays)
+  from an existing array.
+
+For example, one can build an integer array element-wise:
 
 ```c
 #include "nanoarrow.h"
@@ -83,16 +92,14 @@ int make_simple_array(struct ArrowArray* array_out, struct ArrowSchema* schema_o
   NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 2));
   NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 3));
   NANOARROW_RETURN_NOT_OK(ArrowArrayFinishBuilding(array_out, &error));
-  
+
   NANOARROW_RETURN_NOT_OK(ArrowSchemaInit(schema_out, NANOARROW_TYPE_INT32));
 
   return NANOARROW_OK;
 }
 ```
 
-Similarly, nanoarrow provides an
-[API to extract elements element-wise](https://apache.github.io/arrow-nanoarrow/dev/c.html#reading-arrays)
-from an existing array.
+Similarly, one can extract elements from an array:
 
 ```c
 #include <stdio.h>
@@ -179,8 +186,15 @@ A [Python package skeleton](https://github.com/apache/arrow-nanoarrow/tree/main/
 exists in the nanoarrow repository and further functionality may be added once
 the C library interface has stabilized.
 
-## Development roadmap
+## Try nanoarrow
 
-The nanoarrow library is very new and everything about it is experimental
-and contingent on user feedback! An initial 0.1 release is planned for January 2023
-to facilitate this feedback.
+The nanoarrow library is brand new and everything about it is experimental
+and contingent on user feedback! For any interested in giving nanoarrow a try, the
+easiest way to get started is to clone the
+[nanoarrow repository from GitHub](https://github.com/apache/arrow-nanoarrow)
+and build/modify the
+[minimal CMake build example](https://github.com/apache/arrow-nanoarrow/tree/main/examples/cmake-minimal).
+For more realistic usage, one can refer to the
+[ADBC SQLite driver](https://github.com/apache/arrow-adbc/tree/main/c/driver/sqlite)
+and the [ADBC PostgreSQL driver](https://github.com/apache/arrow-adbc/tree/main/c/driver/postgresql).
+An initial 0.1 release is planned for January 2023.
