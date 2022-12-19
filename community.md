@@ -75,10 +75,9 @@ their own tags (for example,
 ### GitHub issues
 
 We use GitHub issues as a way to ask questions and engage with the Arrow developer
-community but also for maintaining a queue of development work and as the public
-record for work on the project. We use the mailing lists for development discussions,
-so to keep things in a single place, we prefer not to have lengthy discussions on
-GitHub issues.
+community and for maintaining a queue of development work and as the public
+record of work on the project. We use the mailing lists for development discussions,
+where a lengthy discussions is required.
 
 ## Contributing
 
