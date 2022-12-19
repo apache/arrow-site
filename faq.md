@@ -148,7 +148,7 @@ the project itself.  See the [contribution guidelines]({{ site.baseurl
 
 #### **Arrow looks great and I'd totally use it if it only did X. When will it be done?**
 
-We use [JIRA](https://issues.apache.org/jira/browse/ARROW) for our issue
+We use [GitHub](https://github.com/apache/arrow) for our issue
 tracker.  Search for an issue that matches your need. If you find one, feel
 free to comment on it and describe your use case--that will help whoever picks
 up the task. If you don't find one, make it.
