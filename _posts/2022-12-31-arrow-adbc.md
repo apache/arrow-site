@@ -222,8 +222,8 @@ In summary, ADBC works as part of the Arrow ecosystem to "cover the bases" for d
        width="90%" class="img-responsive">
 </figure>
 
-To start using ADBC today, see the [repository][adbc] on how to build and install the packages.
-(Nightly builds and a formal release of the packages are still under way.)
+To start using ADBC today, see the [repository][adbc] on how to build and install the packages, or look at the [documentation][adbc-docs] for a short tutorial.
+(A formal release of the packages are still under way.)
 If you're interested in learning more or contributing, please reach out on the [mailing list][dev@arrow.apache.org] or on [GitHub Issues][adbc-issues].
 
 ADBC was only possible with the help and involvement of several Arrow community members and projects.
@@ -231,6 +231,7 @@ In particular, we would like to thank members of the [DuckDB project][duckdb] an
 
 [adbc]: https://github.com/apache/arrow-adbc
 [adbc-core]: https://github.com/apache/arrow-adbc/tree/main/java/core
+[adbc-docs]: https://arrow.apache.org/adbc/
 [adbc-go]: https://github.com/apache/arrow-adbc/blob/main/go/adbc/adbc.goin/
 [adbc-jdbc]: https://github.com/apache/arrow-adbc/tree/main/java/driver/jdbc
 [adbc-issues]: https://github.com/apache/arrow-adbc/issues
