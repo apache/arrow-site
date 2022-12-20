@@ -68,7 +68,7 @@ JDBC is a row-oriented API, and while ODBC can support columnar data, the type s
 In both cases, this leads to data conversions around steps 4–5, spending resources without performing "useful" work.
 
 This mismatch is problematic for columnar database systems, such as ClickHouse, Dremio, DuckDB, and Google BigQuery.
-Clients, such as Apache Spark and pandas, would like to get columnar data directly from these systems.
+On the client side, tools such as Apache Spark and pandas would be better off getting columnar data directly, skipping that conversion.
 Meanwhile, traditional database systems aren't going away, and these clients still want to consume data from them.
 
 In response, we've seen a few solutions:
