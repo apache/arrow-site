@@ -104,7 +104,7 @@ Otherwise, the driver converts the data to Arrow format first.
 4. The database executes the query and returns the result set in a database-specific format, which is ideally Arrow data.
 5. The driver translates the result format into Arrow data if needed.
 
-So either way, the client can use a single API and get Arrow data in all cases.
+No matter what, a given application will only ever use one API, and will always get Arrow data.
 
 ## Examples
 
