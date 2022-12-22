@@ -34,17 +34,17 @@ Applications often use API standards like [JDBC][jdbc] and [ODBC][odbc] to work 
 That way, they can code to the same API regardless of the underlying database, saving on development time.
 Roughly speaking, when an application executes a query with these APIs:
 
+<figure style="text-align: center;">
+  <img src="{{ site.baseurl }}/img/ADBCFlow1.svg" width="90%" class="img-responsive" alt="A diagram showing the query execution flow.">
+  <figcaption>The query execution flow.</figcaption>
+</figure>
+
 1. The application submits a SQL query via the JDBC/ODBC API.
 2. The query is passed on to the driver.
 3. The driver translates the query to a database-specific protocol and sends it to the database.
 4. The database executes the query and returns the result set in a database-specific format.
 5. The driver translates the result format into the JDBC/ODBC API.
 6. The application iterates over the result rows using the JDBC/ODBC API.
-
-<figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/ADBCFlow1.svg" width="90%" class="img-responsive" alt="A diagram showing the query execution flow.">
-  <figcaption>The query execution flow.</figcaption>
-</figure>
 
 When columnar data comes into play, however, problems arise.
 JDBC is a row-oriented API, and while ODBC can support columnar data, the type system and data representation is not a perfect match with Arrow.
