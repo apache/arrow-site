@@ -62,7 +62,7 @@ Developers have a few options:
   These standards are here to stay, and it makes sense for databases to support them for applications that want them.
   But when both the database and the application are columnar, that means converting data into rows for JDBC/ODBC, only for the client to convert them right back into columns!
   Performance suffers, and developers have to spend time implementing the conversions.
-- *Use JDBC/ODBC to Arrow conversion libraries*.
+- *Use JDBC/ODBC-to-Arrow conversion libraries*.
   Libraries like [Turbodbc][turbodbc] and [arrow-jdbc][arrow-jdbc] handle row to columnar conversions for clients.
   But this doesn't fundamentally solve the problem.
   Unnecessary data conversions are still required.
