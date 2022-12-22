@@ -191,6 +191,8 @@ ADBC was only possible with the help and involvement of several Arrow community 
 In particular, we would like to thank members of the [DuckDB project][duckdb] and the [R DBI project][dbi], who constructed prototypes based on early revisions of the standard and provided feedback on the design.
 And ADBC builds on existing Arrow projects, including the [Arrow C Data Interface][c-data-interface] and [Nanoarrow][nanoarrow].
 
+Thanks to Fernanda Foertter for assistance with some of the diagrams.
+
 [adbc]: https://github.com/apache/arrow-adbc
 [adbc-core]: https://github.com/apache/arrow-adbc/tree/main/java/core
 [adbc-docs]: https://arrow.apache.org/adbc/
