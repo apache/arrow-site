@@ -73,7 +73,7 @@ Developers have a few options:
   (Look at all the [connectors](https://trino.io/docs/current/connector.html) that Trino implements.)
   And databases like PostgreSQL don't offer an option supporting Arrow in the first place.
 
-So in the status quo, clients must choose between either tedious integration work or leaving performance on the table.
+As is, clients must choose between either tedious integration work or leaving performance on the table. We can make this better.
 
 ## Introducing ADBC
 
