@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pyarrow.parquet.core &#8212; Apache Arrow v11.0.0.dev307</title>
+    <title>pyarrow.parquet.core &#8212; Apache Arrow v11.0.0.dev322</title>
     
     <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -92,7 +92,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        11.0.0.dev307
+        11.0.0.dev322
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4816,7 +4816,7 @@ function checkPageExistsAndRedirect(event) {
                               <span class="n">ParquetLogicalType</span><span class="p">,</span>
                               <span class="n">FileEncryptionProperties</span><span class="p">,</span>
                               <span class="n">FileDecryptionProperties</span><span class="p">)</span>
-<span class="kn">from</span> <span class="nn">pyarrow.fs</span> <span class="kn">import</span> <span class="p">(</span><span class="n">LocalFileSystem</span><span class="p">,</span> <span class="n">FileSystem</span><span class="p">,</span>
+<span class="kn">from</span> <span class="nn">pyarrow.fs</span> <span class="kn">import</span> <span class="p">(</span><span class="n">LocalFileSystem</span><span class="p">,</span> <span class="n">FileSystem</span><span class="p">,</span> <span class="n">FileType</span><span class="p">,</span>
                         <span class="n">_resolve_filesystem_and_path</span><span class="p">,</span> <span class="n">_ensure_filesystem</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">pyarrow</span> <span class="kn">import</span> <span class="n">filesystem</span> <span class="k">as</span> <span class="n">legacyfs</span>
 <span class="kn">from</span> <span class="nn">pyarrow.util</span> <span class="kn">import</span> <span class="n">guid</span><span class="p">,</span> <span class="n">_is_path_like</span><span class="p">,</span> <span class="n">_stringify_path</span><span class="p">,</span> <span class="n">_deprecate_api</span>
@@ -5031,6 +5031,10 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">        If not None, override the maximum total size of containers allocated</span>
 <span class="sd">        when decoding Thrift structures. The default limit should be</span>
 <span class="sd">        sufficient for most Parquet files.</span>
+<span class="sd">    filesystem : FileSystem, default None</span>
+<span class="sd">        If nothing passed, will be inferred based on path.</span>
+<span class="sd">        Path will try to be found in the local on-disk filesystem otherwise</span>
+<span class="sd">        it will be parsed as an URI to determine the filesystem.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -5078,7 +5082,16 @@ function checkPageExistsAndRedirect(event) {
                  <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                  <span class="n">pre_buffer</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">coerce_int96_timestamp_unit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">decryption_properties</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">thrift_string_size_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">thrift_container_size_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                 <span class="n">thrift_container_size_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_close_source</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;closed&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">filesystem</span><span class="p">,</span> <span class="n">source</span> <span class="o">=</span> <span class="n">_resolve_filesystem_and_path</span><span class="p">(</span>
+            <span class="n">source</span><span class="p">,</span> <span class="n">filesystem</span><span class="p">,</span> <span class="n">memory_map</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">filesystem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">open_input_file</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_close_source</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># We opened it here, ensure we close it.</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">reader</span> <span class="o">=</span> <span class="n">ParquetReader</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">open</span><span class="p">(</span>
             <span class="n">source</span><span class="p">,</span> <span class="n">use_memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span>
@@ -5089,7 +5102,6 @@ function checkPageExistsAndRedirect(event) {
             <span class="n">thrift_string_size_limit</span><span class="o">=</span><span class="n">thrift_string_size_limit</span><span class="p">,</span>
             <span class="n">thrift_container_size_limit</span><span class="o">=</span><span class="n">thrift_container_size_limit</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_close_source</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;closed&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">common_metadata</span> <span class="o">=</span> <span class="n">common_metadata</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_nested_paths_by_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_nested_paths</span><span class="p">()</span></div>
 
@@ -5608,6 +5620,14 @@ function checkPageExistsAndRedirect(event) {
 <span class="s2">dictionary_pagesize_limit : int, default None</span>
 <span class="s2">    Specify the dictionary page size limit per row group. If None, use the</span>
 <span class="s2">    default 1MB.</span>
+<span class="s2">store_schema : bool, default True</span>
+<span class="s2">    By default, the Arrow schema is serialized and stored in the Parquet</span>
+<span class="s2">    file metadata (in the &quot;ARROW:schema&quot; key). When reading the file,</span>
+<span class="s2">    if this key is available, it will be used to more faithfully recreate</span>
+<span class="s2">    the original Arrow data. For example, for tz-aware timestamp columns</span>
+<span class="s2">    it will restore the timezone (Parquet only stores the UTC values without</span>
+<span class="s2">    timezone), or columns with duration type will be restored from the int64</span>
+<span class="s2">    Parquet column.</span>
 <span class="s2">&quot;&quot;&quot;</span>
 
 <span class="n">_parquet_writer_example_doc</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
@@ -5699,6 +5719,7 @@ function checkPageExistsAndRedirect(event) {
                  <span class="n">encryption_properties</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">write_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">dictionary_pagesize_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">store_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">options</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">use_deprecated_int96_timestamps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># Use int96 timestamps for Spark</span>
@@ -5754,6 +5775,7 @@ function checkPageExistsAndRedirect(event) {
             <span class="n">encryption_properties</span><span class="o">=</span><span class="n">encryption_properties</span><span class="p">,</span>
             <span class="n">write_batch_size</span><span class="o">=</span><span class="n">write_batch_size</span><span class="p">,</span>
             <span class="n">dictionary_pagesize_limit</span><span class="o">=</span><span class="n">dictionary_pagesize_limit</span><span class="p">,</span>
+            <span class="n">store_schema</span><span class="o">=</span><span class="n">store_schema</span><span class="p">,</span>
             <span class="o">**</span><span class="n">options</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">is_open</span> <span class="o">=</span> <span class="kc">True</span></div>
 
@@ -6453,7 +6475,7 @@ function checkPageExistsAndRedirect(event) {
 <span class="s2">    dataset metadata. Increasing this is helpful to read partitioned</span>
 <span class="s2">    datasets.</span>
 <span class="si">{0}</span><span class="s2"></span>
-<span class="s2">use_legacy_dataset : bool, default True</span>
+<span class="s2">use_legacy_dataset : bool, default False</span>
 <span class="s2">    Set to False to enable the new code path (using the</span>
 <span class="s2">    new Arrow Dataset API). Among other things, this allows to pass</span>
 <span class="s2">    `filters` for all columns and not only the partition keys, enables</span>
@@ -6487,17 +6509,10 @@ function checkPageExistsAndRedirect(event) {
                 <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">split_row_groups</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                 <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span>
-                <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pre_buffer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pre_buffer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                 <span class="n">coerce_int96_timestamp_unit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">thrift_string_size_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">thrift_container_size_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">use_legacy_dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># if a new filesystem is passed -&gt; default to new implementation</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">FileSystem</span><span class="p">):</span>
-                <span class="n">use_legacy_dataset</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="c1"># otherwise the default is still True</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">use_legacy_dataset</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">use_legacy_dataset</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_ParquetDatasetV2</span><span class="p">(</span>
@@ -6517,6 +6532,11 @@ function checkPageExistsAndRedirect(event) {
                 <span class="n">thrift_string_size_limit</span><span class="o">=</span><span class="n">thrift_string_size_limit</span><span class="p">,</span>
                 <span class="n">thrift_container_size_limit</span><span class="o">=</span><span class="n">thrift_container_size_limit</span><span class="p">,</span>
             <span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Passing &#39;use_legacy_dataset=True&#39; to get the legacy behaviour is &quot;</span>
+            <span class="s2">&quot;deprecated as of pyarrow 11.0.0, and the legacy implementation &quot;</span>
+            <span class="s2">&quot;will be removed in a future version.&quot;</span><span class="p">,</span>
+            <span class="ne">FutureWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="bp">self</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
@@ -6524,7 +6544,7 @@ function checkPageExistsAndRedirect(event) {
                  <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">split_row_groups</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">validate_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_nthreads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">read_dictionary</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">memory_map</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span><span class="p">,</span>
-                 <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">pre_buffer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pre_buffer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">coerce_int96_timestamp_unit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">thrift_string_size_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">thrift_container_size_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -6610,6 +6630,12 @@ function checkPageExistsAndRedirect(event) {
 
         <span class="k">if</span> <span class="n">validate_schema</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">validate_schemas</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__getnewargs_ex__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># when creating a new instance while unpickling, force to use the</span>
+        <span class="c1"># legacy code path to create a ParquetDataset instance</span>
+        <span class="c1"># instead of a _ParquetDatasetV2 instance</span>
+        <span class="k">return</span> <span class="p">((),</span> <span class="nb">dict</span><span class="p">(</span><span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 
 <div class="viewcode-block" id="ParquetDataset.equals"><a class="viewcode-back" href="../../../python/generated/pyarrow.parquet.ParquetDataset.html#pyarrow.parquet.ParquetDataset.equals">[docs]</a>    <span class="k">def</span> <span class="nf">equals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">ParquetDataset</span><span class="p">):</span>
@@ -7167,6 +7193,7 @@ function checkPageExistsAndRedirect(event) {
 
         <span class="c1"># check for single fragment dataset</span>
         <span class="n">single_file</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">_is_path_like</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">):</span>
                 <span class="n">path_or_paths</span> <span class="o">=</span> <span class="n">_stringify_path</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span>
@@ -7177,8 +7204,11 @@ function checkPageExistsAndRedirect(event) {
                             <span class="n">path_or_paths</span><span class="p">)</span>
                     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
                         <span class="n">filesystem</span> <span class="o">=</span> <span class="n">LocalFileSystem</span><span class="p">(</span><span class="n">use_mmap</span><span class="o">=</span><span class="n">memory_map</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">get_file_info</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">:</span>
+                <span class="n">finfo</span> <span class="o">=</span> <span class="n">filesystem</span><span class="o">.</span><span class="n">get_file_info</span><span class="p">(</span><span class="n">path_or_paths</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">finfo</span><span class="o">.</span><span class="n">is_file</span><span class="p">:</span>
                     <span class="n">single_file</span> <span class="o">=</span> <span class="n">path_or_paths</span>
+                <span class="k">if</span> <span class="n">finfo</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">FileType</span><span class="o">.</span><span class="n">Directory</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir</span> <span class="o">=</span> <span class="n">path_or_paths</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">single_file</span> <span class="o">=</span> <span class="n">path_or_paths</span>
 
@@ -7203,6 +7233,27 @@ function checkPageExistsAndRedirect(event) {
                                    <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">parquet_format</span><span class="p">,</span>
                                    <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">,</span>
                                    <span class="n">ignore_prefixes</span><span class="o">=</span><span class="n">ignore_prefixes</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">equals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">ParquetDataset</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;`other` must be an instance of ParquetDataset constructed &quot;</span>
+                <span class="s2">&quot;with `use_legacy_dataset=False`&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">_ParquetDatasetV2</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`other` must be an instance of ParquetDataset&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">schema</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">schema</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_dataset</span><span class="o">.</span><span class="n">format</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">filesystem</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">filesystem</span> <span class="ow">and</span>
+                <span class="c1"># self.fragments == other.fragments and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">files</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -7281,7 +7332,16 @@ function checkPageExistsAndRedirect(event) {
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># if use_pandas_metadata, we need to include index columns in the</span>
         <span class="c1"># column selection, to be able to restore those in the pandas DataFrame</span>
-        <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="n">use_pandas_metadata</span><span class="p">:</span>
+            <span class="c1"># if the dataset schema metadata itself doesn&#39;t have pandas</span>
+            <span class="c1"># then try to get this from common file (for backwards compat)</span>
+            <span class="k">if</span> <span class="sa">b</span><span class="s2">&quot;pandas&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
+                <span class="n">common_metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_common_pandas_metadata</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">common_metadata</span><span class="p">:</span>
+                    <span class="n">metadata</span> <span class="o">=</span> <span class="n">common_metadata</span>
+
         <span class="k">if</span> <span class="n">columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">use_pandas_metadata</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">metadata</span> <span class="ow">and</span> <span class="sa">b</span><span class="s1">&#39;pandas&#39;</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
                 <span class="c1"># RangeIndex can be represented as dict instead of column name</span>
@@ -7307,6 +7367,24 @@ function checkPageExistsAndRedirect(event) {
                 <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">replace_schema_metadata</span><span class="p">(</span><span class="n">new_metadata</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">table</span>
+
+    <span class="k">def</span> <span class="nf">_get_common_pandas_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">metadata</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;_common_metadata&quot;</span><span class="p">,</span> <span class="s2">&quot;_metadata&quot;</span><span class="p">]:</span>
+            <span class="n">metadata_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_base_dir</span><span class="p">),</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">finfo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filesystem</span><span class="o">.</span><span class="n">get_file_info</span><span class="p">(</span><span class="n">metadata_path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">finfo</span><span class="o">.</span><span class="n">is_file</span><span class="p">:</span>
+                <span class="n">pq_meta</span> <span class="o">=</span> <span class="n">read_metadata</span><span class="p">(</span>
+                    <span class="n">metadata_path</span><span class="p">,</span> <span class="n">filesystem</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">filesystem</span><span class="p">)</span>
+                <span class="n">metadata</span> <span class="o">=</span> <span class="n">pq_meta</span><span class="o">.</span><span class="n">metadata</span>
+                <span class="k">if</span> <span class="n">metadata</span> <span class="ow">and</span> <span class="sa">b</span><span class="s1">&#39;pandas&#39;</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+        <span class="k">return</span> <span class="n">metadata</span>
 
     <span class="k">def</span> <span class="nf">read_pandas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -7667,14 +7745,19 @@ function checkPageExistsAndRedirect(event) {
             <span class="s2">&quot;use_legacy_dataset=False&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">_is_path_like</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
-        <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetDataset</span><span class="p">(</span>
-            <span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span>
-            <span class="n">read_dictionary</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">,</span>
-            <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">,</span>
-            <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span>
-            <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">,</span>
-            <span class="n">coerce_int96_timestamp_unit</span><span class="o">=</span><span class="n">coerce_int96_timestamp_unit</span>
-        <span class="p">)</span>
+        <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+            <span class="c1"># Suppress second warning from ParquetDataset constructor</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span>
+                <span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="s2">&quot;Passing &#39;use_legacy_dataset&quot;</span><span class="p">,</span> <span class="ne">FutureWarning</span><span class="p">)</span>
+            <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetDataset</span><span class="p">(</span>
+                <span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span> <span class="n">memory_map</span><span class="o">=</span><span class="n">memory_map</span><span class="p">,</span>
+                <span class="n">read_dictionary</span><span class="o">=</span><span class="n">read_dictionary</span><span class="p">,</span>
+                <span class="n">buffer_size</span><span class="o">=</span><span class="n">buffer_size</span><span class="p">,</span>
+                <span class="n">filesystem</span><span class="o">=</span><span class="n">filesystem</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span>
+                <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">,</span>
+                <span class="n">coerce_int96_timestamp_unit</span><span class="o">=</span><span class="n">coerce_int96_timestamp_unit</span><span class="p">,</span>
+                <span class="n">use_legacy_dataset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">pf</span> <span class="o">=</span> <span class="n">ParquetFile</span><span class="p">(</span>
             <span class="n">source</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
@@ -7735,6 +7818,7 @@ function checkPageExistsAndRedirect(event) {
                 <span class="n">encryption_properties</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">write_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">dictionary_pagesize_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">store_schema</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="n">row_group_size</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;chunk_size&#39;</span><span class="p">,</span> <span class="n">row_group_size</span><span class="p">)</span>
     <span class="n">use_int96</span> <span class="o">=</span> <span class="n">use_deprecated_int96_timestamps</span>
@@ -7759,6 +7843,7 @@ function checkPageExistsAndRedirect(event) {
                 <span class="n">encryption_properties</span><span class="o">=</span><span class="n">encryption_properties</span><span class="p">,</span>
                 <span class="n">write_batch_size</span><span class="o">=</span><span class="n">write_batch_size</span><span class="p">,</span>
                 <span class="n">dictionary_pagesize_limit</span><span class="o">=</span><span class="n">dictionary_pagesize_limit</span><span class="p">,</span>
+                <span class="n">store_schema</span><span class="o">=</span><span class="n">store_schema</span><span class="p">,</span>
                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
             <span class="n">writer</span><span class="o">.</span><span class="n">write_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">row_group_size</span><span class="o">=</span><span class="n">row_group_size</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -8367,6 +8452,7 @@ function checkPageExistsAndRedirect(event) {
     </div>
   
     <script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+  
   <footer class="footer mt-5 mt-md-0">
   <div class="container">
     
@@ -8384,5 +8470,7 @@ Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.3.0.<br>
     
   </div>
 </footer>
+  <script type="text/javascript" src="/docs/_static/versionwarning.js"></script>
+
   </body>
 </html>
