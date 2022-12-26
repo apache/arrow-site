@@ -224,29 +224,28 @@ As such, the best Parquet readers support “streaming” data out in by produci
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃
-┃ Data Page for ColumnChunk 1 │◀╋ ┐                                ┌── ─── ─── ─── ─── ┐
-┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃      ┏━━━━━━━━━━━━━━━━━━━┓         ┌ ─ ┐ ┌ ─ ┐ ┌ ─ ┐ │
-┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │    ┃                   ┃       │                   │
-┃ Data Page for ColumnChunk 1 │ ┃      ┃                   ┃   ┌ ─▶│ │   │ │   │ │   │
-┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ ├ ─ ─┃                   ┃─ ─    │  ─ ─   ─ ─   ─ ─  │
-┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃      ┃                   ┃   │        A    B     C   │
-┃ Data Page for ColumnChunk 2 │◀╋ ┤    ┗━━━━━━━━━━━━━━━━━━━┛       └── ─── ─── ─── ─── ┘
-┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                              │
-┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │      Parquet Decoder                    ...
-┃ Data Page for ColumnChunk 3 │ ┃                              │
-┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │                                ┌── ─── ─── ─── ─── ┐
-┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                              │     ┌ ─ ┐ ┌ ─ ┐ ┌ ─ ┐ │
-┃ Data Page for ColumnChunk 3 │◀╋ ┘                                │                   │
-┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                              └ ─▶│ │   │ │   │ │   │
-┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                                  │  ─ ─   ─ ─   ─ ─  │
-┃ Data Page for ColumnChunk 3 │ ┃                                       A    B     C   │
-┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                                  └── ─── ─── ─── ─── ┘
+┃ Data Page for ColumnChunk 1 │◀┃─                   ┌── ─── ─── ─── ─── ┐
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │   ┏━━━━━━━┓        ┌ ─ ┐ ┌ ─ ┐ ┌ ─ ┐ │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃     ┃       ┃      │                   │
+┃ Data Page for ColumnChunk 1 │ ┃ │   ┃       ┃   ─ ▶│ │   │ │   │ │   │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃  ─ ─┃       ┃─ ┤   │  ─ ─   ─ ─   ─ ─  │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │   ┃       ┃           A    B     C   │
+┃ Data Page for ColumnChunk 2 │◀┃─    ┗━━━━━━━┛  │   └── ─── ─── ─── ─── ┘
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │    Parquet
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃      Decoder   │            ...
+┃ Data Page for ColumnChunk 3 │ ┃ │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                │   ┌── ─── ─── ─── ─── ┐
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │                    ┌ ─ ┐ ┌ ─ ┐ ┌ ─ ┐ │
+┃ Data Page for ColumnChunk 3 │◀┃─               │   │                   │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                 ─ ▶│ │   │ │   │ │   │
+┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                    │  ─ ─   ─ ─   ─ ─  │
+┃ Data Page for ColumnChunk 3 │ ┃                         A    B     C   │
+┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃                    └── ─── ─── ─── ─── ┘
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-
-      Parquet file                                                   Smaller in memory
-                                                                        batches for
-                                                                        processing
+      Parquet file                                    Smaller in memory
+                                                         batches for
+                                                         processing
 ```
 
 While streaming is not a complicated feature to explain, the stateful nature of decoding, especially across multiple columns and [arbitrarily nested data](https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/), where the relationship between rows and values is not fixed, requires [complex intermediate buffering](https://github.com/apache/arrow-rs/blob/b7af85cb8dfe6887bb3fd43d1d76f659473b6927/parquet/src/arrow/record_reader/mod.rs) and significant engineering effort to handle correctly.
@@ -281,41 +280,41 @@ Specifically, using the information in the footer, the Parquet reader can entire
 
 
 ```
-                                     ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-                                     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                           ┌─────────▶ Data Page for ColumnChunk 1 ("A")  ┃
-                           │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-                           │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                           ├─────────▶ Data Page for ColumnChunk 1 ("A")  ┃
-                           │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-                           │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                           ├─────────▶ Data Page for ColumnChunk 2 ("B")  ┃
-                           │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-                           │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                           │         ┃ Data Page for ColumnChunk 3 ("C")  ┃
-                           │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-   A query that            │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-  accesses only            │         ┃ Data Page for ColumnChunk 3 ("C")  ┃
- columns A and B           │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-can read only the          │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
- relevant pages,  ─────────┤         ┃ Data Page for ColumnChunk 3 ("C")  ┃
-skipping any data          │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-  for column C             │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                           ├─────────▶ Data Page for ColumnChunk 4 ("A")  ┃
-                           │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-                           │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                           ├─────────▶ Data Page for ColumnChunk 5 ("B")  ┃
-                           │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-                           │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                           ├─────────▶ Data Page for ColumnChunk 5 ("B")  ┃
-                           │         ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-                           │         ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                           └─────────▶ Data Page for ColumnChunk 5 ("B")  ┃
-                                     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-                                     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┃
-                                     ┃ Data Page for ColumnChunk 6 ("C")  ┃
-                                     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┃
-                                     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                             ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+                             ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ┌─────▶ Data Page for ColumnChunk 1 ("A") ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 1 ("A") ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 2 ("B") ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       │     ┃ Data Page for ColumnChunk 3 ("C") ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+   A query that        │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+  accesses only        │     ┃ Data Page for ColumnChunk 3 ("C") ┃
+ columns A and B       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+can read only the      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+ relevant pages,  ─────┤     ┃ Data Page for ColumnChunk 3 ("C") ┃
+skipping any Data      │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 4 ("A") ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 5 ("B") ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       ├─────▶ Data Page for ColumnChunk 5 ("B") ┃
+                       │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                       │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                       └─────▶ Data Page for ColumnChunk 5 ("B") ┃
+                             ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                             ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
+                             ┃ Data Page for ColumnChunk 6 ("C") ┃
+                             ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
+                             ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
 
@@ -335,17 +334,17 @@ For the example query above, if the maximum value for A in a particular `RowGrou
 ┃Row Group 1 Metadata                      ┃
 ┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
 ┃ ┃Column "A" Metadata    Min:0 Max:15   ┃◀╋ ┐
-┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
-┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃ │
-┃ ┃Column "B" Metadata                   ┃ ┃
-┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃ │
-┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
-┃ ┃Column "C" Metadata                   ┃ ┃ │     Using the min and max values
-┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃       from the metadata, RowGroup
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ├ ─ ─ 1  can be entirely skipped
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓       (pruned) when searching for
-┃Row Group 2 Metadata                      ┃ │     rows with A > 35,
-┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃       Using the min
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃ │     and max values
+┃ ┃Column "B" Metadata                   ┃ ┃       from the
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃ │     metadata,
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃       RowGroup 1  can
+┃ ┃Column "C" Metadata                   ┃ ┃ ├ ─ ─ be entirely
+┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃       skipped
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ │     (pruned) when
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓       searching for
+┃Row Group 2 Metadata                      ┃ │     rows with A >
+┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃       35,
 ┃ ┃Column "A" Metadata   Min:10 Max:50   ┃◀╋ ┘
 ┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
 ┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
@@ -518,22 +517,20 @@ Avoiding the need to buffer the entire file requires a sophisticated Parquet dec
 
 
 ```
-                       ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-                                                                          │
+                       ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+                                                                │
                        │
-               Step 1: Fetch                                              │
+               Step 1: Fetch                                    │
  Parquet       Parquet metadata
- file on ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━▼━━━━━┓
- Remote  ┃          ▒▒▒▒▒▒▒▒▒▒            ▒▒▒▒▒▒▒▒▒▒                 ░░░░░░░░░░ ┃
- Object  ┃          ▒▒▒data▒▒▒            ▒▒▒data▒▒▒                 ░metadata░ ┃
-  Store  ┃          ▒▒▒▒▒▒▒▒▒▒            ▒▒▒▒▒▒▒▒▒▒                 ░░░░░░░░░░ ┃
-         ┗━━━━━━━━━━━━━━━▲━━━━━━━━━━━━━━━━━━━━━▲━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-                         │                     └ ─ ─ ─
-                                                      │
-                         │                   Step 2: Fetch only
-                          ─ ─ ─ ─ ─ ─ ─ ─ ─ relevant data blocks
-
-
+ file on ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━▼━━━━━━━┓
+ Remote  ┃      ▒▒▒▒▒▒▒▒▒▒          ▒▒▒▒▒▒▒▒▒▒               ░░░░░░░░░░ ┃
+ Object  ┃      ▒▒▒data▒▒▒          ▒▒▒data▒▒▒               ░metadata░ ┃
+  Store  ┃      ▒▒▒▒▒▒▒▒▒▒          ▒▒▒▒▒▒▒▒▒▒               ░░░░░░░░░░ ┃
+         ┗━━━━━━━━━━━▲━━━━━━━━━━━━━━━━━━━━━▲━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                     │                     └ ─ ─ ─
+                                                  │
+                     │                   Step 2: Fetch only
+                      ─ ─ ─ ─ ─ ─ ─ ─ ─ relevant data blocks
 ```
 
 
