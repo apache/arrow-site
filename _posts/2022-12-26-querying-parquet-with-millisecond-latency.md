@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Querying Parquet with Millisecond Latency"
-date: "2022-12-18 00:00:00"
+date: "2022-12-26 00:00:00"
 author: "tustvold and alamb"
 categories: [parquet]
 ---
