@@ -43,12 +43,12 @@ Roughly speaking, when an application executes a query with these APIs:
 2. The query is passed on to the driver.
 3. The driver translates the query to a database-specific protocol and sends it to the database.
 4. The database executes the query and returns the result set in a database-specific format.
-5. The driver translates the result format into the JDBC/ODBC API.
+5. The driver translates the result into the format required by the JDBC/ODBC API.
 6. The application iterates over the result rows using the JDBC/ODBC API.
 
 When columnar data comes into play, however, problems arise.
 JDBC is a row-oriented API, and while ODBC can support columnar data, the type system and data representation is not a perfect match with Arrow.
-So generally, columnar data must be converted to rows between steps 5 and 6, spending resources without performing "useful" work.
+So generally, columnar data must be converted to rows in step 5, spending resources without performing "useful" work.
 
 This mismatch is problematic for columnar database systems, such as ClickHouse, Dremio, DuckDB, and Google BigQuery.
 On the client side, tools such as Apache Spark and pandas would be better off getting columnar data directly, skipping that conversion.
@@ -63,13 +63,13 @@ Developers have a few options:
   But when both the database and the application are columnar, that means converting data into rows for JDBC/ODBC, only for the client to convert them right back into columns!
   Performance suffers, and developers have to spend time implementing the conversions.
 - *Use JDBC/ODBC-to-Arrow conversion libraries*.
-  Libraries like [Turbodbc][turbodbc] and [arrow-jdbc][arrow-jdbc] handle row to columnar conversions for clients.
+  Libraries like [Turbodbc][turbodbc] and [arrow-jdbc][arrow-jdbc] handle row-to-columnar conversions for clients.
   But this doesn't fundamentally solve the problem.
   Unnecessary data conversions are still required.
 - *Use vendor-specific protocols*.
   For some databases, applications can use a database-specific protocol or SDK to directly get Arrow data.
   For example, applications could use Dremio via [Arrow Flight SQL][flight-sql].
-  But client applications that want to use multiple database vendors would need to integrate with each of them.
+  But client applications that want to support multiple database vendors would need to integrate with each of them.
   (Look at all the [connectors](https://trino.io/docs/current/connector.html) that Trino implements.)
   And databases like PostgreSQL don't offer an option supporting Arrow in the first place.
 
@@ -78,7 +78,7 @@ As is, clients must choose between either tedious integration work or leaving pe
 ## Introducing ADBC
 
 ADBC is an Arrow-based, vendor-netural API for interacting with databases.
-Applications that use ADBC just get Arrow data.
+Applications that use ADBC receive Arrow data.
 They don't have to do any conversions themselves, and they don't have to integrate each database's specific SDK.
 
 Just like JDBC/ODBC, underneath the ADBC API are drivers that translate the API for specific databases.
@@ -101,7 +101,7 @@ Just like JDBC/ODBC, underneath the ADBC API are drivers that translate the API 
 
 The application only deals with one API, and only works with Arrow data.
 
-For example, in Python, the ADBC packages offer a familiar [DBAPI 2.0 (PEP 249)][pep-249]-style interface, with extensions to get Arrow data.
+ADBC API and driver implementations are under development. For example, in Python, the ADBC packages offer a familiar [DBAPI 2.0 (PEP 249)][pep-249]-style interface, with extensions to get Arrow data.
 We can get Arrow data out of PostgreSQL easily:
 
 ```python
@@ -180,8 +180,8 @@ Meanwhile, Flight SQL is a **wire protocol** that *database servers* can impleme
 ADBC works as part of the Arrow ecosystem to "cover the bases" for database interaction:
 
 - Arrow offers a universal columnar data format,
-- Arrow Flight SQL offers a universal server database protocol,
-- and ADBC offers a universal client database API.
+- Arrow Flight SQL offers a universal wire protocol for database servers,
+- and ADBC offers a universal API for database clients.
 
 To start using ADBC, see the [documentation][adbc-docs] for build instructions and a short tutorial.
 (A formal release of the packages is still under way.)
@@ -189,7 +189,7 @@ If you're interested in learning more or contributing, please reach out on the [
 
 ADBC was only possible with the help and involvement of several Arrow community members and projects.
 In particular, we would like to thank members of the [DuckDB project][duckdb] and the [R DBI project][dbi], who constructed prototypes based on early revisions of the standard and provided feedback on the design.
-And ADBC builds on existing Arrow projects, including the [Arrow C Data Interface][c-data-interface] and [Nanoarrow][nanoarrow].
+And ADBC builds on existing Arrow projects, including the [Arrow C Data Interface][c-data-interface] and [nanoarrow][nanoarrow].
 
 Thanks to Fernanda Foertter for assistance with some of the diagrams.
 
