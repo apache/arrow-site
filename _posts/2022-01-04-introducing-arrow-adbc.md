@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Introducing ADBC: Database Access for Apache Arrow"
-date: "2022-12-31 00:00:00"
+date: "2022-01-04 00:00:00"
 author: pmc
 categories: [application]
 ---
@@ -78,7 +78,7 @@ As is, clients must choose between either tedious integration work or leaving pe
 ## Introducing ADBC
 
 ADBC is an Arrow-based, vendor-netural API for interacting with databases.
-Applications that use ADBC receive Arrow data.
+Applications that use ADBC simply receive Arrow data.
 They don't have to do any conversions themselves, and they don't have to integrate each database's specific SDK.
 
 Just like JDBC/ODBC, underneath the ADBC API are drivers that translate the API for specific databases.
