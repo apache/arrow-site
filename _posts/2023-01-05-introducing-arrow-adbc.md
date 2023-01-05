@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Introducing ADBC: Database Access for Apache Arrow"
-date: "2023-01-04 00:00:00"
+date: "2023-01-05 00:00:00"
 author: pmc
 categories: [application]
 ---
