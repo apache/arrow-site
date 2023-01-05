@@ -1,4 +1,183 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2022-12-26T16:19:40-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Querying Parquet with Millisecond Latency</title><link href="https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/" rel="alternate" type="text/html" title="Querying Parquet with Millisecond Latency" /><published>2022-12-26T00:00:00-05:00</published><updated>2022-12-26T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2023-01-05T15:51:55-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Introducing ADBC: Database Access for Apache Arrow</title><link href="https://arrow.apache.org/blog/2023/01/05/introducing-arrow-adbc/" rel="alternate" type="text/html" title="Introducing ADBC: Database Access for Apache Arrow" /><published>2023-01-05T00:00:00-05:00</published><updated>2023-01-05T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2023/01/05/introducing-arrow-adbc</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/01/05/introducing-arrow-adbc/"><![CDATA[<!--
+
+-->
+
+<p>The Arrow community would like to introduce version 1.0.0 of the <a href="https://github.com/apache/arrow-adbc">Arrow Database Connectivity (ADBC)</a> specification.
+ADBC is a columnar, minimal-overhead alternative to JDBC/ODBC for analytical applications.
+Or in other words: <strong>ADBC is a single API for getting Arrow data in and out of different databases</strong>.</p>
+
+<h2 id="motivation">Motivation</h2>
+
+<p>Applications often use API standards like <a href="https://docs.oracle.com/javase/tutorial/jdbc/overview/index.html">JDBC</a> and <a href="https://learn.microsoft.com/en-us/sql/odbc/reference/what-is-odbc?view=sql-server-ver16">ODBC</a> to work with databases.
+That way, they can code to the same API regardless of the underlying database, saving on development time.
+Roughly speaking, when an application executes a query with these APIs:</p>
+
+<figure style="text-align: center;">
+  <img src="/img/ADBCFlow1.svg" width="90%" class="img-responsive" alt="A diagram showing the query execution flow." />
+  <figcaption>The query execution flow.</figcaption>
+</figure>
+
+<ol>
+  <li>The application submits a SQL query via the JDBC/ODBC API.</li>
+  <li>The query is passed on to the driver.</li>
+  <li>The driver translates the query to a database-specific protocol and sends it to the database.</li>
+  <li>The database executes the query and returns the result set in a database-specific format.</li>
+  <li>The driver translates the result into the format required by the JDBC/ODBC API.</li>
+  <li>The application iterates over the result rows using the JDBC/ODBC API.</li>
+</ol>
+
+<p>When columnar data comes into play, however, problems arise.
+JDBC is a row-oriented API, and while ODBC can support columnar data, the type system and data representation is not a perfect match with Arrow.
+So generally, columnar data must be converted to rows in step 5, spending resources without performing “useful” work.</p>
+
+<p>This mismatch is problematic for columnar database systems, such as ClickHouse, Dremio, DuckDB, and Google BigQuery.
+On the client side, tools such as Apache Spark and pandas would be better off getting columnar data directly, skipping that conversion.
+Otherwise, they’re leaving performance on the table.
+At the same time, that conversion isn’t always avoidable.
+Row-oriented database systems like PostgreSQL aren’t going away, and these clients will still want to consume data from them.</p>
+
+<p>Developers have a few options:</p>
+
+<ul>
+  <li><em>Just use JDBC/ODBC</em>.
+These standards are here to stay, and it makes sense for databases to support them for applications that want them.
+But when both the database and the application are columnar, that means converting data into rows for JDBC/ODBC, only for the client to convert them right back into columns!
+Performance suffers, and developers have to spend time implementing the conversions.</li>
+  <li><em>Use JDBC/ODBC-to-Arrow conversion libraries</em>.
+Libraries like <a href="https://turbodbc.readthedocs.io/en/latest/">Turbodbc</a> and <a href="https://arrow.apache.org/docs/java/jdbc.html">arrow-jdbc</a> handle row-to-columnar conversions for clients.
+But this doesn’t fundamentally solve the problem.
+Unnecessary data conversions are still required.</li>
+  <li><em>Use vendor-specific protocols</em>.
+For some databases, applications can use a database-specific protocol or SDK to directly get Arrow data.
+For example, applications could use Dremio via <a href="/blog/2022/02/16/introducing-arrow-flight-sql/">Arrow Flight SQL</a>.
+But client applications that want to support multiple database vendors would need to integrate with each of them.
+(Look at all the <a href="https://trino.io/docs/current/connector.html">connectors</a> that Trino implements.)
+And databases like PostgreSQL don’t offer an option supporting Arrow in the first place.</li>
+</ul>
+
+<p>As is, clients must choose between either tedious integration work or leaving performance on the table. We can make this better.</p>
+
+<h2 id="introducing-adbc">Introducing ADBC</h2>
+
+<p>ADBC is an Arrow-based, vendor-netural API for interacting with databases.
+Applications that use ADBC simply receive Arrow data.
+They don’t have to do any conversions themselves, and they don’t have to integrate each database’s specific SDK.</p>
+
+<p>Just like JDBC/ODBC, underneath the ADBC API are drivers that translate the API for specific databases.</p>
+
+<ul>
+  <li>A driver for an Arrow-native database just passes Arrow data through without conversion.</li>
+  <li>A driver for a non-Arrow-native database must convert the data to Arrow.
+This saves the application from doing that, and the driver can optimize the conversion for its database.</li>
+</ul>
+
+<figure style="text-align: center;">
+  <img src="/img/ADBCFlow2.svg" alt="A diagram showing the query execution flow with ADBC." width="90%" class="img-responsive" />
+  <figcaption>The query execution flow with two different ADBC drivers.</figcaption>
+</figure>
+
+<ol>
+  <li>The application submits a SQL query via the ADBC API.</li>
+  <li>The query is passed on to the ADBC driver.</li>
+  <li>The driver translates the query to a database-specific protocol and sends the query to the database.</li>
+  <li>The database executes the query and returns the result set in a database-specific format, which is ideally Arrow data.</li>
+  <li>If needed: the driver translates the result into Arrow data.</li>
+  <li>The application iterates over batches of Arrow data.</li>
+</ol>
+
+<p>The application only deals with one API, and only works with Arrow data.</p>
+
+<p>ADBC API and driver implementations are under development. For example, in Python, the ADBC packages offer a familiar <a href="https://www.python.org/dev/peps/pep-0249/">DBAPI 2.0 (PEP 249)</a>-style interface, with extensions to get Arrow data.
+We can get Arrow data out of PostgreSQL easily:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">adbc_driver_postgresql.dbapi</span>
+
+<span class="n">uri</span> <span class="o">=</span> <span class="s">"postgresql://localhost:5432/postgres?user=postgres&amp;password=password"</span>
+<span class="k">with</span> <span class="n">adbc_driver_postgresql</span><span class="p">.</span><span class="n">dbapi</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">conn</span><span class="p">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+        <span class="n">cur</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="s">"SELECT * FROM customer"</span><span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">cur</span><span class="p">.</span><span class="n">fetch_arrow_table</span><span class="p">()</span>
+        <span class="c1"># Process the results
+</span></code></pre></div></div>
+
+<p>Or SQLite:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">adbc_driver_sqlite.dbapi</span>
+
+<span class="n">uri</span> <span class="o">=</span> <span class="s">"file:mydb.sqlite"</span>
+<span class="k">with</span> <span class="n">adbc_driver_sqlite</span><span class="p">.</span><span class="n">dbapi</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">conn</span><span class="p">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+        <span class="n">cur</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="s">"SELECT * FROM customer"</span><span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">cur</span><span class="p">.</span><span class="n">fetch_arrow_table</span><span class="p">()</span>
+        <span class="c1"># Process the results
+</span></code></pre></div></div>
+
+<p><em>Note: implementations are still under development. See the <a href="https://arrow.apache.org/adbc/">documentation</a> for up-to-date examples.</em></p>
+
+<h2 id="what-about-flight-sql-jdbc-odbc-">What about {Flight SQL, JDBC, ODBC, …}?</h2>
+
+<p>ADBC fills a specific niche that related projects do not address. It is both:</p>
+
+<ul>
+  <li><strong>Arrow-native</strong>: ADBC can pass through Arrow data with no overhead thanks to the <a href="/blog/2020/05/03/introducing-arrow-c-data-interface/">C Data Interface</a>.
+JDBC is row-oriented, and ODBC has implementation caveats, as discussed, that make it hard to use with Arrow.</li>
+  <li><strong>Vendor-agnostic</strong>: ADBC drivers can implement the API using any underlying protocol, while Flight SQL requires server-side support that may not be easy to add.</li>
+</ul>
+
+<table class="table table-hover" style="table-layout: fixed">
+  <caption>Comparing database APIs and protocols</caption>
+  <thead class="thead-dark">
+    <tr>
+      <th></th>
+      <th class="align-top" style="width: 40%" scope="col">Vendor-neutral (database APIs)</th>
+      <th class="align-top" style="width: 40%" scope="col">Vendor-specific (database protocols)</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <th scope="row">Arrow-native</th>
+      <td class="table-success"><strong>ADBC</strong></td>
+      <td>Arrow Flight SQL<br />BigQuery Storage gRPC protocol</td>
+    </tr>
+    <tr>
+      <th scope="row">Row-oriented</th>
+      <td>JDBC<br />ODBC (typically row-oriented)</td>
+      <td>PostgreSQL wire protocol<br />Tabular Data Stream (Microsoft SQL Server)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>ADBC doesn’t intend to replace JDBC or ODBC in general</strong>.
+But for applications that just want bulk columnar data access, ADBC lets them avoid data conversion overhead and tedious integration work.</p>
+
+<p>Similarly, within the Arrow project, ADBC does not replace Flight SQL, but instead <em>complements</em> it.
+ADBC is an <strong>API</strong> that lets <em>clients</em> work with different databases easily.
+Meanwhile, Flight SQL is a <strong>wire protocol</strong> that <em>database servers</em> can implement to simultaneously support ADBC, <a href="/blog/2022/11/01/arrow-flight-sql-jdbc/">JDBC</a>, and ODBC users.</p>
+
+<figure style="text-align: center;">
+  <img src="/img/ADBC.svg" alt="ADBC abstracts over protocols and APIs like Flight SQL and JDBC for client applications. Flight SQL provides implementations of APIs like ADBC and JDBC for database servers." width="90%" class="img-responsive" />
+</figure>
+
+<h2 id="getting-involved">Getting Involved</h2>
+
+<p>ADBC works as part of the Arrow ecosystem to “cover the bases” for database interaction:</p>
+
+<ul>
+  <li>Arrow offers a universal columnar data format,</li>
+  <li>Arrow Flight SQL offers a universal wire protocol for database servers,</li>
+  <li>and ADBC offers a universal API for database clients.</li>
+</ul>
+
+<p>To start using ADBC, see the <a href="https://arrow.apache.org/adbc/">documentation</a> for build instructions and a short tutorial.
+(A formal release of the packages is still under way.)
+If you’re interested in learning more or contributing, please reach out on the <a href="https://arrow.apache.org/community/">mailing list</a> or on <a href="https://github.com/apache/arrow-adbc/issues">GitHub Issues</a>.</p>
+
+<p>ADBC was only possible with the help and involvement of several Arrow community members and projects.
+In particular, we would like to thank members of the <a href="https://duckdb.org/">DuckDB project</a> and the <a href="https://www.r-dbi.org/">R DBI project</a>, who constructed prototypes based on early revisions of the standard and provided feedback on the design.
+And ADBC builds on existing Arrow projects, including the <a href="/blog/2020/05/03/introducing-arrow-c-data-interface/">Arrow C Data Interface</a> and <a href="https://github.com/apache/arrow-nanoarrow">nanoarrow</a>.</p>
+
+<p>Thanks to Fernanda Foertter for assistance with some of the diagrams.</p>]]></content><author><name>pmc</name></author><category term="application" /><summary type="html"><![CDATA[The Arrow community would like to introduce version 1.0.0 of the Arrow Database Connectivity (ADBC) specification. ADBC is a columnar, minimal-overhead alternative to JDBC/ODBC for analytical applications. Or in other words: ADBC is a single API for getting Arrow data in and out of different databases. Motivation Applications often use API standards like JDBC and ODBC to work with databases. That way, they can code to the same API regardless of the underlying database, saving on development time. Roughly speaking, when an application executes a query with these APIs: The query execution flow. The application submits a SQL query via the JDBC/ODBC API. The query is passed on to the driver. The driver translates the query to a database-specific protocol and sends it to the database. The database executes the query and returns the result set in a database-specific format. The driver translates the result into the format required by the JDBC/ODBC API. The application iterates over the result rows using the JDBC/ODBC API. When columnar data comes into play, however, problems arise. JDBC is a row-oriented API, and while ODBC can support columnar data, the type system and data representation is not a perfect match with Arrow. So generally, columnar data must be converted to rows in step 5, spending resources without performing “useful” work. This mismatch is problematic for columnar database systems, such as ClickHouse, Dremio, DuckDB, and Google BigQuery. On the client side, tools such as Apache Spark and pandas would be better off getting columnar data directly, skipping that conversion. Otherwise, they’re leaving performance on the table. At the same time, that conversion isn’t always avoidable. Row-oriented database systems like PostgreSQL aren’t going away, and these clients will still want to consume data from them. Developers have a few options: Just use JDBC/ODBC. These standards are here to stay, and it makes sense for databases to support them for applications that want them. But when both the database and the application are columnar, that means converting data into rows for JDBC/ODBC, only for the client to convert them right back into columns! Performance suffers, and developers have to spend time implementing the conversions. Use JDBC/ODBC-to-Arrow conversion libraries. Libraries like Turbodbc and arrow-jdbc handle row-to-columnar conversions for clients. But this doesn’t fundamentally solve the problem. Unnecessary data conversions are still required. Use vendor-specific protocols. For some databases, applications can use a database-specific protocol or SDK to directly get Arrow data. For example, applications could use Dremio via Arrow Flight SQL. But client applications that want to support multiple database vendors would need to integrate with each of them. (Look at all the connectors that Trino implements.) And databases like PostgreSQL don’t offer an option supporting Arrow in the first place. As is, clients must choose between either tedious integration work or leaving performance on the table. We can make this better. Introducing ADBC ADBC is an Arrow-based, vendor-netural API for interacting with databases. Applications that use ADBC simply receive Arrow data. They don’t have to do any conversions themselves, and they don’t have to integrate each database’s specific SDK. Just like JDBC/ODBC, underneath the ADBC API are drivers that translate the API for specific databases. A driver for an Arrow-native database just passes Arrow data through without conversion. A driver for a non-Arrow-native database must convert the data to Arrow. This saves the application from doing that, and the driver can optimize the conversion for its database. The query execution flow with two different ADBC drivers. The application submits a SQL query via the ADBC API. The query is passed on to the ADBC driver. The driver translates the query to a database-specific protocol and sends the query to the database. The database executes the query and returns the result set in a database-specific format, which is ideally Arrow data. If needed: the driver translates the result into Arrow data. The application iterates over batches of Arrow data. The application only deals with one API, and only works with Arrow data. ADBC API and driver implementations are under development. For example, in Python, the ADBC packages offer a familiar DBAPI 2.0 (PEP 249)-style interface, with extensions to get Arrow data. We can get Arrow data out of PostgreSQL easily: import adbc_driver_postgresql.dbapi uri = "postgresql://localhost:5432/postgres?user=postgres&amp;password=password" with adbc_driver_postgresql.dbapi.connect(uri) as conn: with conn.cursor() as cur: cur.execute("SELECT * FROM customer") table = cur.fetch_arrow_table() # Process the results Or SQLite: import adbc_driver_sqlite.dbapi uri = "file:mydb.sqlite" with adbc_driver_sqlite.dbapi.connect(uri) as conn: with conn.cursor() as cur: cur.execute("SELECT * FROM customer") table = cur.fetch_arrow_table() # Process the results Note: implementations are still under development. See the documentation for up-to-date examples. What about {Flight SQL, JDBC, ODBC, …}? ADBC fills a specific niche that related projects do not address. It is both: Arrow-native: ADBC can pass through Arrow data with no overhead thanks to the C Data Interface. JDBC is row-oriented, and ODBC has implementation caveats, as discussed, that make it hard to use with Arrow. Vendor-agnostic: ADBC drivers can implement the API using any underlying protocol, while Flight SQL requires server-side support that may not be easy to add. Comparing database APIs and protocols Vendor-neutral (database APIs) Vendor-specific (database protocols) Arrow-native ADBC Arrow Flight SQLBigQuery Storage gRPC protocol Row-oriented JDBCODBC (typically row-oriented) PostgreSQL wire protocolTabular Data Stream (Microsoft SQL Server) ADBC doesn’t intend to replace JDBC or ODBC in general. But for applications that just want bulk columnar data access, ADBC lets them avoid data conversion overhead and tedious integration work. Similarly, within the Arrow project, ADBC does not replace Flight SQL, but instead complements it. ADBC is an API that lets clients work with different databases easily. Meanwhile, Flight SQL is a wire protocol that database servers can implement to simultaneously support ADBC, JDBC, and ODBC users. Getting Involved ADBC works as part of the Arrow ecosystem to “cover the bases” for database interaction: Arrow offers a universal columnar data format, Arrow Flight SQL offers a universal wire protocol for database servers, and ADBC offers a universal API for database clients. To start using ADBC, see the documentation for build instructions and a short tutorial. (A formal release of the packages is still under way.) If you’re interested in learning more or contributing, please reach out on the mailing list or on GitHub Issues. ADBC was only possible with the help and involvement of several Arrow community members and projects. In particular, we would like to thank members of the DuckDB project and the R DBI project, who constructed prototypes based on early revisions of the standard and provided feedback on the design. And ADBC builds on existing Arrow projects, including the Arrow C Data Interface and nanoarrow. Thanks to Fernanda Foertter for assistance with some of the diagrams.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Querying Parquet with Millisecond Latency</title><link href="https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/" rel="alternate" type="text/html" title="Querying Parquet with Millisecond Latency" /><published>2022-12-26T00:00:00-05:00</published><updated>2022-12-26T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/"><![CDATA[<!--
 
 -->
 
@@ -1908,302 +2087,4 @@ ways to engage with the community.</p>
 <h2 id="summary">Summary</h2>
 <p>Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex.</p>
 
-<p>Fortunately, with the Rust <a href="https://crates.io/crates/parquet">parquet</a> implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for <a href="https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html">reading asynchronously</a> from <a href="https://docs.rs/object_store">object storage</a>, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!</p>]]></content><author><name>tustvold and alamb</name></author><category term="parquet" /><category term="arrow" /><summary type="html"><![CDATA[Introduction This is the third of a three part series exploring how projects such as Rust Apache Arrow support conversion between Apache Arrow for in memory processing and Apache Parquet for efficient storage. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. Arrow and Parquet Part 1: Primitive Types and Nullability covered the basics of primitive types. Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists covered the Struct and List types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting. Some libraries, such as Rust parquet implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so. Structs with Lists Consider the following three json documents { # &lt;-- First record "a": [1], # &lt;-- top-level field a containing list of integers "b": [ # &lt;-- top-level field b containing list of structures { # &lt;-- list element of b containing two field b1 and b2 "b1": 1 # &lt;-- b1 is always provided (non nullable) }, { "b1": 1, "b2": [ # &lt;-- b2 contains list of integers 3, 4 # &lt;-- list elements of b.b2 always provided (non nullable) ] } ] } { "b": [ # &lt;-- b is always provided (non nullable) { "b1": 2 }, ] } { "a": [null, null], # &lt;-- list elements of a are nullable "b": [null] # &lt;-- list elements of b are nullable } Documents of this format could be stored in this Arrow schema Field(name: "a", nullable: true, datatype: List( Field(name: "element", nullable: true, datatype: Int32), ) Field(name: "b"), nullable: false, datatype: List( Field(name: "element", nullable: true, datatype: Struct[ Field(name: "b1", nullable: false, datatype: Int32), Field(name: "b2", nullable: true, datatype: List( Field(name: "element", nullable: false, datatype: Int32) )) ]) )) As explained previously, Arrow chooses to represent this in a hierarchical fashion. StructArrays are stored as child arrays that contain each field of the struct. ListArrays are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index. The Arrow encoding of the example would be: ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌──────────────────┐ │ ┌─────┐ ┌─────┐ │ ┌─────┐ ┌─────┐│ │ │ 1 │ │ 0 │ │ │ 1 │ │ 1 ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 0 │ │ 1 │ │ │ 0 │ │ ?? ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 1 │ │ 1 │ │ │ 0 │ │ ?? ││ │ └─────┘ ├─────┤ │ └─────┘ └─────┘│ │ │ 3 │ │ Validity Values│ │ Validity └─────┘ │ │ │ │ child[0] │ │ "a" Offsets │ PrimitiveArray │ │ ListArray └──────────────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │ ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌─────┐ │ ┌─────┐ │ ┌─────┐ │ ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │ │ │ 0 │ │ 1 │ │ │ 1 │ │ │ │ 0 │ │ 0 │ │ ┌─────┐ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 3 │ │ │ │ │ │ │ 2 │ │ 1 │ │ │ 1 │ │ │ │ 1 │ │ 0 │ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 4 │ │ │ │ │ │ │ 3 │ │ 1 │ │ │ 2 │ │ │ │ 0 │ │ 2 │ │ └─────┘ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ │ │ │ │ │ 4 │ │ 0 │ │ │ ?? │ │ │ │ ?? │ │ 2 │ │ Values │ └─────┘ │ └─────┘ │ └─────┘ │ └─────┘ ├─────┤ │ │ │ │ │ │ │ │ │ │ 2 │ │ │ Offsets │ Validity│ Values │ └─────┘ │ │ │ │ │ │ │ │ │Validity │ child[0] │ │ │ "b1" │ Offsets │ Primitive│ │ │ │ │ │ Primitive│ │ "b2" │ Array │ │ │ Array │ ListArray └──────────┘ │ │ │ │ └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ "element" │ │ │ StructArray "b" └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │ ListArray ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ Documents of this format could be stored in this Parquet schema message schema { optional group a (LIST) { repeated group list { optional int32 element; } } required group b (LIST) { repeated group list { optional group element { required int32 b1; optional group b2 (LIST) { repeated group list { required int32 element; } } } } } } As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability. Definition and repetition levels is a non trivial topic. For more detail, you can read the Google Dremel Paper which offers an academic description of the algorithm. You can also explore this gist to see Rust parquet code which generates the example below. The Parquet encoding of the example would be: ┌───────────────────────────────┐ ┌────────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ 3 │ │ 0 │ │ 1 │ │ │ │ 2 │ │ 0 │ │ 1 │ │ │ ├─────┤ ├─────┤ └─────┘ │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 0 │ │ 0 │ │ │ │ 2 │ │ 1 │ │ 1 │ │ │ ├─────┤ ├─────┤ Data │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ │ 2 │ │ 0 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ ├─────┤ ├─────┤ └─────┘ │ │ │ 2 │ │ 1 │ │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │ └─────┘ └─────┘ Data │ │ │ │ │ │Definition Repetition │ │ Definition Repetition │ │ Levels Levels │ │ Levels Levels │ │ │ │ │ │ "a" │ │ "b.b1" │ └───────────────────────────────┘ └────────────────────────────────┘ ┌───────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐│ │ │ 2 │ │ 0 │ │ 3 ││ │ ├─────┤ ├─────┤ ├─────┤│ │ │ 4 │ │ 1 │ │ 4 ││ │ ├─────┤ ├─────┤ └─────┘│ │ │ 4 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ ├─────┤ ├─────┤ Data │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │Definition Repetition │ │ Levels Levels │ │ │ │ "b.b2" │ └───────────────────────────────┘ Additional Complications This series of posts has necessarily glossed over a number of details that further complicate actual implementations: A ListArray may contain a non-empty offset range that is masked by a validity mask Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present Reading a given number of rows from a repeated field requires reading the repetition levels and detecting a new row based on a repetition level of 0 A Parquet file may contain multiple row groups, each containing multiple column chunks A column chunk may contain multiple pages, and there is no relationship between pages across columns Parquet has alternative schema for representing lists with varying degrees of nullability And more… Summary Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex. Fortunately, with the Rust parquet implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for reading asynchronously from object storage, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists</title><link href="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/" rel="alternate" type="text/html" title="Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists" /><published>2022-10-08T00:00:00-04:00</published><updated>2022-10-08T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/"><![CDATA[<!--
-
--->
-
-<h2 id="introduction">Introduction</h2>
-
-<p>This is the second, in a three part series exploring how projects such as <a href="https://github.com/apache/arrow-rs">Rust Apache Arrow</a> support conversion between <a href="https://arrow.apache.org/">Apache Arrow</a> and <a href="https://parquet.apache.org/">Apache Parquet</a>. The <a href="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/">first post</a> covered the basics of data storage and validity encoding, and this post will cover the more complex <code class="language-plaintext highlighter-rouge">Struct</code> and <code class="language-plaintext highlighter-rouge">List</code> types.</p>
-
-<p><a href="https://arrow.apache.org/">Apache Arrow</a> is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. <a href="https://parquet.apache.org/">Apache Parquet</a> is an open, column-oriented data file format designed for very efficient data encoding and retrieval.</p>
-
-<h2 id="struct--group-columns">Struct / Group Columns</h2>
-
-<p>Both Parquet and Arrow have the concept of a <em>struct</em> column, which is a column containing one or more other columns in named fields and is analogous to a JSON object.</p>
-
-<p>For example, consider the following three JSON documents</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>              <span class="c1"># &lt;-- First record
-</span>  <span class="s">"a"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>      <span class="c1"># &lt;-- the top level fields are a, b, c, and d
-</span>  <span class="s">"b"</span><span class="p">:</span> <span class="p">{</span>       <span class="c1"># &lt;-- b is always provided (not nullable)
-</span>    <span class="s">"b1"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>   <span class="c1"># &lt;-- b1 and b2 are "nested" fields of "b"
-</span>    <span class="s">"b2"</span><span class="p">:</span> <span class="mi">3</span>    <span class="c1"># &lt;-- b2 is always provided (not nullable)
-</span>   <span class="p">},</span>
- <span class="s">"d"</span><span class="p">:</span> <span class="p">{</span>
-   <span class="s">"d1"</span><span class="p">:</span>  <span class="mi">1</span>    <span class="c1"># &lt;-- d1 is a "nested" field of "d"
-</span>  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>              <span class="c1"># &lt;-- Second record
-</span>  <span class="s">"a"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
-  <span class="s">"b"</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s">"b2"</span><span class="p">:</span> <span class="mi">4</span>    <span class="c1"># &lt;-- note "b1" is NULL in this record
-</span>  <span class="p">},</span>
-  <span class="s">"c"</span><span class="p">:</span> <span class="p">{</span>       <span class="c1"># &lt;-- note "c" was NULL in the first record
-</span>    <span class="s">"c1"</span><span class="p">:</span> <span class="mi">6</span>        <span class="n">but</span> <span class="n">when</span> <span class="s">"c"</span> <span class="ow">is</span> <span class="n">provided</span><span class="p">,</span> <span class="n">c1</span> <span class="ow">is</span> <span class="n">also</span>
-  <span class="p">},</span>               <span class="n">always</span> <span class="n">provided</span> <span class="p">(</span><span class="ow">not</span> <span class="n">nullable</span><span class="p">)</span>
-  <span class="s">"d"</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s">"d1"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="s">"d2"</span><span class="p">:</span> <span class="mi">1</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>              <span class="c1"># &lt;-- Third record
-</span>  <span class="s">"b"</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s">"b1"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
-    <span class="s">"b2"</span><span class="p">:</span> <span class="mi">6</span>
-  <span class="p">},</span>
-  <span class="s">"c"</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s">"c1"</span><span class="p">:</span> <span class="mi">7</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-<p>Documents of this format could be stored in an Arrow <code class="language-plaintext highlighter-rouge">StructArray</code> with this schema</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"a"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
-<span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b1"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b2"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
-<span class="p">])</span>
-<span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"c"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"c1"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
-<span class="p">])</span>
-<span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"d"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"d1"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"d2"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
-<span class="p">])</span>
-</code></pre></div></div>
-
-<p>Arrow represents each <code class="language-plaintext highlighter-rouge">StructArray</code> hierarchically using a parent child relationship, with separate validity masks on each of the individual nullable arrays</p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  ┌───────────────────┐        ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-  │                   │           ┌─────────────────┐ ┌────────────┐
-  │ ┌─────┐   ┌─────┐ │        │  │┌─────┐   ┌─────┐│ │  ┌─────┐   │ │
-  │ │  1  │   │  1  │ │           ││  1  │   │  1  ││ │  │  3  │   │
-  │ ├─────┤   ├─────┤ │        │  │├─────┤   ├─────┤│ │  ├─────┤   │ │
-  │ │  1  │   │  2  │ │           ││  0  │   │ ??  ││ │  │  4  │   │
-  │ ├─────┤   ├─────┤ │        │  │├─────┤   ├─────┤│ │  ├─────┤   │ │
-  │ │  0  │   │ ??  │ │           ││  1  │   │  5  ││ │  │  6  │   │
-  │ └─────┘   └─────┘ │        │  │└─────┘   └─────┘│ │  └─────┘   │ │
-  │ Validity   Values │           │Validity   Values│ │   Values   │
-  │                   │        │  │                 │ │            │ │
-  │ "a"               │           │"b.b1"           │ │  "b.b2"    │
-  │ PrimitiveArray    │        │  │PrimitiveArray   │ │  Primitive │ │
-  └───────────────────┘           │                 │ │  Array     │
-                               │  └─────────────────┘ └────────────┘ │
-                                    "b"
-                               │    StructArray                      │
-                                ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-
-┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-            ┌───────────┐                ┌──────────┐┌─────────────────┐ │
-│  ┌─────┐  │ ┌─────┐   │ │ │  ┌─────┐   │┌─────┐   ││ ┌─────┐  ┌─────┐│
-   │  0  │  │ │ ??  │   │      │  1  │   ││  1  │   ││ │  0  │  │ ??  ││ │
-│  ├─────┤  │ ├─────┤   │ │ │  ├─────┤   │├─────┤   ││ ├─────┤  ├─────┤│
-   │  1  │  │ │  6  │   │      │  1  │   ││  2  │   ││ │  1  │  │  1  ││ │
-│  ├─────┤  │ ├─────┤   │ │ │  ├─────┤   │├─────┤   ││ ├─────┤  ├─────┤│
-   │  1  │  │ │  7  │   │      │  0  │   ││ ??  │   ││ │ ??  │  │ ??  ││ │
-│  └─────┘  │ └─────┘   │ │ │  └─────┘   │└─────┘   ││ └─────┘  └─────┘│
-   Validity │  Values   │      Validity  │ Values   ││ Validity  Values│ │
-│           │           │ │ │            │          ││                 │
-            │ "c.c1"    │                │"d.d1"    ││ "d.d2"          │ │
-│           │ Primitive │ │ │            │Primitive ││ PrimitiveArray  │
-            │ Array     │                │Array     ││                 │ │
-│           └───────────┘ │ │            └──────────┘└─────────────────┘
-    "c"                         "d"                                      │
-│   StructArray           │ │   StructArray
-  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
-</code></pre></div></div>
-
-<p>More technical detail is available in the <a href="https://arrow.apache.org/docs/format/Columnar.html#struct-layout">StructArray format specification</a>.</p>
-
-<h3 id="definition-levels">Definition Levels</h3>
-<p>Unlike Arrow, Parquet does not encode validity in a structured fashion, instead only storing definition levels for each of the primitive columns, i.e. those that don’t contain other columns. The definition level of a given element is the depth in the schema at which it is fully defined.</p>
-
-<p>For example consider the case of <code class="language-plaintext highlighter-rouge">d.d2</code>, which contains two nullable levels <code class="language-plaintext highlighter-rouge">d</code> and <code class="language-plaintext highlighter-rouge">d2</code>.</p>
-
-<p>A definition level of <code class="language-plaintext highlighter-rouge">0</code> would imply a null at the level of <code class="language-plaintext highlighter-rouge">d</code>:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>A definition level of <code class="language-plaintext highlighter-rouge">1</code> would imply a null at the level of <code class="language-plaintext highlighter-rouge">d.d2</code></p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
-  <span class="s">"d"</span><span class="p">:</span> <span class="p">{</span> <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>A definition level of <code class="language-plaintext highlighter-rouge">2</code> would imply a defined value for <code class="language-plaintext highlighter-rouge">d.d2</code>:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
-  <span class="s">"d"</span><span class="p">:</span> <span class="p">{</span> <span class="s">"d2"</span><span class="p">:</span> <span class="p">..</span> <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>Going back to the three JSON documents above, they could be stored in Parquet with this schema</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">message</span> <span class="n">schema</span> <span class="p">{</span>
-  <span class="n">optional</span> <span class="n">int32</span> <span class="n">a</span><span class="p">;</span>
-  <span class="n">required</span> <span class="n">group</span> <span class="n">b</span> <span class="p">{</span>
-    <span class="n">optional</span> <span class="n">int32</span> <span class="n">b1</span><span class="p">;</span>
-    <span class="n">required</span> <span class="n">int32</span> <span class="n">b2</span><span class="p">;</span>
-  <span class="p">}</span>
-  <span class="n">optional</span> <span class="n">group</span> <span class="n">c</span> <span class="p">{</span>
-    <span class="n">required</span> <span class="n">int32</span> <span class="n">c1</span><span class="p">;</span>
-  <span class="p">}</span>
-  <span class="n">optional</span> <span class="n">group</span> <span class="n">d</span> <span class="p">{</span>
-    <span class="n">required</span> <span class="n">int32</span> <span class="n">d1</span><span class="p">;</span>
-    <span class="n">optional</span> <span class="n">int32</span> <span class="n">d2</span><span class="p">;</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>The Parquet encoding of the example would be:</p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code> ┌────────────────────────┐  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
- │  ┌─────┐     ┌─────┐   │    ┌──────────────────────┐ ┌───────────┐ │
- │  │  1  │     │  1  │   │  │ │  ┌─────┐    ┌─────┐  │ │  ┌─────┐  │
- │  ├─────┤     ├─────┤   │    │  │  1  │    │  1  │  │ │  │  3  │  │ │
- │  │  1  │     │  2  │   │  │ │  ├─────┤    ├─────┤  │ │  ├─────┤  │
- │  ├─────┤     └─────┘   │    │  │  0  │    │  5  │  │ │  │  4  │  │ │
- │  │  0  │               │  │ │  ├─────┤    └─────┘  │ │  ├─────┤  │
- │  └─────┘               │    │  │  1  │             │ │  │  6  │  │ │
- │                        │  │ │  └─────┘             │ │  └─────┘  │
- │  Definition    Data    │    │                      │ │           │ │
- │    Levels              │  │ │  Definition   Data   │ │   Data    │
- │                        │    │    Levels            │ │           │ │
- │  "a"                   │  │ │                      │ │           │
- └────────────────────────┘    │  "b.b1"              │ │  "b.b2"   │ │
-                             │ └──────────────────────┘ └───────────┘
-                                  "b"                                 │
-                             └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-
-
-┌ ─ ─ ─ ─ ─ ── ─ ─ ─ ─ ─   ┌ ─ ─ ─ ─ ── ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-  ┌────────────────────┐ │   ┌────────────────────┐ ┌──────────────────┐ │
-│ │  ┌─────┐   ┌─────┐ │   │ │  ┌─────┐   ┌─────┐ │ │ ┌─────┐  ┌─────┐ │
-  │  │  0  │   │  6  │ │ │   │  │  1  │   │  1  │ │ │ │  1  │  │  1  │ │ │
-│ │  ├─────┤   ├─────┤ │   │ │  ├─────┤   ├─────┤ │ │ ├─────┤  └─────┘ │
-  │  │  1  │   │  7  │ │ │   │  │  1  │   │  2  │ │ │ │  2  │          │ │
-│ │  ├─────┤   └─────┘ │   │ │  ├─────┤   └─────┘ │ │ ├─────┤          │
-  │  │  1  │           │ │   │  │  0  │           │ │ │  0  │          │ │
-│ │  └─────┘           │   │ │  └─────┘           │ │ └─────┘          │
-  │                    │ │   │                    │ │                  │ │
-│ │  Definition  Data  │   │ │  Definition  Data  │ │ Definition Data  │
-  │    Levels          │ │   │    Levels          │ │   Levels         │ │
-│ │                    │   │ │                    │ │                  │
-  │  "c.1"             │ │   │  "d.1"             │ │  "d.d2"          │ │
-│ └────────────────────┘   │ └────────────────────┘ └──────────────────┘
-     "c"                 │      "d"                                      │
-└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-</code></pre></div></div>
-
-<h2 id="list--repeated-columns">List / Repeated Columns</h2>
-
-<p>Closing out support for nested types are <em>lists</em>, which contain a variable number of other values. For example, the following four documents each have a (nullable) field <code class="language-plaintext highlighter-rouge">a</code> containing a list of integers</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>                     <span class="c1"># &lt;-- First record
-</span>  <span class="s">"a"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span>           <span class="c1"># &lt;-- top-level field a containing list of integers
-</span><span class="p">}</span>
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>                     <span class="c1"># &lt;-- "a" is not provided (is null)
-</span><span class="p">}</span>
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>                     <span class="c1"># &lt;-- "a" is non-null but empty
-</span>  <span class="s">"a"</span><span class="p">:</span> <span class="p">[]</span>
-<span class="p">}</span>
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
-  <span class="s">"a"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>     <span class="c1"># &lt;-- "a" has a null and non-null elements
-</span><span class="p">}</span>
-</code></pre></div></div>
-
-<p>Documents of this format could be stored in this Arrow schema</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"a"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">List</span><span class="p">(</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"element"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
-<span class="p">)</span>
-</code></pre></div></div>
-
-<p>As before, Arrow chooses to represent this in a hierarchical fashion as a <code class="language-plaintext highlighter-rouge">ListArray</code>. A <code class="language-plaintext highlighter-rouge">ListArray</code> contains a list of monotonically increasing integers called <em>offsets</em>, a validity mask if the list is nullable, and a child array containing the list elements. Each consecutive pair of elements in the offset array identifies a slice of the child array for that index in the ListArray</p>
-
-<p>For example, a list with offsets <code class="language-plaintext highlighter-rouge">[0, 2, 3, 3]</code> contains 3 pairs of offsets, <code class="language-plaintext highlighter-rouge">(0,2)</code>, <code class="language-plaintext highlighter-rouge">(2,3)</code>, and <code class="language-plaintext highlighter-rouge">(3,3)</code>, and therefore represents a <code class="language-plaintext highlighter-rouge">ListArray</code> of length 3 with the following values:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="mi">0</span><span class="p">:</span> <span class="p">[</span><span class="n">child</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">child</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
-<span class="mi">1</span><span class="p">:</span> <span class="p">[]</span>
-<span class="mi">2</span><span class="p">:</span> <span class="p">[</span><span class="n">child</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span>
-</code></pre></div></div>
-
-<p>For the example above with 4 JSON documents, this would be encoded in Arrow as</p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-                          ┌──────────────────┐ │
-│    ┌─────┐   ┌─────┐    │ ┌─────┐   ┌─────┐│
-     │  1  │   │  0  │    │ │  1  │   │  1  ││ │
-│    ├─────┤   ├─────┤    │ ├─────┤   ├─────┤│
-     │  0  │   │  1  │    │ │  0  │   │ ??  ││ │
-│    ├─────┤   ├─────┤    │ ├─────┤   ├─────┤│
-     │  1  │   │  1  │    │ │  1  │   │  2  ││ │
-│    ├─────┤   ├─────┤    │ └─────┘   └─────┘│
-     │  1  │   │  1  │    │ Validity   Values│ │
-│    └─────┘   ├─────┤    │                  │
-               │  3  │    │ child[0]         │ │
-│    Validity  └─────┘    │ PrimitiveArray   │
-                          │                  │ │
-│              Offsets    └──────────────────┘
-     "a"                                       │
-│    ListArray
- ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
-</code></pre></div></div>
-
-<p>More technical detail is available in the <a href="https://arrow.apache.org/docs/format/Columnar.html#variable-size-list-layout">ListArray format specification</a>.</p>
-
-<h3 id="parquet-repetition-levels">Parquet Repetition Levels</h3>
-
-<p>The example above with 4 JSON documents can be stored in this Parquet schema</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">message</span> <span class="n">schema</span> <span class="p">{</span>
-  <span class="n">optional</span> <span class="n">group</span> <span class="n">a</span> <span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
-      <span class="n">optional</span> <span class="n">int32</span> <span class="n">element</span><span class="p">;</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>In order to encode lists, Parquet stores an integer <em>repetition level</em> in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of <code class="language-plaintext highlighter-rouge">0</code> means a new list in the top-most repeated list, a value of <code class="language-plaintext highlighter-rouge">1</code> means a new element within the top-most repeated list, a value of <code class="language-plaintext highlighter-rouge">2</code> means a new element within the second top-most repeated list, and so on.</p>
-
-<p>A consequence of this encoding is that the number of zeros in the <code class="language-plaintext highlighter-rouge">repetition</code> levels is the total number of rows in the column, and the first level in a column must be 0.</p>
-
-<p>Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array.</p>
-
-<p>The example above would therefore be encoded as</p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────────────────────────────────────┐
-│  ┌─────┐      ┌─────┐               │
-│  │  3  │      │  0  │               │
-│  ├─────┤      ├─────┤               │
-│  │  0  │      │  0  │               │
-│  ├─────┤      ├─────┤      ┌─────┐  │
-│  │  1  │      │  0  │      │  1  │  │
-│  ├─────┤      ├─────┤      ├─────┤  │
-│  │  2  │      │  0  │      │  2  │  │
-│  ├─────┤      ├─────┤      └─────┘  │
-│  │  3  │      │  1  │               │
-│  └─────┘      └─────┘               │
-│                                     │
-│ Definition  Repetition      Values  │
-│   Levels      Levels                │
-│  "a"                                │
-│                                     │
-└─────────────────────────────────────┘
-</code></pre></div></div>
-
-<h2 id="next-up-arbitrary-nesting-lists-of-structs-and-structs-of-lists">Next up: Arbitrary Nesting: Lists of Structs and Structs of Lists</h2>
-
-<p>In our <a href="https://arrow.apache.org/blog/2022/10/17/arrow-parquet-encoding-part-3/">final blog post</a>, we explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures.</p>
-
-<p>If you want to store and process structured types, you will be pleased to hear that the Rust <a href="https://crates.io/crates/parquet">parquet</a> implementation fully supports reading and writing directly into Arrow, as simply as any other type. All the complex record shredding and reconstruction is handled automatically. With this and other exciting features such as  <a href="https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html">reading asynchronously</a> from <a href="https://docs.rs/object_store/0.5.0/object_store/">object storage</a>, and advanced row filter pushdown, it is the fastest and most feature complete Rust parquet implementation. We look forward to seeing what you build with it!</p>]]></content><author><name>tustvold and alamb</name></author><category term="parquet" /><category term="arrow" /><summary type="html"><![CDATA[Introduction This is the second, in a three part series exploring how projects such as Rust Apache Arrow support conversion between Apache Arrow and Apache Parquet. The first post covered the basics of data storage and validity encoding, and this post will cover the more complex Struct and List types. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. Struct / Group Columns Both Parquet and Arrow have the concept of a struct column, which is a column containing one or more other columns in named fields and is analogous to a JSON object. For example, consider the following three JSON documents { # &lt;-- First record "a": 1, # &lt;-- the top level fields are a, b, c, and d "b": { # &lt;-- b is always provided (not nullable) "b1": 1, # &lt;-- b1 and b2 are "nested" fields of "b" "b2": 3 # &lt;-- b2 is always provided (not nullable) }, "d": { "d1": 1 # &lt;-- d1 is a "nested" field of "d" } } { # &lt;-- Second record "a": 2, "b": { "b2": 4 # &lt;-- note "b1" is NULL in this record }, "c": { # &lt;-- note "c" was NULL in the first record "c1": 6 but when "c" is provided, c1 is also }, always provided (not nullable) "d": { "d1": 2, "d2": 1 } } { # &lt;-- Third record "b": { "b1": 5, "b2": 6 }, "c": { "c1": 7 } } Documents of this format could be stored in an Arrow StructArray with this schema Field(name: "a", nullable: true, datatype: Int32) Field(name: "b", nullable: false, datatype: Struct[ Field(name: "b1", nullable: true, datatype: Int32), Field(name: "b2", nullable: false, datatype: Int32) ]) Field(name: "c"), nullable: true, datatype: Struct[ Field(name: "c1", nullable: false, datatype: Int32) ]) Field(name: "d"), nullable: true, datatype: Struct[ Field(name: "d1", nullable: false, datatype: Int32) Field(name: "d2", nullable: true, datatype: Int32) ]) Arrow represents each StructArray hierarchically using a parent child relationship, with separate validity masks on each of the individual nullable arrays ┌───────────────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │ ┌─────────────────┐ ┌────────────┐ │ ┌─────┐ ┌─────┐ │ │ │┌─────┐ ┌─────┐│ │ ┌─────┐ │ │ │ │ 1 │ │ 1 │ │ ││ 1 │ │ 1 ││ │ │ 3 │ │ │ ├─────┤ ├─────┤ │ │ │├─────┤ ├─────┤│ │ ├─────┤ │ │ │ │ 1 │ │ 2 │ │ ││ 0 │ │ ?? ││ │ │ 4 │ │ │ ├─────┤ ├─────┤ │ │ │├─────┤ ├─────┤│ │ ├─────┤ │ │ │ │ 0 │ │ ?? │ │ ││ 1 │ │ 5 ││ │ │ 6 │ │ │ └─────┘ └─────┘ │ │ │└─────┘ └─────┘│ │ └─────┘ │ │ │ Validity Values │ │Validity Values│ │ Values │ │ │ │ │ │ │ │ │ │ "a" │ │"b.b1" │ │ "b.b2" │ │ PrimitiveArray │ │ │PrimitiveArray │ │ Primitive │ │ └───────────────────┘ │ │ │ Array │ │ └─────────────────┘ └────────────┘ │ "b" │ StructArray │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌───────────┐ ┌──────────┐┌─────────────────┐ │ │ ┌─────┐ │ ┌─────┐ │ │ │ ┌─────┐ │┌─────┐ ││ ┌─────┐ ┌─────┐│ │ 0 │ │ │ ?? │ │ │ 1 │ ││ 1 │ ││ │ 0 │ │ ?? ││ │ │ ├─────┤ │ ├─────┤ │ │ │ ├─────┤ │├─────┤ ││ ├─────┤ ├─────┤│ │ 1 │ │ │ 6 │ │ │ 1 │ ││ 2 │ ││ │ 1 │ │ 1 ││ │ │ ├─────┤ │ ├─────┤ │ │ │ ├─────┤ │├─────┤ ││ ├─────┤ ├─────┤│ │ 1 │ │ │ 7 │ │ │ 0 │ ││ ?? │ ││ │ ?? │ │ ?? ││ │ │ └─────┘ │ └─────┘ │ │ │ └─────┘ │└─────┘ ││ └─────┘ └─────┘│ Validity │ Values │ Validity │ Values ││ Validity Values│ │ │ │ │ │ │ │ ││ │ │ "c.c1" │ │"d.d1" ││ "d.d2" │ │ │ │ Primitive │ │ │ │Primitive ││ PrimitiveArray │ │ Array │ │Array ││ │ │ │ └───────────┘ │ │ └──────────┘└─────────────────┘ "c" "d" │ │ StructArray │ │ StructArray ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ More technical detail is available in the StructArray format specification. Definition Levels Unlike Arrow, Parquet does not encode validity in a structured fashion, instead only storing definition levels for each of the primitive columns, i.e. those that don’t contain other columns. The definition level of a given element is the depth in the schema at which it is fully defined. For example consider the case of d.d2, which contains two nullable levels d and d2. A definition level of 0 would imply a null at the level of d: { } A definition level of 1 would imply a null at the level of d.d2 { "d": { } } A definition level of 2 would imply a defined value for d.d2: { "d": { "d2": .. } } Going back to the three JSON documents above, they could be stored in Parquet with this schema message schema { optional int32 a; required group b { optional int32 b1; required int32 b2; } optional group c { required int32 c1; } optional group d { required int32 d1; optional int32 d2; } } The Parquet encoding of the example would be: ┌────────────────────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ ┌─────┐ ┌─────┐ │ ┌──────────────────────┐ ┌───────────┐ │ │ │ 1 │ │ 1 │ │ │ │ ┌─────┐ ┌─────┐ │ │ ┌─────┐ │ │ ├─────┤ ├─────┤ │ │ │ 1 │ │ 1 │ │ │ │ 3 │ │ │ │ │ 1 │ │ 2 │ │ │ │ ├─────┤ ├─────┤ │ │ ├─────┤ │ │ ├─────┤ └─────┘ │ │ │ 0 │ │ 5 │ │ │ │ 4 │ │ │ │ │ 0 │ │ │ │ ├─────┤ └─────┘ │ │ ├─────┤ │ │ └─────┘ │ │ │ 1 │ │ │ │ 6 │ │ │ │ │ │ │ └─────┘ │ │ └─────┘ │ │ Definition Data │ │ │ │ │ │ │ Levels │ │ │ Definition Data │ │ Data │ │ │ │ Levels │ │ │ │ │ "a" │ │ │ │ │ │ └────────────────────────┘ │ "b.b1" │ │ "b.b2" │ │ │ └──────────────────────┘ └───────────┘ "b" │ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ── ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ── ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌────────────────────┐ │ ┌────────────────────┐ ┌──────────────────┐ │ │ │ ┌─────┐ ┌─────┐ │ │ │ ┌─────┐ ┌─────┐ │ │ ┌─────┐ ┌─────┐ │ │ │ 0 │ │ 6 │ │ │ │ │ 1 │ │ 1 │ │ │ │ 1 │ │ 1 │ │ │ │ │ ├─────┤ ├─────┤ │ │ │ ├─────┤ ├─────┤ │ │ ├─────┤ └─────┘ │ │ │ 1 │ │ 7 │ │ │ │ │ 1 │ │ 2 │ │ │ │ 2 │ │ │ │ │ ├─────┤ └─────┘ │ │ │ ├─────┤ └─────┘ │ │ ├─────┤ │ │ │ 1 │ │ │ │ │ 0 │ │ │ │ 0 │ │ │ │ │ └─────┘ │ │ │ └─────┘ │ │ └─────┘ │ │ │ │ │ │ │ │ │ │ │ Definition Data │ │ │ Definition Data │ │ Definition Data │ │ Levels │ │ │ Levels │ │ Levels │ │ │ │ │ │ │ │ │ │ │ "c.1" │ │ │ "d.1" │ │ "d.d2" │ │ │ └────────────────────┘ │ └────────────────────┘ └──────────────────┘ "c" │ "d" │ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ List / Repeated Columns Closing out support for nested types are lists, which contain a variable number of other values. For example, the following four documents each have a (nullable) field a containing a list of integers { # &lt;-- First record "a": [1], # &lt;-- top-level field a containing list of integers } { # &lt;-- "a" is not provided (is null) } { # &lt;-- "a" is non-null but empty "a": [] } { "a": [null, 2], # &lt;-- "a" has a null and non-null elements } Documents of this format could be stored in this Arrow schema Field(name: "a", nullable: true, datatype: List( Field(name: "element", nullable: true, datatype: Int32), ) As before, Arrow chooses to represent this in a hierarchical fashion as a ListArray. A ListArray contains a list of monotonically increasing integers called offsets, a validity mask if the list is nullable, and a child array containing the list elements. Each consecutive pair of elements in the offset array identifies a slice of the child array for that index in the ListArray For example, a list with offsets [0, 2, 3, 3] contains 3 pairs of offsets, (0,2), (2,3), and (3,3), and therefore represents a ListArray of length 3 with the following values: 0: [child[0], child[1]] 1: [] 2: [child[2]] For the example above with 4 JSON documents, this would be encoded in Arrow as ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌──────────────────┐ │ │ ┌─────┐ ┌─────┐ │ ┌─────┐ ┌─────┐│ │ 1 │ │ 0 │ │ │ 1 │ │ 1 ││ │ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ 0 │ │ 1 │ │ │ 0 │ │ ?? ││ │ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ 1 │ │ 1 │ │ │ 1 │ │ 2 ││ │ │ ├─────┤ ├─────┤ │ └─────┘ └─────┘│ │ 1 │ │ 1 │ │ Validity Values│ │ │ └─────┘ ├─────┤ │ │ │ 3 │ │ child[0] │ │ │ Validity └─────┘ │ PrimitiveArray │ │ │ │ │ Offsets └──────────────────┘ "a" │ │ ListArray ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ More technical detail is available in the ListArray format specification. Parquet Repetition Levels The example above with 4 JSON documents can be stored in this Parquet schema message schema { optional group a (LIST) { repeated group list { optional int32 element; } } } In order to encode lists, Parquet stores an integer repetition level in addition to a definition level. A repetition level identifies where in the hierarchy of repeated fields the current value is to be inserted. A value of 0 means a new list in the top-most repeated list, a value of 1 means a new element within the top-most repeated list, a value of 2 means a new element within the second top-most repeated list, and so on. A consequence of this encoding is that the number of zeros in the repetition levels is the total number of rows in the column, and the first level in a column must be 0. Each repeated field also has a corresponding definition level, however, in this case rather than indicating a null value, they indicate an empty array. The example above would therefore be encoded as ┌─────────────────────────────────────┐ │ ┌─────┐ ┌─────┐ │ │ │ 3 │ │ 0 │ │ │ ├─────┤ ├─────┤ │ │ │ 0 │ │ 0 │ │ │ ├─────┤ ├─────┤ ┌─────┐ │ │ │ 1 │ │ 0 │ │ 1 │ │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ 2 │ │ │ ├─────┤ ├─────┤ └─────┘ │ │ │ 3 │ │ 1 │ │ │ └─────┘ └─────┘ │ │ │ │ Definition Repetition Values │ │ Levels Levels │ │ "a" │ │ │ └─────────────────────────────────────┘ Next up: Arbitrary Nesting: Lists of Structs and Structs of Lists In our final blog post, we explain how Parquet and Arrow combine these concepts to support arbitrary nesting of potentially nullable data structures. If you want to store and process structured types, you will be pleased to hear that the Rust parquet implementation fully supports reading and writing directly into Arrow, as simply as any other type. All the complex record shredding and reconstruction is handled automatically. With this and other exciting features such as reading asynchronously from object storage, and advanced row filter pushdown, it is the fastest and most feature complete Rust parquet implementation. We look forward to seeing what you build with it!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+<p>Fortunately, with the Rust <a href="https://crates.io/crates/parquet">parquet</a> implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for <a href="https://docs.rs/parquet/22.0.0/parquet/arrow/async_reader/index.html">reading asynchronously</a> from <a href="https://docs.rs/object_store">object storage</a>, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!</p>]]></content><author><name>tustvold and alamb</name></author><category term="parquet" /><category term="arrow" /><summary type="html"><![CDATA[Introduction This is the third of a three part series exploring how projects such as Rust Apache Arrow support conversion between Apache Arrow for in memory processing and Apache Parquet for efficient storage. Apache Arrow is an open, language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations. Apache Parquet is an open, column-oriented data file format designed for very efficient data encoding and retrieval. Arrow and Parquet Part 1: Primitive Types and Nullability covered the basics of primitive types. Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists covered the Struct and List types. This post builds on this foundation to show how both formats combine these to support arbitrary nesting. Some libraries, such as Rust parquet implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so. Structs with Lists Consider the following three json documents { # &lt;-- First record "a": [1], # &lt;-- top-level field a containing list of integers "b": [ # &lt;-- top-level field b containing list of structures { # &lt;-- list element of b containing two field b1 and b2 "b1": 1 # &lt;-- b1 is always provided (non nullable) }, { "b1": 1, "b2": [ # &lt;-- b2 contains list of integers 3, 4 # &lt;-- list elements of b.b2 always provided (non nullable) ] } ] } { "b": [ # &lt;-- b is always provided (non nullable) { "b1": 2 }, ] } { "a": [null, null], # &lt;-- list elements of a are nullable "b": [null] # &lt;-- list elements of b are nullable } Documents of this format could be stored in this Arrow schema Field(name: "a", nullable: true, datatype: List( Field(name: "element", nullable: true, datatype: Int32), ) Field(name: "b"), nullable: false, datatype: List( Field(name: "element", nullable: true, datatype: Struct[ Field(name: "b1", nullable: false, datatype: Int32), Field(name: "b2", nullable: true, datatype: List( Field(name: "element", nullable: false, datatype: Int32) )) ]) )) As explained previously, Arrow chooses to represent this in a hierarchical fashion. StructArrays are stored as child arrays that contain each field of the struct. ListArrays are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index. The Arrow encoding of the example would be: ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ ┌──────────────────┐ │ ┌─────┐ ┌─────┐ │ ┌─────┐ ┌─────┐│ │ │ 1 │ │ 0 │ │ │ 1 │ │ 1 ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 0 │ │ 1 │ │ │ 0 │ │ ?? ││ │ ├─────┤ ├─────┤ │ ├─────┤ ├─────┤│ │ │ 1 │ │ 1 │ │ │ 0 │ │ ?? ││ │ └─────┘ ├─────┤ │ └─────┘ └─────┘│ │ │ 3 │ │ Validity Values│ │ Validity └─────┘ │ │ │ │ child[0] │ │ "a" Offsets │ PrimitiveArray │ │ ListArray └──────────────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │ ┌──────────┐ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┌─────┐ │ ┌─────┐ │ ┌─────┐ │ ┌─────┐ ┌─────┐ ┌──────────┐ │ │ │ │ │ 0 │ │ 1 │ │ │ 1 │ │ │ │ 0 │ │ 0 │ │ ┌─────┐ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 3 │ │ │ │ │ │ │ 2 │ │ 1 │ │ │ 1 │ │ │ │ 1 │ │ 0 │ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ 4 │ │ │ │ │ │ │ 3 │ │ 1 │ │ │ 2 │ │ │ │ 0 │ │ 2 │ │ └─────┘ │ ├─────┤ │ ├─────┤ │ ├─────┤ │ ├─────┤ ├─────┤ │ │ │ │ │ │ │ 4 │ │ 0 │ │ │ ?? │ │ │ │ ?? │ │ 2 │ │ Values │ └─────┘ │ └─────┘ │ └─────┘ │ └─────┘ ├─────┤ │ │ │ │ │ │ │ │ │ │ 2 │ │ │ Offsets │ Validity│ Values │ └─────┘ │ │ │ │ │ │ │ │ │Validity │ child[0] │ │ │ "b1" │ Offsets │ Primitive│ │ │ │ │ │ Primitive│ │ "b2" │ Array │ │ │ Array │ ListArray └──────────┘ │ │ │ │ └──────────┘ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │ "element" │ │ │ StructArray "b" └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │ ListArray ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ Documents of this format could be stored in this Parquet schema message schema { optional group a (LIST) { repeated group list { optional int32 element; } } required group b (LIST) { repeated group list { optional group element { required int32 b1; optional group b2 (LIST) { repeated group list { required int32 element; } } } } } } As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability. Definition and repetition levels is a non trivial topic. For more detail, you can read the Google Dremel Paper which offers an academic description of the algorithm. You can also explore this gist to see Rust parquet code which generates the example below. The Parquet encoding of the example would be: ┌───────────────────────────────┐ ┌────────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ ┌─────┐ ┌─────┐ ┌─────┐ │ │ │ 3 │ │ 0 │ │ 1 │ │ │ │ 2 │ │ 0 │ │ 1 │ │ │ ├─────┤ ├─────┤ └─────┘ │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 0 │ │ 0 │ │ │ │ 2 │ │ 1 │ │ 1 │ │ │ ├─────┤ ├─────┤ Data │ │ ├─────┤ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ │ 2 │ │ 0 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ ├─────┤ ├─────┤ └─────┘ │ │ │ 2 │ │ 1 │ │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │ └─────┘ └─────┘ Data │ │ │ │ │ │Definition Repetition │ │ Definition Repetition │ │ Levels Levels │ │ Levels Levels │ │ │ │ │ │ "a" │ │ "b.b1" │ └───────────────────────────────┘ └────────────────────────────────┘ ┌───────────────────────────────┐ │ ┌─────┐ ┌─────┐ ┌─────┐│ │ │ 2 │ │ 0 │ │ 3 ││ │ ├─────┤ ├─────┤ ├─────┤│ │ │ 4 │ │ 1 │ │ 4 ││ │ ├─────┤ ├─────┤ └─────┘│ │ │ 4 │ │ 2 │ │ │ ├─────┤ ├─────┤ │ │ │ 2 │ │ 0 │ │ │ ├─────┤ ├─────┤ Data │ │ │ 1 │ │ 0 │ │ │ └─────┘ └─────┘ │ │Definition Repetition │ │ Levels Levels │ │ │ │ "b.b2" │ └───────────────────────────────┘ Additional Complications This series of posts has necessarily glossed over a number of details that further complicate actual implementations: A ListArray may contain a non-empty offset range that is masked by a validity mask Reading a given number of rows from a nullable field requires reading the definition levels and determining the number of values to read based on the number of nulls present Reading a given number of rows from a repeated field requires reading the repetition levels and detecting a new row based on a repetition level of 0 A Parquet file may contain multiple row groups, each containing multiple column chunks A column chunk may contain multiple pages, and there is no relationship between pages across columns Parquet has alternative schema for representing lists with varying degrees of nullability And more… Summary Both Parquet and Arrow are columnar formats and support nested structs and lists, however, the way they represent such nesting differs significantly and conversion between the two formats is complex. Fortunately, with the Rust parquet implementation, reading and writing nested data in Arrow, in Parquet or converting between the two is as simple as reading unnested data. The library handles all the complex record shredding and reconstruction automatically. With this and other exciting features, such as support for reading asynchronously from object storage, it is the fastest and most feature complete Rust parquet implementation available. We look forward to seeing what you build with it!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
