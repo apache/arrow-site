@@ -77,7 +77,7 @@ As is, clients must choose between either tedious integration work or leaving pe
 
 ## Introducing ADBC
 
-ADBC is an Arrow-based, vendor-netural API for interacting with databases.
+ADBC is an Arrow-based, vendor-neutral API for interacting with databases.
 Applications that use ADBC simply receive Arrow data.
 They don't have to do any conversions themselves, and they don't have to integrate each database's specific SDK.
 
