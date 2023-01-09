@@ -186,8 +186,8 @@ short description of your use case.
   Specification 2.0.
 * **[UKV][45]:** Open NoSQL binary database interface, with support for
   LevelDB, RocksDB, UDisk, and in-memory Key-Value Stores. It extends
-  its functionality to support Document Collections, Graphs, and Vector
-  Search, similar to RedisJSON, RedisGraph, and RediSearch, brings
+  their functionality to support Document Collections, Graphs, and Vector
+  Search, similar to RedisJSON, RedisGraph, and RediSearch, and brings
   familiar structured bindings on top, mimicking tools like Pandas and NetworkX.
   All UKV interfaces are compatible with Apache Arrow columnar format,
   which minimizes copies when passing data between different language
