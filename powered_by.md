@@ -184,6 +184,14 @@ short description of your use case.
   Database Connectivity (ODBC) interface. It provides the ability to return
   Arrow Tables and RecordBatches in addition to the Python Database API
   Specification 2.0.
+* **[UKV][45]:** Open NoSQL binary database interface, with support for
+  LevelDB, RocksDB, UDisk, and in-memory Key-Value Stores. It extends
+  its functionality to support Document Collections, Graphs, and Vector
+  Search, similar to RedisJSON, RedisGraph, and RediSearch, brings
+  familiar structured bindings on top, mimicking tools like Pandas and NetworkX.
+  All UKV interfaces are compatible with Apache Arrow columnar format,
+  which minimizes copies when passing data between different language
+  runtimes. UKV also uses Apache Arrow Flight RPC for client-server communication.
 * **[Vaex][38]:** Out-of-Core hybrid Apache Arrow/NumPy DataFrame for Python,
   ML, visualize and explore big tabular data at a billion rows per second.
 * **[VAST][37]:** A network telemetry engine for data-driven security
@@ -235,3 +243,4 @@ short description of your use case.
 [42]: https://github.com/influxdata/influxdb_iox
 [43]: https://www.esri.com/en-us/arcgis/products/arcgis-python-libraries/libraries/arcpy
 [44]: https://clickhouse.com/docs/en/interfaces/formats/#data-format-arrow
+[45]: https://unum.cloud/ukv/
