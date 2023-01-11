@@ -188,7 +188,7 @@ short description of your use case.
   LevelDB, RocksDB, UDisk, and in-memory Key-Value Stores. It extends
   their functionality to support Document Collections, Graphs, and Vector
   Search, similar to RedisJSON, RedisGraph, and RediSearch, and brings
-  familiar structured bindings on top, mimicking tools like Pandas and NetworkX.
+  familiar structured bindings on top, mimicking tools like pandas and NetworkX.
   All UKV interfaces are compatible with Apache Arrow columnar format,
   which minimizes copies when passing data between different language
   runtimes. UKV also uses Apache Arrow Flight RPC for client-server communication.
