@@ -79,6 +79,10 @@ advantage of Arrow for significant performance gains when transferring data.
 [AWS Athena](https://docs.aws.amazon.com/athena/latest/ug/connect-to-a-data-source.html),
 and [others]({{ site.baseurl }}/powered_by/) also use Arrow similarly.
 
+The Arrow project also defines [Flight]({% post_url 2019-09-30-introducing-arrow-flight %}),
+a client-server RPC framework to build rich services exchanging data according
+to application-defined semantics.
+
 <!-- turbodbc -->
 
 ## In-memory data structure for analytics
