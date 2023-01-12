@@ -64,9 +64,7 @@ The Arrow format also defines a [C data interface]({% post_url 2020-05-04-introd
 which allows zero-copy data sharing inside a single process without any
 build-time or link-time dependency requirements. This allows, for example,
 [R users to access `pyarrow`-based projects]({{ site.baseurl }}/docs/r/articles/python.html)
-using the `reticulate` package. Similarly, it empowers [UKV](https://unum.cloud/ukv)
-to forward persisted data from RocksDB, LevelDB, and UDisk, into Python
-runtime and `pyarrow` without copies.
+using the `reticulate` package.
 
 ## Moving data over the network
 
@@ -80,11 +78,6 @@ advantage of Arrow for significant performance gains when transferring data.
 [TensorFlow](https://www.tensorflow.org/tfx),
 [AWS Athena](https://docs.aws.amazon.com/athena/latest/ug/connect-to-a-data-source.html),
 and [others]({{ site.baseurl }}/powered_by/) also use Arrow similarly.
-
-The Arrow project also defines [Flight]({% post_url 2019-09-30-introducing-arrow-flight %}),
-a client-server RPC framework to build rich services exchanging data according
-to application-defined semantics. Flight RPC is used by [UKV](https://unum.cloud/ukv)
-to exchange tables, documents, and graphs, between server application and client SDKs.
 
 <!-- turbodbc -->
 
