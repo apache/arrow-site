@@ -1,4 +1,246 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2023-01-14T12:28:55-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow ADBC 0.1.0 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2023/01/12/adbc-0.1.0-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 0.1.0 (Libraries) Release" /><published>2023-01-12T00:00:00-05:00</published><updated>2023-01-12T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2023/01/12/adbc-0.1.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/01/12/adbc-0.1.0-release/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2023-01-19T07:39:11-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow DataFusion 16.0.0 Project Update</title><link href="https://arrow.apache.org/blog/2023/01/19/datafusion-16.0.0/" rel="alternate" type="text/html" title="Apache Arrow DataFusion 16.0.0 Project Update" /><published>2023-01-19T00:00:00-05:00</published><updated>2023-01-19T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2023/01/19/datafusion-16.0.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/01/19/datafusion-16.0.0/"><![CDATA[<!--
+
+-->
+
+<h1 id="introduction">Introduction</h1>
+
+<p><a href="https://arrow.apache.org/datafusion/">DataFusion</a> is an extensible
+query execution framework, written in <a href="https://www.rust-lang.org/">Rust</a>,
+that uses <a href="https://arrow.apache.org">Apache Arrow</a> as its
+in-memory format. It is targeted primarily at developers creating data
+intensive analytics, and offers mature
+<a href="https://arrow.apache.org/datafusion/user-guide/sql/index.html">SQL support</a>,
+a DataFrame API, and many extension points.</p>
+
+<p>Systems based on DataFusion perform very well in benchmarks,
+especially considering they operate directly on parquet files rather
+than first loading into a specialized format.  Some recent highlights
+include <a href="https://benchmark.clickhouse.com/">clickbench</a> and the
+<a href="https://www.cloudfuse.io/dashboards/standalone-engines">Cloudfuse.io standalone query
+engines</a> page.</p>
+
+<p>DataFusion is also part of a longer term trend, articulated clearly by
+<a href="http://www.cs.cmu.edu/~pavlo/">Andy Pavlo</a> in his <a href="https://ottertune.com/blog/2022-databases-retrospective/">2022 Databases
+Retrospective</a>.
+Database frameworks are proliferating and it is likely that all OLAP
+DBMSs and other data heavy applications, such as machine learning,
+will <strong>require</strong> a vectorized, highly performant query engine in the next
+5 years to remain relevant.  The only practical way to make such
+technology so widely available without many millions of dollars of
+investment is though open source engine such as DataFusion or
+<a href="https://github.com/facebookincubator/velox">Velox</a>.</p>
+
+<p>The rest of this post describes the improvements made to DataFusion
+over the last three months and some hints of where we are heading.</p>
+
+<h2 id="community-growth">Community Growth</h2>
+
+<p>We again saw significant growth in the DataFusion community since <a href="https://arrow.apache.org/blog/2022/10/25/datafusion-13.0.0/">our last update</a>. There are some interesting metrics on <a href="https://ossrank.com/p/1573-apache-arrow-datafusion">OSSRank</a>.</p>
+
+<p>The DataFusion 16.0.0 release consists of 543 PRs from 73 distinct contributors, not including all the work that goes into dependencies such as <a href="https://crates.io/crates/arrow">arrow</a>, <a href="https://crates.io/crates/parquet">parquet</a>, and <a href="https://crates.io/crates/object_store">object_store</a>, that much of the same community helps support. Thank you all for your help</p>
+
+<!--
+$ git log --pretty=oneline 13.0.0..16.0.0 . | wc -l
+     543
+
+$ git shortlog -sn 13.0.0..16.0.0 . | wc -l
+      73
+-->
+<p>Several <a href="https://github.com/apache/arrow-datafusion#known-uses">new systems based on DataFusion</a> were recently added:</p>
+
+<ul>
+  <li><a href="https://github.com/GreptimeTeam/greptimedb">Greptime DB</a></li>
+  <li><a href="https://synnada.ai/">Synnada</a></li>
+  <li><a href="https://github.com/PRQL/prql-query">PRQL</a></li>
+  <li><a href="https://github.com/parseablehq/parseable">Parseable</a></li>
+  <li><a href="https://github.com/splitgraph/seafowl">SeaFowl</a></li>
+</ul>
+
+<h2 id="performance-">Performance 🚀</h2>
+
+<p>Performance and efficiency are core values for
+DataFusion. While there is still a gap between DataFusion and the best of
+breed, tightly integrated systems such as <a href="https://duckdb.org">DuckDB</a>
+and <a href="https://www.pola.rs/">Polars</a>, DataFusion is
+closing the gap quickly. Performance highlights from the last three
+months:</p>
+
+<ul>
+  <li>Up to 30% Faster Sorting and Merging using the new <a href="https://arrow.apache.org/blog/2022/11/07/multi-column-sorts-in-arrow-rust-part-1/">Row Format</a></li>
+  <li><a href="https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/">Advanced predicate pushdown</a>, directly on parquet, directly from object storage, enabling sub millisecond filtering. <!-- Andrew nots: we should really get this turned on by default --></li>
+  <li><code class="language-plaintext highlighter-rouge">70%</code> faster <code class="language-plaintext highlighter-rouge">IN</code> expressions evaluation (<a href="https://github.com/apache/arrow-datafusion/issues/4057">#4057</a>)</li>
+  <li>Sort and partition aware optimizations (<a href="https://github.com/apache/arrow-datafusion/issues/3969">#3969</a> and  <a href="https://github.com/apache/arrow-datafusion/issues/4691">#4691</a>)</li>
+  <li>Filter selectivity analysis (<a href="https://github.com/apache/arrow-datafusion/issues/3868">#3868</a>)</li>
+</ul>
+
+<h2 id="runtime-resource-limits">Runtime Resource Limits</h2>
+
+<p>Previously, DataFusion could potentially use unbounded amounts of memory for certain queries that included Sorts, Grouping or Joins.</p>
+
+<p>In version 16.0.0, it is possible to limit DataFusion’s memory usage for Sorting and Grouping. We are looking for help adding similar limiting for Joins as well as expanding our algorithms to optionally spill to secondary storage. See <a href="https://github.com/apache/arrow-datafusion/issues/3941">#3941</a> for more detail.</p>
+
+<h2 id="sql-window-functions">SQL Window Functions</h2>
+
+<p><a href="https://en.wikipedia.org/wiki/Window_function_(SQL)">SQL Window Functions</a> are useful for a variety of analysis and DataFusion’s implementation support expanded significantly:</p>
+
+<ul>
+  <li>Custom window frames such as <code class="language-plaintext highlighter-rouge">... OVER (ORDER BY ... RANGE BETWEEN 0.2 PRECEDING AND 0.2 FOLLOWING)</code></li>
+  <li>Unbounded window frames such as <code class="language-plaintext highlighter-rouge">... OVER (ORDER BY ... RANGE UNBOUNDED ROWS PRECEDING)</code></li>
+  <li>Support for the <code class="language-plaintext highlighter-rouge">NTILE</code> window function (<a href="https://github.com/apache/arrow-datafusion/issues/4676">#4676</a>)</li>
+  <li>Support for <code class="language-plaintext highlighter-rouge">GROUPS</code> mode (<a href="https://github.com/apache/arrow-datafusion/issues/4155">#4155</a>)</li>
+</ul>
+
+<h1 id="improved-joins">Improved Joins</h1>
+
+<p>Joins are often the most complicated operations to handle well in
+analytics systems and DataFusion 16.0.0 offers significant improvements
+such as</p>
+
+<ul>
+  <li>Cost based optimizer (CBO) automatically reorders join evaluations, selects algorithms (Merge / Hash), and pick build side based on available statistics and join type (<code class="language-plaintext highlighter-rouge">INNER</code>, <code class="language-plaintext highlighter-rouge">LEFT</code>, etc) (<a href="https://github.com/apache/arrow-datafusion/issues/4219">#4219</a>)</li>
+  <li>Fast non <code class="language-plaintext highlighter-rouge">column=column</code> equijoins such as <code class="language-plaintext highlighter-rouge">JOIN ON a.x + 5 = b.y</code></li>
+  <li>Better performance on non-equijoins (<a href="https://github.com/apache/arrow-datafusion/issues/4562">#4562</a>) <!-- TODO is this a good thing to mention as any time this is usd the query is going to go slow or the data size is small --></li>
+</ul>
+
+<h1 id="streaming-execution">Streaming Execution</h1>
+
+<p>One emerging use case for Datafusion is as a foundation for
+streaming-first data platforms. An important prerequisite
+is support for incremental execution for queries that can be computed
+incrementally.</p>
+
+<p>With this release, DataFusion now supports the following streaming features:</p>
+
+<ul>
+  <li>Data ingestion from infinite files such as FIFOs (<a href="https://github.com/apache/arrow-datafusion/issues/4694">#4694</a>),</li>
+  <li>Detection of pipeline-breaking queries in streaming use cases (<a href="https://github.com/apache/arrow-datafusion/issues/4694">#4694</a>),</li>
+  <li>Automatic input swapping for joins so probe side is a data stream (<a href="https://github.com/apache/arrow-datafusion/issues/4694">#4694</a>),</li>
+  <li>Intelligent elision of pipeline-breaking sort operations whenever possible (<a href="https://github.com/apache/arrow-datafusion/issues/4691">#4691</a>),</li>
+  <li>Incremental execution for more types of queries; e.g. queries involving finite window frames (<a href="https://github.com/apache/arrow-datafusion/issues/4777">#4777</a>).</li>
+</ul>
+
+<p>These are a major steps forward, and we plan even more improvements over the next few releases.</p>
+
+<h1 id="better-support-for-distributed-catalogs">Better Support for Distributed Catalogs</h1>
+
+<p>16.0.0 has been enhanced support for asynchronous catalogs (<a href="https://github.com/apache/arrow-datafusion/issues/4607">#4607</a>)
+to better support distributed metadata stores such as
+<a href="https://delta.io/">Delta.io</a> and <a href="https://iceberg.apache.org/">Apache
+Iceberg</a> which require asynchronous I/O
+during planning to access remote catalogs. Previously, DataFusion
+required synchronous access to all relevant catalog information.</p>
+
+<h1 id="additional-sql-support">Additional SQL Support</h1>
+<p>SQL support continues to improve, including some of these highlights:</p>
+
+<ul>
+  <li>Add TPC-DS query planning regression tests <a href="https://github.com/apache/arrow-datafusion/issues/4719">#4719</a></li>
+  <li>Support for <code class="language-plaintext highlighter-rouge">PREPARE</code> statement <a href="https://github.com/apache/arrow-datafusion/issues/4490">#4490</a></li>
+  <li>Automatic coercions ast between Date and Timestamp <a href="https://github.com/apache/arrow-datafusion/issues/4726">#4726</a></li>
+  <li>Support type coercion for timestamp and utf8 <a href="https://github.com/apache/arrow-datafusion/issues/4312">#4312</a></li>
+  <li>Full support for time32 and time64 literal values (<code class="language-plaintext highlighter-rouge">ScalarValue</code>) <a href="https://github.com/apache/arrow-datafusion/issues/4156">#4156</a></li>
+  <li>New functions, incuding <code class="language-plaintext highlighter-rouge">uuid()</code>  <a href="https://github.com/apache/arrow-datafusion/issues/4041">#4041</a>, <code class="language-plaintext highlighter-rouge">current_time</code>  <a href="https://github.com/apache/arrow-datafusion/issues/4054">#4054</a>, <code class="language-plaintext highlighter-rouge">current_date</code> <a href="https://github.com/apache/arrow-datafusion/issues/4022">#4022</a></li>
+  <li>Compressed CSV/JSON support <a href="https://github.com/apache/arrow-datafusion/issues/3642">#3642</a></li>
+</ul>
+
+<p>The community has also invested in new <a href="https://github.com/apache/arrow-datafusion/blob/master/datafusion/core/tests/sqllogictests/README.md">sqllogic based</a> tests to keep improving DataFusion’s quality with less effort.</p>
+
+<h1 id="plan-serialization-and-substrait">Plan Serialization and Substrait</h1>
+
+<p>DataFusion now supports serialization of physical plans, with a custom protocol buffers format. In addition, we are adding initial support for <a href="https://substrait.io/">Substrait</a>, a Cross-Language Serialization for Relational Algebra</p>
+
+<h1 id="how-to-get-involved">How to Get Involved</h1>
+
+<p>Kudos to everyone in the community who contributed ideas, discussions, bug reports, documentation and code. It is exciting to be building something so cool together!</p>
+
+<p>If you are interested in contributing to DataFusion, we would love to
+have you join us. You can try out DataFusion on some of your own
+data and projects and let us know how it goes or contribute a PR with
+documentation, tests or code. A list of open issues suitable for
+beginners is
+<a href="https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">here</a>.</p>
+
+<p>Check out our <a href="https://arrow.apache.org/datafusion/community/communication.html">Communication Doc</a> on more
+ways to engage with the community.</p>
+
+<h2 id="appendix-contributor-shoutout">Appendix: Contributor Shoutout</h2>
+
+<p>Here is a list of people who have contributed PRs to this project over the last three releases, derived from <code class="language-plaintext highlighter-rouge">git shortlog -sn 13.0.0..16.0.0 .</code> Thank you all!</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   113	Andrew Lamb
+    58	jakevin
+    46	Raphael Taylor-Davies
+    30	Andy Grove
+    19	Batuhan Taskaya
+    19	Remzi Yang
+    17	ygf11
+    16	Burak
+    16	Jeffrey
+    16	Marco Neumann
+    14	Kun Liu
+    12	Yang Jiang
+    10	mingmwang
+     9	Daniël Heres
+     9	Mustafa akur
+     9	comphead
+     9	mvanschellebeeck
+     9	xudong.w
+     7	dependabot[bot]
+     7	yahoNanJing
+     6	Brent Gardner
+     5	AssHero
+     4	Jiayu Liu
+     4	Wei-Ting Kuo
+     4	askoa
+     3	André Calado Coroado
+     3	Jie Han
+     3	Jon Mease
+     3	Metehan Yıldırım
+     3	Nga Tran
+     3	Ruihang Xia
+     3	baishen
+     2	Berkay Şahin
+     2	Dan Harris
+     2	Dongyan Zhou
+     2	Eduard Karacharov
+     2	Kikkon
+     2	Liang-Chi Hsieh
+     2	Marko Milenković
+     2	Martin Grigorov
+     2	Roman Nozdrin
+     2	Tim Van Wassenhove
+     2	r.4ntix
+     2	unconsolable
+     2	unvalley
+     1	Ajaya Agrawal
+     1	Alexander Spies
+     1	ArkashaJavelin
+     1	Artjoms Iskovs
+     1	BoredPerson
+     1	Christian Salvati
+     1	Creampanda
+     1	Data Psycho
+     1	Francis Du
+     1	Francis Le Roy
+     1	LFC
+     1	Marko Grujic
+     1	Matt Willian
+     1	Matthijs Brobbel
+     1	Max Burke
+     1	Mehmet Ozan Kabak
+     1	Rito Takeuchi
+     1	Roman Zeyde
+     1	Vrishabh
+     1	Zhang Li
+     1	ZuoTiJia
+     1	byteink
+     1	cfraz89
+     1	nbr
+     1	xxchan
+     1	yujie.zhang
+     1	zembunia
+     1	哇呜哇呜呀咦耶
+</code></pre></div></div>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction DataFusion is an extensible query execution framework, written in Rust, that uses Apache Arrow as its in-memory format. It is targeted primarily at developers creating data intensive analytics, and offers mature SQL support, a DataFrame API, and many extension points. Systems based on DataFusion perform very well in benchmarks, especially considering they operate directly on parquet files rather than first loading into a specialized format. Some recent highlights include clickbench and the Cloudfuse.io standalone query engines page. DataFusion is also part of a longer term trend, articulated clearly by Andy Pavlo in his 2022 Databases Retrospective. Database frameworks are proliferating and it is likely that all OLAP DBMSs and other data heavy applications, such as machine learning, will require a vectorized, highly performant query engine in the next 5 years to remain relevant. The only practical way to make such technology so widely available without many millions of dollars of investment is though open source engine such as DataFusion or Velox. The rest of this post describes the improvements made to DataFusion over the last three months and some hints of where we are heading. Community Growth We again saw significant growth in the DataFusion community since our last update. There are some interesting metrics on OSSRank. The DataFusion 16.0.0 release consists of 543 PRs from 73 distinct contributors, not including all the work that goes into dependencies such as arrow, parquet, and object_store, that much of the same community helps support. Thank you all for your help Several new systems based on DataFusion were recently added: Greptime DB Synnada PRQL Parseable SeaFowl Performance 🚀 Performance and efficiency are core values for DataFusion. While there is still a gap between DataFusion and the best of breed, tightly integrated systems such as DuckDB and Polars, DataFusion is closing the gap quickly. Performance highlights from the last three months: Up to 30% Faster Sorting and Merging using the new Row Format Advanced predicate pushdown, directly on parquet, directly from object storage, enabling sub millisecond filtering. 70% faster IN expressions evaluation (#4057) Sort and partition aware optimizations (#3969 and #4691) Filter selectivity analysis (#3868) Runtime Resource Limits Previously, DataFusion could potentially use unbounded amounts of memory for certain queries that included Sorts, Grouping or Joins. In version 16.0.0, it is possible to limit DataFusion’s memory usage for Sorting and Grouping. We are looking for help adding similar limiting for Joins as well as expanding our algorithms to optionally spill to secondary storage. See #3941 for more detail. SQL Window Functions SQL Window Functions are useful for a variety of analysis and DataFusion’s implementation support expanded significantly: Custom window frames such as ... OVER (ORDER BY ... RANGE BETWEEN 0.2 PRECEDING AND 0.2 FOLLOWING) Unbounded window frames such as ... OVER (ORDER BY ... RANGE UNBOUNDED ROWS PRECEDING) Support for the NTILE window function (#4676) Support for GROUPS mode (#4155) Improved Joins Joins are often the most complicated operations to handle well in analytics systems and DataFusion 16.0.0 offers significant improvements such as Cost based optimizer (CBO) automatically reorders join evaluations, selects algorithms (Merge / Hash), and pick build side based on available statistics and join type (INNER, LEFT, etc) (#4219) Fast non column=column equijoins such as JOIN ON a.x + 5 = b.y Better performance on non-equijoins (#4562) Streaming Execution One emerging use case for Datafusion is as a foundation for streaming-first data platforms. An important prerequisite is support for incremental execution for queries that can be computed incrementally. With this release, DataFusion now supports the following streaming features: Data ingestion from infinite files such as FIFOs (#4694), Detection of pipeline-breaking queries in streaming use cases (#4694), Automatic input swapping for joins so probe side is a data stream (#4694), Intelligent elision of pipeline-breaking sort operations whenever possible (#4691), Incremental execution for more types of queries; e.g. queries involving finite window frames (#4777). These are a major steps forward, and we plan even more improvements over the next few releases. Better Support for Distributed Catalogs 16.0.0 has been enhanced support for asynchronous catalogs (#4607) to better support distributed metadata stores such as Delta.io and Apache Iceberg which require asynchronous I/O during planning to access remote catalogs. Previously, DataFusion required synchronous access to all relevant catalog information. Additional SQL Support SQL support continues to improve, including some of these highlights: Add TPC-DS query planning regression tests #4719 Support for PREPARE statement #4490 Automatic coercions ast between Date and Timestamp #4726 Support type coercion for timestamp and utf8 #4312 Full support for time32 and time64 literal values (ScalarValue) #4156 New functions, incuding uuid() #4041, current_time #4054, current_date #4022 Compressed CSV/JSON support #3642 The community has also invested in new sqllogic based tests to keep improving DataFusion’s quality with less effort. Plan Serialization and Substrait DataFusion now supports serialization of physical plans, with a custom protocol buffers format. In addition, we are adding initial support for Substrait, a Cross-Language Serialization for Relational Algebra How to Get Involved Kudos to everyone in the community who contributed ideas, discussions, bug reports, documentation and code. It is exciting to be building something so cool together! If you are interested in contributing to DataFusion, we would love to have you join us. You can try out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is here. Check out our Communication Doc on more ways to engage with the community. Appendix: Contributor Shoutout Here is a list of people who have contributed PRs to this project over the last three releases, derived from git shortlog -sn 13.0.0..16.0.0 . Thank you all! 113 Andrew Lamb 58 jakevin 46 Raphael Taylor-Davies 30 Andy Grove 19 Batuhan Taskaya 19 Remzi Yang 17 ygf11 16 Burak 16 Jeffrey 16 Marco Neumann 14 Kun Liu 12 Yang Jiang 10 mingmwang 9 Daniël Heres 9 Mustafa akur 9 comphead 9 mvanschellebeeck 9 xudong.w 7 dependabot[bot] 7 yahoNanJing 6 Brent Gardner 5 AssHero 4 Jiayu Liu 4 Wei-Ting Kuo 4 askoa 3 André Calado Coroado 3 Jie Han 3 Jon Mease 3 Metehan Yıldırım 3 Nga Tran 3 Ruihang Xia 3 baishen 2 Berkay Şahin 2 Dan Harris 2 Dongyan Zhou 2 Eduard Karacharov 2 Kikkon 2 Liang-Chi Hsieh 2 Marko Milenković 2 Martin Grigorov 2 Roman Nozdrin 2 Tim Van Wassenhove 2 r.4ntix 2 unconsolable 2 unvalley 1 Ajaya Agrawal 1 Alexander Spies 1 ArkashaJavelin 1 Artjoms Iskovs 1 BoredPerson 1 Christian Salvati 1 Creampanda 1 Data Psycho 1 Francis Du 1 Francis Le Roy 1 LFC 1 Marko Grujic 1 Matt Willian 1 Matthijs Brobbel 1 Max Burke 1 Mehmet Ozan Kabak 1 Rito Takeuchi 1 Roman Zeyde 1 Vrishabh 1 Zhang Li 1 ZuoTiJia 1 byteink 1 cfraz89 1 nbr 1 xxchan 1 yujie.zhang 1 zembunia 1 哇呜哇呜呀咦耶]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow ADBC 0.1.0 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2023/01/12/adbc-0.1.0-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 0.1.0 (Libraries) Release" /><published>2023-01-12T00:00:00-05:00</published><updated>2023-01-12T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2023/01/12/adbc-0.1.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/01/12/adbc-0.1.0-release/"><![CDATA[<!--
 
 -->
 
@@ -1725,226 +1967,4 @@ tuning Ballista.</p>
 
 <p>Ballista has a friendly community and we welcome contributions. A good place to start is to following the instructions
 in the <a href="https://arrow.apache.org/ballista/">user guide</a> and try using Ballista with your own SQL queries and ETL pipelines, and file issues
-for any bugs or feature suggestions.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction Ballista is an Arrow-native distributed SQL query engine implemented in Rust. Ballista 0.9.0 is now available and is the most significant release since the project was donated to Apache Arrow in 2021. This release represents 4 weeks of work, with 66 commits from 14 contributors: 22 Andy Grove 12 yahoNanJing 6 Daniël Heres 4 Brent Gardner 4 dependabot[bot] 4 r.4ntix 3 Stefan Stanciulescu 3 mingmwang 2 Ken Suenobu 2 Yang Jiang 1 Metehan Yıldırım 1 Trent Feda 1 askoa 1 yangzhong Release Highlights The release notes below are not exhaustive and only expose selected highlights of the release. Many other bug fixes and improvements have been made: we refer you to the complete changelog. Support for Cloud Object Stores and Distributed File Systems This is the first release of Ballista to have documented support for querying data from distributed file systems and object stores. Currently, S3 and HDFS are supported. Support for Google Cloud Storage and Azure Blob Storage is planned for the next release. Flight SQL &amp; JDBC support The Ballista scheduler now implements the Flight SQL protocol, enabling any compliant Flight SQL client to connect to and run queries against a Ballista cluster. The Apache Arrow Flight SQL JDBC driver can be used to connect Business Intelligence tools to a Ballista cluster. Python Bindings It is now possible to connect to a Ballista cluster from Python and execute queries using both the DataFrame and SQL interfaces. Scheduler Web User Interface and REST API The scheduler now has a web user interface for monitoring queries. It is also possible to view graphical query plans that show how the query was executed, along with metrics. The REST API that powers the user interface can also be accessed directly. Simplified Kubernetes Deployment Ballista now provides a Helm chart for simplified Kubernetes deployment. User Guide The user guide is published at https://arrow.apache.org/ballista/ and provides deployment instructions for Docker, Docker Compose, and Kubernetes, as well as references for configuring and tuning Ballista. Roadmap The Ballista community is currently focused on the following tasks for the next release: Support for Azure Blob Storage and Google Cloud Storage Improve benchmark performance by implementing more query optimizations Improve scheduler web user interface Publish Docker images to GitHub Container Registry The detailed list of issues planned for the 0.10.0 release can be found in the tracking issue. Getting Involved Ballista has a friendly community and we welcome contributions. A good place to start is to following the instructions in the user guide and try using Ballista with your own SQL queries and ETL pipelines, and file issues for any bugs or feature suggestions.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow DataFusion 13.0.0 Project Update</title><link href="https://arrow.apache.org/blog/2022/10/25/datafusion-13.0.0/" rel="alternate" type="text/html" title="Apache Arrow DataFusion 13.0.0 Project Update" /><published>2022-10-25T00:00:00-04:00</published><updated>2022-10-25T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2022/10/25/datafusion-13.0.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2022/10/25/datafusion-13.0.0/"><![CDATA[<!--
-
--->
-
-<h1 id="introduction">Introduction</h1>
-
-<p><a href="https://arrow.apache.org/datafusion/">Apache Arrow DataFusion</a> <a href="https://crates.io/crates/datafusion"><code class="language-plaintext highlighter-rouge">13.0.0</code></a> is released, and this blog contains an update on the project for the 5 months since our <a href="https://arrow.apache.org/blog/2022/05/16/datafusion-8.0.0/">last update in May 2022</a>.</p>
-
-<p>DataFusion is an extensible and embeddable query engine, written in Rust used to create modern, fast and efficient data pipelines, ETL processes, and database systems. You may want to check out DataFusion to extend your Rust project to:</p>
-
-<ul>
-  <li>Support <a href="https://arrow.apache.org/datafusion/user-guide/sql/sql_status.html">SQL support</a></li>
-  <li>Support <a href="https://docs.rs/datafusion/13.0.0/datafusion/dataframe/struct.DataFrame.html">DataFrame API</a></li>
-  <li>Support a Domain Specific Query Language</li>
-  <li>Easily and quickly read and process Parquet, JSON, Avro or CSV data.</li>
-  <li>Read from remote object stores such as AWS S3, Azure Blob Storage, GCP.</li>
-</ul>
-
-<p>Even though DataFusion is 4 years “young,” it has seen significant community growth in the last few months and the momentum continues to accelerate.</p>
-
-<h1 id="background">Background</h1>
-
-<p>DataFusion is used as the engine in <a href="https://github.com/apache/arrow-datafusion#known-uses">many open source and commercial projects</a> and was one of the early open source projects to provide this capability. 2022 has validated our belief in the need for such a <a href="https://docs.google.com/presentation/d/1iNX_35sWUakee2q3zMFPyHE4IV2nC3lkCK_H6Y2qK84/edit#slide=id.p">“LLVM for database and AI systems”</a><a href="https://www.slideshare.net/AndrewLamb32/20220623-apache-arrow-and-datafusion-changing-the-game-for-implementing-database-systemspdf">(alternate link)</a> with announcements such as the <a href="https://engineering.fb.com/2022/08/31/open-source/velox/">release of FaceBook’s Velox</a> engine, the major investments in <a href="https://arrow.apache.org/docs/cpp/streaming_execution.html">Acero</a> as well as the continued popularity of <a href="https://calcite.apache.org/">Apache Calcite</a> and other similar technologies.</p>
-
-<p>While Velox and Acero focus on execution engines, DataFusion provides the entire suite of components needed to build most analytic systems, including a SQL frontend, a dataframe API, and  extension points for just about everything. Some <a href="https://github.com/apache/arrow-datafusion#known-uses">DataFusion users</a> use a subset of the features such as the frontend (e.g. <a href="https://dask-sql.readthedocs.io/en/latest/">dask-sql</a>) or the execution engine, (e.g.  <a href="https://github.com/blaze-init/blaze">Blaze</a>), and some use many different components to build both SQL based and customized DSL based systems such as <a href="https://github.com/influxdata/influxdb_iox/pulls">InfluxDB IOx</a> and <a href="https://github.com/vegafusion/vegafusion">VegaFusion</a>.</p>
-
-<p>One of DataFusion’s advantages is its implementation in <a href="https://www.rust-lang.org/">Rust</a> and thus its easy integration with the broader Rust ecosystem. Rust continues to be a major source of benefit, from the <a href="https://www.influxdata.com/blog/using-rustlangs-async-tokio-runtime-for-cpu-bound-tasks/">ease of parallelization with the high quality and standardized <code class="language-plaintext highlighter-rouge">async</code> ecosystem</a> , as well as its modern dependency management system and wonderful performance. <!-- I wonder if we should link to clickbench?? -->
-<!--While we haven’t invested in the benchmarking ratings game datafusion continues to be quite speedy (todo quantity this, with some evidence) – maybe clickbench?--></p>
-
-<!--
-Maybe we can do this un a future post
-# DataFusion in Action
-
-While DataFusion really shines as an embeddable query engine, if you want to try it out and get a feel for its power, you can use the basic[`datafusion-cli`](https://docs.rs/datafusion-cli/13.0.0/datafusion_cli/) tool to get a sense for what is possible to add in your application
-
-(TODO example here of using datafusion-cli to query from local parquet files on disk)
-
-TODO: also mention you can use the same thing to query data from S3
--->
-
-<h1 id="summary">Summary</h1>
-
-<p>We have increased the frequency of DataFusion releases to monthly instead of quarterly. This
-makes it easier for the increasing number of projects that now depend on DataFusion.</p>
-
-<p>We have also completed the “graduation” of <a href="https://github.com/apache/arrow-ballista">Ballista to its own top-level arrow-ballista repository</a>
-which decouples the two projects and allows each project to move even faster.</p>
-
-<p>Along with numerous other bug fixes and smaller improvements, here are some of the major advances:</p>
-
-<h1 id="improved-support-for-cloud-object-stores">Improved Support for Cloud Object Stores</h1>
-
-<p>DataFusion now supports many major cloud object stores (Amazon S3, Azure Blob Storage, and Google Cloud Storage) “out of the box” via the <a href="https://crates.io/crates/object_store">object_store</a> crate. Using this integration, DataFusion optimizes reading parquet files by reading only the parts of the files that are needed.</p>
-
-<h2 id="advanced-sql">Advanced SQL</h2>
-
-<p>DataFusion now supports correlated subqueries, by rewriting them as joins. See the <a href="https://arrow.apache.org/datafusion/user-guide/sql/subqueries.html">Subquery</a> page in the User Guide for more information.</p>
-
-<p>In addition to numerous other small improvements, the following SQL features are now supported:</p>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">ROWS</code>, <code class="language-plaintext highlighter-rouge">RANGE</code>, <code class="language-plaintext highlighter-rouge">PRECEDING</code> and <code class="language-plaintext highlighter-rouge">FOLLOWING</code> in <code class="language-plaintext highlighter-rouge">OVER</code> clauses <a href="https://github.com/apache/arrow-datafusion/issues/3570">#3570</a></li>
-  <li><code class="language-plaintext highlighter-rouge">ROLLUP</code> and <code class="language-plaintext highlighter-rouge">CUBE</code> grouping set expressions  <a href="https://github.com/apache/arrow-datafusion/issues/2446">#2446</a></li>
-  <li><code class="language-plaintext highlighter-rouge">SUM DISTINCT</code> aggregate support  <a href="https://github.com/apache/arrow-datafusion/issues/2405">#2405</a></li>
-  <li><code class="language-plaintext highlighter-rouge">IN</code> and <code class="language-plaintext highlighter-rouge">NOT IN</code> Subqueries by rewriting them to <code class="language-plaintext highlighter-rouge">SEMI</code> / <code class="language-plaintext highlighter-rouge">ANTI</code> <a href="https://github.com/apache/arrow-datafusion/issues/2885">#2421</a></li>
-  <li>Non equality predicates in  <code class="language-plaintext highlighter-rouge">ON</code> clause of  <code class="language-plaintext highlighter-rouge">LEFT</code>, <code class="language-plaintext highlighter-rouge">RIGHT, </code>and <code class="language-plaintext highlighter-rouge">FULL</code> joins <a href="https://github.com/apache/arrow-datafusion/issues/2591">#2591</a></li>
-  <li>Exact <code class="language-plaintext highlighter-rouge">MEDIAN</code> <a href="https://github.com/apache/arrow-datafusion/issues/3009">#3009</a></li>
-  <li><code class="language-plaintext highlighter-rouge">GROUPING SETS</code>/<code class="language-plaintext highlighter-rouge">CUBE</code>/<code class="language-plaintext highlighter-rouge">ROLLUP</code> <a href="https://github.com/apache/arrow-datafusion/issues/2716">#2716</a></li>
-</ul>
-
-<h1 id="more-ddl-support">More DDL Support</h1>
-
-<p>Just as it is important to query, it is also important to give users the ability to define their data sources. We have added:</p>
-
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">CREATE VIEW</code> <a href="https://github.com/apache/arrow-datafusion/issues/2279">#2279</a></li>
-  <li><code class="language-plaintext highlighter-rouge">DESCRIBE &lt;table&gt;</code> <a href="https://github.com/apache/arrow-datafusion/issues/2642">#2642</a></li>
-  <li>Custom / Dynamic table provider factories <a href="https://github.com/apache/arrow-datafusion/issues/3311">#3311</a></li>
-  <li><code class="language-plaintext highlighter-rouge">SHOW CREATE TABLE</code> for support for views <a href="https://github.com/apache/arrow-datafusion/issues/2830">#2830</a></li>
-</ul>
-
-<h1 id="faster-execution">Faster Execution</h1>
-<p>Performance is always an important goal for DataFusion, and there are a number of significant new optimizations such as</p>
-
-<ul>
-  <li>Optimizations of TopK (queries with a <code class="language-plaintext highlighter-rouge">LIMIT</code> or <code class="language-plaintext highlighter-rouge">OFFSET</code> clause):  <a href="https://github.com/apache/arrow-datafusion/issues/3527">#3527</a>, <a href="https://github.com/apache/arrow-datafusion/issues/2521">#2521</a></li>
-  <li>Reduce <code class="language-plaintext highlighter-rouge">left</code>/<code class="language-plaintext highlighter-rouge">right</code>/<code class="language-plaintext highlighter-rouge">full</code> joins to <code class="language-plaintext highlighter-rouge">inner</code> join <a href="https://github.com/apache/arrow-datafusion/issues/2750">#2750</a></li>
-  <li>Convert  cross joins to inner joins when possible <a href="https://github.com/apache/arrow-datafusion/issues/3482">#3482</a></li>
-  <li>Sort preserving <code class="language-plaintext highlighter-rouge">SortMergeJoin</code> <a href="https://github.com/apache/arrow-datafusion/issues/2699">#2699</a></li>
-  <li>Improvements in group by and sort performance <a href="https://github.com/apache/arrow-datafusion/issues/2375">#2375</a></li>
-  <li>Adaptive <code class="language-plaintext highlighter-rouge">regex_replace</code> implementation <a href="https://github.com/apache/arrow-datafusion/issues/3518">#3518</a></li>
-</ul>
-
-<h1 id="optimizer-enhancements">Optimizer Enhancements</h1>
-<p>Internally the optimizer has been significantly enhanced as well.</p>
-
-<ul>
-  <li>Casting / coercion now happens during logical planning <a href="https://github.com/apache/arrow-datafusion/issues/3396">#3185</a> <a href="https://github.com/apache/arrow-datafusion/issues/3636">#3636</a></li>
-  <li>More sophisticated expression analysis and simplification is available</li>
-</ul>
-
-<h1 id="parquet">Parquet</h1>
-<ul>
-  <li>The parquet reader can now read directly from parquet files on remote object storage <a href="https://github.com/apache/arrow-datafusion/issues/2677">#2489</a> <a href="https://github.com/apache/arrow-datafusion/issues/3051">#3051</a></li>
-  <li>Experimental support for “predicate pushdown” with late materialization after filtering during the scan (another blog post on this topic is coming soon).</li>
-  <li>Support reading directly from AWS S3 and other object stores via <code class="language-plaintext highlighter-rouge">datafusion-cli </code> <a href="https://github.com/apache/arrow-datafusion/issues/3631">#3631</a></li>
-</ul>
-
-<h1 id="datatype-support">DataType Support</h1>
-<ul>
-  <li>Support for <code class="language-plaintext highlighter-rouge">TimestampTz</code> <a href="https://github.com/apache/arrow-datafusion/issues/3660">#3660</a></li>
-  <li>Expanded support for the <code class="language-plaintext highlighter-rouge">Decimal</code> type, including  <code class="language-plaintext highlighter-rouge">IN</code> list and better built in coercion.</li>
-  <li>Expanded support for date/time manipulation such as  <code class="language-plaintext highlighter-rouge">date_bin</code> built-in function , timestamp <code class="language-plaintext highlighter-rouge">+/-</code> interval, <code class="language-plaintext highlighter-rouge">TIME</code> literal values <a href="https://github.com/apache/arrow-datafusion/issues/3010">#3010</a>, <a href="https://github.com/apache/arrow-datafusion/issues/3110">#3110</a>, <a href="https://github.com/apache/arrow-datafusion/issues/3034">#3034</a></li>
-  <li>Binary operations (<code class="language-plaintext highlighter-rouge">AND</code>, <code class="language-plaintext highlighter-rouge">XOR</code>, etc):  <a href="https://github.com/apache/arrow-datafusion/issues/1619">#3037</a> <a href="https://github.com/apache/arrow-datafusion/issues/3430">#3420</a></li>
-  <li><code class="language-plaintext highlighter-rouge">IS TRUE/FALSE</code> and <code class="language-plaintext highlighter-rouge">IS [NOT] UNKNOWN</code> <a href="https://github.com/apache/arrow-datafusion/issues/3235">#3235</a>, <a href="https://github.com/apache/arrow-datafusion/issues/3246">#3246</a></li>
-</ul>
-
-<h2 id="upcoming-work">Upcoming Work</h2>
-<p>With the community growing and code accelerating, there is so much great stuff on the horizon. Some features we expect to land in the next few months:</p>
-
-<ul>
-  <li><a href="https://github.com/apache/arrow-datafusion/issues/3462">Complete Parquet Pushdown</a></li>
-  <li><a href="https://github.com/apache/arrow-datafusion/issues/3148">Additional date/time support</a></li>
-  <li>Cost models, Nested Join Optimizations, analysis framework <a href="https://github.com/apache/arrow-datafusion/issues/128">#128</a>, <a href="https://github.com/apache/arrow-datafusion/issues/3843">#3843</a>, <a href="https://github.com/apache/arrow-datafusion/issues/3845">#3845</a></li>
-</ul>
-
-<h1 id="community-growth">Community Growth</h1>
-
-<p>The DataFusion 9.0.0 and 13.0.0 releases consists of 433 PRs from 64 distinct contributors. This does not count all the work that goes into our dependencies such as <a href="https://crates.io/crates/arrow">arrow</a>,  <a href="https://crates.io/crates/parquet">parquet</a>, and <a href="https://crates.io/crates/object_store">object_store</a>, that much of the same community helps nurture.</p>
-
-<!--
-$ git log --pretty=oneline 9.0.0..13.0.0 . | wc -l
-433
-
-$ git shortlog -sn 9.0.0..13.0.0 . | wc -l
-65
--->
-
-<h1 id="how-to-get-involved">How to Get Involved</h1>
-
-<p>Kudos to everyone in the community who contributed ideas, discussions, bug reports, documentation and code. It is exciting to be building something so cool together!</p>
-
-<p>If you are interested in contributing to DataFusion, we would love to
-have you join us on our journey to create the most advanced open
-source query engine. You can try out DataFusion on some of your own
-data and projects and let us know how it goes or contribute a PR with
-documentation, tests or code. A list of open issues suitable for
-beginners is
-<a href="https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">here</a>.</p>
-
-<p>Check out our <a href="https://arrow.apache.org/datafusion/community/communication.html">Communication Doc</a> on more
-ways to engage with the community.</p>
-
-<h2 id="appendix-contributor-shoutout">Appendix: Contributor Shoutout</h2>
-
-<p>To give a sense of the number of people who contribute to this project regularly, we present for your consideration the following list derived from <code class="language-plaintext highlighter-rouge">git shortlog -sn 9.0.0..13.0.0 .</code> Thank you all again!</p>
-
-<!-- Note: combined kmitchener and Kirk Mitchener -->
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    87	Andy Grove
-    71	Andrew Lamb
-    29	Kun Liu
-    29	Kirk Mitchener
-    17	Wei-Ting Kuo
-    14	Yang Jiang
-    12	Raphael Taylor-Davies
-    11	Batuhan Taskaya
-    10	Brent Gardner
-    10	Remzi Yang
-    10	comphead
-    10	xudong.w
-     8	AssHero
-     7	Ruihang Xia
-     6	Dan Harris
-     6	Daniël Heres
-     6	Ian Alexander Joiner
-     6	Mike Roberts
-     6	askoa
-     4	BaymaxHWY
-     4	gorkem
-     4	jakevin
-     3	George Andronchik
-     3	Sarah Yurick
-     3	Stuart Carnie
-     2	Dalton Modlin
-     2	Dmitry Patsura
-     2	JasonLi
-     2	Jon Mease
-     2	Marco Neumann
-     2	yahoNanJing
-     1	Adilet Sarsembayev
-     1	Ayush Dattagupta
-     1	Dezhi Wu
-     1	Dhamotharan Sritharan
-     1	Eduard Karacharov
-     1	Francis Du
-     1	Harbour Zheng
-     1	Ismaël Mejía
-     1	Jack Klamer
-     1	Jeremy Dyer
-     1	Jiayu Liu
-     1	Kamil Konior
-     1	Liang-Chi Hsieh
-     1	Martin Grigorov
-     1	Matthijs Brobbel
-     1	Mehmet Ozan Kabak
-     1	Metehan Yıldırım
-     1	Morgan Cassels
-     1	Nitish Tiwari
-     1	Renjie Liu
-     1	Rito Takeuchi
-     1	Robert Pack
-     1	Thomas Cameron
-     1	Vrishabh
-     1	Xin Hao
-     1	Yijie Shen
-     1	byteink
-     1	kamille
-     1	mateuszkj
-     1	nvartolomei
-     1	yourenawo
-     1	Özgür Akkurt
-</code></pre></div></div>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction Apache Arrow DataFusion 13.0.0 is released, and this blog contains an update on the project for the 5 months since our last update in May 2022. DataFusion is an extensible and embeddable query engine, written in Rust used to create modern, fast and efficient data pipelines, ETL processes, and database systems. You may want to check out DataFusion to extend your Rust project to: Support SQL support Support DataFrame API Support a Domain Specific Query Language Easily and quickly read and process Parquet, JSON, Avro or CSV data. Read from remote object stores such as AWS S3, Azure Blob Storage, GCP. Even though DataFusion is 4 years “young,” it has seen significant community growth in the last few months and the momentum continues to accelerate. Background DataFusion is used as the engine in many open source and commercial projects and was one of the early open source projects to provide this capability. 2022 has validated our belief in the need for such a “LLVM for database and AI systems”(alternate link) with announcements such as the release of FaceBook’s Velox engine, the major investments in Acero as well as the continued popularity of Apache Calcite and other similar technologies. While Velox and Acero focus on execution engines, DataFusion provides the entire suite of components needed to build most analytic systems, including a SQL frontend, a dataframe API, and extension points for just about everything. Some DataFusion users use a subset of the features such as the frontend (e.g. dask-sql) or the execution engine, (e.g. Blaze), and some use many different components to build both SQL based and customized DSL based systems such as InfluxDB IOx and VegaFusion. One of DataFusion’s advantages is its implementation in Rust and thus its easy integration with the broader Rust ecosystem. Rust continues to be a major source of benefit, from the ease of parallelization with the high quality and standardized async ecosystem , as well as its modern dependency management system and wonderful performance. Summary We have increased the frequency of DataFusion releases to monthly instead of quarterly. This makes it easier for the increasing number of projects that now depend on DataFusion. We have also completed the “graduation” of Ballista to its own top-level arrow-ballista repository which decouples the two projects and allows each project to move even faster. Along with numerous other bug fixes and smaller improvements, here are some of the major advances: Improved Support for Cloud Object Stores DataFusion now supports many major cloud object stores (Amazon S3, Azure Blob Storage, and Google Cloud Storage) “out of the box” via the object_store crate. Using this integration, DataFusion optimizes reading parquet files by reading only the parts of the files that are needed. Advanced SQL DataFusion now supports correlated subqueries, by rewriting them as joins. See the Subquery page in the User Guide for more information. In addition to numerous other small improvements, the following SQL features are now supported: ROWS, RANGE, PRECEDING and FOLLOWING in OVER clauses #3570 ROLLUP and CUBE grouping set expressions #2446 SUM DISTINCT aggregate support #2405 IN and NOT IN Subqueries by rewriting them to SEMI / ANTI #2421 Non equality predicates in ON clause of LEFT, RIGHT, and FULL joins #2591 Exact MEDIAN #3009 GROUPING SETS/CUBE/ROLLUP #2716 More DDL Support Just as it is important to query, it is also important to give users the ability to define their data sources. We have added: CREATE VIEW #2279 DESCRIBE &lt;table&gt; #2642 Custom / Dynamic table provider factories #3311 SHOW CREATE TABLE for support for views #2830 Faster Execution Performance is always an important goal for DataFusion, and there are a number of significant new optimizations such as Optimizations of TopK (queries with a LIMIT or OFFSET clause): #3527, #2521 Reduce left/right/full joins to inner join #2750 Convert cross joins to inner joins when possible #3482 Sort preserving SortMergeJoin #2699 Improvements in group by and sort performance #2375 Adaptive regex_replace implementation #3518 Optimizer Enhancements Internally the optimizer has been significantly enhanced as well. Casting / coercion now happens during logical planning #3185 #3636 More sophisticated expression analysis and simplification is available Parquet The parquet reader can now read directly from parquet files on remote object storage #2489 #3051 Experimental support for “predicate pushdown” with late materialization after filtering during the scan (another blog post on this topic is coming soon). Support reading directly from AWS S3 and other object stores via datafusion-cli #3631 DataType Support Support for TimestampTz #3660 Expanded support for the Decimal type, including IN list and better built in coercion. Expanded support for date/time manipulation such as date_bin built-in function , timestamp +/- interval, TIME literal values #3010, #3110, #3034 Binary operations (AND, XOR, etc): #3037 #3420 IS TRUE/FALSE and IS [NOT] UNKNOWN #3235, #3246 Upcoming Work With the community growing and code accelerating, there is so much great stuff on the horizon. Some features we expect to land in the next few months: Complete Parquet Pushdown Additional date/time support Cost models, Nested Join Optimizations, analysis framework #128, #3843, #3845 Community Growth The DataFusion 9.0.0 and 13.0.0 releases consists of 433 PRs from 64 distinct contributors. This does not count all the work that goes into our dependencies such as arrow, parquet, and object_store, that much of the same community helps nurture. How to Get Involved Kudos to everyone in the community who contributed ideas, discussions, bug reports, documentation and code. It is exciting to be building something so cool together! If you are interested in contributing to DataFusion, we would love to have you join us on our journey to create the most advanced open source query engine. You can try out DataFusion on some of your own data and projects and let us know how it goes or contribute a PR with documentation, tests or code. A list of open issues suitable for beginners is here. Check out our Communication Doc on more ways to engage with the community. Appendix: Contributor Shoutout To give a sense of the number of people who contribute to this project regularly, we present for your consideration the following list derived from git shortlog -sn 9.0.0..13.0.0 . Thank you all again! 87 Andy Grove 71 Andrew Lamb 29 Kun Liu 29 Kirk Mitchener 17 Wei-Ting Kuo 14 Yang Jiang 12 Raphael Taylor-Davies 11 Batuhan Taskaya 10 Brent Gardner 10 Remzi Yang 10 comphead 10 xudong.w 8 AssHero 7 Ruihang Xia 6 Dan Harris 6 Daniël Heres 6 Ian Alexander Joiner 6 Mike Roberts 6 askoa 4 BaymaxHWY 4 gorkem 4 jakevin 3 George Andronchik 3 Sarah Yurick 3 Stuart Carnie 2 Dalton Modlin 2 Dmitry Patsura 2 JasonLi 2 Jon Mease 2 Marco Neumann 2 yahoNanJing 1 Adilet Sarsembayev 1 Ayush Dattagupta 1 Dezhi Wu 1 Dhamotharan Sritharan 1 Eduard Karacharov 1 Francis Du 1 Harbour Zheng 1 Ismaël Mejía 1 Jack Klamer 1 Jeremy Dyer 1 Jiayu Liu 1 Kamil Konior 1 Liang-Chi Hsieh 1 Martin Grigorov 1 Matthijs Brobbel 1 Mehmet Ozan Kabak 1 Metehan Yıldırım 1 Morgan Cassels 1 Nitish Tiwari 1 Renjie Liu 1 Rito Takeuchi 1 Robert Pack 1 Thomas Cameron 1 Vrishabh 1 Xin Hao 1 Yijie Shen 1 byteink 1 kamille 1 mateuszkj 1 nvartolomei 1 yourenawo 1 Özgür Akkurt]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+for any bugs or feature suggestions.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction Ballista is an Arrow-native distributed SQL query engine implemented in Rust. Ballista 0.9.0 is now available and is the most significant release since the project was donated to Apache Arrow in 2021. This release represents 4 weeks of work, with 66 commits from 14 contributors: 22 Andy Grove 12 yahoNanJing 6 Daniël Heres 4 Brent Gardner 4 dependabot[bot] 4 r.4ntix 3 Stefan Stanciulescu 3 mingmwang 2 Ken Suenobu 2 Yang Jiang 1 Metehan Yıldırım 1 Trent Feda 1 askoa 1 yangzhong Release Highlights The release notes below are not exhaustive and only expose selected highlights of the release. Many other bug fixes and improvements have been made: we refer you to the complete changelog. Support for Cloud Object Stores and Distributed File Systems This is the first release of Ballista to have documented support for querying data from distributed file systems and object stores. Currently, S3 and HDFS are supported. Support for Google Cloud Storage and Azure Blob Storage is planned for the next release. Flight SQL &amp; JDBC support The Ballista scheduler now implements the Flight SQL protocol, enabling any compliant Flight SQL client to connect to and run queries against a Ballista cluster. The Apache Arrow Flight SQL JDBC driver can be used to connect Business Intelligence tools to a Ballista cluster. Python Bindings It is now possible to connect to a Ballista cluster from Python and execute queries using both the DataFrame and SQL interfaces. Scheduler Web User Interface and REST API The scheduler now has a web user interface for monitoring queries. It is also possible to view graphical query plans that show how the query was executed, along with metrics. The REST API that powers the user interface can also be accessed directly. Simplified Kubernetes Deployment Ballista now provides a Helm chart for simplified Kubernetes deployment. User Guide The user guide is published at https://arrow.apache.org/ballista/ and provides deployment instructions for Docker, Docker Compose, and Kubernetes, as well as references for configuring and tuning Ballista. Roadmap The Ballista community is currently focused on the following tasks for the next release: Support for Azure Blob Storage and Google Cloud Storage Improve benchmark performance by implementing more query optimizations Improve scheduler web user interface Publish Docker images to GitHub Container Registry The detailed list of issues planned for the 0.10.0 release can be found in the tracking issue. Getting Involved Ballista has a friendly community and we welcome contributions. A good place to start is to following the instructions in the user guide and try using Ballista with your own SQL queries and ETL pipelines, and file issues for any bugs or feature suggestions.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
