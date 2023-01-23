@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Acero: A C++ streaming execution engine &#8212; Apache Arrow v11.0.0.dev489</title>
+    <title>Acero: A C++ streaming execution engine &#8212; Apache Arrow v11.0.0.dev500</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        11.0.0.dev489
+        11.0.0.dev500
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -5094,9 +5094,10 @@ implemented in Acero and any caveats that apply.</p>
 <blockquote>
 <div><ul class="simple">
 <li><p>A plan should have a single top-level relation.</p></li>
-<li><p>The consumer is currently based on a custom build of Substrait that
-is older than 0.1.0.  Any features added that are newer than 0.1.0 will
-not be supported.</p></li>
+<li><p>The consumer is currently based on version 0.20.0 of Substrait.
+Any features added that are newer will not be supported.</p></li>
+<li><p>Due to a breaking change in 0.20.0 any Substrait plan older than 0.20.0
+will be rejected.</p></li>
 </ul>
 </div></blockquote>
 </section>
@@ -5105,7 +5106,8 @@ not be supported.</p></li>
 <blockquote>
 <div><ul class="simple">
 <li><p>If a plan contains any extension type variations it will be rejected.</p></li>
-<li><p>If a plan contains any advanced extensions it will be rejected.</p></li>
+<li><p>Advanced extensions can be provided by supplying a custom implementation of
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::engine::ExtensionProvider</span></code>.</p></li>
 </ul>
 </div></blockquote>
 </section>
@@ -5113,12 +5115,6 @@ not be supported.</p></li>
 <h4>Relations (in general)<a class="headerlink" href="#relations-in-general" title="Permalink to this heading">¶</a></h4>
 <blockquote>
 <div><ul class="simple">
-<li><p>The <code class="docutils literal notranslate"><span class="pre">emit</span></code> property (to customize output order of a node or to drop
-columns) is not supported and plans containing this property will
-be rejected.</p></li>
-<li><p>The <code class="docutils literal notranslate"><span class="pre">hint</span></code> property is not supported and plans containing this
-property will be rejected.</p></li>
-<li><p>Any advanced extensions will cause a plan to be rejected.</p></li>
 <li><p>Any relation not explicitly listed below will not be supported
 and will cause the plan to be rejected.</p></li>
 </ul>
@@ -5130,12 +5126,12 @@ and will cause the plan to be rejected.</p></li>
 <div><ul class="simple">
 <li><p>The <code class="docutils literal notranslate"><span class="pre">projection</span></code> property is not supported and plans containing this
 property will be rejected.</p></li>
-<li><p>The only supported read type is <code class="docutils literal notranslate"><span class="pre">LocalFiles</span></code>.  Plans with any other
-type will be rejected.</p></li>
-<li><p>Only the parquet file format is currently supported.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">VirtualTable</span></code> and <a href="#id2"><span class="problematic" id="id3">``</span></a>ExtensionTable``read types are not supported.
+Plans containing these types will be rejected.</p></li>
+<li><p>Only the parquet and arrow file formats are currently supported.</p></li>
 <li><p>All URIs must use the <code class="docutils literal notranslate"><span class="pre">file</span></code> scheme</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">partition_index</span></code>, <code class="docutils literal notranslate"><span class="pre">start</span></code>, and <code class="docutils literal notranslate"><span class="pre">length</span></code> are not supported.  Plans containing
-these properties will be rejected.</p></li>
+non-default values for these properties will be rejected.</p></li>
 <li><p>The Substrait spec requires that a <code class="docutils literal notranslate"><span class="pre">filter</span></code> be completely satisfied by a read
 relation.  However, Acero only uses a read filter for pushdown projection and
 it may not be fully satisfied.  Users should generally attach an additional
@@ -5181,7 +5177,8 @@ join key is supported.</p></li>
 <li><p>Each measure’s arguments must be direct references.</p></li>
 <li><p>A measure may not have a filter</p></li>
 <li><p>A measure may not have sorts</p></li>
-<li><p>A measure’s invocation must be AGGREGATION_INVOCATION_ALL</p></li>
+<li><p>A measure’s invocation must be AGGREGATION_INVOCATION_ALL or
+AGGREGATION_INVOCATION_UNSPECIFIED</p></li>
 <li><p>A measure’s phase must be AGGREGATION_PHASE_INITIAL_TO_RESULT</p></li>
 </ul>
 </div></blockquote>
@@ -5195,8 +5192,6 @@ of a filter or project relation.  For example, a join expression or an aggregate
 grouping set.  Acero typically expects these expressions to be direct references.
 Planners should extract the implicit projection into a formal project relation
 before delivering the plan to Acero.</p></li>
-<li><p>Older versions of Isthmus would omit optional arguments instead of including them
-as unspecified enums.  Acero will not support these plans.</p></li>
 </ul>
 </div></blockquote>
 </section>
@@ -5218,8 +5213,8 @@ to have nulls without rejecting it.</p></li>
 classes that are currently supported</p></li>
 </ul>
 </div></blockquote>
-<table class="table" id="id2">
-<caption><span class="caption-text">Substrait / Arrow Type Mapping</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<table class="table" id="id4">
+<caption><span class="caption-text">Substrait / Arrow Type Mapping</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 25.0%" />
 <col style="width: 25.0%" />
@@ -5334,12 +5329,11 @@ classes that are currently supported</p></li>
 <section id="functions">
 <h4>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">¶</a></h4>
 <blockquote>
-<div><ul class="simple">
-<li><p>Acero does not support the legacy <code class="docutils literal notranslate"><span class="pre">args</span></code> style of declaring arguments</p></li>
+<div><ul>
 <li><p>The following functions have caveats or are not supported at all.  Note that
 this is not a comprehensive list.  Functions are being added to Substrait at
 a rapid pace and new functions may be missing.</p>
-<ul>
+<ul class="simple">
 <li><p>Acero does not support the SATURATE option for overflow</p></li>
 <li><p>Acero does not support kernels that take more than two arguments
 for the functions <code class="docutils literal notranslate"><span class="pre">and</span></code>, <code class="docutils literal notranslate"><span class="pre">or</span></code>, <code class="docutils literal notranslate"><span class="pre">xor</span></code></p></li>
@@ -5359,8 +5353,16 @@ for the functions <code class="docutils literal notranslate"><span class="pre">a
 </li>
 </ul>
 </li>
-<li><p>The functions above must be referenced using the URI
-<code class="docutils literal notranslate"><span class="pre">https://github.com/apache/arrow/blob/master/format/substrait/extension_types.yaml</span></code></p></li>
+<li><p>The functions above should be referenced using the URI
+<code class="docutils literal notranslate"><span class="pre">https://github.com/apache/arrow/blob/master/format/substrait/extension_types.yaml</span></code></p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Alternatively, the URI can be left completely empty and Acero will match
+based only on function name.  This fallback mechanism is non-standard and should
+be avoided if possible.</p></li>
+</ul>
+</div></blockquote>
+</li>
 </ul>
 </div></blockquote>
 </section>
@@ -5610,8 +5612,8 @@ reads and decodes twice.</p>
 <p><a class="reference internal" href="api/compute.html#_CPPv4N5arrow7compute8ExecNodeE" title="arrow::compute::ExecNode"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ExecNode</span></code></a> is the component we use as a building block
 containing in-built operations with various functionalities.</p>
 <p>This is the list of operations associated with the execution plan:</p>
-<table class="table" id="id3">
-<caption><span class="caption-text">Operations and Options</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<table class="table" id="id5">
+<caption><span class="caption-text">Operations and Options</span><a class="headerlink" href="#id5" title="Permalink to this table">¶</a></caption>
 <colgroup>
 <col style="width: 50.0%" />
 <col style="width: 50.0%" />
