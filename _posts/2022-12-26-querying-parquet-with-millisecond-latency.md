@@ -29,7 +29,7 @@ limitations under the License.
 
 We believe that querying data in [Apache Parquet](https://parquet.apache.org/) files directly can achieve similar or better storage efficiency and query performance than most specialized file formats. While it requires significant engineering effort, the benefits of Parquet's open format and broad ecosystem support make it the obvious choice for a wide class of data systems.
 
-In this article we explain several advanced techniques needed to query data stored in the Parquet format quickly that we implemented in the [Apache Arrow Rust Parquet reader](https://docs.rs/parquet/27.0.0/parquet/). Together these techniques make the Rust implementation one of, if not the, fastest implementation for querying Parquet files — be it on local disk or remote object storage. It is able to query GBs of Parquet in a [matter of milliseconds](https://github.com/tustvold/access-log-bench).
+In this article we explain several advanced techniques needed to query data stored in the Parquet format quickly that we implemented in the [Apache Arrow Rust Parquet reader](https://docs.rs/parquet/27.0.0/parquet/). Together these techniques make the Rust implementation one of, if not the fastest implementation for querying Parquet files — be it on local disk or remote object storage. It is able to query GBs of Parquet in a [matter of milliseconds](https://github.com/tustvold/access-log-bench).
 
 We would like to acknowledge and thank [InfluxData](https://www.influxdata.com/) for their support of this work. InfluxData has a deep and continuing commitment to Open source software, and it sponsored much of our time for writing this blog post as well as many contributions as part of building the [InfluxDB IOx Storage Engine](https://www.influxdata.com/blog/influxdb-engine/).
 
@@ -493,8 +493,8 @@ While Parquet was designed for efficient access on the [HDFS distributed file sy
 
 
 * **Relatively slow “random access” reads**: it is much more efficient to read large (MBs) sections of data in each request than issue many requests for smaller portions
-* **Significant latency before retrieving the first byte **
-* **High per-request cost: **Often billed per request, regardless of number of bytes read, which incentivizes fewer requests that each read a large contiguous section of data.
+* **Significant latency before retrieving the first byte**
+* **High per-request cost:** Often billed per request, regardless of number of bytes read, which incentivizes fewer requests that each read a large contiguous section of data.
 
 To read optimally from such systems, a Parquet reader must:
 
