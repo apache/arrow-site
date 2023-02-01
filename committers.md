@@ -64,7 +64,7 @@ on important decisions, including releases and inviting committers to join the P
 ### Committers
 
 Contributors who have demonstrated a sustained commitment to the
-project, may be invited by the PMC to become
+project may be invited by the PMC to become
 [committers](https://www.apache.org/foundation/how-it-works.html#committers).
 Committers are authorized to merge code patches to the project's
 repositories and serve as non-voting project maintainers. See the
@@ -89,20 +89,21 @@ repositories and serve as non-voting project maintainers. See the
 
 ### **Becoming a committer**
 
-As described elsewhere, there are many ways we welcome you to
-contribute the Apache Arrow project such as issue reports,
-documentation, tests, and code. Some particularly active contributors
-may also receive an invitation to become a committer.
+There are many ways to [contribute](https://arrow.apache.org/docs/developers/contributing.html)
+to the Apache Arrow project, including issue reports,
+documentation, tests, and code. Contributors with sustained, high-quality activity
+may be invited to become a committer by the PMC.
 
-The PMC regularly adds new committers from the set of active
-contributors. Becoming a committer is a recognition of sustained
+Becoming a committer is a recognition of sustained
 contribution to the project, and comes with the privilege of
 committing changes directly in all Arrow github repositories. Becoming
 a committer is also a significant responsibility, and committers are
 expected to use their status and access to improve the Arrow project
 for the entire community.
 
-Anyone wishing to become a committer can already do all of the things a
+When considering to invite someone to be a committer, the PMC looks for 
+contributors who are doing the work and exercising the judgment expected
+of a committer. After all, any contributor can already do all of the things a
 committer does except for merge a PR. While there is no set list of
 requirements, nor a checklist that entitles one to commit privileges,
 typical behaviors include:
