@@ -101,26 +101,25 @@ a committer is also a significant responsibility, and committers are
 expected to use their status and access to improve the Arrow project
 for the entire community.
 
-When considering to invite someone to be a committer, the PMC looks for 
+When considering to invite someone to be a committer, the PMC looks for
 contributors who are doing the work and exercising the judgment expected
-of a committer. After all, any contributor can already do all of the things a
+of a committer already. After all, any contributor can do all of the things a
 committer does except for merge a PR. While there is no set list of
 requirements, nor a checklist that entitles one to commit privileges,
 typical behaviors include:
 
-* Consistent, significant, and sustained involvement in the Arrow
+* Contributions beyond pull requests, such as reviewing other pull requests,
+  fixing bugs and documentation, triaging issues, answering community
+  questions, improving usability, reducing technical debt, helping
+  with CI, verifying releases, debugging in strange environments, etc.
+
+* Consistent, significant, and sustained contributions in the Arrow
   community, typically on the order of 6 months or more.
 
-* Help grow the size and health of the community with constructive and
-  respectful interactions with the rest of the community. Maintain a
+* Assistance growing the size and health of the community via constructive and
+  respectful interactions with the rest of the community. Maintaining a
   professional and diplomatic approach and try to find consensus
   amongst other community members.
-
-* Help maintain existing code, review pull requests, fix bugs and
-  documentation, triage issues, answer community questions, improve
-  usability, reduce technical debt, help with CI, verify releases,
-  debug in strange environments, etc.
-
 
 The mechanics of how the process works is [documented here].  If you
 feel you should be offered committer privileges, but have not been,
