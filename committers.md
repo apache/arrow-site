@@ -92,13 +92,11 @@ repositories and serve as non-voting project maintainers. See the
 There are many ways to [contribute](https://arrow.apache.org/docs/developers/contributing.html)
 to the Apache Arrow project, including issue reports,
 documentation, tests, and code. Contributors with sustained, high-quality activity
-may be invited to become a committer by the PMC.
-
-Becoming a committer is a recognition of sustained
-contribution to the project, and comes with the privilege of
-committing changes directly in all Arrow github repositories. Becoming
-a committer is also a significant responsibility, and committers are
-expected to use their status and access to improve the Arrow project
+may be invited to become committers by the PMC
+as a recognition of their sustained
+contribution to the project. A committer can commit
+changes directly in all Arrow github repositories, and have the significant responsibility
+of using their status and access to improve the Arrow project
 for the entire community.
 
 When considering to invite someone to be a committer, the PMC looks for
