@@ -113,8 +113,8 @@ typical behaviors include:
   questions, improving usability, reducing technical debt, helping
   with CI, verifying releases, debugging in strange environments, etc.
 
-* Consistent, significant, and sustained contributions in the Arrow
-  community, typically on the order of 6 months or more.
+* These contributions to the project should be consistent in quality
+  and sustained over time, typically on the order of 6 months or more.
 
 * Assistance growing the size and health of the community via constructive and
   respectful interactions with the rest of the community. Maintaining a
