@@ -114,10 +114,9 @@ typical behaviors include:
 * These contributions to the project should be consistent in quality
   and sustained over time, typically on the order of 6 months or more.
 
-* Assistance growing the size and health of the community via constructive and
-  respectful interactions with the rest of the community. Maintaining a
-  professional and diplomatic approach and try to find consensus
-  amongst other community members.
+* Assistance growing the size and health of the community via
+  constructive, respectful, and consensus driven interactions, as
+  described in our [Code of Conduct] and [the Apache Way].
 
 The mechanics of how the process works is [documented here].  If you
 feel you should be offered committer privileges, but have not been,
@@ -126,3 +125,5 @@ dot apache dot org mailing list.
 
 
 [documented here]: https://cwiki.apache.org/confluence/display/ARROW/Inviting+New+Committers+and+PMC+Members
+[Code of Conduct]: https://www.apache.org/foundation/policies/conduct.html
+[the Apache Way]: https://www.apache.org/theapacheway
