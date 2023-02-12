@@ -120,8 +120,8 @@ typical behaviors include:
 
 The mechanics of how the process works is [documented here].  If you
 feel you should be offered committer privileges, but have not been,
-you can reach out to one of the PMC members or the private at arrow
-dot apache dot org mailing list.
+you can reach out to one of the PMC members or the `private@arrow.apache.org`
+mailing list.
 
 
 [documented here]: https://cwiki.apache.org/confluence/display/ARROW/Inviting+New+Committers+and+PMC+Members
