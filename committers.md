@@ -95,7 +95,7 @@ documentation, tests, and code. Contributors with sustained, high-quality activi
 may be invited to become committers by the PMC
 as a recognition of their sustained
 contribution to the project. A committer can commit
-changes directly in all Arrow github repositories, and have the significant responsibility
+changes directly in all Arrow GitHub repositories, and have the significant responsibility
 of using their status and access to improve the Arrow project
 for the entire community.
 
