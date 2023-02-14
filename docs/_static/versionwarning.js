@@ -30,7 +30,7 @@
             // Path of the page
             var location_array = location.pathname.split('/');
             var versionPath = location_array[2];
-            var versionNumber = Number (versionPath.match(/^\d+/))
+            var versionNumber = Number(versionPath.match(/^\d+/))
             var subPath = location_array[3];
             var filePath = location_array.slice(3).join('/');
             // Links to stable or dev versions
