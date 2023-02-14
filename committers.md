@@ -87,7 +87,7 @@ repositories and serve as non-voting project maintainers. See the
   {% endfor %}
 </tbody></table>
 
-### **Becoming a committer**
+### Becoming a committer
 
 There are many ways to [contribute](https://arrow.apache.org/docs/developers/contributing.html)
 to the Apache Arrow project, including issue reports,
