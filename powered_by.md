@@ -117,6 +117,9 @@ short description of your use case.
   team uses Arrow in its NodeJS GPU backend and client libraries, and is an
   early contributing member to GOAI and Arrow\[JS\] focused on bringing these
   technologies to the enterprise.
+* **[GreptimeDB][46]:** GreptimeDB is an open-source time-series database with a special focus on scalability, analytical capabilities and efficiency.
+  It's designed to work on infrastructure of the cloud era, and users benefit from its elasticity and commodity storage.
+  GreptimeDB uses Apache Arrow as the memory model and Apache Parquet as the persistent file format.
 * **[HASH][39]:** HASH is an open-core platform for building, running, and learning
   from simulations, with an in-browser IDE. HASH Engine uses Apache Arrow to power
   the datastore for simulation state during computation, enabling zero-copy data
@@ -244,3 +247,4 @@ short description of your use case.
 [43]: https://www.esri.com/en-us/arcgis/products/arcgis-python-libraries/libraries/arcpy
 [44]: https://clickhouse.com/docs/en/interfaces/formats/#data-format-arrow
 [45]: https://unum.cloud/ukv/
+[46]: https://github.com/GrepTimeTeam/greptimedb/
