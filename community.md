@@ -79,6 +79,18 @@ community and for maintaining a queue of development work and as the public
 record of work on the project. We use the mailing lists for development discussions,
 where a lengthy discussions is required.
 
+### Meetings
+
+We host online meetings to provide venues for synchronous discussions about the Arrow project. These discussions usually focus on topics of interest to developers who are contributing to Arrow, but we welcome users of Arrow to join. Currently there are two series of regularly scheduled meetings:
+
+<ul>
+  <li>Arrow community meting, held biweekly</li>
+  <li>Arrow R package development meeting, held biweekly</li>
+</ul>
+
+To receive information about these meetings, subscribe to the <code>dev@</code> mailing list as described above.
+
+
 ## Contributing
 
 As mentioned above, we use [GitHub](https://github.com/apache/arrow) for our issue
