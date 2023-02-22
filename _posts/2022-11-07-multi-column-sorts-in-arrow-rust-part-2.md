@@ -130,11 +130,9 @@ Note the following example encodings use a block size of 4 bytes, as opposed to 
                       └───┼───┼───┼───┼───┼───┤
                           │'n'│'e'│'s'│'t'│FF │
                           ├───┼───┼───┼───┼───┤
-                          │'r'│'a'│'t'│'r'│FF │
+                          │'r'│'a'│'t'│'i'│FF │
                           ├───┼───┼───┼───┼───┤
-                          │'a'│'t'│'i'│'o'│FF │
-                          ├───┼───┼───┼───┼───┤
-                          │'n'│00 │00 │00 │01 │
+                          │'o'│'n'│00 │00 │02 │
                           └───┴───┴───┴───┴───┘
 ```
 
@@ -210,7 +208,7 @@ The details of the data structure used to generate this mapping are beyond the s
 
 The data structure also ensures that no values contain `0x00` and therefore we can encode the arrays directly using `0x00` as an end-delimiter.
 
-A null value is encoded as a single `0x00` byte, and a non-null value encoded as a single `0x01` byte, followed by the `0x00` terminated byte array determined by the order preserving mapping
+A null value is encoded as a single `0x00` byte, and a non-null value encoded as a single `0x01` byte, followed by the `0x00` terminated byte array determined by the order preserving mapping.
 
 ```
                           ┌─────┬─────┬─────┬─────┐

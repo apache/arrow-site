@@ -117,6 +117,9 @@ short description of your use case.
   team uses Arrow in its NodeJS GPU backend and client libraries, and is an
   early contributing member to GOAI and Arrow\[JS\] focused on bringing these
   technologies to the enterprise.
+* **[GreptimeDB][46]:** GreptimeDB is an open-source time-series database with a special focus on scalability, analytical capabilities and efficiency.
+  It's designed to work on infrastructure of the cloud era, and users benefit from its elasticity and commodity storage.
+  GreptimeDB uses Apache Arrow as the memory model and Apache Parquet as the persistent file format.
 * **[HASH][39]:** HASH is an open-core platform for building, running, and learning
   from simulations, with an in-browser IDE. HASH Engine uses Apache Arrow to power
   the datastore for simulation state during computation, enabling zero-copy data
@@ -184,6 +187,14 @@ short description of your use case.
   Database Connectivity (ODBC) interface. It provides the ability to return
   Arrow Tables and RecordBatches in addition to the Python Database API
   Specification 2.0.
+* **[UKV][45]:** Open NoSQL binary database interface, with support for
+  LevelDB, RocksDB, UDisk, and in-memory Key-Value Stores. It extends
+  their functionality to support Document Collections, Graphs, and Vector
+  Search, similar to RedisJSON, RedisGraph, and RediSearch, and brings
+  familiar structured bindings on top, mimicking tools like pandas and NetworkX.
+  All UKV interfaces are compatible with Apache Arrow columnar format,
+  which minimizes copies when passing data between different language
+  runtimes. UKV also uses Apache Arrow Flight RPC for client-server communication.
 * **[Vaex][38]:** Out-of-Core hybrid Apache Arrow/NumPy DataFrame for Python,
   ML, visualize and explore big tabular data at a billion rows per second.
 * **[VAST][37]:** A network telemetry engine for data-driven security
@@ -235,3 +246,5 @@ short description of your use case.
 [42]: https://github.com/influxdata/influxdb_iox
 [43]: https://www.esri.com/en-us/arcgis/products/arcgis-python-libraries/libraries/arcpy
 [44]: https://clickhouse.com/docs/en/interfaces/formats/#data-format-arrow
+[45]: https://unum.cloud/ukv/
+[46]: https://github.com/GrepTimeTeam/greptimedb/

@@ -63,12 +63,12 @@ on important decisions, including releases and inviting committers to join the P
 
 ### Committers
 
-Contributors who have demonstrated a sustained commitment to the project, not
-only authoring code but also reviewing others' patches and exercising good
-judgment, may be invited by the PMC to become
+Contributors who have demonstrated a sustained commitment to the
+project may be invited by the PMC to become
 [committers](https://www.apache.org/foundation/how-it-works.html#committers).
-Committers are authorized to merge code patches to the project and serve as
-non-voting project maintainers.
+Committers are authorized to merge code patches to the project's
+repositories and serve as non-voting project maintainers. See the
+"Becoming a committer" section below for more details.
 
 <table class="table table-striped"><thead>
 <tr>
@@ -86,3 +86,44 @@ non-voting project maintainers.
     {% endif %}
   {% endfor %}
 </tbody></table>
+
+### Becoming a committer
+
+There are many ways to [contribute](https://arrow.apache.org/docs/developers/contributing.html)
+to the Apache Arrow project, including issue reports,
+documentation, tests, and code. Contributors with sustained, high-quality activity
+may be invited to become committers by the PMC
+as a recognition of their sustained
+contribution to the project. A committer can commit
+changes directly in all Arrow GitHub repositories, and have the significant responsibility
+of using their status and access to improve the Arrow project
+for the entire community.
+
+When considering to invite someone to be a committer, the PMC looks for
+contributors who are doing the work and exercising the judgment expected
+of a committer already. After all, any contributor can do all of the things a
+committer does except for merge a PR. While there is no set list of
+requirements, nor a checklist that entitles one to commit privileges,
+typical behaviors include:
+
+* Contributions beyond pull requests, such as reviewing other pull requests,
+  fixing bugs and documentation, triaging issues, answering community
+  questions, improving usability, reducing technical debt, helping
+  with CI, verifying releases, debugging in strange environments, etc.
+
+* These contributions to the project should be consistent in quality
+  and sustained over time, typically on the order of 6 months or more.
+
+* Assistance growing the size and health of the community via
+  constructive, respectful, and consensus driven interactions, as
+  described in our [Code of Conduct] and [the Apache Way].
+
+The mechanics of how the process works is [documented here].  If you
+feel you should be offered committer privileges, but have not been,
+you can reach out to one of the PMC members or the `private@arrow.apache.org`
+mailing list.
+
+
+[documented here]: https://cwiki.apache.org/confluence/display/ARROW/Inviting+New+Committers+and+PMC+Members
+[Code of Conduct]: https://www.apache.org/foundation/policies/conduct.html
+[the Apache Way]: https://www.apache.org/theapacheway
