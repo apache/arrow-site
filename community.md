@@ -45,9 +45,15 @@ These arrow.apache.org mailing lists are for project discussion:
 
 #### Tags
 
-When emailing one of the lists, you may want to prefix the subject line with
-one or more tags so that the appropriate people in the community notice the
-message. Depending the topic of your email, tags may include one or more:
+The mailing lists follow the convention of prefixing subjects with one or more
+tags in order to clarify the scope and purpose of messages. For example:
+
+- [ANNOUNCE] Apache Arrow 11.0.0 released
+- [DISCUSS][C++] C++ API as a user-facing API
+- [Java][Arrow IPC] Extreme memory usage when reading feather files
+
+When emailing one of the lists, please prefix the subject line with one or more
+tags. Depending the topic of your email, tags may include one or more:
 
 - Supported Enivronments: e.g., `[C++]`, `[Java]`, `[Python]`, etc.
 - Specifications and Protocols: e.g., `[Format]`, `[Flight RPC]`, `[ADBC]`, etc.
