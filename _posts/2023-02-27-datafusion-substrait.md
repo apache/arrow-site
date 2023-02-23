@@ -53,7 +53,7 @@ DataFusion currently supports serialization and deserialization of the following
 ### Operators / Relations
 
 | DataFusion    | SQL                     | DataFusion Supported Subtypes           |
-| ------------- |-------------------------| --------------------------------------- |
+| ------------- | ----------------------- | --------------------------------------- |
 | Projection    | SELECT                  |                                         |
 | TableScan     | FROM                    |                                         |
 | Filter        | WHERE                   |                                         |
@@ -67,7 +67,7 @@ DataFusion currently supports serialization and deserialization of the following
 ### Expressions
 
 | DataFusion        | SQL                         | DataFusion Supported Subtypes                                                                                  |
-| ----------------- |-----------------------------| ------------------------------------------------------------------------------------------------------------- | 
+| ----------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------- | ----- | ----- | ----- | ---------- |
 | AggregateFunction |                             |                                                                                                                |
 | Alias             | \<expr> AS \<alias>         |                                                                                                                |
 | Column            | \<identifier>               |                                                                                                                |
@@ -79,12 +79,12 @@ DataFusion currently supports serialization and deserialization of the following
 
 ## Physical Plan Support
 
-There is also preliminary work on supporting serialization of physical plans. The tracking issue for this is 
+There is also preliminary work on supporting serialization of physical plans. The tracking issue for this is
 [#5173](https://github.com/apache/arrow-datafusion/issues/5173).
 
 ## Python Bindings
 
-Substrait support is also available from DataFusion’s [Python bindings](https://github.com/apache/arrow-datafusion-python/). 
+Substrait support is also available from DataFusion’s [Python bindings](https://github.com/apache/arrow-datafusion-python/).
 
 Source code for this example is available [here](https://github.com/apache/arrow-datafusion-python/blob/main/examples/substrait.py).
 
@@ -124,8 +124,9 @@ Substrait support is available in DataFusion 18.0.0 and version 0.8.0 of the Pyt
 
 ## Get Involved
 
-The Substrait support is at an early stage of development, and we would welcome more contributors to expand the 
+The Substrait support is at an early stage of development, and we would welcome more contributors to expand the
 functionality and to help with compatibility testing with other data infrastructure that supports Substrait.
 
-If you are interested in getting involved, an excellent place to start is to read our communication and 
-contributor guides.
+If you are interested in getting involved, an excellent place to start is to read our
+[communication](https://arrow.apache.org/datafusion/contributor-guide/communication.html) and
+[contributor](https://arrow.apache.org/datafusion/contributor-guide/index.html) guides.
