@@ -283,7 +283,7 @@ gem install red-plasma # For Plasma support
 [13]: {{site.data.versions['current'].asc}}
 [14]: {{site.data.versions['current'].sha256}}
 [15]: {{site.data.versions['current'].sha512}}
-[16]: https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-arrow
+[16]: https://github.com/msys2/MINGW-packages/tree/HEAD/mingw-w64-arrow
 [17]: https://brew.sh/
 [18]: https://github.com/Microsoft/vcpkg
 [19]: {{ site.baseurl }}/release/

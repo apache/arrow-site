@@ -64,7 +64,7 @@ bundle exec rake
 
 ## Deployment
 
-On commits to the `master` branch of `apache/arrow-site`, the rendered
+On commits to the `main` branch of `apache/arrow-site`, the rendered
 static site will be published to the `asf-site` branch using GitHub
 Actions. On a fork, it will deploy to your `gh-pages` branch for
 deployment via GitHub Pages; this is useful for previewing changes

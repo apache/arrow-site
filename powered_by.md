@@ -228,7 +228,7 @@ short description of your use case.
 [24]: https://github.com/Paradigm4/accelerated_io_tools
 [25]: https://github.com/uwdata/falcon
 [26]: https://fastdata.io/
-[27]: https://github.com/apache/arrow-site/edit/master/powered_by.md
+[27]: https://github.com/apache/arrow-site/edit/main/powered_by.md
 [28]: https://github.com/uber/petastorm
 [29]: https://www.inaccel.com/
 [30]: https://www.mathworks.com
