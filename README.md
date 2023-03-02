@@ -77,8 +77,8 @@ workflow behaves differently.
 
 On a commit to the `main` branch, the rendered static site will be
 published to a branch named `gh-pages` (rather than `asf-site`). If it doesn't
-already exist, a `gh-pages` will be automatically created by the GitHub Actions
-workflow when it succeeds.
+already exist, a `gh-pages` branch will be automatically created by the
+GitHub Actions workflow when it succeeds.
 
 The **gh**-**p**ages branch is intended to be used with **G**it**H**ub **P**ages.
 Deploying changes on the `gh-pages` branch to GitHub Pages is a useful way to
