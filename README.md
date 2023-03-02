@@ -37,8 +37,9 @@ exists in the ASF; all metadata is local to this project.)
 
 ## Prerequisites
 
-With non-EOL-ed [Ruby](https://www.ruby-lang.org/) installed, run the
-following commands to install [Jekyll](https://jekyllrb.com/).
+With a recent version of [Ruby](https://www.ruby-lang.org/) (i.e. one that does not have
+an [End-Of-Life (EOL) status](https://www.ruby-lang.org/en/downloads/branches/)) installed,
+run the following commands to install [Jekyll](https://jekyllrb.com/).
 
 ```shell
 gem install bundler
