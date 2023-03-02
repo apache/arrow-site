@@ -89,7 +89,7 @@ by navigating to the GitHub Pages URL in their web browser.
 For the changes on the `gh-pages` branch to be deployed to GitHub Pages,
 the *Source* branch for GitHub Pages deployment must be set to `gh-pages`
 in the repository Settings of your fork (by default, the Source branch
-should be set to `asf-site` on a fork). Instructions on how to configure
+should be set to `asf-site`). Instructions on how to configure
 the Source branch can be found in the [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-from-a-branch).
 
 FYI: We can also generate the site for https://arrow.apache.org/
