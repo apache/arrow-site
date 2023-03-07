@@ -1,8 +1,8 @@
 ---
 layout: post
-title: "Introducing nanoarrow"
-date: "2022-12-14 00:00:00"
-author: paleolimbot
+title: "Apache Arrow nanoarrow 0.1 Release"
+date: "2023-03-07 00:00:00"
+author: pmc
 categories: [application]
 ---
 <!--
@@ -23,6 +23,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 {% endcomment %}
 -->
+
+The Apache Arrow team is pleased to announce the 0.1.0 release of
+Apache Arrow nanoarrow. This initial release covers 63 resolved issues from
+7 contributors.
+
+## Release Highlights
+
+This initial release includes the following:
+
+- A [C library](#using-nanoarrow-in-c) bundled as two files (nanoarrow.c
+  and nanoarrow.h)
+- An [R package](#using-nanoarrow-in-c-r-and-python) providing bindings for users
+  of the R programming language
+
+## Why nanoarrow?
 
 The adoption of the
 [Arrow C Data Interface](https://arrow.apache.org/docs/format/CDataInterface.html)
@@ -188,13 +203,25 @@ the C library interface has stabilized.
 
 ## Try nanoarrow
 
-The nanoarrow library is brand new and everything about it is experimental
-and contingent on user feedback! For any interested in giving nanoarrow a try, the
-easiest way to get started is to clone the
-[nanoarrow repository from GitHub](https://github.com/apache/arrow-nanoarrow)
+For any interested in giving nanoarrow a try, the easiest way to get started is to clone the
+[nanoarrow repository from GitHub](https://github.com/apache/arrow-nanoarrow/tree/apache-arrow-nanoarrow-0.1.0)
 and build/modify the
-[minimal CMake build example](https://github.com/apache/arrow-nanoarrow/tree/main/examples/cmake-minimal).
-For more realistic usage, one can refer to the
+[minimal CMake build example](https://github.com/apache/arrow-nanoarrow/tree/apache-arrow-nanoarrow-0.1.0/examples/cmake-minimal).
+For applied usage, one can refer to the
 [ADBC SQLite driver](https://github.com/apache/arrow-adbc/tree/main/c/driver/sqlite)
 and the [ADBC PostgreSQL driver](https://github.com/apache/arrow-adbc/tree/main/c/driver/postgresql).
-An initial 0.1 release is planned for January 2023.
+
+## Contributors
+
+This initial release consists of contributions from 6 contributors in addition
+to the invaluable advice and support of the Apache Arrow developer mailing list.
+
+```
+$ git shortlog -sn 8339114637919b661c1c8fae6764ceed532c935e..apache-arrow-nanoarrow-0.1.0 | grep -v "GitHub Actions"
+   100  Dewey Dunnington
+     7  David Li
+     2  Dirk Eddelbuettel
+     1  Dane Pitkin
+     1  Jonathan Keane
+     1  Joris Van den Bossche
+```
