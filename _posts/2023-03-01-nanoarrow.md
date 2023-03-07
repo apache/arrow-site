@@ -25,17 +25,17 @@ limitations under the License.
 -->
 
 The Apache Arrow team is pleased to announce the 0.1.0 release of
-Apache Arrow nanoarrow. This initial release covers 63 resolved issues from
-7 contributors.
+Apache Arrow nanoarrow. This initial release covers 31 resolved issues from
+6 contributors.
 
 ## Release Highlights
 
 This initial release includes the following:
 
 - A [C library](#using-nanoarrow-in-c) bundled as two files (nanoarrow.c
-  and nanoarrow.h)
+  and nanoarrow.h).
 - An [R package](#using-nanoarrow-in-c-r-and-python) providing bindings for users
-  of the R programming language
+  of the R programming language.
 
 ## Why nanoarrow?
 
