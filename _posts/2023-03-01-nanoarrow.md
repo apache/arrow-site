@@ -3,7 +3,7 @@ layout: post
 title: "Apache Arrow nanoarrow 0.1 Release"
 date: "2023-03-07 00:00:00"
 author: pmc
-categories: [application]
+categories: [release]
 ---
 <!--
 {% comment %}
