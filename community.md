@@ -81,7 +81,7 @@ where a lengthy discussions is required.
 
 ### Meetings
 
-We host online meetings to provide spaces for synchronous discussions about the Arrow project. These discussions usually focus on topics of interest to developers who are contributing to Arrow, but we welcome users of Arrow to join. Currently there are three series of regularly scheduled meetings:
+We host online meetings to provide spaces for synchronous discussions about the Arrow project. These discussions usually focus on topics of interest to developers who are contributing to Arrow, but we welcome users of Arrow to join. Currently there are three series of regularly held meetings:
 
 <table class="table table-striped"><thead>
 <tr>
@@ -93,17 +93,17 @@ We host online meetings to provide spaces for synchronous discussions about the 
   <tr>
     <td>Arrow community meting</td>
     <td>Biweekly</td>
-    <td>[Google Doc](https://docs.google.com/document/d/1xrji8fc6_24TVmKiHJB4ECX1Zy2sy2eRbBjpVJMnPmk/)</td>
+    <td><a href="https://docs.google.com/document/d/1xrji8fc6_24TVmKiHJB4ECX1Zy2sy2eRbBjpVJMnPmk/">Google Doc</a></td>
   </tr>
   <tr>
     <td>Arrow R package development meeting</td>
     <td>Biweekly</td>
-    <td>[Google Doc](https://docs.google.com/document/d/1nSIfJw8mfqtvScqvSVqmktpWff80pFmkqiZT7nTtiDo/)</td>
+    <td><a href="https://docs.google.com/document/d/1nSIfJw8mfqtvScqvSVqmktpWff80pFmkqiZT7nTtiDo/">Google Doc</a></td>
   </tr>
   <tr>
     <td>Arrow Rust sync meeting</td>
     <td>Biweekly</td>
-    <td>[Google Doc](https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/)</td>
+    <td><a href="https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/">Google Doc</a></td>
   </tr>
 </tbody></table>
 
