@@ -81,15 +81,33 @@ where a lengthy discussions is required.
 
 ### Meetings
 
-We host online meetings to provide venues for synchronous discussions about the Arrow project. These discussions usually focus on topics of interest to developers who are contributing to Arrow, but we welcome users of Arrow to join. Currently there are two series of regularly scheduled meetings:
+We host online meetings to provide spaces for synchronous discussions about the Arrow project. These discussions usually focus on topics of interest to developers who are contributing to Arrow, but we welcome users of Arrow to join. Currently there are three series of regularly scheduled meetings:
 
-<ul>
-  <li>Arrow community meting, held biweekly</li>
-  <li>Arrow R package development meeting, held biweekly</li>
-</ul>
+<table class="table table-striped"><thead>
+<tr>
+<th>Meeting</th>
+<th>Frequency</th>
+<th>Notes</th>
+</tr>
+</thead><tbody>
+  <tr>
+    <td>Arrow community meting</td>
+    <td>Biweekly</td>
+    <td>[Google Doc](https://docs.google.com/document/d/1xrji8fc6_24TVmKiHJB4ECX1Zy2sy2eRbBjpVJMnPmk/)</td>
+  </tr>
+  <tr>
+    <td>Arrow R package development meeting</td>
+    <td>Biweekly</td>
+    <td>[Google Doc](https://docs.google.com/document/d/1nSIfJw8mfqtvScqvSVqmktpWff80pFmkqiZT7nTtiDo/)</td>
+  </tr>
+  <tr>
+    <td>Arrow Rust sync meeting</td>
+    <td>Biweekly</td>
+    <td>[Google Doc](https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/)</td>
+  </tr>
+</tbody></table>
 
-To receive information about these meetings, subscribe to the <code>dev@</code> mailing list as described above.
-
+For information about how to attend these meetings, see the meeting notes and subscribe to the <code>dev@</code> mailing list as described above. The hosts of some of these meetings send reminder emails to the mailing list prior to each meeting with information about how to join.
 
 ## Contributing
 
