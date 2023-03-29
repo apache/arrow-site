@@ -69,7 +69,7 @@ voting process](https://community.apache.org/committers/voting.html). Members of
 the community are encouraged to engage with these posts by replying with a body
 of "+1 (non-binding)" if they are in support of the respective proposal. The
 result of a vote will be posted back to the dev@ mailing list with the prefix
-`[VOTE][RESULT]`.
+`[RESULT][VOTE]`.
 
 #### Other Lists
 
