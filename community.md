@@ -43,10 +43,35 @@ These arrow.apache.org mailing lists are for project discussion:
   <li> <code>dev@</code> is for discussions about contributing to the project development {% include mailing_list_links.html list="dev" %} </li>
 </ul>
 
-When emailing one of the lists, you may want to prefix the subject line with
-one or more tags, like `[C++] why did this segfault?`, `[Python] trouble with
-wheels`, etc., so that the appropriate people in the community notice the
-message.
+#### Tags
+
+The mailing lists follow the convention of prefixing subjects with one or more
+tags in order to clarify the scope and purpose of messages. For example:
+
+- [ANNOUNCE] Apache Arrow 11.0.0 released
+- [DISCUSS][C++] C++ API as a user-facing API
+- [Java][Arrow IPC] Extreme memory usage when reading feather files
+
+When emailing one of the lists, please prefix the subject line with one or more
+tags. Depending the topic of your email, tags may include one or more:
+
+- Supported Enivronments: e.g., `[C++]`, `[Java]`, `[Python]`, etc.
+- Specifications and Protocols: e.g., `[Format]`, `[Flight RPC]`, `[ADBC]`, etc.
+
+You may also prefix your subject line with `[DISCUSS]` if your email is intended
+to prompt a discussion rather than get an answer to a specific question.
+
+#### Voting
+
+Votes are held periodically on the dev@ mailing list and are indicated by the
+`[VOTE]` prefix. These votes are part of the formal [Apache Software Foundation
+voting process](https://community.apache.org/committers/voting.html). Members of
+the community are encouraged to engage with these posts by replying with a body
+of "+1 (non-binding)" if they are in support of the respective proposal. The
+result of a vote will be posted back to the dev@ mailing list with the prefix
+`[RESULT][VOTE]`.
+
+#### Other Lists
 
 You may also wish to subscribe to these lists, which capture some activity streams:
 
