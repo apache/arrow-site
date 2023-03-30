@@ -116,7 +116,7 @@ We host online meetings to provide spaces for synchronous discussions about the 
 </tr>
 </thead><tbody>
   <tr>
-    <td>Arrow community meting</td>
+    <td>Arrow community meeting</td>
     <td>Biweekly</td>
     <td><a href="https://docs.google.com/document/d/1xrji8fc6_24TVmKiHJB4ECX1Zy2sy2eRbBjpVJMnPmk/">Google Doc</a></td>
   </tr>
