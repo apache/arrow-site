@@ -3,7 +3,7 @@ layout: post
 title: "A journey with Apache Arrow (part 1)"
 date: "2023-04-02 00:00:00"
 author: Laurent Quérel
-categories: [arrow]
+categories: [application]
 ---
 <!--
 {% comment %}
