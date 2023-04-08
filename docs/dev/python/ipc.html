@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Streaming, Serialization, and IPC &#8212; Apache Arrow v12.0.0.dev352</title>
+    <title>Streaming, Serialization, and IPC &#8212; Apache Arrow v12.0.0.dev364</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        12.0.0.dev352
+        12.0.0.dev364
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -1701,6 +1701,11 @@ function checkPageExistsAndRedirect(event) {
        <li class="toctree-l4">
         <a class="reference internal" href="generated/pyarrow.DictionaryScalar.html">
          pyarrow.DictionaryScalar
+        </a>
+       </li>
+       <li class="toctree-l4">
+        <a class="reference internal" href="generated/pyarrow.RunEndEncodedScalar.html">
+         pyarrow.RunEndEncodedScalar
         </a>
        </li>
        <li class="toctree-l4">
@@ -3612,46 +3617,6 @@ function checkPageExistsAndRedirect(event) {
          pyarrow.ipc.RecordBatchStreamWriter
         </a>
        </li>
-       <li class="toctree-l4">
-        <a class="reference internal" href="generated/pyarrow.serialize.html">
-         pyarrow.serialize
-        </a>
-       </li>
-       <li class="toctree-l4">
-        <a class="reference internal" href="generated/pyarrow.serialize_to.html">
-         pyarrow.serialize_to
-        </a>
-       </li>
-       <li class="toctree-l4">
-        <a class="reference internal" href="generated/pyarrow.deserialize.html">
-         pyarrow.deserialize
-        </a>
-       </li>
-       <li class="toctree-l4">
-        <a class="reference internal" href="generated/pyarrow.deserialize_components.html">
-         pyarrow.deserialize_components
-        </a>
-       </li>
-       <li class="toctree-l4">
-        <a class="reference internal" href="generated/pyarrow.deserialize_from.html">
-         pyarrow.deserialize_from
-        </a>
-       </li>
-       <li class="toctree-l4">
-        <a class="reference internal" href="generated/pyarrow.read_serialized.html">
-         pyarrow.read_serialized
-        </a>
-       </li>
-       <li class="toctree-l4">
-        <a class="reference internal" href="generated/pyarrow.SerializedPyObject.html">
-         pyarrow.SerializedPyObject
-        </a>
-       </li>
-       <li class="toctree-l4">
-        <a class="reference internal" href="generated/pyarrow.SerializationContext.html">
-         pyarrow.SerializationContext
-        </a>
-       </li>
       </ul>
      </li>
      <li class="toctree-l3 has-children">
@@ -4896,23 +4861,6 @@ function checkPageExistsAndRedirect(event) {
    Efficiently Writing and Reading Arrow Data
   </a>
  </li>
- <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#arbitrary-object-serialization">
-   Arbitrary Object Serialization
-  </a>
-  <ul class="visible nav section-nav flex-column">
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#serializing-custom-data-types">
-     Serializing Custom Data Types
-    </a>
-   </li>
-   <li class="toc-h3 nav-item toc-entry">
-    <a class="reference internal nav-link" href="#component-based-serialization">
-     Component-based Serialization
-    </a>
-   </li>
-  </ul>
- </li>
 </ul>
 
 </nav>
@@ -5153,176 +5101,6 @@ allowing to more easily read arrays bigger than the total memory.</p>
 <code class="docutils literal notranslate"><span class="pre">memory_map</span></code> option. But in those cases, the memory mapping can’t help with
 reducing resident memory consumption. See <a class="reference internal" href="parquet.html#parquet-mmap"><span class="std std-ref">Reading Parquet and Memory Mapping</span></a> for details.</p>
 </div>
-</section>
-<section id="arbitrary-object-serialization">
-<h2>Arbitrary Object Serialization<a class="headerlink" href="#arbitrary-object-serialization" title="Permalink to this heading">¶</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The custom serialization functionality is deprecated in pyarrow 2.0, and
-will be removed in a future version.</p>
-<p>While the serialization functions in this section utilize the Arrow stream
-protocol internally, they do not produce data that is compatible with the
-above <code class="docutils literal notranslate"><span class="pre">ipc.open_file</span></code> and <code class="docutils literal notranslate"><span class="pre">ipc.open_stream</span></code> functions.</p>
-<p>For arbitrary objects, you can use the standard library <code class="docutils literal notranslate"><span class="pre">pickle</span></code>
-functionality instead. For pyarrow objects, you can use the IPC
-serialization format through the <code class="docutils literal notranslate"><span class="pre">pyarrow.ipc</span></code> module, as explained
-above.</p>
-<p>PyArrow serialization was originally meant to provide a higher-performance
-alternative to <code class="docutils literal notranslate"><span class="pre">pickle</span></code> thanks to zero-copy semantics.  However,
-<code class="docutils literal notranslate"><span class="pre">pickle</span></code> protocol 5 gained support for zero-copy using out-of-band
-buffers, and can be used instead for similar benefits.</p>
-</div>
-<p>In <code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> we are able to serialize and deserialize many kinds of Python
-objects.  As an example, consider a dictionary containing NumPy arrays:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [34]: </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-
-<span class="gp">In [35]: </span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
-<span class="gp">   ....: </span>    <span class="n">i</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
-<span class="gp">   ....: </span>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
-<span class="gp">   ....: </span><span class="p">}</span>
-<span class="gp">   ....: </span>
-</pre></div>
-</div>
-<p>We use the <code class="docutils literal notranslate"><span class="pre">pyarrow.serialize</span></code> function to convert this data to a byte
-buffer:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [36]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
-
-<span class="gp">In [37]: </span><span class="nb">type</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
-<span class="gh">Out[37]: </span><span class="go">pyarrow.lib.Buffer</span>
-
-<span class="gp">In [38]: </span><span class="n">buf</span><span class="o">.</span><span class="n">size</span>
-<span class="gh">Out[38]: </span><span class="go">200028928</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">pyarrow.serialize</span></code> creates an intermediate object which can be converted to
-a buffer (the <code class="docutils literal notranslate"><span class="pre">to_buffer</span></code> method) or written directly to an output stream.</p>
-<p><code class="docutils literal notranslate"><span class="pre">pyarrow.deserialize</span></code> converts a buffer-like object back to the original
-Python object:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [39]: </span><span class="n">restored_data</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
-
-<span class="gp">In [40]: </span><span class="n">restored_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gh">Out[40]: </span>
-<span class="go">array([[-1.44790061, -0.59253624, -0.19564642, ...,  1.05413164,</span>
-<span class="go">         0.10270642, -1.44492069],</span>
-<span class="go">       [-1.22213225,  1.63146623, -1.918385  , ...,  0.37296526,</span>
-<span class="go">        -0.11504117,  0.91363058],</span>
-<span class="go">       [ 1.25584856,  0.50370517,  0.22427141, ...,  0.49861086,</span>
-<span class="go">        -1.21597128, -0.35518547],</span>
-<span class="go">       ...,</span>
-<span class="go">       [ 0.61015863,  0.97899859, -0.08089483, ..., -0.66049831,</span>
-<span class="go">        -0.37292863, -0.68830783],</span>
-<span class="go">       [ 1.69497609,  0.01835581,  0.19037948, ...,  0.04758213,</span>
-<span class="go">         1.13956571,  0.45531514],</span>
-<span class="go">       [ 0.29129607, -0.46621263,  0.49319633, ..., -0.6281739 ,</span>
-<span class="go">         1.83356266, -0.77313251]])</span>
-</pre></div>
-</div>
-<section id="serializing-custom-data-types">
-<h3>Serializing Custom Data Types<a class="headerlink" href="#serializing-custom-data-types" title="Permalink to this heading">¶</a></h3>
-<p>If an unrecognized data type is encountered when serializing an object,
-<code class="docutils literal notranslate"><span class="pre">pyarrow</span></code> will fall back on using <code class="docutils literal notranslate"><span class="pre">pickle</span></code> for converting that type to a
-byte string. There may be a more efficient way, though.</p>
-<p>Consider a class with two members, one of which is a NumPy array:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyData</span><span class="p">:</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
-</pre></div>
-</div>
-<p>We write functions to convert this to and from a dictionary with simpler types:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_serialize_MyData</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">val</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
-
-<span class="k">def</span> <span class="nf">_deserialize_MyData</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">MyData</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
-</pre></div>
-</div>
-<p>then, we must register these functions in a <code class="docutils literal notranslate"><span class="pre">SerializationContext</span></code> so that
-<code class="docutils literal notranslate"><span class="pre">MyData</span></code> can be recognized:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">context</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">SerializationContext</span><span class="p">()</span>
-<span class="n">context</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span><span class="n">MyData</span><span class="p">,</span> <span class="s1">&#39;MyData&#39;</span><span class="p">,</span>
-                      <span class="n">custom_serializer</span><span class="o">=</span><span class="n">_serialize_MyData</span><span class="p">,</span>
-                      <span class="n">custom_deserializer</span><span class="o">=</span><span class="n">_deserialize_MyData</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Lastly, we use this context as an additional argument to <code class="docutils literal notranslate"><span class="pre">pyarrow.serialize</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">buf</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
-<span class="n">restored_val</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">SerializationContext</span></code> also has convenience methods <code class="docutils literal notranslate"><span class="pre">serialize</span></code> and
-<code class="docutils literal notranslate"><span class="pre">deserialize</span></code>, so these are equivalent statements:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">buf</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="o">.</span><span class="n">to_buffer</span><span class="p">()</span>
-<span class="n">restored_val</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="component-based-serialization">
-<h3>Component-based Serialization<a class="headerlink" href="#component-based-serialization" title="Permalink to this heading">¶</a></h3>
-<p>For serializing Python objects containing some number of NumPy arrays, Arrow
-buffers, or other data types, it may be desirable to transport their serialized
-representation without having to produce an intermediate copy using the
-<code class="docutils literal notranslate"><span class="pre">to_buffer</span></code> method. To motivate this, suppose we have a list of NumPy arrays:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [41]: </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-
-<span class="gp">In [42]: </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
-</pre></div>
-</div>
-<p>The call <code class="docutils literal notranslate"><span class="pre">pa.serialize(data)</span></code> does not copy the memory inside each of these
-NumPy arrays. This serialized representation can be then decomposed into a
-dictionary containing a sequence of <code class="docutils literal notranslate"><span class="pre">pyarrow.Buffer</span></code> objects containing
-metadata for each array and references to the memory inside the arrays. To do
-this, use the <code class="docutils literal notranslate"><span class="pre">to_components</span></code> method:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [43]: </span><span class="n">serialized</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-
-<span class="gp">In [44]: </span><span class="n">components</span> <span class="o">=</span> <span class="n">serialized</span><span class="o">.</span><span class="n">to_components</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>The particular details of the output of <code class="docutils literal notranslate"><span class="pre">to_components</span></code> are not too
-important. The objects in the <code class="docutils literal notranslate"><span class="pre">'data'</span></code> field are <code class="docutils literal notranslate"><span class="pre">pyarrow.Buffer</span></code> objects,
-which are zero-copy convertible to Python <code class="docutils literal notranslate"><span class="pre">memoryview</span></code> objects:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [45]: </span><span class="nb">memoryview</span><span class="p">(</span><span class="n">components</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-<span class="gh">Out[45]: </span><span class="go">&lt;memory at 0x7f55ee7a4c40&gt;</span>
-</pre></div>
-</div>
-<p>A memoryview can be converted back to a Arrow <code class="docutils literal notranslate"><span class="pre">Buffer</span></code> with
-<code class="docutils literal notranslate"><span class="pre">pyarrow.py_buffer</span></code>:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [46]: </span><span class="n">mv</span> <span class="o">=</span> <span class="nb">memoryview</span><span class="p">(</span><span class="n">components</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-
-<span class="gp">In [47]: </span><span class="n">buf</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">py_buffer</span><span class="p">(</span><span class="n">mv</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>An object can be reconstructed from its component-based representation using
-<code class="docutils literal notranslate"><span class="pre">deserialize_components</span></code>:</p>
-<div class="highlight-ipython notranslate"><div class="highlight"><pre><span></span><span class="gp">In [48]: </span><span class="n">restored_data</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">deserialize_components</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
-
-<span class="gp">In [49]: </span><span class="n">restored_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="gh">Out[49]: </span>
-<span class="go">array([[ 0.69888903,  0.43902728, -0.53341699,  1.31979825, -0.30038194,</span>
-<span class="go">        -0.0371734 ,  0.4668832 , -0.77888763,  0.72376216, -0.11401572],</span>
-<span class="go">       [-1.46408852, -0.58625548, -0.53862647, -0.22069441, -0.25097844,</span>
-<span class="go">         0.765765  ,  0.36498832, -0.32529337,  0.30055298,  1.79056505],</span>
-<span class="go">       [ 0.27522183, -0.1501052 ,  0.71172607,  0.0767644 ,  0.87869274,</span>
-<span class="go">         0.29421595,  0.17952365,  0.59272357,  0.15225686, -0.2245066 ],</span>
-<span class="go">       [-0.84940896, -0.37317979,  0.13721459, -0.555726  ,  1.27350523,</span>
-<span class="go">         1.27706559,  0.9565087 , -0.13832781,  2.84036637,  1.15462026],</span>
-<span class="go">       [-0.92409617,  0.85028664, -0.97807176, -0.60609502,  0.8800741 ,</span>
-<span class="go">        -0.79562634,  0.75246813, -0.45127543,  1.53481076,  1.39980027],</span>
-<span class="go">       [-1.04739482, -0.31160352, -0.64056057,  1.34574901,  0.40311172,</span>
-<span class="go">        -1.35335877,  1.28708269, -0.59183908,  2.62508926,  0.50399202],</span>
-<span class="go">       [ 0.71210471, -1.69445008, -0.4874948 ,  0.12913839,  0.22237233,</span>
-<span class="go">         0.58184703, -1.75770459,  1.04273462, -3.42024397,  1.13425858],</span>
-<span class="go">       [-0.28746835, -1.54178321,  0.32121894, -0.24843085, -0.10612442,</span>
-<span class="go">         0.41929732, -0.16940343,  0.54275541,  0.79642598, -1.36618469],</span>
-<span class="go">       [ 1.95757141, -0.16130592, -0.02808022, -0.0839462 ,  0.01686969,</span>
-<span class="go">        -0.63316491, -1.56041416,  0.62050879,  0.08666442,  1.1156745 ],</span>
-<span class="go">       [ 0.13753314, -0.93813224,  0.8840402 , -2.55783244, -1.4942442 ,</span>
-<span class="go">         1.19573315, -0.09416924, -0.17157707,  0.01275073,  1.74929305]])</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">deserialize_components</span></code> is also available as a method on
-<code class="docutils literal notranslate"><span class="pre">SerializationContext</span></code> objects.</p>
-</section>
 </section>
 </section>
 
