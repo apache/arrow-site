@@ -76,7 +76,7 @@ short description of your use case.
 * **[ClickHouse][44]:** An open-source analytical database management system. 
    ClickHouse is using Apache Arrow for data import and export, and for direct querying of external datasets 
    in Arrow, ArrowStream, Parquet and ORC formats.
-* **[CloudQuery][48]**: An open-source high performance ELT framework powered by apache arrow types system.
+* **[CloudQuery][48]**: An open-source high performance ELT framework powered by Apache Arrow's type system.
 * **[Cylon][35]:**  An open-source high performance distributed data processing library 
   that can be seamlessly integrated with existing Big Data and AI/ML frameworks. Cylon
   uses Arrow memory format and exposes language bindings to C++, Java, and Python.
