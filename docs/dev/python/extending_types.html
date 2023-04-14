@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Extending pyarrow &#8212; Apache Arrow v12.0.0.dev397</title>
+    <title>Extending pyarrow &#8212; Apache Arrow v12.0.0.dev416</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        12.0.0.dev397
+        12.0.0.dev416
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4870,6 +4870,18 @@ function checkPageExistsAndRedirect(event) {
      Conversion to pandas
     </a>
    </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#canonical-extension-types">
+     Canonical extension types
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#fixed-size-tensor">
+       Fixed size tensor
+      </a>
+     </li>
+    </ul>
+   </li>
   </ul>
  </li>
 </ul>
@@ -5215,6 +5227,145 @@ pandas <code class="docutils literal notranslate"><span class="pre">ExtensionArr
 </div>
 <p>This way, you can control the conversion of a pyarrow <code class="docutils literal notranslate"><span class="pre">Array</span></code> of your pyarrow
 extension type to a pandas <code class="docutils literal notranslate"><span class="pre">ExtensionArray</span></code> that can be stored in a DataFrame.</p>
+</section>
+<section id="canonical-extension-types">
+<h3>Canonical extension types<a class="headerlink" href="#canonical-extension-types" title="Permalink to this heading">¶</a></h3>
+<p>You can find the official list of canonical extension types in the
+<a class="reference internal" href="../format/CanonicalExtensions.html#format-canonical-extensions"><span class="std std-ref">Canonical Extension Types</span></a> section. Here we add examples on how to
+use them in pyarrow.</p>
+<section id="fixed-size-tensor">
+<h4>Fixed size tensor<a class="headerlink" href="#fixed-size-tensor" title="Permalink to this heading">¶</a></h4>
+<p>To create an array of tensors with equal shape (fixed shape tensor array) we
+first need to define a fixed shape tensor extension type with value type
+and shape:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">fixed_shape_tensor</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">(),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Then we need the storage array with <a class="reference internal" href="generated/pyarrow.list_.html#pyarrow.list_" title="pyarrow.list_"><code class="xref py py-func docutils literal notranslate"><span class="pre">pyarrow.list_()</span></code></a> type where <code class="docutils literal notranslate"><span class="pre">value_type`</span></code>
+is the fixed shape tensor value type and list size is a product of <code class="docutils literal notranslate"><span class="pre">tensor_type</span></code>
+shape elements. Then we can create an array of tensors with
+<code class="docutils literal notranslate"><span class="pre">pa.ExtensionArray.from_storage()</span></code> method:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span class="p">],</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">400</span><span class="p">]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">storage</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">(),</span> <span class="mi">4</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ExtensionArray</span><span class="o">.</span><span class="n">from_storage</span><span class="p">(</span><span class="n">tensor_type</span><span class="p">,</span> <span class="n">storage</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can also create another array of tensors with different value type:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_type_2</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">fixed_shape_tensor</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">storage_2</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="mi">4</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_array_2</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ExtensionArray</span><span class="o">.</span><span class="n">from_storage</span><span class="p">(</span><span class="n">tensor_type_2</span><span class="p">,</span> <span class="n">storage_2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Extension arrays can be used as columns in  <code class="docutils literal notranslate"><span class="pre">pyarrow.Table</span></code> or
+<code class="docutils literal notranslate"><span class="pre">pyarrow.RecordBatch</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]),</span>
+<span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]),</span>
+<span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">True</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">True</span><span class="p">]),</span>
+<span class="gp">... </span>    <span class="n">tensor_array</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">tensor_array_2</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">([(</span><span class="s1">&#39;f0&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int8</span><span class="p">()),</span>
+<span class="gp">... </span>                       <span class="p">(</span><span class="s1">&#39;f1&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()),</span>
+<span class="gp">... </span>                       <span class="p">(</span><span class="s1">&#39;f2&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">()),</span>
+<span class="gp">... </span>                       <span class="p">(</span><span class="s1">&#39;tensors_int&#39;</span><span class="p">,</span> <span class="n">tensor_type</span><span class="p">),</span>
+<span class="gp">... </span>                       <span class="p">(</span><span class="s1">&#39;tensors_float&#39;</span><span class="p">,</span> <span class="n">tensor_type_2</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">my_schema</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">table</span>
+<span class="go">pyarrow.Table</span>
+<span class="go">f0: int8</span>
+<span class="go">f1: string</span>
+<span class="go">f2: bool</span>
+<span class="go">tensors_int: extension&lt;arrow.fixed_size_tensor&gt;</span>
+<span class="go">tensors_float: extension&lt;arrow.fixed_size_tensor&gt;</span>
+<span class="go">----</span>
+<span class="go">f0: [[1,2,3]]</span>
+<span class="go">f1: [[&quot;foo&quot;,&quot;bar&quot;,null]]</span>
+<span class="go">f2: [[true,null,true]]</span>
+<span class="go">tensors_int: [[[1,2,3,4],[10,20,30,40],[100,200,300,400]]]</span>
+<span class="go">tensors_float: [[[1,2,3,4],[10,20,30,40],[100,200,300,400]]]</span>
+</pre></div>
+</div>
+<p>We can also convert a tensor array to a single multi-dimensional numpy ndarray.
+With the conversion the length of the arrow array becomes the first dimension
+in the numpy ndarray:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">numpy_tensor</span> <span class="o">=</span> <span class="n">tensor_array_2</span><span class="o">.</span><span class="n">to_numpy_ndarray</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">numpy_tensor</span>
+<span class="go">array([[[  1.,   2.],</span>
+<span class="go">        [  3.,   4.]],</span>
+<span class="go">       [[ 10.,  20.],</span>
+<span class="go">        [ 30.,  40.]],</span>
+<span class="go">       [[100., 200.],</span>
+<span class="go">        [300., 400.]]])</span>
+<span class="go"> &gt;&gt;&gt; numpy_tensor.shape</span>
+<span class="go">(3, 2, 2)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Both optional parameters, <code class="docutils literal notranslate"><span class="pre">permutation</span></code> and <code class="docutils literal notranslate"><span class="pre">dim_names</span></code>, are meant to provide the user
+with the information about the logical layout of the data compared to the physical layout.</p>
+<p>The conversion to numpy ndarray is only possible for trivial permutations (<code class="docutils literal notranslate"><span class="pre">None</span></code> or
+<code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1,</span> <span class="pre">...</span> <span class="pre">N-1]</span></code> where <code class="docutils literal notranslate"><span class="pre">N</span></code> is the number of tensor dimensions).</p>
+</div>
+<p>And also the other way around, we can convert a numpy ndarray to a fixed shape tensor array:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">FixedShapeTensorArray</span><span class="o">.</span><span class="n">from_numpy_ndarray</span><span class="p">(</span><span class="n">numpy_tensor</span><span class="p">)</span>
+<span class="go">&lt;pyarrow.lib.FixedShapeTensorArray object at ...&gt;</span>
+<span class="go">[</span>
+<span class="go">  [</span>
+<span class="go">    1,</span>
+<span class="go">    2,</span>
+<span class="go">    3,</span>
+<span class="go">    4</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    10,</span>
+<span class="go">    20,</span>
+<span class="go">    30,</span>
+<span class="go">    40</span>
+<span class="go">  ],</span>
+<span class="go">  [</span>
+<span class="go">    100,</span>
+<span class="go">    200,</span>
+<span class="go">    300,</span>
+<span class="go">    400</span>
+<span class="go">  ]</span>
+<span class="go">]</span>
+</pre></div>
+</div>
+<p>With the conversion the first dimension of the ndarray becomes the length of the pyarrow extension
+array. We can see in the example that ndarray of shape <code class="docutils literal notranslate"><span class="pre">(3,</span> <span class="pre">2,</span> <span class="pre">2)</span></code> becomes an arrow array of
+length 3 with tensor elements of shape <code class="docutils literal notranslate"><span class="pre">(2,</span> <span class="pre">2)</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># ndarray of shape (3, 2, 2)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">numpy_tensor</span><span class="o">.</span><span class="n">shape</span>
+<span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># arrow array of length 3 with tensor elements of shape (2, 2)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">pyarrow_tensor_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">FixedShapeTensorArray</span><span class="o">.</span><span class="n">from_numpy_ndarray</span><span class="p">(</span><span class="n">numpy_tensor</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">pyarrow_tensor_array</span><span class="p">)</span>
+<span class="mi">3</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">pyarrow_tensor_array</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">shape</span>
+<span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The extension type can also have <code class="docutils literal notranslate"><span class="pre">permutation</span></code> and <code class="docutils literal notranslate"><span class="pre">dim_names</span></code> defined. For
+example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">fixed_shape_tensor</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float64</span><span class="p">(),</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">permutation</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">fixed_shape_tensor</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">(),</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dim_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>for <code class="docutils literal notranslate"><span class="pre">NCHW</span></code> format where:</p>
+<ul class="simple">
+<li><p>N: number of images which is in our case the length of an array and is always on
+the first dimension</p></li>
+<li><p>C: number of channels of the image</p></li>
+<li><p>H: height of the image</p></li>
+<li><p>W: width of the image</p></li>
+</ul>
+</section>
 </section>
 </section>
 </section>
