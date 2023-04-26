@@ -24,7 +24,7 @@ limitations under the License.
 {% endcomment %}
 -->
 
-[CloudQuery](https://github.com/cloudquery/cloudquery) is an open source high performance ELT framework written in Go. We [previously](https://www.cloudquery.io/blog/building-cloudquery) discussed some of the architecture and design decisions that we took to build a performant ELT framework. A type system is one of the key components of a performant and scalable ELT framework where sources and destinations are decoupled. In this blog we will go through why we decided to adopt Apache Arrow as our type system and replace our in-house implementation.
+[CloudQuery](https://github.com/cloudquery/cloudquery) is an open source high performance ELT framework written in Go. We [previously](https://www.cloudquery.io/blog/building-cloudquery) discussed some of the architecture and design decisions that we took to build a performant ELT framework. A type system is a key component for creating a performant and scalable ELT framework where sources and destinations are decoupled. In this blog post we will go through why we decided to adopt Apache Arrow as our type system and replace our in-house implementation.
 
 # What is a Type System?
 
