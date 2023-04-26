@@ -37,7 +37,7 @@ API ---> [Source Plugin]  ----->    [Destination Plugin]
 ```
 
 
-Sources and destinations are decoupled and communicate via gRPC. This is crucial because this way we can add new destinations and update old destinations without updating source plugins code(which otherwise would introduce an unmaintainable architecture).
+Sources and destinations are decoupled and communicate via gRPC. This is crucial to allowing the addition of new destinations and updating old destinations without requiring updates to source plugin code (which otherwise would introduce an unmaintainable architecture).
 
 This is where the type system comes in. Source plugin extracts information from APIs in the most performant way, defines a schema and then transforms the result from the API (JSON or any other format) to a well-defined type system so the destination plugin will be able to easily create the schema for its database and transform the data to the destination type. So to recap, the source plugin sends mainly two things to a destination: 1) schema 2) data that fits the defined schema.
 
