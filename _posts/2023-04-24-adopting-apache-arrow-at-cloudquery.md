@@ -28,7 +28,7 @@ limitations under the License.
 
 # What is a Type System?
 
-Let’s quickly [recap](https://www.cloudquery.io/blog/building-cloudquery#type-system) what type system is and why it is needed in an ELT framework. At a very high level ELT framework extracts data from a source and moves it to a destination with a specific schema.
+Let’s quickly [recap](https://www.cloudquery.io/blog/building-cloudquery#type-system) what a type system is and why an ELT framework needs one. At a very high level, an ELT framework extracts data from some source and moves it to some destination with a specific schema.
 
 ```text
 API ---> [Source Plugin]  ----->    [Destination Plugin]
