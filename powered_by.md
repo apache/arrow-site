@@ -138,6 +138,8 @@ short description of your use case.
   written in Rust.  It is the future core of InfluxDB; supporting
   industry standard SQL, InfluxQL, and Flux. IOx uses Apache Arrow as its in-memory
   format, Apache Parquet as its persistence format and Apache Arrow Flight for RPC.
+* **[Kaskada][49]:** An open source event processing engine written in Rust and
+  built on Apache Arrow.
 * **[libgdf][14]:** A C library of CUDA-based analytics functions and GPU IPC
   support for structured data. Uses the Arrow IPC format and targets the Arrow
   memory layout in its analytic functions. This work is part of the [GPU Open
@@ -255,3 +257,4 @@ short description of your use case.
 [46]: https://github.com/GrepTimeTeam/greptimedb/
 [47]: https://github.com/huggingface/datasets
 [48]: https://github.com/cloudquery/cloudquery
+[49]: https://kaskada.io
