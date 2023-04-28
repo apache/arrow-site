@@ -45,7 +45,7 @@ This is where a type system comes in. Source plugins extract information from AP
 
 # Why Arrow?
 
-Before Arrow, we used our own type system that supported more than 14 types. This served us well, but we started to hit limitations in various use-cases. For example, in database to database replication, we needed to support many more types, including nested types. Also, performance-wise, lots of the time spent in an ELT process is around converting data from one format to another, so we wanted to take a step back and see if we can avoid this famous XKCD (by building yet another format):
+Before Arrow, we used our own type system that supported more than 14 types. This served us well, but we started to hit limitations in various use-cases. For example, in database to database replication, we needed to support many more types, including nested types. Also, performance-wise, lots of the time spent in an ELT process is around converting data from one format to another, so we wanted to take a step back and see if we can avoid this [famous XKCD](https://xkcd.com/927/) (by building yet another format):
 
 <figure style="text-align: center;">
   <img src="https://imgs.xkcd.com/comics/standards.png" width="100%" class="img-responsive" alt="Yet another standard XKCD">
