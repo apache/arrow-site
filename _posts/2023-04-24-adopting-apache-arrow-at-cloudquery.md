@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Adopting Apache Arrow at CloudQuery"
-date: "2023-04-26 00:00:00"
+date: "2023-04-30 00:00:00"
 author: Yevgeny Pats
 categories: [application]
 ---
