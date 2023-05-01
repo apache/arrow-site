@@ -41,7 +41,7 @@ API ---> [Source Plugin]  ----->    [Destination Plugin]
 
 Sources and destinations are decoupled and communicate via gRPC. This is crucial to allowing the addition of new destinations and updating old destinations without requiring updates to source plugin code (which otherwise would introduce an unmaintainable architecture).
 
-This is where a type system comes in. Source plugins extract information from APIs in the most performant way possible, defining a schema and then transforming the result from the API (JSON or any other format) to a well-defined type system. The destination plugin can then easily create the schema for its database and transform the incoming data to the destination types. So to recap, the source plugin sends mainly two things to a destination: 1) Schema 2) Data that fits the defined schema (Arrow Arrays).
+This is where a type system comes in. Source plugins extract information from APIs in the most performant way possible, defining a schema and then transforming the result from the API (JSON or any other format) to a well-defined type system. The destination plugin can then easily create the schema for its database and transform the incoming data to the destination types. So to recap, the source plugin sends mainly two things to a destination: 1) the schema 2) the records that fit the defined schema. In Arrow terminology, these are a schema and a record batch.
 
 # Why Arrow?
 
