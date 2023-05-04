@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Adopting Apache Arrow at CloudQuery | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Adopting Apache Arrow at CloudQuery" />
+<meta name="author" content="Yevgeny Pats" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="This post is a collaboration with CloudQuery and cross-posted on the CloudQuery blog. CloudQuery is an open source high performance ELT framework written in Go. We previously discussed some of the architecture and design decisions that we took to build a performant ELT framework. A type system is a key component for creating a performant and scalable ELT framework where sources and destinations are decoupled. In this blog post we will go through why we decided to adopt Apache Arrow as our type system and replace our in-house implementation. What is a Type System? Let’s quickly recap what a type system is and why an ELT framework needs one. At a very high level, an ELT framework extracts data from some source and moves it to some destination with a specific schema. API ---&gt; [Source Plugin]  -----&gt;    [Destination Plugin] -----&gt;    [Destination Plugin] gRPC Sources and destinations are decoupled and communicate via gRPC. This is crucial to allowing the addition of new destinations and updating old destinations without requiring updates to source plugin code (which otherwise would introduce an unmaintainable architecture). This is where a type system comes in. Source plugins extract information from APIs in the most performant way possible, defining a schema and then transforming the result from the API (JSON or any other format) to a well-defined type system. The destination plugin can then easily create the schema for its database and transform the incoming data to the destination types. So to recap, the source plugin sends mainly two things to a destination: 1) the schema 2) the records that fit the defined schema. In Arrow terminology, these are a schema and a record batch. Why Arrow? Before Arrow, we used our own type system that supported more than 14 types. This served us well, but we started to hit limitations in various use-cases. For example, in database to database replication, we needed to support many more types, including nested types. Also, performance-wise, lots of the time spent in an ELT process is around converting data from one format to another, so we wanted to take a step back and see if we can avoid this famous XKCD (by building yet another format): This is where Arrow comes in. Apache Arrow defines a language-independent columnar format for flat and hierarchical data, and brings the following advantages: Cross-language with extensive libraries for different languages - The format is defined via flatbuffers in such way that you can parse it in any language and already has extensive support in C/C++, C#, Go, Java, JavaScript, Julia, Matlab, Python, R, Ruby and Rust (at the time of writing). For CloudQuery this is important as it makes it much easier to develop source or destination plugins in different languages. Performance: Arrow adoption is rising especially in columnar based databases (DuckDB, ClickHouse, BigQuery) and file formats (Parquet) which makes it easier to write CloudQuery destination or source plugins for databases that already support Arrow as well as much more efficient as we remove the need for additional serialization and transformation step. Moreover, just the performance of sending Arrow format from source plugin to destination is already more performant and memory efficient, given its “zero-copy” nature and not needing serialization/deserialization. Rich Data Types: Arrow supports more than 35 types including composite types (i.e. lists, structs and maps of all the available types) and ability to extend the type system with custom types. Also, there is already built-in mapping from/to the arrow type system and the parquet type system (including nested types) which already supported in many of the arrow libraries as explained here. Summary Adopting Apache Arrow as the CloudQuery in-memory type system enables us to gain better performance, data interoperability and developer experience. Some plugins that are going to gain an immediate boost of rich type systems are our database-to-database replication plugins such as PostgreSQL CDC source plugin (and all database destinations) that are going to get support for all available types including nested ones. We are excited about this step and joining the growing Arrow community. We already contributed more than 30 upstream pull requests that were quickly reviewed by the Arrow maintainers, thank you!" />
+<meta property="og:description" content="This post is a collaboration with CloudQuery and cross-posted on the CloudQuery blog. CloudQuery is an open source high performance ELT framework written in Go. We previously discussed some of the architecture and design decisions that we took to build a performant ELT framework. A type system is a key component for creating a performant and scalable ELT framework where sources and destinations are decoupled. In this blog post we will go through why we decided to adopt Apache Arrow as our type system and replace our in-house implementation. What is a Type System? Let’s quickly recap what a type system is and why an ELT framework needs one. At a very high level, an ELT framework extracts data from some source and moves it to some destination with a specific schema. API ---&gt; [Source Plugin]  -----&gt;    [Destination Plugin] -----&gt;    [Destination Plugin] gRPC Sources and destinations are decoupled and communicate via gRPC. This is crucial to allowing the addition of new destinations and updating old destinations without requiring updates to source plugin code (which otherwise would introduce an unmaintainable architecture). This is where a type system comes in. Source plugins extract information from APIs in the most performant way possible, defining a schema and then transforming the result from the API (JSON or any other format) to a well-defined type system. The destination plugin can then easily create the schema for its database and transform the incoming data to the destination types. So to recap, the source plugin sends mainly two things to a destination: 1) the schema 2) the records that fit the defined schema. In Arrow terminology, these are a schema and a record batch. Why Arrow? Before Arrow, we used our own type system that supported more than 14 types. This served us well, but we started to hit limitations in various use-cases. For example, in database to database replication, we needed to support many more types, including nested types. Also, performance-wise, lots of the time spent in an ELT process is around converting data from one format to another, so we wanted to take a step back and see if we can avoid this famous XKCD (by building yet another format): This is where Arrow comes in. Apache Arrow defines a language-independent columnar format for flat and hierarchical data, and brings the following advantages: Cross-language with extensive libraries for different languages - The format is defined via flatbuffers in such way that you can parse it in any language and already has extensive support in C/C++, C#, Go, Java, JavaScript, Julia, Matlab, Python, R, Ruby and Rust (at the time of writing). For CloudQuery this is important as it makes it much easier to develop source or destination plugins in different languages. Performance: Arrow adoption is rising especially in columnar based databases (DuckDB, ClickHouse, BigQuery) and file formats (Parquet) which makes it easier to write CloudQuery destination or source plugins for databases that already support Arrow as well as much more efficient as we remove the need for additional serialization and transformation step. Moreover, just the performance of sending Arrow format from source plugin to destination is already more performant and memory efficient, given its “zero-copy” nature and not needing serialization/deserialization. Rich Data Types: Arrow supports more than 35 types including composite types (i.e. lists, structs and maps of all the available types) and ability to extend the type system with custom types. Also, there is already built-in mapping from/to the arrow type system and the parquet type system (including nested types) which already supported in many of the arrow libraries as explained here. Summary Adopting Apache Arrow as the CloudQuery in-memory type system enables us to gain better performance, data interoperability and developer experience. Some plugins that are going to gain an immediate boost of rich type systems are our database-to-database replication plugins such as PostgreSQL CDC source plugin (and all database destinations) that are going to get support for all available types including nested ones. We are excited about this step and joining the growing Arrow community. We already contributed more than 30 upstream pull requests that were quickly reviewed by the Arrow maintainers, thank you!" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2023/04/30/adopting-apache-arrow-at-cloudquery/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2023/04/30/adopting-apache-arrow-at-cloudquery/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-04-30T00:00:00-04:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="Adopting Apache Arrow at CloudQuery" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@Yevgeny Pats" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Yevgeny Pats"},"dateModified":"2023-04-30T00:00:00-04:00","datePublished":"2023-04-30T00:00:00-04:00","description":"This post is a collaboration with CloudQuery and cross-posted on the CloudQuery blog. CloudQuery is an open source high performance ELT framework written in Go. We previously discussed some of the architecture and design decisions that we took to build a performant ELT framework. A type system is a key component for creating a performant and scalable ELT framework where sources and destinations are decoupled. In this blog post we will go through why we decided to adopt Apache Arrow as our type system and replace our in-house implementation. What is a Type System? Let’s quickly recap what a type system is and why an ELT framework needs one. At a very high level, an ELT framework extracts data from some source and moves it to some destination with a specific schema. API ---&gt; [Source Plugin]  -----&gt;    [Destination Plugin] -----&gt;    [Destination Plugin] gRPC Sources and destinations are decoupled and communicate via gRPC. This is crucial to allowing the addition of new destinations and updating old destinations without requiring updates to source plugin code (which otherwise would introduce an unmaintainable architecture). This is where a type system comes in. Source plugins extract information from APIs in the most performant way possible, defining a schema and then transforming the result from the API (JSON or any other format) to a well-defined type system. The destination plugin can then easily create the schema for its database and transform the incoming data to the destination types. So to recap, the source plugin sends mainly two things to a destination: 1) the schema 2) the records that fit the defined schema. In Arrow terminology, these are a schema and a record batch. Why Arrow? Before Arrow, we used our own type system that supported more than 14 types. This served us well, but we started to hit limitations in various use-cases. For example, in database to database replication, we needed to support many more types, including nested types. Also, performance-wise, lots of the time spent in an ELT process is around converting data from one format to another, so we wanted to take a step back and see if we can avoid this famous XKCD (by building yet another format): This is where Arrow comes in. Apache Arrow defines a language-independent columnar format for flat and hierarchical data, and brings the following advantages: Cross-language with extensive libraries for different languages - The format is defined via flatbuffers in such way that you can parse it in any language and already has extensive support in C/C++, C#, Go, Java, JavaScript, Julia, Matlab, Python, R, Ruby and Rust (at the time of writing). For CloudQuery this is important as it makes it much easier to develop source or destination plugins in different languages. Performance: Arrow adoption is rising especially in columnar based databases (DuckDB, ClickHouse, BigQuery) and file formats (Parquet) which makes it easier to write CloudQuery destination or source plugins for databases that already support Arrow as well as much more efficient as we remove the need for additional serialization and transformation step. Moreover, just the performance of sending Arrow format from source plugin to destination is already more performant and memory efficient, given its “zero-copy” nature and not needing serialization/deserialization. Rich Data Types: Arrow supports more than 35 types including composite types (i.e. lists, structs and maps of all the available types) and ability to extend the type system with custom types. Also, there is already built-in mapping from/to the arrow type system and the parquet type system (including nested types) which already supported in many of the arrow libraries as explained here. Summary Adopting Apache Arrow as the CloudQuery in-memory type system enables us to gain better performance, data interoperability and developer experience. Some plugins that are going to gain an immediate boost of rich type systems are our database-to-database replication plugins such as PostgreSQL CDC source plugin (and all database destinations) that are going to get support for all available types including nested ones. We are excited about this step and joining the growing Arrow community. We already contributed more than 30 upstream pull requests that were quickly reviewed by the Arrow maintainers, thank you!","headline":"Adopting Apache Arrow at CloudQuery","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2023/04/30/adopting-apache-arrow-at-cloudquery/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"Yevgeny Pats"},"url":"https://arrow.apache.org/blog/2023/04/30/adopting-apache-arrow-at-cloudquery/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="https://arrow.juliadata.org/stable/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/crate/arrow/">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/adbc">ADBC</a>
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="/datafusion">DataFusion</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/contributing.html">Contributing</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/issues">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Adopting Apache Arrow at CloudQuery
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    30 Apr 2023
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Yevgeny Pats
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p>This post is a collaboration with CloudQuery and cross-posted on the CloudQuery <a href="https://cloudquery.io/blog/adopting-apache-arrow-at-cloudquery">blog</a>.</p>
+
+<p><a href="https://github.com/cloudquery/cloudquery">CloudQuery</a> is an open source high performance ELT framework written in Go. We <a href="https://www.cloudquery.io/blog/building-cloudquery">previously</a> discussed some of the <a href="https://www.cloudquery.io/docs/developers/architecture">architecture</a> and design decisions that we took to build a performant ELT framework. A type system is a key component for creating a performant and scalable ELT framework where sources and destinations are decoupled. In this blog post we will go through why we decided to adopt Apache Arrow as our type system and replace our in-house implementation.</p>
+
+<h1 id="what-is-a-type-system">What is a Type System?</h1>
+
+<p>Let’s quickly <a href="https://www.cloudquery.io/blog/building-cloudquery#type-system">recap</a> what a type system is and why an ELT framework needs one. At a very high level, an ELT framework extracts data from some source and moves it to some destination with a specific schema.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>API ---&gt; [Source Plugin]  -----&gt;    [Destination Plugin]
+                          -----&gt;    [Destination Plugin]
+                           gRPC
+</code></pre></div></div>
+
+<p>Sources and destinations are decoupled and communicate via gRPC. This is crucial to allowing the addition of new destinations and updating old destinations without requiring updates to source plugin code (which otherwise would introduce an unmaintainable architecture).</p>
+
+<p>This is where a type system comes in. Source plugins extract information from APIs in the most performant way possible, defining a schema and then transforming the result from the API (JSON or any other format) to a well-defined type system. The destination plugin can then easily create the schema for its database and transform the incoming data to the destination types. So to recap, the source plugin sends mainly two things to a destination: 1) the schema 2) the records that fit the defined schema. In Arrow terminology, these are a schema and a record batch.</p>
+
+<h1 id="why-arrow">Why Arrow?</h1>
+
+<p>Before Arrow, we used our own type system that supported more than 14 types. This served us well, but we started to hit limitations in various use-cases. For example, in database to database replication, we needed to support many more types, including nested types. Also, performance-wise, lots of the time spent in an ELT process is around converting data from one format to another, so we wanted to take a step back and see if we can avoid this <a href="https://xkcd.com/927/">famous XKCD</a> (by building yet another format):</p>
+
+<figure style="text-align: center;">
+  <img src="https://imgs.xkcd.com/comics/standards.png" width="100%" class="img-responsive" alt="Yet another standard XKCD" />
+</figure>
+
+<p>This is where Arrow comes in. Apache Arrow defines a language-independent columnar format for flat and hierarchical data, and brings the following advantages:</p>
+
+<ol>
+  <li>Cross-language with extensive libraries for different languages - The <a href="https://arrow.apache.org/docs/format/Columnar.html">format</a> is defined via flatbuffers in such way that you can parse it in any language and already has extensive support in C/C++, C#, Go, Java, JavaScript, Julia, Matlab, Python, R, Ruby and Rust (at the time of writing). For CloudQuery this is important as it makes it much easier to develop source or destination plugins in different languages.</li>
+  <li>Performance: Arrow adoption is rising especially in columnar based databases (<a href="https://duckdb.org/2021/12/03/duck-arrow.html">DuckDB</a>, <a href="https://clickhouse.com/docs/en/integrations/data-formats/arrow-avro-orc">ClickHouse</a>, <a href="https://cloud.google.com/bigquery/docs/samples/bigquerystorage-arrow-quickstart">BigQuery</a>) and file formats (<a href="https://arrow.apache.org/docs/python/parquet.html">Parquet</a>) which makes it easier to write CloudQuery destination or source plugins for databases that already support Arrow as well as much more efficient as we remove the need for additional serialization and transformation step. Moreover, just the performance of sending Arrow format from source plugin to destination is already more performant and memory efficient, given its “zero-copy” nature and not needing serialization/deserialization.</li>
+  <li>Rich Data Types: Arrow supports more than <a href="https://arrow.apache.org/docs/python/api/datatypes.html">35 types</a> including composite types (i.e. lists, structs and maps of all the available types) and ability to extend the type system with custom types. Also, there is already built-in mapping from/to the arrow type system and the parquet type system (including nested types) which already supported in many of the arrow libraries as explained <a href="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/">here</a>.</li>
+</ol>
+
+<h1 id="summary">Summary</h1>
+
+<p>Adopting Apache Arrow as the CloudQuery in-memory type system enables us to gain better performance, data interoperability and developer experience. Some plugins that are going to gain an immediate boost of rich type systems are our database-to-database replication plugins such as <a href="https://www.cloudquery.io/docs/plugins/sources/postgresql/overview">PostgreSQL CDC</a> source plugin (and all <a href="https://www.cloudquery.io/docs/plugins/destinations/overview">database destinations</a>) that are going to get support for all available types including nested ones.</p>
+
+<p>We are excited about this step and joining the growing Arrow community. We already contributed more than <a href="https://github.com/search?q=is%3Apr+author%3Ayevgenypats+author%3Ahermanschaaf+author%3Acandiduslynx+author%3Adisq+label%3A%22Component%3A+Go%22++is%3Amerged+&amp;ref=simplesearch">30</a> upstream pull requests that were quickly reviewed by the Arrow maintainers, thank you!</p>
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2023 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
