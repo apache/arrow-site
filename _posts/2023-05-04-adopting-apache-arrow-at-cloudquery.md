@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Adopting Apache Arrow at CloudQuery"
-date: "2023-04-30 00:00:00"
+date: "2023-05-04 00:00:00"
 author: Yevgeny Pats
 categories: [application]
 ---
@@ -55,7 +55,7 @@ Before Arrow, we used our own type system that supported more than 14 types. Thi
 This is where Arrow comes in. Apache Arrow defines a language-independent columnar format for flat and hierarchical data, and brings the following advantages:
 
 1. Cross-language with extensive libraries for different languages - The [format](https://arrow.apache.org/docs/format/Columnar.html) is defined via flatbuffers in such way that you can parse it in any language and already has extensive support in C/C++, C#, Go, Java, JavaScript, Julia, Matlab, Python, R, Ruby and Rust (at the time of writing). For CloudQuery this is important as it makes it much easier to develop source or destination plugins in different languages.
-2. Performance: Arrow adoption is rising especially in columnar based databases ([DuckDB](https://duckdb.org/2021/12/03/duck-arrow.html), [ClickHouse](https://clickhouse.com/docs/en/integrations/data-formats/arrow-avro-orc), [BigQuery](https://cloud.google.com/bigquery/docs/samples/bigquerystorage-arrow-quickstart)) and file formats ([Parquet](https://arrow.apache.org/docs/python/parquet.html)) which makes it easier to write CloudQuery destination or source plugins for databases that already support Arrow as well as much more efficient as we remove the need for additional serialization and transformation step. Moreover, just the performance of sending Arrow format from source plugin to destination is already more performant and memory efficient, given its “zero-copy” nature and not needing serialization/deserialization. 
+2. Performance: Arrow adoption is rising especially in columnar based databases ([DuckDB](https://duckdb.org/2021/12/03/duck-arrow.html), [ClickHouse](https://clickhouse.com/docs/en/integrations/data-formats/arrow-avro-orc), [BigQuery](https://cloud.google.com/bigquery/docs/samples/bigquerystorage-arrow-quickstart)) and file formats ([Parquet](https://arrow.apache.org/docs/python/parquet.html)) which makes it easier to write CloudQuery destination or source plugins for databases that already support Arrow as well as much more efficient as we remove the need for additional serialization and transformation step. Moreover, just the performance of sending Arrow format from source plugin to destination is already more performant and memory efficient, given its “zero-copy” nature and not needing serialization/deserialization.
 3. Rich Data Types: Arrow supports more than [35 types](https://arrow.apache.org/docs/python/api/datatypes.html) including composite types (i.e. lists, structs and maps of all the available types) and ability to extend the type system with custom types. Also, there is already built-in mapping from/to the arrow type system and the parquet type system (including nested types) which already supported in many of the arrow libraries as explained [here](https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/).
 
 # Summary
