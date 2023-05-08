@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2023-05-04T06:41:34-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Adopting Apache Arrow at CloudQuery</title><link href="https://arrow.apache.org/blog/2023/05/04/adopting-apache-arrow-at-cloudquery/" rel="alternate" type="text/html" title="Adopting Apache Arrow at CloudQuery" /><published>2023-05-04T00:00:00-04:00</published><updated>2023-05-04T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2023/05/04/adopting-apache-arrow-at-cloudquery</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/05/04/adopting-apache-arrow-at-cloudquery/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2023-05-08T06:32:11-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Adopting Apache Arrow at CloudQuery</title><link href="https://arrow.apache.org/blog/2023/05/04/adopting-apache-arrow-at-cloudquery/" rel="alternate" type="text/html" title="Adopting Apache Arrow at CloudQuery" /><published>2023-05-04T00:00:00-04:00</published><updated>2023-05-04T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2023/05/04/adopting-apache-arrow-at-cloudquery</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/05/04/adopting-apache-arrow-at-cloudquery/"><![CDATA[<!--
 
 -->
 
@@ -39,7 +39,299 @@
 
 <p>Adopting Apache Arrow as the CloudQuery in-memory type system enables us to gain better performance, data interoperability and developer experience. Some plugins that are going to gain an immediate boost of rich type systems are our database-to-database replication plugins such as <a href="https://www.cloudquery.io/docs/plugins/sources/postgresql/overview">PostgreSQL CDC</a> source plugin (and all <a href="https://www.cloudquery.io/docs/plugins/destinations/overview">database destinations</a>) that are going to get support for all available types including nested ones.</p>
 
-<p>We are excited about this step and joining the growing Arrow community. We already contributed more than <a href="https://github.com/search?q=is%3Apr+author%3Ayevgenypats+author%3Ahermanschaaf+author%3Acandiduslynx+author%3Adisq+label%3A%22Component%3A+Go%22++is%3Amerged+&amp;ref=simplesearch">30</a> upstream pull requests that were quickly reviewed by the Arrow maintainers, thank you!</p>]]></content><author><name>Yevgeny Pats</name></author><category term="application" /><summary type="html"><![CDATA[This post is a collaboration with CloudQuery and cross-posted on the CloudQuery blog. CloudQuery is an open source high performance ELT framework written in Go. We previously discussed some of the architecture and design decisions that we took to build a performant ELT framework. A type system is a key component for creating a performant and scalable ELT framework where sources and destinations are decoupled. In this blog post we will go through why we decided to adopt Apache Arrow as our type system and replace our in-house implementation. What is a Type System? Let’s quickly recap what a type system is and why an ELT framework needs one. At a very high level, an ELT framework extracts data from some source and moves it to some destination with a specific schema. API ---&gt; [Source Plugin]  -----&gt;    [Destination Plugin] -----&gt;    [Destination Plugin] gRPC Sources and destinations are decoupled and communicate via gRPC. This is crucial to allowing the addition of new destinations and updating old destinations without requiring updates to source plugin code (which otherwise would introduce an unmaintainable architecture). This is where a type system comes in. Source plugins extract information from APIs in the most performant way possible, defining a schema and then transforming the result from the API (JSON or any other format) to a well-defined type system. The destination plugin can then easily create the schema for its database and transform the incoming data to the destination types. So to recap, the source plugin sends mainly two things to a destination: 1) the schema 2) the records that fit the defined schema. In Arrow terminology, these are a schema and a record batch. Why Arrow? Before Arrow, we used our own type system that supported more than 14 types. This served us well, but we started to hit limitations in various use-cases. For example, in database to database replication, we needed to support many more types, including nested types. Also, performance-wise, lots of the time spent in an ELT process is around converting data from one format to another, so we wanted to take a step back and see if we can avoid this famous XKCD (by building yet another format): This is where Arrow comes in. Apache Arrow defines a language-independent columnar format for flat and hierarchical data, and brings the following advantages: Cross-language with extensive libraries for different languages - The format is defined via flatbuffers in such way that you can parse it in any language and already has extensive support in C/C++, C#, Go, Java, JavaScript, Julia, Matlab, Python, R, Ruby and Rust (at the time of writing). For CloudQuery this is important as it makes it much easier to develop source or destination plugins in different languages. Performance: Arrow adoption is rising especially in columnar based databases (DuckDB, ClickHouse, BigQuery) and file formats (Parquet) which makes it easier to write CloudQuery destination or source plugins for databases that already support Arrow as well as much more efficient as we remove the need for additional serialization and transformation step. Moreover, just the performance of sending Arrow format from source plugin to destination is already more performant and memory efficient, given its “zero-copy” nature and not needing serialization/deserialization. Rich Data Types: Arrow supports more than 35 types including composite types (i.e. lists, structs and maps of all the available types) and ability to extend the type system with custom types. Also, there is already built-in mapping from/to the arrow type system and the parquet type system (including nested types) which already supported in many of the arrow libraries as explained here. Summary Adopting Apache Arrow as the CloudQuery in-memory type system enables us to gain better performance, data interoperability and developer experience. Some plugins that are going to gain an immediate boost of rich type systems are our database-to-database replication plugins such as PostgreSQL CDC source plugin (and all database destinations) that are going to get support for all available types including nested ones. We are excited about this step and joining the growing Arrow community. We already contributed more than 30 upstream pull requests that were quickly reviewed by the Arrow maintainers, thank you!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Our journey at F5 with Apache Arrow (part 1)</title><link href="https://arrow.apache.org/blog/2023/04/11/our-journey-at-f5-with-apache-arrow-part-1/" rel="alternate" type="text/html" title="Our journey at F5 with Apache Arrow (part 1)" /><published>2023-04-11T00:00:00-04:00</published><updated>2023-04-11T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2023/04/11/our-journey-at-f5-with-apache-arrow-part-1</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/04/11/our-journey-at-f5-with-apache-arrow-part-1/"><![CDATA[<!--
+<p>We are excited about this step and joining the growing Arrow community. We already contributed more than <a href="https://github.com/search?q=is%3Apr+author%3Ayevgenypats+author%3Ahermanschaaf+author%3Acandiduslynx+author%3Adisq+label%3A%22Component%3A+Go%22++is%3Amerged+&amp;ref=simplesearch">30</a> upstream pull requests that were quickly reviewed by the Arrow maintainers, thank you!</p>]]></content><author><name>Yevgeny Pats</name></author><category term="application" /><summary type="html"><![CDATA[This post is a collaboration with CloudQuery and cross-posted on the CloudQuery blog. CloudQuery is an open source high performance ELT framework written in Go. We previously discussed some of the architecture and design decisions that we took to build a performant ELT framework. A type system is a key component for creating a performant and scalable ELT framework where sources and destinations are decoupled. In this blog post we will go through why we decided to adopt Apache Arrow as our type system and replace our in-house implementation. What is a Type System? Let’s quickly recap what a type system is and why an ELT framework needs one. At a very high level, an ELT framework extracts data from some source and moves it to some destination with a specific schema. API ---&gt; [Source Plugin]  -----&gt;    [Destination Plugin] -----&gt;    [Destination Plugin] gRPC Sources and destinations are decoupled and communicate via gRPC. This is crucial to allowing the addition of new destinations and updating old destinations without requiring updates to source plugin code (which otherwise would introduce an unmaintainable architecture). This is where a type system comes in. Source plugins extract information from APIs in the most performant way possible, defining a schema and then transforming the result from the API (JSON or any other format) to a well-defined type system. The destination plugin can then easily create the schema for its database and transform the incoming data to the destination types. So to recap, the source plugin sends mainly two things to a destination: 1) the schema 2) the records that fit the defined schema. In Arrow terminology, these are a schema and a record batch. Why Arrow? Before Arrow, we used our own type system that supported more than 14 types. This served us well, but we started to hit limitations in various use-cases. For example, in database to database replication, we needed to support many more types, including nested types. Also, performance-wise, lots of the time spent in an ELT process is around converting data from one format to another, so we wanted to take a step back and see if we can avoid this famous XKCD (by building yet another format): This is where Arrow comes in. Apache Arrow defines a language-independent columnar format for flat and hierarchical data, and brings the following advantages: Cross-language with extensive libraries for different languages - The format is defined via flatbuffers in such way that you can parse it in any language and already has extensive support in C/C++, C#, Go, Java, JavaScript, Julia, Matlab, Python, R, Ruby and Rust (at the time of writing). For CloudQuery this is important as it makes it much easier to develop source or destination plugins in different languages. Performance: Arrow adoption is rising especially in columnar based databases (DuckDB, ClickHouse, BigQuery) and file formats (Parquet) which makes it easier to write CloudQuery destination or source plugins for databases that already support Arrow as well as much more efficient as we remove the need for additional serialization and transformation step. Moreover, just the performance of sending Arrow format from source plugin to destination is already more performant and memory efficient, given its “zero-copy” nature and not needing serialization/deserialization. Rich Data Types: Arrow supports more than 35 types including composite types (i.e. lists, structs and maps of all the available types) and ability to extend the type system with custom types. Also, there is already built-in mapping from/to the arrow type system and the parquet type system (including nested types) which already supported in many of the arrow libraries as explained here. Summary Adopting Apache Arrow as the CloudQuery in-memory type system enables us to gain better performance, data interoperability and developer experience. Some plugins that are going to gain an immediate boost of rich type systems are our database-to-database replication plugins such as PostgreSQL CDC source plugin (and all database destinations) that are going to get support for all available types including nested ones. We are excited about this step and joining the growing Arrow community. We already contributed more than 30 upstream pull requests that were quickly reviewed by the Arrow maintainers, thank you!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 12.0.0 Release</title><link href="https://arrow.apache.org/blog/2023/05/02/12.0.0-release/" rel="alternate" type="text/html" title="Apache Arrow 12.0.0 Release" /><published>2023-05-02T00:00:00-04:00</published><updated>2023-05-02T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2023/05/02/12.0.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/05/02/12.0.0-release/"><![CDATA[<!--
+
+-->
+
+<p>The Apache Arrow team is pleased to announce the 12.0.0 release. This covers
+over 3 months of development work and includes <a href="https://github.com/apache/arrow/milestone/51?closed=1"><strong>476 resolved issues</strong></a>
+with <a href="/release/12.0.0.html#contributors"><strong>531 commits from 97 distinct contributors</strong></a>.
+See the <a href="https://arrow.apache.org/install/">Install Page</a>
+to learn how to get the libraries for your platform.</p>
+
+<p>The release notes below are not exhaustive and only expose selected highlights
+of the release. Many other bugfixes and improvements have been made: we refer
+you to the <a href="/release/12.0.0.html#changelog">complete changelog</a>.</p>
+
+<h2 id="community">Community</h2>
+
+<p>Since the 11.0.0 release, Wang Mingming, Mustafa Akur and Ruihang Xia
+have been invited to be committers.
+Will Jones have joined the Project Management Committee (PMC).</p>
+
+<p>Thanks for your contributions and participation in the project!</p>
+
+<h2 id="columnar-format-notes">Columnar Format Notes</h2>
+
+<p>A first “canonical” extension type has been formalized: <code class="language-plaintext highlighter-rouge">arrow.fixed_shape_tensor</code> to
+represent an Array where each slot contains a tensor, with all tensors having the same
+dimension and shape, <a href="https://github.com/apache/arrow/issues/33923">GH-33923</a>.
+This is based on a Fixed-Size List layout as storage array
+(<a href="https://arrow.apache.org/docs/dev/format/CanonicalExtensions.html#fixed-shape-tensor-extension">https://arrow.apache.org/docs/dev/format/CanonicalExtensions.html#fixed-shape-tensor-extension</a>).</p>
+
+<h2 id="arrow-flight-rpc-notes">Arrow Flight RPC notes</h2>
+
+<p>The JDBC driver for Arrow Flight SQL has had some bugfixes, and has been refactored into a core library (which is not distributed as an uberjar with shaded names) and a driver (which is distributed as an uberjar).</p>
+
+<p>The Java server builder API now offers easier access to the underlying gRPC builder.</p>
+
+<p>Go now implements the Flight SQL extensions for Substrait and transaction support.</p>
+
+<h2 id="plasma-notes">Plasma notes</h2>
+
+<p>Plasma was deprecated since 10.0.0. Plasma is removed in this
+release. <a href="https://github.com/apache/arrow/issues/33243">GH-33243</a></p>
+
+<h2 id="c-notes">C++ notes</h2>
+
+<ul>
+  <li>Run-End Encoded Arrays have been implemented and are accessible (<a href="https://github.com/apache/arrow/issues/32104">GH-32104</a>)</li>
+  <li>The FixedShapeTensor Logical value type has been implemented using ExtensionType (<a href="https://github.com/apache/arrow/issues/15483">GH-15483</a>, <a href="https://github.com/apache/arrow/issues/34796">GH-34796</a>)</li>
+</ul>
+
+<h3 id="compute">Compute</h3>
+
+<ul>
+  <li>New kernel to convert timestamp with timezone to wall time (<a href="https://github.com/apache/arrow/issues/33143">GH-33143</a>)</li>
+  <li>Cast kernels are now built into libarrow by default (<a href="https://github.com/apache/arrow/issues/34388">GH-34388</a>)</li>
+</ul>
+
+<h3 id="acero">Acero</h3>
+
+<ul>
+  <li>Acero has been moved out of libarrow into it’s own shared library, allowing for smaller builds of the core libarrow (<a href="https://github.com/apache/arrow/issues/15280">GH-15280</a>)</li>
+  <li>Exec nodes now can have a concept of “ordering” and will reject non-sensible plans (<a href="https://github.com/apache/arrow/issues/34136">GH-34136</a>)</li>
+  <li>New exec nodes: “pivot_longer” (<a href="https://github.com/apache/arrow/issues/34266">GH-34266</a>), “order_by” (<a href="https://github.com/apache/arrow/issues/34248">GH-34248</a>) and “fetch” (<a href="https://github.com/apache/arrow/issues/34059">GH-34059</a>)</li>
+  <li><em>Breaking Change:</em> Reorder output fields of “group_by” node so that keys/segment keys come before aggregates (<a href="https://github.com/apache/arrow/issues/33616">GH-33616</a>)</li>
+</ul>
+
+<h3 id="substrait">Substrait</h3>
+
+<ul>
+  <li>Add support for the <code class="language-plaintext highlighter-rouge">round</code> function <a href="https://github.com/apache/arrow/issues/33588">GH-33588</a></li>
+  <li>Add support for the <code class="language-plaintext highlighter-rouge">cast</code> expression element <a href="https://github.com/apache/arrow/issues/31910">GH-31910</a></li>
+  <li>Added API reference documentation <a href="https://github.com/apache/arrow/issues/34011">GH-34011</a></li>
+  <li>Added an extension relation to support segmented aggregation <a href="https://github.com/apache/arrow/issues/34626">GH-34626</a></li>
+  <li>The output of the aggregate relation now conforms to the spec <a href="https://github.com/apache/arrow/issues/34786">GH-34786</a></li>
+</ul>
+
+<h3 id="parquet">Parquet</h3>
+
+<ul>
+  <li>Added support for DeltaLengthByteArray encoding to the Parquet writer (<a href="https://github.com/apache/arrow/issues/33024">GH-33024</a>)</li>
+  <li>NaNs are correctly handled now for Parquet predicate push-downs (<a href="https://github.com/apache/arrow/issues/18481">GH-18481</a>)</li>
+  <li>Added support for reading Parquet page indexes (<a href="https://github.com/apache/arrow/issues/33596">GH-33596</a>) and writing page indexes (<a href="https://github.com/apache/arrow/issues/34053">GH-34053</a>)</li>
+  <li>Parquet writer can write columns in parallel now (<a href="https://github.com/apache/arrow/issues/33655">GH-33655</a>)</li>
+  <li>Fixed incorrect number of rows in Parquet V2 page headers (<a href="https://github.com/apache/arrow/issues/34086">GH-34086</a>)</li>
+  <li>Fixed incorrect Parquet page null_count when stats are disabled (<a href="https://github.com/apache/arrow/issues/34326">GH-34326</a>)</li>
+  <li>Added support for reading BloomFilters to the Parquet Reader (<a href="https://github.com/apache/arrow/issues/34665">GH-34665</a>)</li>
+  <li>Parquet File-writer can now add additional key-value metadata after it has been opened (<a href="https://github.com/apache/arrow/issues/34888">GH-34888</a>)</li>
+  <li><em>Breaking Change:</em> The default row group size for the Arrow writer changed from 64Mi rows to 1Mi rows. <a href="https://github.com/apache/arrow/issues/34280">GH-34280</a></li>
+</ul>
+
+<h3 id="orc">ORC</h3>
+
+<ul>
+  <li>Added support for the union type in ORC writer (<a href="https://github.com/apache/arrow/issues/34262">GH-34262</a>)</li>
+  <li>Fixed ORC CHAR type mapping with Arrow (<a href="https://github.com/apache/arrow/issues/34823">GH-34823</a>)</li>
+  <li>Fixed timestamp type mapping between ORC and arrow (<a href="https://github.com/apache/arrow/issues/34590">GH-34590</a>)</li>
+</ul>
+
+<h3 id="datasets">Datasets</h3>
+
+<ul>
+  <li>Added support for reading JSON datasets (<a href="https://github.com/apache/arrow/issues/33209">GH-33209</a>)</li>
+  <li>Dataset writer now supports specifying a function callback to construct the file name in addition to the existing file name template (<a href="https://github.com/apache/arrow/issues/34565">GH-34565</a>)</li>
+</ul>
+
+<h3 id="filesystems">Filesystems</h3>
+
+<ul>
+  <li>GcsFileSystem::OpenInputFile avoids unnecessary downloads (<a href="https://github.com/apache/arrow/issues/34051">GH-34051</a>)</li>
+</ul>
+
+<h3 id="other-changes">Other changes</h3>
+
+<ul>
+  <li>Convenience Append(std::optional<T>...) methods have been added to array builders ([GH-14863](https://github.com/apache/arrow/issues/14863))</T></li>
+  <li>A deprecated OpenTelemetry header was removed from the Flight library (<a href="https://github.com/apache/arrow/issues/34417">GH-34417</a>)</li>
+  <li>Fixed crash in “take” kernels on ExtensionArrays with an underlying dictionary type (<a href="https://github.com/apache/arrow/issues/34619">GH-34619</a>)</li>
+  <li>Fixed bug where the C-Data bridge did not preserve nullability of map values on import (<a href="https://github.com/apache/arrow/issues/34983">GH-34983</a>)</li>
+  <li>Added support for EqualOptions to RecordBatch::Equals (<a href="https://github.com/apache/arrow/issues/34968">GH-34968</a>)</li>
+  <li>zstd dependency upgraded to v1.5.5 (<a href="https://github.com/apache/arrow/issues/34899">GH-34899</a>)</li>
+  <li>Improved handling of “logical” nulls such as with union and RunEndEncoded arrays (<a href="https://github.com/apache/arrow/issues/34361">GH-34361</a>)</li>
+  <li>Fixed incorrect handling of uncompressed body buffers in IPC reader, added IpcWriteOptions::min_space_savings for optional compression optimizations (<a href="https://github.com/apache/arrow/issues/15102">GH-15102</a>)</li>
+</ul>
+
+<h2 id="c-notes-1">C# notes</h2>
+
+<ul>
+  <li>Support added for importing / exporting schemas and types via the
+C data interface <a href="https://github.com/apache/arrow/issues/34737">GH-34737</a></li>
+  <li>Support added for the half-float data type <a href="https://github.com/apache/arrow/issues/25163">GH-25163</a></li>
+  <li>Schemas are now allowed to have multiple fields with the same name
+<a href="https://github.com/apache/arrow/issues/34076">GH-34076</a></li>
+  <li>Added support for reading compressed IPC files <a href="https://github.com/apache/arrow/issues/32240">GH-32240</a></li>
+  <li>Add [] operator to Schema <a href="https://github.com/apache/arrow/issues/32240">GH-34119</a></li>
+</ul>
+
+<h2 id="go-notes">Go notes</h2>
+
+<ul>
+  <li>Run-End Encoded Arrays have been added to the Golang implementation (<a href="https://github.com/apache/arrow/issues/32104">GH-32104</a>, <a href="https://github.com/apache/arrow/issues/32946">GH-32946</a>, <a href="https://github.com/apache/arrow/issues/20407">GH-20407</a>, <a href="https://github.com/apache/arrow/issues/32949">GH-32949</a>)</li>
+  <li>The SQLite Flight SQL Example has been improved and you can now <code class="language-plaintext highlighter-rouge">go get</code> a simple SQLite Flight SQL Server mainprog using <code class="language-plaintext highlighter-rouge">go get github.com/apache/arrow/go/v12/arrow/flight/flightsql/example/cmd/sqlite_flightsql_server</code> (<a href="https://github.com/apache/arrow/issues/33840">GH-33840</a>)</li>
+  <li>Fixed bug causing builds to fail with the <code class="language-plaintext highlighter-rouge">noasm</code> build tag (<a href="https://github.com/apache/arrow/issues/34044">GH-34044</a>) and added a CI test run that uses the <code class="language-plaintext highlighter-rouge">noasm</code> tag (<a href="https://github.com/apache/arrow/issues/34055">GH-34055</a>)</li>
+  <li>Fixed issue allowing building on riscv64-freebsd (<a href="https://github.com/apache/arrow/issues/34629">GH-34629</a>)</li>
+  <li>Fixed issue preventing building on 32-bit platforms (<a href="https://github.com/apache/arrow/issues/35133">GH-35133</a>)</li>
+</ul>
+
+<h3 id="arrow">Arrow</h3>
+
+<ul>
+  <li>Fixed bug in C-Data handling of <code class="language-plaintext highlighter-rouge">ArrowArrayStream.get_next</code> when handling uninitialized <code class="language-plaintext highlighter-rouge">ArrowArrays</code> (<a href="https://github.com/apache/arrow/issues/33767">GH-33767</a>)</li>
+  <li><em>Breaking Change:</em> Added <code class="language-plaintext highlighter-rouge">Err()</code> method to <code class="language-plaintext highlighter-rouge">RecordReader</code> interface so that it can propagate errors (<a href="https://github.com/apache/arrow/issues/33789">GH-33789</a>)</li>
+  <li>Fixed potential panic in C-Data API for misusing an invalid handle (<a href="https://github.com/apache/arrow/issues/33864">GH-33864</a>)</li>
+  <li>A new cgo-based Allocator that does not depend on libarrow has been added to the memory package (<a href="https://github.com/apache/arrow/issues/33901">GH-33901</a>)</li>
+  <li>CSV Reader and Writer now support Extension type arrays (<a href="https://github.com/apache/arrow/issues/34334">GH-34334</a>)</li>
+  <li>Fixed bug preventing the reading of IPC streams/files with compression enabled but uncompressed buffers (<a href="https://github.com/apache/arrow/issues/34385">GH-34385</a>)</li>
+  <li>Added interface which can be added to an <code class="language-plaintext highlighter-rouge">ExtensionType</code> to allow Builders to be created via <code class="language-plaintext highlighter-rouge">NewBuilder</code>, enabling easy building of nested fields containing extension types (<a href="https://github.com/apache/arrow/issues/34453">GH-34453</a>)</li>
+  <li>Added utilities to perform Array diffing (<a href="https://github.com/apache/arrow/issues/34790">GH-34790</a>)</li>
+  <li>Added <code class="language-plaintext highlighter-rouge">SetColumn</code> method to <code class="language-plaintext highlighter-rouge">arrow.Record</code> (<a href="https://github.com/apache/arrow/issues/34832">GH-34832</a>)</li>
+  <li>Added <code class="language-plaintext highlighter-rouge">GetValue</code> method to <code class="language-plaintext highlighter-rouge">arrow.Metadata</code> (<a href="https://github.com/apache/arrow/issues/34855">GH-34855</a>)</li>
+  <li>Added <code class="language-plaintext highlighter-rouge">Pow</code> method to <code class="language-plaintext highlighter-rouge">decimal128.Num</code> and <code class="language-plaintext highlighter-rouge">decimal256.Num</code> (<a href="https://github.com/apache/arrow/issues/34863">GH-34863</a>)</li>
+</ul>
+
+<h4 id="flight">Flight</h4>
+
+<ul>
+  <li>Fixed bug in <code class="language-plaintext highlighter-rouge">StreamChunks</code> for Flight SQL to correctly propagate to the gRPC client (<a href="https://github.com/apache/arrow/issues/33717">GH-33717</a>)</li>
+  <li>Fixed issue that prevented compatibility with gRPC &lt; v1.45 (<a href="https://github.com/apache/arrow/issues/33734">GH-33734</a>)</li>
+  <li>Added support to bind a <code class="language-plaintext highlighter-rouge">RecordReader</code> for supplying parameters to a Flight SQL Prepared statement (<a href="https://github.com/apache/arrow/issues/33794">GH-33794</a>)</li>
+  <li>Prepared Statement methods for FlightSQL client now allows gRPC Call Options (<a href="https://github.com/apache/arrow/issues/33867">GH-33867</a>)</li>
+  <li>FlightSQL Extensions have been implemented (for transactions and Substrait support) (<a href="https://github.com/apache/arrow/issues/33935">GH-33935</a>)</li>
+  <li>A driver compatible with <code class="language-plaintext highlighter-rouge">database/sql</code> for FlightSQL has been added (<a href="https://github.com/apache/arrow/issues/34332">GH-34332</a>)</li>
+</ul>
+
+<h4 id="compute-1">Compute</h4>
+
+<ul>
+  <li>“run_end_encode” and “run_end_decode” functions added to compute functions (<a href="https://github.com/apache/arrow/issues/20408">GH-20408</a>)</li>
+  <li>“unique” function added (<a href="https://github.com/apache/arrow/issues/34171">GH-34171</a>)</li>
+</ul>
+
+<h3 id="parquet-1">Parquet</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">pqarrow</code> pkg now handles DICTIONARY fields natively (<a href="https://github.com/apache/arrow/issues/33466">GH-33466</a>)</li>
+  <li>Fixed rare panic when writing list of 8 structs (<a href="https://github.com/apache/arrow/issues/33600">GH-33600</a>)</li>
+  <li>Added support for <code class="language-plaintext highlighter-rouge">pqarrow</code> pkg to write LargeString and LargeBinary types (<a href="https://github.com/apache/arrow/issues/33875">GH-33875</a>)</li>
+  <li>Fixed bug where <code class="language-plaintext highlighter-rouge">pqarrow.NewSchemaManifest</code> created the wrong field type for Array Object fields (<a href="https://github.com/apache/arrow/issues/34101">GH-34101</a>)</li>
+  <li>Added support to Parquet Writer for Extension type Arrays (<a href="https://github.com/apache/arrow/issues/34330">GH-34330</a>)</li>
+</ul>
+
+<h2 id="java-notes">Java notes</h2>
+
+<ul>
+  <li>Update Java JNI modules to consider Arrow ACERO <a href="https://github.com/apache/arrow/issues/34862">GH-34862</a></li>
+  <li>Ability to register additional GRPC services with FlightServer <a href="https://github.com/apache/arrow/issues/34778">GH-34778</a></li>
+  <li>Allow sending custom headers/properties through Arrow Flight SQL JDBC <a href="https://github.com/apache/arrow/issues/33874">GH-33874</a></li>
+</ul>
+
+<h2 id="javascript-notes">JavaScript notes</h2>
+
+<p>No changes.</p>
+
+<h2 id="python-notes">Python notes</h2>
+
+<p>Compatibility notes:</p>
+
+<ul>
+  <li>Plasma has been removed in this release (<a href="https://github.com/apache/arrow/issues/33243">GH-33243</a>). In additiona, the deprecated serialization module in PyArrow was also removed (<a href="https://github.com/apache/arrow/issues/29705">GH-29705</a>). IPC (Inter-Process Communication) functionality of pyarrow or the standard library pickle should be used instead.</li>
+  <li>The deprecated <code class="language-plaintext highlighter-rouge">use_async</code> keyword has been removed from the dataset module (<a href="https://github.com/apache/arrow/issues/30774">GH-30774</a>)</li>
+  <li>Minimum Cython version to build PyArrow from source has been raised to 0.29.31 (<a href="https://github.com/apache/arrow/issues/34933">GH-34933</a>). In addition, PyArrow can now be compiled using Cython 3 (<a href="https://github.com/apache/arrow/issues/34564">GH-34564</a>).</li>
+</ul>
+
+<p>New features:</p>
+
+<ul>
+  <li>A new <code class="language-plaintext highlighter-rouge">pyarrow.acero</code> module with initial bindings for the Acero execution engine has been added (<a href="https://github.com/apache/arrow/issues/33976">GH-33976</a>)</li>
+  <li>A new canonical extension type for fixed shaped tensor data has been defined. This is exposed in PyArrow as the FixedShapeTensorType (<a href="https://github.com/apache/arrow/issues/34882">GH-34882</a>, <a href="https://github.com/apache/arrow/issues/34956">GH-34956</a>)</li>
+  <li>Run-End Encoded arrays binding has been implemented (<a href="https://github.com/apache/arrow/issues/34686">GH-34686</a>, <a href="https://github.com/apache/arrow/issues/34568">GH-34568</a>)</li>
+  <li>Method <code class="language-plaintext highlighter-rouge">is_nan</code> has been added to Array, ChunkedArray and Expression (<a href="https://github.com/apache/arrow/issues/34154">GH-34154</a>)</li>
+  <li>Dataframe interchange protocol has been implemented for RecordBatch (<a href="https://github.com/apache/arrow/issues/33926">GH-33926</a>)</li>
+</ul>
+
+<p>Other improvements:</p>
+
+<ul>
+  <li>Extension arrays can now be concatenated (<a href="https://github.com/apache/arrow/issues/31868">GH-31868</a>)</li>
+  <li><code class="language-plaintext highlighter-rouge">get_partition_keys</code> helper function is implemented in the <code class="language-plaintext highlighter-rouge">dataset</code> module to access the partitioning field’s key/value from the partition expression of a certain dataset fragment (<a href="https://github.com/apache/arrow/issues/33825">GH-33825</a>)</li>
+  <li>PyArrow Array objects can now be accepted by the <code class="language-plaintext highlighter-rouge">pa.array()</code> constructor (<a href="https://github.com/apache/arrow/issues/34411">GH-34411</a>)</li>
+  <li>The default row group size when writing parquet files has been changed (<a href="https://github.com/apache/arrow/issues/34280">GH-34280</a>)</li>
+  <li>RecordBatch has the <code class="language-plaintext highlighter-rouge">select()</code> method implemented (<a href="https://github.com/apache/arrow/issues/34359">GH-34359</a>)</li>
+  <li>New method <code class="language-plaintext highlighter-rouge">drop_column</code> on the <code class="language-plaintext highlighter-rouge">pyarrow.Table</code> supports passing a single column as a string (<a href="https://github.com/apache/arrow/issues/33377">GH-33377</a>)</li>
+  <li>User-defined tabular functions, which are a user-functions implemented in Python that return a stateful stream of tabular data, are now also supported (<a href="https://github.com/apache/arrow/issues/32916">GH-32916</a>)</li>
+  <li><a href="https://arrow.apache.org/docs/dev/developers/continuous_integration/archery.html">Arrow Archery tool</a> now includes linting of the Cython files (<a href="https://github.com/apache/arrow/issues/31905">GH-31905</a>)</li>
+  <li><em>Breaking Change:</em> Reorder output fields of “group_by” node so that keys/segment keys come before aggregates (<a href="https://github.com/apache/arrow/issues/33616">GH-33616</a>)</li>
+</ul>
+
+<p>Relevant bug fixes:</p>
+
+<ul>
+  <li>Acero can now detect and raise an error in case a join operation needs too much bytes of key data (<a href="https://github.com/apache/arrow/issues/34474">GH-34474</a>)</li>
+  <li>Fix for converting non-sequence object in <code class="language-plaintext highlighter-rouge">pa.array()</code> (<a href="https://github.com/apache/arrow/issues/34944">GH-34944</a>)</li>
+  <li>Fix erroneous table conversion to pandas if table includes an extension array that does not implement <code class="language-plaintext highlighter-rouge">to_pandas_dtype</code> (<a href="https://github.com/apache/arrow/issues/34906">GH-34906</a>)</li>
+  <li>Reading from a closed <code class="language-plaintext highlighter-rouge">ArrayStreamBatchReader</code> now returns invalid status instead of segfaulting (<a href="https://github.com/apache/arrow/issues/34165">GH-34165</a>)</li>
+  <li><code class="language-plaintext highlighter-rouge">array()</code> now returns <code class="language-plaintext highlighter-rouge">pyarrow.Array</code> and not <code class="language-plaintext highlighter-rouge">pyarrow.ChunkedArray</code> for columns with <code class="language-plaintext highlighter-rouge">__arrow_array__</code> method and only one chunk so that the conversion of pandas dataframe with categorical column of dtype <code class="language-plaintext highlighter-rouge">string[pyarrow]</code> does not fail (<a href="https://github.com/apache/arrow/issues/33727">GH-33727</a>)</li>
+  <li>Custom type mapper in <code class="language-plaintext highlighter-rouge">to_pandas</code> now converts index dtypes together with column dtypes (<a href="https://github.com/apache/arrow/issues/34283">GH-34283</a>)</li>
+</ul>
+
+<h2 id="r-notes">R notes</h2>
+
+<ul>
+  <li>The <code class="language-plaintext highlighter-rouge">read_parquet()</code> and <code class="language-plaintext highlighter-rouge">read_feather()</code> functions can now accept URL
+arguments.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">json_credentials</code> argument in <code class="language-plaintext highlighter-rouge">GcsFileSystem$create()</code> now accepts
+a file path containing the appropriate authentication token.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">$options</code> member of <code class="language-plaintext highlighter-rouge">GcsFileSystem</code> objects can now be inspected.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">read_csv_arrow()</code> and <code class="language-plaintext highlighter-rouge">read_json_arrow()</code> functions now accept literal text input wrapped in
+<code class="language-plaintext highlighter-rouge">I()</code> to improve compatability with <code class="language-plaintext highlighter-rouge">readr::read_csv()</code>.</li>
+  <li>Nested fields can now be accessed using <code class="language-plaintext highlighter-rouge">$</code> and <code class="language-plaintext highlighter-rouge">[[</code> in dplyr expressions.</li>
+</ul>
+
+<p>For more on what’s in the 12.0.0 R package, see the <a href="/docs/r/news/">R changelog</a>.</p>
+
+<h2 id="ruby-and-c-glib-notes">Ruby and C GLib notes</h2>
+
+<ul>
+  <li>Flight SQL: Added support for authentication. <a href="https://github.com/apache/arrow/issues/34074">GH-34074</a></li>
+  <li>Compute: Added <code class="language-plaintext highlighter-rouge">GArrowRankOptions</code>. <a href="https://github.com/apache/arrow/issues/34425">GH-34425</a></li>
+  <li>Compute: Added <code class="language-plaintext highlighter-rouge">GArrowFilterOptions</code>. <a href="https://github.com/apache/arrow/issues/34650">GH-34650</a></li>
+  <li>Compute: Added <code class="language-plaintext highlighter-rouge">GArrowIndexOptions</code>. <a href="https://github.com/apache/arrow/issues/15286">GH-15286</a></li>
+  <li>Compute: Added <code class="language-plaintext highlighter-rouge">GArrowMatchSubstringOptions</code>. <a href="https://github.com/apache/arrow/issues/15285">GH-15285</a></li>
+  <li>Added <code class="language-plaintext highlighter-rouge">GArrowDenseUnionArrayBuilder</code>. <a href="https://github.com/apache/arrow/issues/21429">GH-21429</a></li>
+  <li>Added <code class="language-plaintext highlighter-rouge">GArrowSparseUnionArrayBuilder</code>. <a href="https://github.com/apache/arrow/issues/21430">GH-21430</a></li>
+</ul>
+
+<h3 id="ruby-notes">Ruby notes</h3>
+
+<ul>
+  <li>Improved <code class="language-plaintext highlighter-rouge">Arrow::Table#join</code> API. <a href="https://github.com/apache/arrow/issues/15287">GH-15287</a></li>
+  <li>Flight SQL: Added <code class="language-plaintext highlighter-rouge">ArrowFlight::RecordBatchReader#each</code>. <a href="https://github.com/apache/arrow/issues/15287">GH-15287</a></li>
+  <li>Added <code class="language-plaintext highlighter-rouge">Arrow::DenseUnionArray#get_value</code>. <a href="https://github.com/apache/arrow/issues/34837">GH-34837</a></li>
+  <li>Added <code class="language-plaintext highlighter-rouge">Arrow::SparseUnionArray#get_value</code>. <a href="https://github.com/apache/arrow/issues/34837">GH-34837</a></li>
+  <li>Expression: Added support for
+<code class="language-plaintext highlighter-rouge">table.slice {|slicer| slicer.column.match_substring(string)</code> and
+related shortcuts. <a href="https://github.com/apache/arrow/issues/34819">GH-34819</a> <a href="https://github.com/apache/arrow/issues/34951">GH-34951</a></li>
+  <li><em>Breaking change:</em> <code class="language-plaintext highlighter-rouge">Arrow::Table#slice</code> with a filter removes null
+records. <a href="https://github.com/apache/arrow/issues/34953">GH-34953</a></li>
+</ul>
+
+<h2 id="rust-notes">Rust notes</h2>
+
+<p>The Rust projects have moved to separate repositories outside the
+main Arrow monorepo. For notes on the latest release of the Rust
+implementation, see the latest <a href="https://github.com/apache/arrow-rs/tags">Arrow Rust changelog</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 12.0.0 release. This covers over 3 months of development work and includes 476 resolved issues with 531 commits from 97 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 11.0.0 release, Wang Mingming, Mustafa Akur and Ruihang Xia have been invited to be committers. Will Jones have joined the Project Management Committee (PMC). Thanks for your contributions and participation in the project! Columnar Format Notes A first “canonical” extension type has been formalized: arrow.fixed_shape_tensor to represent an Array where each slot contains a tensor, with all tensors having the same dimension and shape, GH-33923. This is based on a Fixed-Size List layout as storage array (https://arrow.apache.org/docs/dev/format/CanonicalExtensions.html#fixed-shape-tensor-extension). Arrow Flight RPC notes The JDBC driver for Arrow Flight SQL has had some bugfixes, and has been refactored into a core library (which is not distributed as an uberjar with shaded names) and a driver (which is distributed as an uberjar). The Java server builder API now offers easier access to the underlying gRPC builder. Go now implements the Flight SQL extensions for Substrait and transaction support. Plasma notes Plasma was deprecated since 10.0.0. Plasma is removed in this release. GH-33243 C++ notes Run-End Encoded Arrays have been implemented and are accessible (GH-32104) The FixedShapeTensor Logical value type has been implemented using ExtensionType (GH-15483, GH-34796) Compute New kernel to convert timestamp with timezone to wall time (GH-33143) Cast kernels are now built into libarrow by default (GH-34388) Acero Acero has been moved out of libarrow into it’s own shared library, allowing for smaller builds of the core libarrow (GH-15280) Exec nodes now can have a concept of “ordering” and will reject non-sensible plans (GH-34136) New exec nodes: “pivot_longer” (GH-34266), “order_by” (GH-34248) and “fetch” (GH-34059) Breaking Change: Reorder output fields of “group_by” node so that keys/segment keys come before aggregates (GH-33616) Substrait Add support for the round function GH-33588 Add support for the cast expression element GH-31910 Added API reference documentation GH-34011 Added an extension relation to support segmented aggregation GH-34626 The output of the aggregate relation now conforms to the spec GH-34786 Parquet Added support for DeltaLengthByteArray encoding to the Parquet writer (GH-33024) NaNs are correctly handled now for Parquet predicate push-downs (GH-18481) Added support for reading Parquet page indexes (GH-33596) and writing page indexes (GH-34053) Parquet writer can write columns in parallel now (GH-33655) Fixed incorrect number of rows in Parquet V2 page headers (GH-34086) Fixed incorrect Parquet page null_count when stats are disabled (GH-34326) Added support for reading BloomFilters to the Parquet Reader (GH-34665) Parquet File-writer can now add additional key-value metadata after it has been opened (GH-34888) Breaking Change: The default row group size for the Arrow writer changed from 64Mi rows to 1Mi rows. GH-34280 ORC Added support for the union type in ORC writer (GH-34262) Fixed ORC CHAR type mapping with Arrow (GH-34823) Fixed timestamp type mapping between ORC and arrow (GH-34590) Datasets Added support for reading JSON datasets (GH-33209) Dataset writer now supports specifying a function callback to construct the file name in addition to the existing file name template (GH-34565) Filesystems GcsFileSystem::OpenInputFile avoids unnecessary downloads (GH-34051) Other changes Convenience Append(std::optional...) methods have been added to array builders ([GH-14863](https://github.com/apache/arrow/issues/14863)) A deprecated OpenTelemetry header was removed from the Flight library (GH-34417) Fixed crash in “take” kernels on ExtensionArrays with an underlying dictionary type (GH-34619) Fixed bug where the C-Data bridge did not preserve nullability of map values on import (GH-34983) Added support for EqualOptions to RecordBatch::Equals (GH-34968) zstd dependency upgraded to v1.5.5 (GH-34899) Improved handling of “logical” nulls such as with union and RunEndEncoded arrays (GH-34361) Fixed incorrect handling of uncompressed body buffers in IPC reader, added IpcWriteOptions::min_space_savings for optional compression optimizations (GH-15102) C# notes Support added for importing / exporting schemas and types via the C data interface GH-34737 Support added for the half-float data type GH-25163 Schemas are now allowed to have multiple fields with the same name GH-34076 Added support for reading compressed IPC files GH-32240 Add [] operator to Schema GH-34119 Go notes Run-End Encoded Arrays have been added to the Golang implementation (GH-32104, GH-32946, GH-20407, GH-32949) The SQLite Flight SQL Example has been improved and you can now go get a simple SQLite Flight SQL Server mainprog using go get github.com/apache/arrow/go/v12/arrow/flight/flightsql/example/cmd/sqlite_flightsql_server (GH-33840) Fixed bug causing builds to fail with the noasm build tag (GH-34044) and added a CI test run that uses the noasm tag (GH-34055) Fixed issue allowing building on riscv64-freebsd (GH-34629) Fixed issue preventing building on 32-bit platforms (GH-35133) Arrow Fixed bug in C-Data handling of ArrowArrayStream.get_next when handling uninitialized ArrowArrays (GH-33767) Breaking Change: Added Err() method to RecordReader interface so that it can propagate errors (GH-33789) Fixed potential panic in C-Data API for misusing an invalid handle (GH-33864) A new cgo-based Allocator that does not depend on libarrow has been added to the memory package (GH-33901) CSV Reader and Writer now support Extension type arrays (GH-34334) Fixed bug preventing the reading of IPC streams/files with compression enabled but uncompressed buffers (GH-34385) Added interface which can be added to an ExtensionType to allow Builders to be created via NewBuilder, enabling easy building of nested fields containing extension types (GH-34453) Added utilities to perform Array diffing (GH-34790) Added SetColumn method to arrow.Record (GH-34832) Added GetValue method to arrow.Metadata (GH-34855) Added Pow method to decimal128.Num and decimal256.Num (GH-34863) Flight Fixed bug in StreamChunks for Flight SQL to correctly propagate to the gRPC client (GH-33717) Fixed issue that prevented compatibility with gRPC &lt; v1.45 (GH-33734) Added support to bind a RecordReader for supplying parameters to a Flight SQL Prepared statement (GH-33794) Prepared Statement methods for FlightSQL client now allows gRPC Call Options (GH-33867) FlightSQL Extensions have been implemented (for transactions and Substrait support) (GH-33935) A driver compatible with database/sql for FlightSQL has been added (GH-34332) Compute “run_end_encode” and “run_end_decode” functions added to compute functions (GH-20408) “unique” function added (GH-34171) Parquet pqarrow pkg now handles DICTIONARY fields natively (GH-33466) Fixed rare panic when writing list of 8 structs (GH-33600) Added support for pqarrow pkg to write LargeString and LargeBinary types (GH-33875) Fixed bug where pqarrow.NewSchemaManifest created the wrong field type for Array Object fields (GH-34101) Added support to Parquet Writer for Extension type Arrays (GH-34330) Java notes Update Java JNI modules to consider Arrow ACERO GH-34862 Ability to register additional GRPC services with FlightServer GH-34778 Allow sending custom headers/properties through Arrow Flight SQL JDBC GH-33874 JavaScript notes No changes. Python notes Compatibility notes: Plasma has been removed in this release (GH-33243). In additiona, the deprecated serialization module in PyArrow was also removed (GH-29705). IPC (Inter-Process Communication) functionality of pyarrow or the standard library pickle should be used instead. The deprecated use_async keyword has been removed from the dataset module (GH-30774) Minimum Cython version to build PyArrow from source has been raised to 0.29.31 (GH-34933). In addition, PyArrow can now be compiled using Cython 3 (GH-34564). New features: A new pyarrow.acero module with initial bindings for the Acero execution engine has been added (GH-33976) A new canonical extension type for fixed shaped tensor data has been defined. This is exposed in PyArrow as the FixedShapeTensorType (GH-34882, GH-34956) Run-End Encoded arrays binding has been implemented (GH-34686, GH-34568) Method is_nan has been added to Array, ChunkedArray and Expression (GH-34154) Dataframe interchange protocol has been implemented for RecordBatch (GH-33926) Other improvements: Extension arrays can now be concatenated (GH-31868) get_partition_keys helper function is implemented in the dataset module to access the partitioning field’s key/value from the partition expression of a certain dataset fragment (GH-33825) PyArrow Array objects can now be accepted by the pa.array() constructor (GH-34411) The default row group size when writing parquet files has been changed (GH-34280) RecordBatch has the select() method implemented (GH-34359) New method drop_column on the pyarrow.Table supports passing a single column as a string (GH-33377) User-defined tabular functions, which are a user-functions implemented in Python that return a stateful stream of tabular data, are now also supported (GH-32916) Arrow Archery tool now includes linting of the Cython files (GH-31905) Breaking Change: Reorder output fields of “group_by” node so that keys/segment keys come before aggregates (GH-33616) Relevant bug fixes: Acero can now detect and raise an error in case a join operation needs too much bytes of key data (GH-34474) Fix for converting non-sequence object in pa.array() (GH-34944) Fix erroneous table conversion to pandas if table includes an extension array that does not implement to_pandas_dtype (GH-34906) Reading from a closed ArrayStreamBatchReader now returns invalid status instead of segfaulting (GH-34165) array() now returns pyarrow.Array and not pyarrow.ChunkedArray for columns with __arrow_array__ method and only one chunk so that the conversion of pandas dataframe with categorical column of dtype string[pyarrow] does not fail (GH-33727) Custom type mapper in to_pandas now converts index dtypes together with column dtypes (GH-34283) R notes The read_parquet() and read_feather() functions can now accept URL arguments. The json_credentials argument in GcsFileSystem$create() now accepts a file path containing the appropriate authentication token. The $options member of GcsFileSystem objects can now be inspected. The read_csv_arrow() and read_json_arrow() functions now accept literal text input wrapped in I() to improve compatability with readr::read_csv(). Nested fields can now be accessed using $ and [[ in dplyr expressions. For more on what’s in the 12.0.0 R package, see the R changelog. Ruby and C GLib notes Flight SQL: Added support for authentication. GH-34074 Compute: Added GArrowRankOptions. GH-34425 Compute: Added GArrowFilterOptions. GH-34650 Compute: Added GArrowIndexOptions. GH-15286 Compute: Added GArrowMatchSubstringOptions. GH-15285 Added GArrowDenseUnionArrayBuilder. GH-21429 Added GArrowSparseUnionArrayBuilder. GH-21430 Ruby notes Improved Arrow::Table#join API. GH-15287 Flight SQL: Added ArrowFlight::RecordBatchReader#each. GH-15287 Added Arrow::DenseUnionArray#get_value. GH-34837 Added Arrow::SparseUnionArray#get_value. GH-34837 Expression: Added support for table.slice {|slicer| slicer.column.match_substring(string) and related shortcuts. GH-34819 GH-34951 Breaking change: Arrow::Table#slice with a filter removes null records. GH-34953 Rust notes The Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Rust implementation, see the latest Arrow Rust changelog.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Our journey at F5 with Apache Arrow (part 1)</title><link href="https://arrow.apache.org/blog/2023/04/11/our-journey-at-f5-with-apache-arrow-part-1/" rel="alternate" type="text/html" title="Our journey at F5 with Apache Arrow (part 1)" /><published>2023-04-11T00:00:00-04:00</published><updated>2023-04-11T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2023/04/11/our-journey-at-f5-with-apache-arrow-part-1</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/04/11/our-journey-at-f5-with-apache-arrow-part-1/"><![CDATA[<!--
 
 -->
 
@@ -1376,183 +1668,4 @@ milestone</a> for details.</p>
 
 <p>We welcome questions and contributions from all interested.  Issues
 can be filed on <a href="https://github.com/apache/arrow-adbc/issues">GitHub</a>, and questions can be directed to GitHub
-or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 0.1.0 release of the Apache Arrow ADBC libraries. This covers includes 63 resolved issues from 7 distinct contributors. This is a release of the libraries, which are at version 0.1.0. The API specification is versioned separately and is at version 1.0.0. For more, see the introduction to ADBC. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights This initial release includes the following: Driver manager libraries for C/C++, Go, Java, Python, and Ruby. ADBC drivers for SQLite and PostgreSQL, available in C/C++, Go, Python, and Ruby. ADBC drivers for Arrow FLight SQL and JDBC, available in Java. Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn fe96ea9186194af06f4a229b6e5a57815f05f6bd..apache-arrow-adbc-0.1.0 169 David Li 12 Sutou Kouhei 5 Matt Topol 2 Dewey Dunnington 1 Ash 1 Judah Rand 1 Raúl Cumplido Roadmap Future development will expand the capabilities of the existing drivers, as well as adding drivers for more targets. Drivers for Flight SQL in C/C++ and Go are being developed. See the 0.2.0 milestone for details. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Introducing ADBC: Database Access for Apache Arrow</title><link href="https://arrow.apache.org/blog/2023/01/05/introducing-arrow-adbc/" rel="alternate" type="text/html" title="Introducing ADBC: Database Access for Apache Arrow" /><published>2023-01-05T00:00:00-05:00</published><updated>2023-01-05T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2023/01/05/introducing-arrow-adbc</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/01/05/introducing-arrow-adbc/"><![CDATA[<!--
-
--->
-
-<p>The Arrow community would like to introduce version 1.0.0 of the <a href="https://github.com/apache/arrow-adbc">Arrow Database Connectivity (ADBC)</a> specification.
-ADBC is a columnar, minimal-overhead alternative to JDBC/ODBC for analytical applications.
-Or in other words: <strong>ADBC is a single API for getting Arrow data in and out of different databases</strong>.</p>
-
-<h2 id="motivation">Motivation</h2>
-
-<p>Applications often use API standards like <a href="https://docs.oracle.com/javase/tutorial/jdbc/overview/index.html">JDBC</a> and <a href="https://learn.microsoft.com/en-us/sql/odbc/reference/what-is-odbc?view=sql-server-ver16">ODBC</a> to work with databases.
-That way, they can code to the same API regardless of the underlying database, saving on development time.
-Roughly speaking, when an application executes a query with these APIs:</p>
-
-<figure style="text-align: center;">
-  <img src="/img/ADBCFlow1.svg" width="90%" class="img-responsive" alt="A diagram showing the query execution flow." />
-  <figcaption>The query execution flow.</figcaption>
-</figure>
-
-<ol>
-  <li>The application submits a SQL query via the JDBC/ODBC API.</li>
-  <li>The query is passed on to the driver.</li>
-  <li>The driver translates the query to a database-specific protocol and sends it to the database.</li>
-  <li>The database executes the query and returns the result set in a database-specific format.</li>
-  <li>The driver translates the result into the format required by the JDBC/ODBC API.</li>
-  <li>The application iterates over the result rows using the JDBC/ODBC API.</li>
-</ol>
-
-<p>When columnar data comes into play, however, problems arise.
-JDBC is a row-oriented API, and while ODBC can support columnar data, the type system and data representation is not a perfect match with Arrow.
-So generally, columnar data must be converted to rows in step 5, spending resources without performing “useful” work.</p>
-
-<p>This mismatch is problematic for columnar database systems, such as ClickHouse, Dremio, DuckDB, and Google BigQuery.
-On the client side, tools such as Apache Spark and pandas would be better off getting columnar data directly, skipping that conversion.
-Otherwise, they’re leaving performance on the table.
-At the same time, that conversion isn’t always avoidable.
-Row-oriented database systems like PostgreSQL aren’t going away, and these clients will still want to consume data from them.</p>
-
-<p>Developers have a few options:</p>
-
-<ul>
-  <li><em>Just use JDBC/ODBC</em>.
-These standards are here to stay, and it makes sense for databases to support them for applications that want them.
-But when both the database and the application are columnar, that means converting data into rows for JDBC/ODBC, only for the client to convert them right back into columns!
-Performance suffers, and developers have to spend time implementing the conversions.</li>
-  <li><em>Use JDBC/ODBC-to-Arrow conversion libraries</em>.
-Libraries like <a href="https://turbodbc.readthedocs.io/en/latest/">Turbodbc</a> and <a href="https://arrow.apache.org/docs/java/jdbc.html">arrow-jdbc</a> handle row-to-columnar conversions for clients.
-But this doesn’t fundamentally solve the problem.
-Unnecessary data conversions are still required.</li>
-  <li><em>Use vendor-specific protocols</em>.
-For some databases, applications can use a database-specific protocol or SDK to directly get Arrow data.
-For example, applications could use Dremio via <a href="/blog/2022/02/16/introducing-arrow-flight-sql/">Arrow Flight SQL</a>.
-But client applications that want to support multiple database vendors would need to integrate with each of them.
-(Look at all the <a href="https://trino.io/docs/current/connector.html">connectors</a> that Trino implements.)
-And databases like PostgreSQL don’t offer an option supporting Arrow in the first place.</li>
-</ul>
-
-<p>As is, clients must choose between either tedious integration work or leaving performance on the table. We can make this better.</p>
-
-<h2 id="introducing-adbc">Introducing ADBC</h2>
-
-<p>ADBC is an Arrow-based, vendor-neutral API for interacting with databases.
-Applications that use ADBC simply receive Arrow data.
-They don’t have to do any conversions themselves, and they don’t have to integrate each database’s specific SDK.</p>
-
-<p>Just like JDBC/ODBC, underneath the ADBC API are drivers that translate the API for specific databases.</p>
-
-<ul>
-  <li>A driver for an Arrow-native database just passes Arrow data through without conversion.</li>
-  <li>A driver for a non-Arrow-native database must convert the data to Arrow.
-This saves the application from doing that, and the driver can optimize the conversion for its database.</li>
-</ul>
-
-<figure style="text-align: center;">
-  <img src="/img/ADBCFlow2.svg" alt="A diagram showing the query execution flow with ADBC." width="90%" class="img-responsive" />
-  <figcaption>The query execution flow with two different ADBC drivers.</figcaption>
-</figure>
-
-<ol>
-  <li>The application submits a SQL query via the ADBC API.</li>
-  <li>The query is passed on to the ADBC driver.</li>
-  <li>The driver translates the query to a database-specific protocol and sends the query to the database.</li>
-  <li>The database executes the query and returns the result set in a database-specific format, which is ideally Arrow data.</li>
-  <li>If needed: the driver translates the result into Arrow data.</li>
-  <li>The application iterates over batches of Arrow data.</li>
-</ol>
-
-<p>The application only deals with one API, and only works with Arrow data.</p>
-
-<p>ADBC API and driver implementations are under development. For example, in Python, the ADBC packages offer a familiar <a href="https://www.python.org/dev/peps/pep-0249/">DBAPI 2.0 (PEP 249)</a>-style interface, with extensions to get Arrow data.
-We can get Arrow data out of PostgreSQL easily:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">adbc_driver_postgresql.dbapi</span>
-
-<span class="n">uri</span> <span class="o">=</span> <span class="s">"postgresql://localhost:5432/postgres?user=postgres&amp;password=password"</span>
-<span class="k">with</span> <span class="n">adbc_driver_postgresql</span><span class="p">.</span><span class="n">dbapi</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
-    <span class="k">with</span> <span class="n">conn</span><span class="p">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
-        <span class="n">cur</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="s">"SELECT * FROM customer"</span><span class="p">)</span>
-        <span class="n">table</span> <span class="o">=</span> <span class="n">cur</span><span class="p">.</span><span class="n">fetch_arrow_table</span><span class="p">()</span>
-        <span class="c1"># Process the results
-</span></code></pre></div></div>
-
-<p>Or SQLite:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">adbc_driver_sqlite.dbapi</span>
-
-<span class="n">uri</span> <span class="o">=</span> <span class="s">"file:mydb.sqlite"</span>
-<span class="k">with</span> <span class="n">adbc_driver_sqlite</span><span class="p">.</span><span class="n">dbapi</span><span class="p">.</span><span class="n">connect</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
-    <span class="k">with</span> <span class="n">conn</span><span class="p">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
-        <span class="n">cur</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="s">"SELECT * FROM customer"</span><span class="p">)</span>
-        <span class="n">table</span> <span class="o">=</span> <span class="n">cur</span><span class="p">.</span><span class="n">fetch_arrow_table</span><span class="p">()</span>
-        <span class="c1"># Process the results
-</span></code></pre></div></div>
-
-<p><em>Note: implementations are still under development. See the <a href="https://arrow.apache.org/adbc/">documentation</a> for up-to-date examples.</em></p>
-
-<h2 id="what-about-flight-sql-jdbc-odbc-">What about {Flight SQL, JDBC, ODBC, …}?</h2>
-
-<p>ADBC fills a specific niche that related projects do not address. It is both:</p>
-
-<ul>
-  <li><strong>Arrow-native</strong>: ADBC can pass through Arrow data with no overhead thanks to the <a href="/blog/2020/05/03/introducing-arrow-c-data-interface/">C Data Interface</a>.
-JDBC is row-oriented, and ODBC has implementation caveats, as discussed, that make it hard to use with Arrow.</li>
-  <li><strong>Vendor-agnostic</strong>: ADBC drivers can implement the API using any underlying protocol, while Flight SQL requires server-side support that may not be easy to add.</li>
-</ul>
-
-<table class="table table-hover" style="table-layout: fixed">
-  <caption>Comparing database APIs and protocols</caption>
-  <thead class="thead-dark">
-    <tr>
-      <th></th>
-      <th class="align-top" style="width: 40%" scope="col">Vendor-neutral (database APIs)</th>
-      <th class="align-top" style="width: 40%" scope="col">Vendor-specific (database protocols)</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    <tr>
-      <th scope="row">Arrow-native</th>
-      <td class="table-success"><strong>ADBC</strong></td>
-      <td>Arrow Flight SQL<br />BigQuery Storage gRPC protocol</td>
-    </tr>
-    <tr>
-      <th scope="row">Row-oriented</th>
-      <td>JDBC<br />ODBC (typically row-oriented)</td>
-      <td>PostgreSQL wire protocol<br />Tabular Data Stream (Microsoft SQL Server)</td>
-    </tr>
-  </tbody>
-</table>
-
-<p><strong>ADBC doesn’t intend to replace JDBC or ODBC in general</strong>.
-But for applications that just want bulk columnar data access, ADBC lets them avoid data conversion overhead and tedious integration work.</p>
-
-<p>Similarly, within the Arrow project, ADBC does not replace Flight SQL, but instead <em>complements</em> it.
-ADBC is an <strong>API</strong> that lets <em>clients</em> work with different databases easily.
-Meanwhile, Flight SQL is a <strong>wire protocol</strong> that <em>database servers</em> can implement to simultaneously support ADBC, <a href="/blog/2022/11/01/arrow-flight-sql-jdbc/">JDBC</a>, and ODBC users.</p>
-
-<figure style="text-align: center;">
-  <img src="/img/ADBC.svg" alt="ADBC abstracts over protocols and APIs like Flight SQL and JDBC for client applications. Flight SQL provides implementations of APIs like ADBC and JDBC for database servers." width="90%" class="img-responsive" />
-</figure>
-
-<h2 id="getting-involved">Getting Involved</h2>
-
-<p>ADBC works as part of the Arrow ecosystem to “cover the bases” for database interaction:</p>
-
-<ul>
-  <li>Arrow offers a universal columnar data format,</li>
-  <li>Arrow Flight SQL offers a universal wire protocol for database servers,</li>
-  <li>and ADBC offers a universal API for database clients.</li>
-</ul>
-
-<p>To start using ADBC, see the <a href="https://arrow.apache.org/adbc/">documentation</a> for build instructions and a short tutorial.
-(A formal release of the packages is still under way.)
-If you’re interested in learning more or contributing, please reach out on the <a href="https://arrow.apache.org/community/">mailing list</a> or on <a href="https://github.com/apache/arrow-adbc/issues">GitHub Issues</a>.</p>
-
-<p>ADBC was only possible with the help and involvement of several Arrow community members and projects.
-In particular, we would like to thank members of the <a href="https://duckdb.org/">DuckDB project</a> and the <a href="https://www.r-dbi.org/">R DBI project</a>, who constructed prototypes based on early revisions of the standard and provided feedback on the design.
-And ADBC builds on existing Arrow projects, including the <a href="/blog/2020/05/03/introducing-arrow-c-data-interface/">Arrow C Data Interface</a> and <a href="https://github.com/apache/arrow-nanoarrow">nanoarrow</a>.</p>
-
-<p>Thanks to Fernanda Foertter for assistance with some of the diagrams.</p>]]></content><author><name>pmc</name></author><category term="application" /><summary type="html"><![CDATA[The Arrow community would like to introduce version 1.0.0 of the Arrow Database Connectivity (ADBC) specification. ADBC is a columnar, minimal-overhead alternative to JDBC/ODBC for analytical applications. Or in other words: ADBC is a single API for getting Arrow data in and out of different databases. Motivation Applications often use API standards like JDBC and ODBC to work with databases. That way, they can code to the same API regardless of the underlying database, saving on development time. Roughly speaking, when an application executes a query with these APIs: The query execution flow. The application submits a SQL query via the JDBC/ODBC API. The query is passed on to the driver. The driver translates the query to a database-specific protocol and sends it to the database. The database executes the query and returns the result set in a database-specific format. The driver translates the result into the format required by the JDBC/ODBC API. The application iterates over the result rows using the JDBC/ODBC API. When columnar data comes into play, however, problems arise. JDBC is a row-oriented API, and while ODBC can support columnar data, the type system and data representation is not a perfect match with Arrow. So generally, columnar data must be converted to rows in step 5, spending resources without performing “useful” work. This mismatch is problematic for columnar database systems, such as ClickHouse, Dremio, DuckDB, and Google BigQuery. On the client side, tools such as Apache Spark and pandas would be better off getting columnar data directly, skipping that conversion. Otherwise, they’re leaving performance on the table. At the same time, that conversion isn’t always avoidable. Row-oriented database systems like PostgreSQL aren’t going away, and these clients will still want to consume data from them. Developers have a few options: Just use JDBC/ODBC. These standards are here to stay, and it makes sense for databases to support them for applications that want them. But when both the database and the application are columnar, that means converting data into rows for JDBC/ODBC, only for the client to convert them right back into columns! Performance suffers, and developers have to spend time implementing the conversions. Use JDBC/ODBC-to-Arrow conversion libraries. Libraries like Turbodbc and arrow-jdbc handle row-to-columnar conversions for clients. But this doesn’t fundamentally solve the problem. Unnecessary data conversions are still required. Use vendor-specific protocols. For some databases, applications can use a database-specific protocol or SDK to directly get Arrow data. For example, applications could use Dremio via Arrow Flight SQL. But client applications that want to support multiple database vendors would need to integrate with each of them. (Look at all the connectors that Trino implements.) And databases like PostgreSQL don’t offer an option supporting Arrow in the first place. As is, clients must choose between either tedious integration work or leaving performance on the table. We can make this better. Introducing ADBC ADBC is an Arrow-based, vendor-neutral API for interacting with databases. Applications that use ADBC simply receive Arrow data. They don’t have to do any conversions themselves, and they don’t have to integrate each database’s specific SDK. Just like JDBC/ODBC, underneath the ADBC API are drivers that translate the API for specific databases. A driver for an Arrow-native database just passes Arrow data through without conversion. A driver for a non-Arrow-native database must convert the data to Arrow. This saves the application from doing that, and the driver can optimize the conversion for its database. The query execution flow with two different ADBC drivers. The application submits a SQL query via the ADBC API. The query is passed on to the ADBC driver. The driver translates the query to a database-specific protocol and sends the query to the database. The database executes the query and returns the result set in a database-specific format, which is ideally Arrow data. If needed: the driver translates the result into Arrow data. The application iterates over batches of Arrow data. The application only deals with one API, and only works with Arrow data. ADBC API and driver implementations are under development. For example, in Python, the ADBC packages offer a familiar DBAPI 2.0 (PEP 249)-style interface, with extensions to get Arrow data. We can get Arrow data out of PostgreSQL easily: import adbc_driver_postgresql.dbapi uri = "postgresql://localhost:5432/postgres?user=postgres&amp;password=password" with adbc_driver_postgresql.dbapi.connect(uri) as conn: with conn.cursor() as cur: cur.execute("SELECT * FROM customer") table = cur.fetch_arrow_table() # Process the results Or SQLite: import adbc_driver_sqlite.dbapi uri = "file:mydb.sqlite" with adbc_driver_sqlite.dbapi.connect(uri) as conn: with conn.cursor() as cur: cur.execute("SELECT * FROM customer") table = cur.fetch_arrow_table() # Process the results Note: implementations are still under development. See the documentation for up-to-date examples. What about {Flight SQL, JDBC, ODBC, …}? ADBC fills a specific niche that related projects do not address. It is both: Arrow-native: ADBC can pass through Arrow data with no overhead thanks to the C Data Interface. JDBC is row-oriented, and ODBC has implementation caveats, as discussed, that make it hard to use with Arrow. Vendor-agnostic: ADBC drivers can implement the API using any underlying protocol, while Flight SQL requires server-side support that may not be easy to add. Comparing database APIs and protocols Vendor-neutral (database APIs) Vendor-specific (database protocols) Arrow-native ADBC Arrow Flight SQLBigQuery Storage gRPC protocol Row-oriented JDBCODBC (typically row-oriented) PostgreSQL wire protocolTabular Data Stream (Microsoft SQL Server) ADBC doesn’t intend to replace JDBC or ODBC in general. But for applications that just want bulk columnar data access, ADBC lets them avoid data conversion overhead and tedious integration work. Similarly, within the Arrow project, ADBC does not replace Flight SQL, but instead complements it. ADBC is an API that lets clients work with different databases easily. Meanwhile, Flight SQL is a wire protocol that database servers can implement to simultaneously support ADBC, JDBC, and ODBC users. Getting Involved ADBC works as part of the Arrow ecosystem to “cover the bases” for database interaction: Arrow offers a universal columnar data format, Arrow Flight SQL offers a universal wire protocol for database servers, and ADBC offers a universal API for database clients. To start using ADBC, see the documentation for build instructions and a short tutorial. (A formal release of the packages is still under way.) If you’re interested in learning more or contributing, please reach out on the mailing list or on GitHub Issues. ADBC was only possible with the help and involvement of several Arrow community members and projects. In particular, we would like to thank members of the DuckDB project and the R DBI project, who constructed prototypes based on early revisions of the standard and provided feedback on the design. And ADBC builds on existing Arrow projects, including the Arrow C Data Interface and nanoarrow. Thanks to Fernanda Foertter for assistance with some of the diagrams.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 0.1.0 release of the Apache Arrow ADBC libraries. This covers includes 63 resolved issues from 7 distinct contributors. This is a release of the libraries, which are at version 0.1.0. The API specification is versioned separately and is at version 1.0.0. For more, see the introduction to ADBC. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights This initial release includes the following: Driver manager libraries for C/C++, Go, Java, Python, and Ruby. ADBC drivers for SQLite and PostgreSQL, available in C/C++, Go, Python, and Ruby. ADBC drivers for Arrow FLight SQL and JDBC, available in Java. Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn fe96ea9186194af06f4a229b6e5a57815f05f6bd..apache-arrow-adbc-0.1.0 169 David Li 12 Sutou Kouhei 5 Matt Topol 2 Dewey Dunnington 1 Ash 1 Judah Rand 1 Raúl Cumplido Roadmap Future development will expand the capabilities of the existing drivers, as well as adding drivers for more targets. Drivers for Flight SQL in C/C++ and Go are being developed. See the 0.2.0 milestone for details. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
