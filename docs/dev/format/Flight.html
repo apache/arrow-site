@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Arrow Flight RPC &#8212; Apache Arrow v13.0.0.dev24</title>
+    <title>Arrow Flight RPC &#8212; Apache Arrow v13.0.0.dev33</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -95,7 +95,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        13.0.0.dev24
+        13.0.0.dev33
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -4972,9 +4972,18 @@ contains a subset of the response data.</p>
 <p>An endpoint contains a list of locations (server addresses) where
 this data can be retrieved from, and a <code class="docutils literal notranslate"><span class="pre">Ticket</span></code>, an opaque binary
 token that the server will use to identify the data being
-requested. There is no ordering defined on endpoints or the data
-within, so if the dataset is sorted, applications should return
-data in a single endpoint.</p>
+requested.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">FlightInfo.ordered</span></code> is true, this signals there is some order
+between data from different endpoints. Clients should produce the
+same results as if the data returned from each of the endpoints was
+concatenated, in order, from front to back.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">FlightInfo.ordered</span></code> is false, the client may return data
+from any of the endpoints in arbitrary order. Data from any
+specific endpoint must be returned in order, but the data from
+different endpoints may be interleaved to allow parallel fetches.</p>
+<p>Note that since some clients may ignore <code class="docutils literal notranslate"><span class="pre">FlightInfo.ordered</span></code>, if
+ordering is important and client support can not be ensured,
+servers should return a single endpoint.</p>
 <p>The response also contains other metadata, like the schema, and
 optionally an estimate of the dataset size.</p>
 </li>
@@ -4995,7 +5004,9 @@ or otherwise distributed.</p>
 <p>The client must consume all endpoints to retrieve the complete data
 set. The client can consume endpoints in any order, or even in
 parallel, or distribute the endpoints among multiple machines for
-consumption; this is up to the application to implement.</p>
+consumption; this is up to the application to implement. The client
+can also use <code class="docutils literal notranslate"><span class="pre">FlightInfo.ordered</span></code>. See the previous item for
+details of <code class="docutils literal notranslate"><span class="pre">FlightInfo.ordered</span></code>.</p>
 </li>
 </ol>
 </section>
@@ -5091,7 +5102,7 @@ well, in which case any <a class="reference external" href="https://grpc.io/docs
 specification below, but Arrow implementations may also support
 alternative transports (see <a class="reference internal" href="../status.html#status-flight-rpc"><span class="std std-ref">Flight RPC</span></a>). In that case,
 implementations should use the following URI schemes for the given
-transport implemenatations:</p>
+transport implementations:</p>
 <table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Transport</p></th>
@@ -5450,100 +5461,118 @@ by the client for connectivity reasons.</p></td>
 <span class="linenos">266</span><span class="cm">   * In other words, an application can use multiple endpoints to</span>
 <span class="linenos">267</span><span class="cm">   * represent partitioned data.</span>
 <span class="linenos">268</span><span class="cm">   *</span>
-<span class="linenos">269</span><span class="cm">   * There is no ordering defined on endpoints. Hence, if the returned</span>
-<span class="linenos">270</span><span class="cm">   * data has an ordering, it should be returned in a single endpoint.</span>
-<span class="linenos">271</span><span class="cm">   */</span>
-<span class="linenos">272</span><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">FlightEndpoint</span><span class="w"> </span><span class="na">endpoint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
-<span class="linenos">273</span>
-<span class="linenos">274</span><span class="w">  </span><span class="c1">// Set these to -1 if unknown.</span>
-<span class="linenos">275</span><span class="w">  </span><span class="kt">int64</span><span class="w"> </span><span class="na">total_records</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
-<span class="linenos">276</span><span class="w">  </span><span class="kt">int64</span><span class="w"> </span><span class="na">total_bytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
-<span class="linenos">277</span><span class="p">}</span>
-<span class="linenos">278</span>
-<span class="linenos">279</span><span class="cm">/*</span>
-<span class="linenos">280</span><span class="cm"> * A particular stream or split associated with a flight.</span>
-<span class="linenos">281</span><span class="cm"> */</span>
-<span class="linenos">282</span><span class="kd">message</span><span class="w"> </span><span class="nc">FlightEndpoint</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">283</span>
-<span class="linenos">284</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">285</span><span class="cm">   * Token used to retrieve this stream.</span>
-<span class="linenos">286</span><span class="cm">   */</span>
-<span class="linenos">287</span><span class="w">  </span><span class="n">Ticket</span><span class="w"> </span><span class="na">ticket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">288</span>
-<span class="linenos">289</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">290</span><span class="cm">   * A list of URIs where this ticket can be redeemed via DoGet().</span>
-<span class="linenos">291</span><span class="cm">   *</span>
-<span class="linenos">292</span><span class="cm">   * If the list is empty, the expectation is that the ticket can only</span>
-<span class="linenos">293</span><span class="cm">   * be redeemed on the current service where the ticket was</span>
-<span class="linenos">294</span><span class="cm">   * generated.</span>
-<span class="linenos">295</span><span class="cm">   *</span>
-<span class="linenos">296</span><span class="cm">   * If the list is not empty, the expectation is that the ticket can</span>
-<span class="linenos">297</span><span class="cm">   * be redeemed at any of the locations, and that the data returned</span>
-<span class="linenos">298</span><span class="cm">   * will be equivalent. In this case, the ticket may only be redeemed</span>
-<span class="linenos">299</span><span class="cm">   * at one of the given locations, and not (necessarily) on the</span>
-<span class="linenos">300</span><span class="cm">   * current service.</span>
-<span class="linenos">301</span><span class="cm">   *</span>
-<span class="linenos">302</span><span class="cm">   * In other words, an application can use multiple locations to</span>
-<span class="linenos">303</span><span class="cm">   * represent redundant and/or load balanced services.</span>
+<span class="linenos">269</span><span class="cm">   * If the returned data has an ordering, an application can use</span>
+<span class="linenos">270</span><span class="cm">   * &quot;FlightInfo.ordered = true&quot; or should return the all data in a</span>
+<span class="linenos">271</span><span class="cm">   * single endpoint. Otherwise, there is no ordering defined on</span>
+<span class="linenos">272</span><span class="cm">   * endpoints or the data within.</span>
+<span class="linenos">273</span><span class="cm">   *</span>
+<span class="linenos">274</span><span class="cm">   * A client can read ordered data by reading data from returned</span>
+<span class="linenos">275</span><span class="cm">   * endpoints, in order, from front to back.</span>
+<span class="linenos">276</span><span class="cm">   *</span>
+<span class="linenos">277</span><span class="cm">   * Note that a client may ignore &quot;FlightInfo.ordered = true&quot;. If an</span>
+<span class="linenos">278</span><span class="cm">   * ordering is important for an application, an application must</span>
+<span class="linenos">279</span><span class="cm">   * choose one of them:</span>
+<span class="linenos">280</span><span class="cm">   *</span>
+<span class="linenos">281</span><span class="cm">   * * An application requires that all clients must read data in</span>
+<span class="linenos">282</span><span class="cm">   *   returned endpoints order.</span>
+<span class="linenos">283</span><span class="cm">   * * An application must return the all data in a single endpoint.</span>
+<span class="linenos">284</span><span class="cm">   */</span>
+<span class="linenos">285</span><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">FlightEndpoint</span><span class="w"> </span><span class="na">endpoint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="linenos">286</span>
+<span class="linenos">287</span><span class="w">  </span><span class="c1">// Set these to -1 if unknown.</span>
+<span class="linenos">288</span><span class="w">  </span><span class="kt">int64</span><span class="w"> </span><span class="na">total_records</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="linenos">289</span><span class="w">  </span><span class="kt">int64</span><span class="w"> </span><span class="na">total_bytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="linenos">290</span>
+<span class="linenos">291</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">292</span><span class="cm">   * FlightEndpoints are in the same order as the data.</span>
+<span class="linenos">293</span><span class="cm">   */</span>
+<span class="linenos">294</span><span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="na">ordered</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="p">;</span>
+<span class="linenos">295</span><span class="p">}</span>
+<span class="linenos">296</span>
+<span class="linenos">297</span><span class="cm">/*</span>
+<span class="linenos">298</span><span class="cm"> * A particular stream or split associated with a flight.</span>
+<span class="linenos">299</span><span class="cm"> */</span>
+<span class="linenos">300</span><span class="kd">message</span><span class="w"> </span><span class="nc">FlightEndpoint</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">301</span>
+<span class="linenos">302</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">303</span><span class="cm">   * Token used to retrieve this stream.</span>
 <span class="linenos">304</span><span class="cm">   */</span>
-<span class="linenos">305</span><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">Location</span><span class="w"> </span><span class="na">location</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
-<span class="linenos">306</span><span class="p">}</span>
-<span class="linenos">307</span>
-<span class="linenos">308</span><span class="cm">/*</span>
-<span class="linenos">309</span><span class="cm"> * A location where a Flight service will accept retrieval of a particular</span>
-<span class="linenos">310</span><span class="cm"> * stream given a ticket.</span>
-<span class="linenos">311</span><span class="cm"> */</span>
-<span class="linenos">312</span><span class="kd">message</span><span class="w"> </span><span class="nc">Location</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">313</span><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">uri</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">314</span><span class="p">}</span>
-<span class="linenos">315</span>
-<span class="linenos">316</span><span class="cm">/*</span>
-<span class="linenos">317</span><span class="cm"> * An opaque identifier that the service can use to retrieve a particular</span>
-<span class="linenos">318</span><span class="cm"> * portion of a stream.</span>
-<span class="linenos">319</span><span class="cm"> *</span>
-<span class="linenos">320</span><span class="cm"> * Tickets are meant to be single use. It is an error/application-defined</span>
-<span class="linenos">321</span><span class="cm"> * behavior to reuse a ticket.</span>
-<span class="linenos">322</span><span class="cm"> */</span>
-<span class="linenos">323</span><span class="kd">message</span><span class="w"> </span><span class="nc">Ticket</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">324</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">ticket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">325</span><span class="p">}</span>
-<span class="linenos">326</span>
-<span class="linenos">327</span><span class="cm">/*</span>
-<span class="linenos">328</span><span class="cm"> * A batch of Arrow data as part of a stream of batches.</span>
+<span class="linenos">305</span><span class="w">  </span><span class="n">Ticket</span><span class="w"> </span><span class="na">ticket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">306</span>
+<span class="linenos">307</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">308</span><span class="cm">   * A list of URIs where this ticket can be redeemed via DoGet().</span>
+<span class="linenos">309</span><span class="cm">   *</span>
+<span class="linenos">310</span><span class="cm">   * If the list is empty, the expectation is that the ticket can only</span>
+<span class="linenos">311</span><span class="cm">   * be redeemed on the current service where the ticket was</span>
+<span class="linenos">312</span><span class="cm">   * generated.</span>
+<span class="linenos">313</span><span class="cm">   *</span>
+<span class="linenos">314</span><span class="cm">   * If the list is not empty, the expectation is that the ticket can</span>
+<span class="linenos">315</span><span class="cm">   * be redeemed at any of the locations, and that the data returned</span>
+<span class="linenos">316</span><span class="cm">   * will be equivalent. In this case, the ticket may only be redeemed</span>
+<span class="linenos">317</span><span class="cm">   * at one of the given locations, and not (necessarily) on the</span>
+<span class="linenos">318</span><span class="cm">   * current service.</span>
+<span class="linenos">319</span><span class="cm">   *</span>
+<span class="linenos">320</span><span class="cm">   * In other words, an application can use multiple locations to</span>
+<span class="linenos">321</span><span class="cm">   * represent redundant and/or load balanced services.</span>
+<span class="linenos">322</span><span class="cm">   */</span>
+<span class="linenos">323</span><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">Location</span><span class="w"> </span><span class="na">location</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="linenos">324</span><span class="p">}</span>
+<span class="linenos">325</span>
+<span class="linenos">326</span><span class="cm">/*</span>
+<span class="linenos">327</span><span class="cm"> * A location where a Flight service will accept retrieval of a particular</span>
+<span class="linenos">328</span><span class="cm"> * stream given a ticket.</span>
 <span class="linenos">329</span><span class="cm"> */</span>
-<span class="linenos">330</span><span class="kd">message</span><span class="w"> </span><span class="nc">FlightData</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">331</span>
-<span class="linenos">332</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">333</span><span class="cm">   * The descriptor of the data. This is only relevant when a client is</span>
-<span class="linenos">334</span><span class="cm">   * starting a new DoPut stream.</span>
-<span class="linenos">335</span><span class="cm">   */</span>
-<span class="linenos">336</span><span class="w">  </span><span class="n">FlightDescriptor</span><span class="w"> </span><span class="na">flight_descriptor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">337</span>
-<span class="linenos">338</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">339</span><span class="cm">   * Header for message data as described in Message.fbs::Message.</span>
-<span class="linenos">340</span><span class="cm">   */</span>
-<span class="linenos">341</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">data_header</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
-<span class="linenos">342</span>
-<span class="linenos">343</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">344</span><span class="cm">   * Application-defined metadata.</span>
-<span class="linenos">345</span><span class="cm">   */</span>
-<span class="linenos">346</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
-<span class="linenos">347</span>
-<span class="linenos">348</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">349</span><span class="cm">   * The actual batch of Arrow data. Preferably handled with minimal-copies</span>
-<span class="linenos">350</span><span class="cm">   * coming last in the definition to help with sidecar patterns (it is</span>
-<span class="linenos">351</span><span class="cm">   * expected that some implementations will fetch this field off the wire</span>
-<span class="linenos">352</span><span class="cm">   * with specialized code to avoid extra memory copies).</span>
+<span class="linenos">330</span><span class="kd">message</span><span class="w"> </span><span class="nc">Location</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">331</span><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">uri</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">332</span><span class="p">}</span>
+<span class="linenos">333</span>
+<span class="linenos">334</span><span class="cm">/*</span>
+<span class="linenos">335</span><span class="cm"> * An opaque identifier that the service can use to retrieve a particular</span>
+<span class="linenos">336</span><span class="cm"> * portion of a stream.</span>
+<span class="linenos">337</span><span class="cm"> *</span>
+<span class="linenos">338</span><span class="cm"> * Tickets are meant to be single use. It is an error/application-defined</span>
+<span class="linenos">339</span><span class="cm"> * behavior to reuse a ticket.</span>
+<span class="linenos">340</span><span class="cm"> */</span>
+<span class="linenos">341</span><span class="kd">message</span><span class="w"> </span><span class="nc">Ticket</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">342</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">ticket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">343</span><span class="p">}</span>
+<span class="linenos">344</span>
+<span class="linenos">345</span><span class="cm">/*</span>
+<span class="linenos">346</span><span class="cm"> * A batch of Arrow data as part of a stream of batches.</span>
+<span class="linenos">347</span><span class="cm"> */</span>
+<span class="linenos">348</span><span class="kd">message</span><span class="w"> </span><span class="nc">FlightData</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">349</span>
+<span class="linenos">350</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">351</span><span class="cm">   * The descriptor of the data. This is only relevant when a client is</span>
+<span class="linenos">352</span><span class="cm">   * starting a new DoPut stream.</span>
 <span class="linenos">353</span><span class="cm">   */</span>
-<span class="linenos">354</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">data_body</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
-<span class="linenos">355</span><span class="p">}</span>
-<span class="linenos">356</span>
-<span class="linenos">357</span><span class="cm">/**</span>
-<span class="linenos">358</span><span class="cm"> * The response message associated with the submission of a DoPut.</span>
-<span class="linenos">359</span><span class="cm"> */</span>
-<span class="linenos">360</span><span class="kd">message</span><span class="w"> </span><span class="nc">PutResult</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">361</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">362</span><span class="p">}</span>
+<span class="linenos">354</span><span class="w">  </span><span class="n">FlightDescriptor</span><span class="w"> </span><span class="na">flight_descriptor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">355</span>
+<span class="linenos">356</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">357</span><span class="cm">   * Header for message data as described in Message.fbs::Message.</span>
+<span class="linenos">358</span><span class="cm">   */</span>
+<span class="linenos">359</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">data_header</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="linenos">360</span>
+<span class="linenos">361</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">362</span><span class="cm">   * Application-defined metadata.</span>
+<span class="linenos">363</span><span class="cm">   */</span>
+<span class="linenos">364</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="linenos">365</span>
+<span class="linenos">366</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">367</span><span class="cm">   * The actual batch of Arrow data. Preferably handled with minimal-copies</span>
+<span class="linenos">368</span><span class="cm">   * coming last in the definition to help with sidecar patterns (it is</span>
+<span class="linenos">369</span><span class="cm">   * expected that some implementations will fetch this field off the wire</span>
+<span class="linenos">370</span><span class="cm">   * with specialized code to avoid extra memory copies).</span>
+<span class="linenos">371</span><span class="cm">   */</span>
+<span class="linenos">372</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">data_body</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
+<span class="linenos">373</span><span class="p">}</span>
+<span class="linenos">374</span>
+<span class="linenos">375</span><span class="cm">/**</span>
+<span class="linenos">376</span><span class="cm"> * The response message associated with the submission of a DoPut.</span>
+<span class="linenos">377</span><span class="cm"> */</span>
+<span class="linenos">378</span><span class="kd">message</span><span class="w"> </span><span class="nc">PutResult</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">379</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">380</span><span class="p">}</span>
 </pre></div>
 </div>
 </section>
