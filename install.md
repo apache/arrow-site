@@ -81,7 +81,6 @@ Apache Arrow GLib (C). Here are supported platforms:
 
 * Debian GNU/Linux bullseye
 * Debian GNU/Linux bookworm
-* Ubuntu 18.04 LTS
 * Ubuntu 20.04 LTS
 * Ubuntu 22.04 LTS
 * AlmaLinux 8
@@ -108,14 +107,9 @@ sudo apt install -y -V libarrow-dev # For C++
 sudo apt install -y -V libarrow-glib-dev # For GLib (C)
 sudo apt install -y -V libarrow-dataset-dev # For Apache Arrow Dataset C++
 sudo apt install -y -V libarrow-dataset-glib-dev # For Apache Arrow Dataset GLib (C)
+sudo apt install -y -V libarrow-acero-dev # For Apache Arrow Acero
 sudo apt install -y -V libarrow-flight-dev # For Apache Arrow Flight C++
 sudo apt install -y -V libarrow-flight-glib-dev # For Apache Arrow Flight GLib (C)
-# Notes for Plasma related packages:
-#   * You need to enable "non-free" component on Debian GNU/Linux
-#   * You need to enable "multiverse" component on Ubuntu
-#   * You can use Plasma related packages only on amd64
-sudo apt install -y -V libplasma-dev # For Plasma C++
-sudo apt install -y -V libplasma-glib-dev # For Plasma GLib (C)
 sudo apt install -y -V libgandiva-dev # For Gandiva C++
 sudo apt install -y -V libgandiva-glib-dev # For Gandiva GLib (C)
 sudo apt install -y -V libparquet-dev # For Apache Parquet C++
@@ -137,6 +131,7 @@ sudo dnf install -y arrow-devel # For C++
 sudo dnf install -y arrow-glib-devel # For GLib (C)
 sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
 sudo dnf install -y arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo dnf install -y arrow-acero-devel # For Apache Arrow Acero
 sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
 sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
 sudo dnf install -y gandiva-devel # For Apache Gandiva C++
@@ -154,6 +149,7 @@ sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
 sudo yum install -y --enablerepo=epel arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo yum install -y --enablerepo=epel arrow-acero-devel # For Apache Arrow Acero
 sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
 sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
 ```
@@ -167,6 +163,7 @@ sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
 sudo yum install -y --enablerepo=epel arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo yum install -y --enablerepo=epel arrow-acero-devel # For Apache Arrow Acero
 sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
 sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
 ```
@@ -185,11 +182,11 @@ For convenience, we also provide packages through several package managers. Many
 
 ### C++ and Python Conda Packages
 
-Binary conda packages are on [conda-forge][5] for Linux (x86_64, aarch64, ppc64le), macOS (x86_64 and arm64), and Windows (x86_64)
+Binary conda packages are on [conda-forge][5] for Linux (x86\_64, aarch64, ppc64le), macOS (x86\_64 and arm64), and Windows (x86\_64)
 for the following versions:
 
-* Python 3.7, 3.8, 3.9, 3.10
-* R 4.0, 4.1
+* Python 3.7, 3.8, 3.9, 3.10, 3.11
+* R 4.1, 4.2
 
 Install them with:
 
@@ -261,16 +258,16 @@ install.packages("arrow")
 
 ### Ruby Packages on RubyGems
 
-Install the Ruby packages for Ruby 2.7, 3.0 and 3.1 from [RubyGems][25] with
+Install the Ruby packages for Ruby 3.0, 3.1 and 3.2 from [RubyGems][25] with
 
 ```shell
 gem install red-arrow
 gem install red-arrow-cuda # For CUDA support
 gem install red-arrow-dataset # For Apache Arrow Dataset support
 gem install red-arrow-flight # For Apache Arrow Flight support
+gem install red-arrow-flight-sql # For Apache Arrow Flight SQL support
 gem install red-gandiva # For Gandiva support
 gem install red-parquet # For Apache Parquet support
-gem install red-plasma # For Plasma support
 ```
 
 [2]: {{site.data.versions['current'].github-tag-link}}
