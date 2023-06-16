@@ -42,46 +42,46 @@ The following Go Arrow schema definition provides an example of such a schema, i
 var (
   // Arrow schema for the OTLP Arrow Traces record (without attributes, links, and events).
   TracesSchema = arrow.NewSchema([]arrow.Field{
-    {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: schema.Metadata(schema.Optional)},
-    {Name: constants.Resource, Type: arrow.StructOf([]arrow.Field{
-      {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: schema.Metadata(schema.Optional)},
-      {Name: constants.SchemaUrl,Type: arrow.BinaryTypes.String,Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-      {Name: constants.DroppedAttributesCount,Type: arrow.PrimitiveTypes.Uint32,Metadata: schema.Metadata(schema.Optional)},
-    }...), Metadata: schema.Metadata(schema.Optional)},
-    {Name: constants.Scope, Type: arrow.StructOf([]arrow.Field{
-        {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: acommon.Metadata(acommon.Optional, acommon.DeltaEncoding)},
-        {Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary8)},
-        {Name: constants.Version, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Optional, acommon.Dictionary8)},
-        {Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: acommon.Metadata(acommon.Optional)},
-    }...), Metadata: schema.Metadata(schema.Optional)},
-    {Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-    {Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
-    {Name: constants.DurationTimeUnixNano, Type: arrow.FixedWidthTypes.Duration_ms, Metadata: schema.Metadata(schema.Dictionary8)},
-    {Name: constants.TraceId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}},
-    {Name: constants.SpanId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}},
-    {Name: constants.TraceState, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-    {Name: constants.ParentSpanId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}, Metadata: schema.Metadata(schema.Optional)},
-    {Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
-    {Name: constants.KIND, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-    {Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
-    {Name: constants.DroppedEventsCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
-    {Name: constants.DroppedLinksCount, Type: arrow.PrimitiveTypes.Uint32, Metadata: schema.Metadata(schema.Optional)},
-    {Name: constants.Status, Type: arrow.StructOf([]arrow.Field{
-      {Name: constants.StatusCode, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-      {Name: constants.StatusMessage, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Optional, schema.Dictionary8)},
-    }...), Metadata: schema.Metadata(schema.Optional)},
-  }, nil)
-)
+      {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Nullable: true},
+      {Name: constants.Resource, Type: arrow.StructOf([]arrow.Field{
+        {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Nullable: true},
+        {Name: constants.SchemaUrl,Type: arrow.BinaryTypes.String,Metadata: schema.Metadata(schema.Dictionary8), Nullable: true},
+        {Name: constants.DroppedAttributesCount,Type: arrow.PrimitiveTypes.Uint32,Nullable: true},
+      }...), Nullable: true},
+      {Name: constants.Scope, Type: arrow.StructOf([]arrow.Field{
+          {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: acommon.Metadata(acommon.DeltaEncoding), Nullable: true},
+          {Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Dictionary8), Nullable: true},
+          {Name: constants.Version, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Dictionary8), Nullable: true},
+          {Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Nullable: true},
+      }...), Nullable: true},
+      {Name: constants.SchemaUrl, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8), Nullable: true},
+      {Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
+      {Name: constants.DurationTimeUnixNano, Type: arrow.FixedWidthTypes.Duration_ms, Metadata: schema.Metadata(schema.Dictionary8)},
+      {Name: constants.TraceId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}},
+      {Name: constants.SpanId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}},
+      {Name: constants.TraceState, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8), Nullable: true},
+      {Name: constants.ParentSpanId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}, Nullable: true},
+      {Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8)},
+      {Name: constants.KIND, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Dictionary8), Nullable: true},
+      {Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Nullable: true},
+      {Name: constants.DroppedEventsCount, Type: arrow.PrimitiveTypes.Uint32, Nullable: true},
+      {Name: constants.DroppedLinksCount, Type: arrow.PrimitiveTypes.Uint32, Nullable: true},
+      {Name: constants.Status, Type: arrow.StructOf([]arrow.Field{
+        {Name: constants.StatusCode, Type: arrow.PrimitiveTypes.Int32, Metadata: schema.Metadata(schema.Dictionary8), Nullable: true},
+        {Name: constants.StatusMessage, Type: arrow.BinaryTypes.String, Metadata: schema.Metadata(schema.Dictionary8), Nullable: true},
+      }...), Nullable: true},
+    }, nil)
+  )
 ```
 
-In this example, Arrow field-level metadata are employed to designate when a field is optional or to specify the minimal dictionary encoding applicable to a particular field. Now let’s imagine a scenario utilizing this schema in a straightforward scenario, wherein only a handful of fields are actually in use, and the cardinality of most dictionary-encoded fields is low (i.e., below 2^8). Ideally, we'd want a system capable of dynamically constructing the following simplified schema, which, in essence, is a strict subset of the original schema. 
+In this example, Arrow field-level metadata are employed to designate when a field is optional (Nullable: true) or to specify the minimal dictionary encoding applicable to a particular field (Metadata Dictionary8/16/…). Now let’s imagine a scenario utilizing this schema in a straightforward scenario, wherein only a handful of fields are actually in use, and the cardinality of most dictionary-encoded fields is low (i.e., below 2^8). Ideally, we'd want a system capable of dynamically constructing the following simplified schema, which, in essence, is a strict subset of the original schema. 
 
 ```go
 var (
   // Simplified schema definition generated by the Arrow Record encoder based on 
   // the data observed.
   TracesSchema = arrow.NewSchema([]arrow.Field{
-    {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16},
+    {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Nullable: true},
     {Name: constants.StartTimeUnixNano, Type: arrow.FixedWidthTypes.Timestamp_ns},
     {Name: constants.TraceId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 16}},
     {Name: constants.SpanId, Type: &arrow.FixedSizeBinaryType{ByteWidth: 8}},
@@ -91,7 +91,7 @@ var (
     {Name: constants.KIND, Type: &arrow.DictionaryType {
       IndexType: arrow.PrimitiveTypes.Uint8,
       ValueType: arrow.PrimitiveTypes.Int32,
-    }},
+    }, Nullable: true},
   }, nil)
 )
 ```
