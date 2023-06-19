@@ -42,6 +42,7 @@ The following Go Arrow schema definition provides an example of such a schema, i
 var (
   // Arrow schema for the OTLP Arrow Traces record (without attributes, links, and events).
   TracesSchema = arrow.NewSchema([]arrow.Field{
+      // Nullabe:true means the field is optional, in this case of 16 bit unsigned integers 
       {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Nullable: true},
       {Name: constants.Resource, Type: arrow.StructOf([]arrow.Field{
         {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Nullable: true},
@@ -50,6 +51,7 @@ var (
       }...), Nullable: true},
       {Name: constants.Scope, Type: arrow.StructOf([]arrow.Field{
           {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Metadata: acommon.Metadata(acommon.DeltaEncoding), Nullable: true},
+          // --- Use dictionary with 8 bit integers initially ----
           {Name: constants.Name, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Dictionary8), Nullable: true},
           {Name: constants.Version, Type: arrow.BinaryTypes.String, Metadata: acommon.Metadata(acommon.Dictionary8), Nullable: true},
           {Name: constants.DroppedAttributesCount, Type: arrow.PrimitiveTypes.Uint32, Nullable: true},
