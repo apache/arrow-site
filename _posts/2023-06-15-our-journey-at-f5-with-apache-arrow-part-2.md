@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Our journey at F5 with Apache Arrow (part 2)"
+title: "Our journey at F5 with Apache Arrow (part 2): Adaptive Schemas and Sorting to Optimize Arrow Usage"
 date: "2023-06-15 00:00:00"
 author: Laurent Quérel
 categories: [application]
