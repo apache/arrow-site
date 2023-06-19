@@ -46,6 +46,7 @@ var (
       {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Nullable: true},
       {Name: constants.Resource, Type: arrow.StructOf([]arrow.Field{
         {Name: constants.ID, Type: arrow.PrimitiveTypes.Uint16, Nullable: true},
+        // --- Use dictionary with 8 bit integers initially ----
         {Name: constants.SchemaUrl,Type: arrow.BinaryTypes.String,Metadata: schema.Metadata(schema.Dictionary8), Nullable: true},
         {Name: constants.DroppedAttributesCount,Type: arrow.PrimitiveTypes.Uint32,Nullable: true},
       }...), Nullable: true},
@@ -113,7 +114,7 @@ More specifically, the process of the Adaptive Arrow schema component consists o
 
 **Initialization phase**
 
-During the initialization phase, the Arrow Record Encoder reads the annotated Arrow schema (i.e. the reference schema) and generates a collection of transformations. When these transformations are applied to the reference schema, they yield the first minimal Arrow schema that adheres to the constraints depicted by these annotations. In this initial iteration, all optional fields are eliminated, and all dictionary-encoded fields are configured to utilize the smallest encoding as defined by the annotation. These transformations form a tree, reflecting the structure of the reference schema. 
+During the initialization phase, the Arrow Record Encoder reads the annotated Arrow schema (i.e. the reference schema) and generates a collection of transformations. When these transformations are applied to the reference schema, they yield the first minimal Arrow schema that adheres to the constraints depicted by these annotations. In this initial iteration, all optional fields are eliminated, and all dictionary-encoded fields are configured to utilize the smallest encoding as defined by the annotation (only `Dictionary8` in the previous example). These transformations form a tree, reflecting the structure of the reference schema. 
 
 **Feeding phase**
 
