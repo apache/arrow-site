@@ -1,4 +1,146 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2023-06-21T08:18:03-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow ADBC 0.5.0 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2023/06/21/adbc-0.5.0-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 0.5.0 (Libraries) Release" /><published>2023-06-21T00:00:00-04:00</published><updated>2023-06-21T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2023/06/21/adbc-0.5.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/06/21/adbc-0.5.0-release/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2023-06-22T20:44:58-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow nanoarrow 0.2 Release</title><link href="https://arrow.apache.org/blog/2023/06/22/nanoarrow-0.120-release/" rel="alternate" type="text/html" title="Apache Arrow nanoarrow 0.2 Release" /><published>2023-06-22T00:00:00-04:00</published><updated>2023-06-22T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2023/06/22/nanoarrow-0.120-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/06/22/nanoarrow-0.120-release/"><![CDATA[<!--
+
+-->
+
+<p>The Apache Arrow team is pleased to announce the 0.2.0 release of
+Apache Arrow nanoarrow. This initial release covers 19 resolved issues from
+6 contributors.</p>
+
+<h2 id="release-highlights">Release Highlights</h2>
+
+<ul>
+  <li>Addition of the Arrow <a href="#ipc-stream-support">IPC stream reader extension</a></li>
+  <li>Addition of the <a href="#getting-started-with-nanoarrow">Getting Started with nanoarrow</a>
+tutorial</li>
+  <li>Improvements in reliability and platform test coverage of the <a href="#c-library">C library</a></li>
+  <li>Improvements in reliability and type support in the <a href="#r-bindings">R bindings</a></li>
+</ul>
+
+<p>See the
+<a href="https://github.com/apache/arrow-nanoarrow/blob/apache-arrow-nanoarrow-0.2.0/CHANGELOG.md">Changelog</a>
+for a detailed list of contributions to this release.</p>
+
+<h2 id="ipc-stream-support">IPC stream support</h2>
+
+<p>This release includes support for reading schemas and record batches serialized
+using the
+<a href="https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc">Arrow IPC format</a>. Based on the
+<a href="https://github.com/dvidelabs/flatcc">flatcc</a>
+flatbuffers implementation, the nanoarrow IPC read support is implemented as
+an optional extension to the core nanoarrow library. The easiest way to get
+started is with the <code class="language-plaintext highlighter-rouge">ArrowArrayStream</code> provider using one of the built-in
+<code class="language-plaintext highlighter-rouge">ArrowIpcInputStream</code> implementations:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;stdbool.h&gt;</span><span class="cp">
+</span>
+<span class="cp">#include</span> <span class="cpf">"nanoarrow_ipc.h"</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+  <span class="kt">FILE</span><span class="o">*</span> <span class="n">file_ptr</span> <span class="o">=</span> <span class="n">freopen</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">,</span> <span class="n">stdin</span><span class="p">);</span>
+
+  <span class="k">struct</span> <span class="n">ArrowIpcInputStream</span> <span class="n">input</span><span class="p">;</span>
+  <span class="n">NANOARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">ArrowIpcInputStreamInitFile</span><span class="p">(</span><span class="o">&amp;</span><span class="n">input</span><span class="p">,</span> <span class="n">file_ptr</span><span class="p">,</span> <span class="nb">false</span><span class="p">));</span>
+
+  <span class="k">struct</span> <span class="n">ArrowArrayStream</span> <span class="n">stream</span><span class="p">;</span>
+  <span class="n">NANOARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">ArrowIpcArrayStreamReaderInit</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stream</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">input</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">));</span>
+
+  <span class="k">struct</span> <span class="n">ArrowSchema</span> <span class="n">schema</span><span class="p">;</span>
+  <span class="n">NANOARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">stream</span><span class="p">.</span><span class="n">get_schema</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stream</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">schema</span><span class="p">));</span>
+
+  <span class="k">struct</span> <span class="n">ArrowArray</span> <span class="n">array</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">NANOARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">stream</span><span class="p">.</span><span class="n">get_next</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stream</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">array</span><span class="p">));</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">array</span><span class="p">.</span><span class="n">release</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Facilities for advanced usage are also provided via the low-level <code class="language-plaintext highlighter-rouge">ArrowIpcDecoder</code>,
+which takes care of the details of deserializing the flatbuffer headers and
+assembling buffers into an <code class="language-plaintext highlighter-rouge">ArrowArray</code>. The current implementation can read
+schema and record batch messages that contain any Arrow type that supported by
+the C data interface. The initial version can read both big and little endian
+streams originating from platforms of either endian. Dictionary encoding and
+compression are not currently supported.</p>
+
+<h2 id="getting-started-with-nanoarrow">Getting started with nanoarrow</h2>
+
+<p>Early users of the nanoarrow C library respectfully noted that it was difficult
+to know where to begin. This release includes improvements in reference documentation
+but also includes a long-form tutorial for those just getting started with or
+considering adopting the library. You can find the tutorial at the
+<a href="https://apache.github.io/arrow-nanoarrow/dev/getting-started.html">nanoarrow documentation site</a>.</p>
+
+<h2 id="c-library">C library</h2>
+
+<p>The nanoarrow 0.2.0 release also includes a number of bugfixes and improvements
+to the core C library, many of which were identified as a result of usage
+connected with development of the IPC extension.</p>
+
+<ul>
+  <li>Helpers for extracting/appending <code class="language-plaintext highlighter-rouge">Decimal128</code> and <code class="language-plaintext highlighter-rouge">Decimal256</code> elements
+from/to arrays were added.</li>
+  <li>The C library can now perform “full” validation to validate untrusted input
+(e.g., serialized IPC from the wire).</li>
+  <li>The C library can now perform “minimal” validation that performs all checks
+that do not access any buffer data. This feature was added to facilitate
+future support for the <code class="language-plaintext highlighter-rouge">ArrowDeviceArray</code> that was recently added as the
+Arrow C device interface.</li>
+  <li>Release verification on Ubuntu (x86_64, arm64), Fedora (x86_64),
+Archlinux (x86_64), Centos 7 (x86_64, arm64), Alpine (x86_64, arm64, s390x),
+Windows (x86_64), and MacOS (x86_64) were added to the continuous
+integration system. Linux verification is implemented using <code class="language-plaintext highlighter-rouge">docker compose</code>
+to facilitate local checks when developing features that may affect
+a specific platform.</li>
+</ul>
+
+<h2 id="r-bindings">R bindings</h2>
+
+<p>The nanoarrow R bindings are distributed as the <code class="language-plaintext highlighter-rouge">nanoarrow</code> package on
+<a href="https://cran.r-project.org/">CRAN</a>. The 0.2.0 release of the R bindings includes
+improvements in type support, improvements in stability, and features required
+for the forthcoming release of Arrow Database Connectivity (ADBC) R bindings.
+Notably:</p>
+
+<ul>
+  <li>Support for conversion of union arrays to R objects was added to facilitate
+support for an ADBC function that returns such an array.</li>
+  <li>Support for adding an R-level finalizer to an <code class="language-plaintext highlighter-rouge">ArrowArrayStream</code> was added
+to facilitate safely wrapping a stream resulting from an ADBC call at the
+R level.</li>
+</ul>
+
+<h2 id="python-bindings">Python bindings?</h2>
+
+<p>The nanoarrow 0.2.0 release does not include Python bindings, but improvements to the
+<a href="https://github.com/apache/arrow-nanoarrow/tree/main/python">unreleased draft bindings</a>
+were added to facilitate discussion among Python developers regarding the useful
+scope of a potential future nanoarrow Python package. If one of those developers is
+you, feel free to
+<a href="https://github.com/apache/arrow-nanoarrow/issues/new/choose">open an issue</a>
+or send a post to the
+<a href="https://lists.apache.org/list.html?dev@arrow.apache.org">developer mailing list</a>
+to engage in the discussion.</p>
+
+<h2 id="contributors">Contributors</h2>
+
+<p>This initial release consists of contributions from 6 contributors in addition
+to the invaluable advice and support of the Apache Arrow developer mailing list.
+Special thanks to David Li for reviewing nearly every PR in this release!</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ git shortlog -sn d91c35b33c7b6ff94f5f929384879352e241ed71..apache-arrow-nanoarrow-0.2.0 | grep -v "GitHub Actions"
+    61  Dewey Dunnington
+     2  Dirk Eddelbuettel
+     2  Joris Van den Bossche
+     2  Kirill Müller
+     2  William Ayd
+     1  David Li
+</code></pre></div></div>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 0.2.0 release of Apache Arrow nanoarrow. This initial release covers 19 resolved issues from 6 contributors. Release Highlights Addition of the Arrow IPC stream reader extension Addition of the Getting Started with nanoarrow tutorial Improvements in reliability and platform test coverage of the C library Improvements in reliability and type support in the R bindings See the Changelog for a detailed list of contributions to this release. IPC stream support This release includes support for reading schemas and record batches serialized using the Arrow IPC format. Based on the flatcc flatbuffers implementation, the nanoarrow IPC read support is implemented as an optional extension to the core nanoarrow library. The easiest way to get started is with the ArrowArrayStream provider using one of the built-in ArrowIpcInputStream implementations: #include &lt;stdio.h&gt; #include &lt;stdbool.h&gt; #include "nanoarrow_ipc.h" int main(int argc, char* argv[]) { FILE* file_ptr = freopen(NULL, "rb", stdin); struct ArrowIpcInputStream input; NANOARROW_RETURN_NOT_OK(ArrowIpcInputStreamInitFile(&amp;input, file_ptr, false)); struct ArrowArrayStream stream; NANOARROW_RETURN_NOT_OK(ArrowIpcArrayStreamReaderInit(&amp;stream, &amp;input, NULL)); struct ArrowSchema schema; NANOARROW_RETURN_NOT_OK(stream.get_schema(&amp;stream, &amp;schema)); struct ArrowArray array; while (true) { NANOARROW_RETURN_NOT_OK(stream.get_next(&amp;stream, &amp;array)); if (array.release == NULL) { break; } } return 0; } Facilities for advanced usage are also provided via the low-level ArrowIpcDecoder, which takes care of the details of deserializing the flatbuffer headers and assembling buffers into an ArrowArray. The current implementation can read schema and record batch messages that contain any Arrow type that supported by the C data interface. The initial version can read both big and little endian streams originating from platforms of either endian. Dictionary encoding and compression are not currently supported. Getting started with nanoarrow Early users of the nanoarrow C library respectfully noted that it was difficult to know where to begin. This release includes improvements in reference documentation but also includes a long-form tutorial for those just getting started with or considering adopting the library. You can find the tutorial at the nanoarrow documentation site. C library The nanoarrow 0.2.0 release also includes a number of bugfixes and improvements to the core C library, many of which were identified as a result of usage connected with development of the IPC extension. Helpers for extracting/appending Decimal128 and Decimal256 elements from/to arrays were added. The C library can now perform “full” validation to validate untrusted input (e.g., serialized IPC from the wire). The C library can now perform “minimal” validation that performs all checks that do not access any buffer data. This feature was added to facilitate future support for the ArrowDeviceArray that was recently added as the Arrow C device interface. Release verification on Ubuntu (x86_64, arm64), Fedora (x86_64), Archlinux (x86_64), Centos 7 (x86_64, arm64), Alpine (x86_64, arm64, s390x), Windows (x86_64), and MacOS (x86_64) were added to the continuous integration system. Linux verification is implemented using docker compose to facilitate local checks when developing features that may affect a specific platform. R bindings The nanoarrow R bindings are distributed as the nanoarrow package on CRAN. The 0.2.0 release of the R bindings includes improvements in type support, improvements in stability, and features required for the forthcoming release of Arrow Database Connectivity (ADBC) R bindings. Notably: Support for conversion of union arrays to R objects was added to facilitate support for an ADBC function that returns such an array. Support for adding an R-level finalizer to an ArrowArrayStream was added to facilitate safely wrapping a stream resulting from an ADBC call at the R level. Python bindings? The nanoarrow 0.2.0 release does not include Python bindings, but improvements to the unreleased draft bindings were added to facilitate discussion among Python developers regarding the useful scope of a potential future nanoarrow Python package. If one of those developers is you, feel free to open an issue or send a post to the developer mailing list to engage in the discussion. Contributors This initial release consists of contributions from 6 contributors in addition to the invaluable advice and support of the Apache Arrow developer mailing list. Special thanks to David Li for reviewing nearly every PR in this release! $ git shortlog -sn d91c35b33c7b6ff94f5f929384879352e241ed71..apache-arrow-nanoarrow-0.2.0 | grep -v "GitHub Actions" 61 Dewey Dunnington 2 Dirk Eddelbuettel 2 Joris Van den Bossche 2 Kirill Müller 2 William Ayd 1 David Li]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow ADBC 0.5.0 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2023/06/21/adbc-0.5.0-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 0.5.0 (Libraries) Release" /><published>2023-06-21T00:00:00-04:00</published><updated>2023-06-21T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2023/06/21/adbc-0.5.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/06/21/adbc-0.5.0-release/"><![CDATA[<!--
 
 -->
 
@@ -1162,176 +1304,4 @@ For details, see the <a href="https://lists.apache.org/thread/247z3t06mf132nocng
 
 <p>We welcome questions and contributions from all interested.  Issues
 can be filed on <a href="https://github.com/apache/arrow-adbc/issues">GitHub</a>, and questions can be directed to GitHub
-or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 0.2.0 release of the Apache Arrow ADBC libraries. This covers includes 34 resolved issues from 7 distinct contributors. This is a release of the libraries, which are at version 0.2.0. The API specification is versioned separately and is at version 1.0.0. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights An ADBC Flight SQL driver in Go has been added. This driver has bindings for C/C++ and Python as well. This lets us distribute and update the driver independently of PyArrow, without causing conflicts in dependencies like Protobuf and gRPC. The Go database/sql interface now returns standard library time.Time values for Arrow time and date columns. The PostgreSQL driver has support for more types. Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-arrow-adbc-0.1.0..apache-arrow-adbc-0.2.0 56 David Li 8 Sutou Kouhei 7 Matt Topol 4 Jacob Marble 2 Benson Muite 1 Dave Hirschfeld 1 Jianfeng Mao Roadmap New extensions to the API specification have been proposed. These will be backwards-compatible and will become API specification 1.1.0. For details, see the mailing list discussion and the milestone tracking the proposed features. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">February 2023 Rust Apache Arrow Highlights</title><link href="https://arrow.apache.org/blog/2023/02/13/rust-32.0.0/" rel="alternate" type="text/html" title="February 2023 Rust Apache Arrow Highlights" /><published>2023-02-13T19:00:00-05:00</published><updated>2023-02-13T19:00:00-05:00</updated><id>https://arrow.apache.org/blog/2023/02/13/rust-32.0.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2023/02/13/rust-32.0.0/"><![CDATA[<!--
-
--->
-
-<h1 id="introduction">Introduction</h1>
-
-<p>With the recent release of <a href="https://crates.io/crates/arrow/32.0.0">32.0.0</a> of the Rust implementation of <a href="https://arrow.apache.org/">Apache Arrow</a>, it seemed timely to highlight some of the community works since the <a href="https://arrow.apache.org/blog/2022/06/16/rust-16.0.0/">last update</a>.</p>
-
-<p>The most recent list of detailed changes can always be found in the <a href="https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md">CHANGELOG</a>, with the full historical list available <a href="https://github.com/apache/arrow-rs/blob/master/CHANGELOG-old.md">here</a>.</p>
-
-<h1 id="arrow">Arrow</h1>
-
-<p><a href="https://crates.io/crates/arrow">arrow</a> and <a href="https://crates.io/crates/arrow-flight">arrow-flight</a> are native Rust implementations of Apache Arrow. Apache Arrow defines a language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware like CPUs and GPUs. The Arrow memory format also supports zero-copy reads for lightning-fast data access without serialization overhead.</p>
-
-<p>The <a href="https://www.rust-lang.org/">Rust language</a> offers best in class performance,  memory safety, and the developer productivity of a modern programming language. These features make Rust an excellent choice for building modern high performance analytical systems. When combined, Rust and the Apache Arrow Ecosystem are a compelling toolkit for building the next generation of systems.</p>
-
-<p>The <a href="https://github.com/apache/arrow-rs">repository</a> recently passed 1400 stars on github, and the community has been focused on performance and feature completeness.</p>
-
-<p><strong>Major Highlights</strong></p>
-
-<ul>
-  <li><strong>New CSV and JSON Readers</strong>: The CSV and JSON readers have been revamped. Their performance has more than doubled, and they now support push-driven parsing facilitating async streaming decode from object storage.</li>
-  <li><strong>Faster Build Times and Reduced Codegen</strong>: The <code class="language-plaintext highlighter-rouge">arrow</code> crate has been split into multiple smaller crates, and large kernels have been moved behind optional feature flags. These changes allow downstream projects to choose a smaller dependency footprint and build times, if desired.</li>
-  <li><strong>Support for Copy-On-Write</strong>: Arrow arrays now support copy-on-write, via the <a href="https://docs.rs/arrow/32.0.0/arrow/array/struct.ArrayData.html#method.into_builder"><code class="language-plaintext highlighter-rouge">into_builder</code></a> methods</li>
-  <li><strong>Comparable Row Format</strong>: <a href="https://arrow.apache.org/blog/2022/11/07/multi-column-sorts-in-arrow-rust-part-1/">Much faster multi-column Sorting and Grouping</a> is now possible with the the new spillable, comparable <a href="https://docs.rs/arrow-row/32.0.0/arrow_row/index.html">row-format</a></li>
-  <li><strong>FlightSQL Support</strong>: <a href="https://arrow.apache.org/docs/format/FlightSql.html">FlightSQL</a> <a href="https://docs.rs/arrow-flight/32.0.0/arrow_flight/sql/index.html">support</a> has been expanded</li>
-  <li><strong>Mid-Level Flight Client</strong>: A new <a href="https://docs.rs/arrow-flight/32.0.0/arrow_flight/client/struct.FlightClient.html">FlightClient</a> is available that handles lower level protocol details, and easier to use <a href="https://docs.rs/arrow-flight/32.0.0/arrow_flight/encode/struct.FlightDataEncoderBuilder.html">encoding</a> and <a href="https://docs.rs/arrow-flight/32.0.0/arrow_flight/decode/struct.FlightDataDecoder.html">decoding</a> APIs.</li>
-  <li><strong>IPC File Compression</strong>: Arrow IPC file <a href="https://docs.rs/arrow-ipc/32.0.0/arrow_ipc/gen/Message/struct.CompressionType.html">compression</a> with ZSTD and LZ4 is now fully supported.</li>
-  <li><strong>Full Decimal Support</strong>: 256-bit decimals and negative scales can be created and manipulated using many kernels, such as arithmetic.</li>
-  <li><strong>Improved Dictionary Support</strong>: Dictionaries are now transparently supported in most kernels.</li>
-  <li><strong>Improved Temporal Support</strong>: Timestamps with Timezones and other temporal types are supported in many more kernels.</li>
-  <li><strong>Improved Generics</strong>: Improved generics allow writing code generic over all arrays, or all arrays with the same layout</li>
-  <li><strong>Downcast Macros</strong>: Various <a href="https://docs.rs/arrow/32.0.0/arrow/macro.downcast_primitive_array.html">helper</a> <a href="https://docs.rs/arrow/32.0.0/arrow/macro.downcast_dictionary_array.html">macros</a> are now available to simplify dynamic dispatch to statically typed implementations.</li>
-</ul>
-
-<h1 id="parquet">Parquet</h1>
-
-<p><a href="https://parquet.apache.org/">Apache Parquet</a> is an open source, column-oriented data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle complex data in bulk. The Apache Parquet implementation in Rust is one of the <a href="https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/">fastest and most sophisticated</a> open source implementations available.</p>
-
-<p><strong>Major Highlights</strong></p>
-
-<ul>
-  <li><strong>Arbitrarily Nested Schema</strong>: Arbitrarily nested schemas can be read to and written from arrow, as described in the series of <a href="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/">blog posts</a> on the topic.</li>
-  <li><strong>Predicate Pushdown</strong>: The <a href="https://docs.rs/parquet/32.0.0/parquet/arrow/index.html">arrow reader</a> now supports advanced predicate pushdown, including late materialization, as described <a href="https://arrow.apache.org/blog/2022/12/26/querying-parquet-with-millisecond-latency/">here</a>. See <a href="https://docs.rs/parquet/32.0.0/parquet/arrow/arrow_reader/struct.RowSelection.html">RowSelection</a> and <a href="https://docs.rs/parquet/32.0.0/parquet/arrow/arrow_reader/trait.ArrowPredicate.html">ArrowPredicate</a>.</li>
-  <li><strong>Bloom Filter Support</strong>: Support for both <a href="https://docs.rs/parquet/32.0.0/parquet/bloom_filter/index.html">reading and writing bloom filters</a> has been added.</li>
-  <li><strong>CLI Tools</strong>: additional <a href="https://github.com/apache/arrow-rs/tree/master/parquet/src/bin">CLI tools</a> have been added to introspect and manipulate parquet data.</li>
-</ul>
-
-<h1 id="object-store">Object Store</h1>
-
-<p>Modern analytic workloads increasingly make use of blob storage facilities, such as S3, to store large volumes of queryable data. A native Rust object storage implementation that works well with the Rust Ecosystem in general, and the Arrow IO abstractions, is an important building block for many applications.
-The <a href="https://docs.rs/object_store/latest/object_store/">object_store</a> crate was <a href="https://www.influxdata.com/blog/rust-object-store-donation/">donated to the Apache Arrow project in July 2022</a> to fill this need, and while it follows a separate release schedule than the <code class="language-plaintext highlighter-rouge">arrow</code> and <code class="language-plaintext highlighter-rouge">parquet</code> crates, it forms an integral part of the overarching Arrow IO story.</p>
-
-<p>Recent improvements include the following:</p>
-
-<p><strong>Major Highlights</strong></p>
-
-<ul>
-  <li><strong>Streaming Upload</strong>: Multipart uploads are now supported.</li>
-  <li><strong>Minimised dependency footprint</strong>: Upstream SDKs are no longer used, improving consistency and reducing dependencies.</li>
-  <li><strong>HTTP / WebDAV Support</strong>: Applications can read from arbitrary HTTP servers, with mutation and listing supported on WebDAV-compatible endpoints.</li>
-  <li><strong>Configurable Networking</strong>: Socks proxies, and advanced HTTP client configuration are now supported.</li>
-  <li><strong>Serializable Configuration</strong>: Configuration information can now be easily serialized and deserialized.</li>
-  <li><strong>Additional Authentication</strong>: Additional authentication options are now available for the various cloud providers.</li>
-</ul>
-
-<h1 id="contributors">Contributors:</h1>
-
-<p>While some open source software can be created mostly by a single contributor, we believe the greatest software with the largest impact and reach is built around its community. Thus, Arrow is proud to part of the <a href="https://www.apache.org/">Apache Software Foundation</a> and our releases both past and present are a result of our amazing community’s effort.</p>
-
-<p>We would like to thank everyone who has contributed to the arrow-rs repository since the <code class="language-plaintext highlighter-rouge">16.0.0</code> release. Keep up the great work, and we look forward to continued improvements:</p>
-
-<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="go">% git shortlog -sn 16.0.0..32.0.0
-   347  Raphael Taylor-Davies
-   166  Liang-Chi Hsieh
-    94  Andrew Lamb
-    36  Remzi Yang
-    30  Kun Liu
-    21  Yang Jiang
-    20  askoa
-    17  dependabot[bot]
-    15  Vrishabh
-    12  Dan Harris
-    12  Wei-Ting Kuo
-    11  Daniël Heres
-    11  Jörn Horstmann
-     9  Brent Gardner
-     9  Ian Alexander Joiner
-     9  Jiayu Liu
-     9  Martin Grigorov
-     8  Palladium
-     7  Jeffrey
-     7  Marco Neumann
-     6  Robert Pack
-     6  Will Jones
-     4  Andy Grove
-     4  comphead
-     3  Adrián Gallego Castellanos
-     3  Markus Westerlind
-     3  Quentin
-     2  Alex Qyoun-ae
-     2  Dmitry Patsura
-     2  Frank
-     2  Jiacai Liu
-     2  Marc Garcia
-     2  Marko Grujic
-     2  Max Burke
-     2  Your friendly neighborhood geek
-     2  sachin agarwal
-     1  Aarash Heydari
-     1  Adam Gutglick
-     1  Andrey Frolov
-     1  Anthony Poncet
-     1  Artjoms Iskovs
-     1  Ben Kimock
-     1  Brian Phillips
-     1  Carol (Nichols || Goulding)
-     1  Christian Salvati
-     1  Dalton Modlin
-     1  Daniel Martinez Maqueda
-     1  Daniel Poelzleithner
-     1  Davis Silverman
-     1  Dhruv Vats
-     1  Fabio Silva
-     1  GeauxEric
-     1  George Andronchik
-     1  Ismail-Maj
-     1  Ismaël Mejía
-     1  JanKaul
-     1  JasonLi
-     1  Javier Goday
-     1  Jayjeet Chakraborty
-     1  Jean-Charles Campagne
-     1  Jie Han
-     1  John Hughes
-     1  Jon Mease
-     1  Kevin Lim
-     1  Kohei Suzuki
-     1  Konstantin Fastov
-     1  Marius S
-     1  Masato Kato
-     1  Matthijs Brobbel
-     1  Michael Edwards
-     1  Pier-Olivier Thibault
-     1  Remco Verhoef
-     1  Rutvik Patel
-     1  Sean Smith
-     1  Sid
-     1  Stanislav Lukeš
-     1  Steve Vaughan
-     1  Stuart Carnie
-     1  Sumit
-     1  Trent Feda
-     1  Valeriy V. Vorotyntsev
-     1  Wenjun L
-     1  X
-     1  aksharau
-     1  bmmeijers
-     1  chunshao.rcs
-     1  jakevin
-     1  kastolars
-     1  nvartolomei
-     1  xudong.w
-     1  哇呜哇呜呀咦耶
-     1  尹吉峰
-</span></code></pre></div></div>
-
-<h1 id="join-the-community">Join the community</h1>
-
-<p>If you are interested in contributing to the Rust subproject in Apache Arrow, we encourage you to try out Arrow on some of your data, help
-improve the documentation, or submit a PR. You can find a list of open issues
-suitable for beginners <a href="https://github.com/apache/arrow-rs/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">here</a>
-and the full list <a href="https://github.com/apache/arrow-rs/issues">here</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[Introduction With the recent release of 32.0.0 of the Rust implementation of Apache Arrow, it seemed timely to highlight some of the community works since the last update. The most recent list of detailed changes can always be found in the CHANGELOG, with the full historical list available here. Arrow arrow and arrow-flight are native Rust implementations of Apache Arrow. Apache Arrow defines a language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware like CPUs and GPUs. The Arrow memory format also supports zero-copy reads for lightning-fast data access without serialization overhead. The Rust language offers best in class performance, memory safety, and the developer productivity of a modern programming language. These features make Rust an excellent choice for building modern high performance analytical systems. When combined, Rust and the Apache Arrow Ecosystem are a compelling toolkit for building the next generation of systems. The repository recently passed 1400 stars on github, and the community has been focused on performance and feature completeness. Major Highlights New CSV and JSON Readers: The CSV and JSON readers have been revamped. Their performance has more than doubled, and they now support push-driven parsing facilitating async streaming decode from object storage. Faster Build Times and Reduced Codegen: The arrow crate has been split into multiple smaller crates, and large kernels have been moved behind optional feature flags. These changes allow downstream projects to choose a smaller dependency footprint and build times, if desired. Support for Copy-On-Write: Arrow arrays now support copy-on-write, via the into_builder methods Comparable Row Format: Much faster multi-column Sorting and Grouping is now possible with the the new spillable, comparable row-format FlightSQL Support: FlightSQL support has been expanded Mid-Level Flight Client: A new FlightClient is available that handles lower level protocol details, and easier to use encoding and decoding APIs. IPC File Compression: Arrow IPC file compression with ZSTD and LZ4 is now fully supported. Full Decimal Support: 256-bit decimals and negative scales can be created and manipulated using many kernels, such as arithmetic. Improved Dictionary Support: Dictionaries are now transparently supported in most kernels. Improved Temporal Support: Timestamps with Timezones and other temporal types are supported in many more kernels. Improved Generics: Improved generics allow writing code generic over all arrays, or all arrays with the same layout Downcast Macros: Various helper macros are now available to simplify dynamic dispatch to statically typed implementations. Parquet Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It provides efficient data compression and encoding schemes with enhanced performance to handle complex data in bulk. The Apache Parquet implementation in Rust is one of the fastest and most sophisticated open source implementations available. Major Highlights Arbitrarily Nested Schema: Arbitrarily nested schemas can be read to and written from arrow, as described in the series of blog posts on the topic. Predicate Pushdown: The arrow reader now supports advanced predicate pushdown, including late materialization, as described here. See RowSelection and ArrowPredicate. Bloom Filter Support: Support for both reading and writing bloom filters has been added. CLI Tools: additional CLI tools have been added to introspect and manipulate parquet data. Object Store Modern analytic workloads increasingly make use of blob storage facilities, such as S3, to store large volumes of queryable data. A native Rust object storage implementation that works well with the Rust Ecosystem in general, and the Arrow IO abstractions, is an important building block for many applications. The object_store crate was donated to the Apache Arrow project in July 2022 to fill this need, and while it follows a separate release schedule than the arrow and parquet crates, it forms an integral part of the overarching Arrow IO story. Recent improvements include the following: Major Highlights Streaming Upload: Multipart uploads are now supported. Minimised dependency footprint: Upstream SDKs are no longer used, improving consistency and reducing dependencies. HTTP / WebDAV Support: Applications can read from arbitrary HTTP servers, with mutation and listing supported on WebDAV-compatible endpoints. Configurable Networking: Socks proxies, and advanced HTTP client configuration are now supported. Serializable Configuration: Configuration information can now be easily serialized and deserialized. Additional Authentication: Additional authentication options are now available for the various cloud providers. Contributors: While some open source software can be created mostly by a single contributor, we believe the greatest software with the largest impact and reach is built around its community. Thus, Arrow is proud to part of the Apache Software Foundation and our releases both past and present are a result of our amazing community’s effort. We would like to thank everyone who has contributed to the arrow-rs repository since the 16.0.0 release. Keep up the great work, and we look forward to continued improvements: % git shortlog -sn 16.0.0..32.0.0 347 Raphael Taylor-Davies 166 Liang-Chi Hsieh 94 Andrew Lamb 36 Remzi Yang 30 Kun Liu 21 Yang Jiang 20 askoa 17 dependabot[bot] 15 Vrishabh 12 Dan Harris 12 Wei-Ting Kuo 11 Daniël Heres 11 Jörn Horstmann 9 Brent Gardner 9 Ian Alexander Joiner 9 Jiayu Liu 9 Martin Grigorov 8 Palladium 7 Jeffrey 7 Marco Neumann 6 Robert Pack 6 Will Jones 4 Andy Grove 4 comphead 3 Adrián Gallego Castellanos 3 Markus Westerlind 3 Quentin 2 Alex Qyoun-ae 2 Dmitry Patsura 2 Frank 2 Jiacai Liu 2 Marc Garcia 2 Marko Grujic 2 Max Burke 2 Your friendly neighborhood geek 2 sachin agarwal 1 Aarash Heydari 1 Adam Gutglick 1 Andrey Frolov 1 Anthony Poncet 1 Artjoms Iskovs 1 Ben Kimock 1 Brian Phillips 1 Carol (Nichols || Goulding) 1 Christian Salvati 1 Dalton Modlin 1 Daniel Martinez Maqueda 1 Daniel Poelzleithner 1 Davis Silverman 1 Dhruv Vats 1 Fabio Silva 1 GeauxEric 1 George Andronchik 1 Ismail-Maj 1 Ismaël Mejía 1 JanKaul 1 JasonLi 1 Javier Goday 1 Jayjeet Chakraborty 1 Jean-Charles Campagne 1 Jie Han 1 John Hughes 1 Jon Mease 1 Kevin Lim 1 Kohei Suzuki 1 Konstantin Fastov 1 Marius S 1 Masato Kato 1 Matthijs Brobbel 1 Michael Edwards 1 Pier-Olivier Thibault 1 Remco Verhoef 1 Rutvik Patel 1 Sean Smith 1 Sid 1 Stanislav Lukeš 1 Steve Vaughan 1 Stuart Carnie 1 Sumit 1 Trent Feda 1 Valeriy V. Vorotyntsev 1 Wenjun L 1 X 1 aksharau 1 bmmeijers 1 chunshao.rcs 1 jakevin 1 kastolars 1 nvartolomei 1 xudong.w 1 哇呜哇呜呀咦耶 1 尹吉峰 Join the community If you are interested in contributing to the Rust subproject in Apache Arrow, we encourage you to try out Arrow on some of your data, help improve the documentation, or submit a PR. You can find a list of open issues suitable for beginners here and the full list here.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 0.2.0 release of the Apache Arrow ADBC libraries. This covers includes 34 resolved issues from 7 distinct contributors. This is a release of the libraries, which are at version 0.2.0. The API specification is versioned separately and is at version 1.0.0. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights An ADBC Flight SQL driver in Go has been added. This driver has bindings for C/C++ and Python as well. This lets us distribute and update the driver independently of PyArrow, without causing conflicts in dependencies like Protobuf and gRPC. The Go database/sql interface now returns standard library time.Time values for Arrow time and date columns. The PostgreSQL driver has support for more types. Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-arrow-adbc-0.1.0..apache-arrow-adbc-0.2.0 56 David Li 8 Sutou Kouhei 7 Matt Topol 4 Jacob Marble 2 Benson Muite 1 Dave Hirschfeld 1 Jianfeng Mao Roadmap New extensions to the API specification have been proposed. These will be backwards-compatible and will become API specification 1.1.0. For details, see the mailing list discussion and the milestone tracking the proposed features. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
