@@ -55,7 +55,7 @@ tags in order to clarify the scope and purpose of messages. For example:
 When emailing one of the lists, please prefix the subject line with one or more
 tags. Depending the topic of your email, tags may include one or more:
 
-- Supported Enivronments: e.g., `[C++]`, `[Java]`, `[Python]`, etc.
+- Supported Environments: e.g., `[C++]`, `[Java]`, `[Python]`, etc.
 - Specifications and Protocols: e.g., `[Format]`, `[Flight RPC]`, `[ADBC]`, etc.
 
 You may also prefix your subject line with `[DISCUSS]` if your email is intended
