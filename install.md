@@ -81,6 +81,7 @@ Apache Arrow GLib (C). Here are supported platforms:
 
 * Debian GNU/Linux bullseye
 * Debian GNU/Linux bookworm
+* Debian GNU/Linux trixie
 * Ubuntu 20.04 LTS
 * Ubuntu 22.04 LTS
 * AlmaLinux 8
@@ -91,7 +92,7 @@ Apache Arrow GLib (C). Here are supported platforms:
 * Red Hat Enterprise Linux 7
 * Red Hat Enterprise Linux 8
 * Red Hat Enterprise Linux 9
-* Amazon Linux 2
+* Amazon Linux 2023
 * Oracle Linux 8
 * Oracle Linux 9
 
@@ -110,6 +111,8 @@ sudo apt install -y -V libarrow-dataset-glib-dev # For Apache Arrow Dataset GLib
 sudo apt install -y -V libarrow-acero-dev # For Apache Arrow Acero
 sudo apt install -y -V libarrow-flight-dev # For Apache Arrow Flight C++
 sudo apt install -y -V libarrow-flight-glib-dev # For Apache Arrow Flight GLib (C)
+sudo apt install -y -V libarrow-flight-sql-dev # For Apache Arrow Flight SQL C++
+sudo apt install -y -V libarrow-flight-sql-glib-dev # For Apache Arrow Flight SQL GLib (C)
 sudo apt install -y -V libgandiva-dev # For Gandiva C++
 sudo apt install -y -V libgandiva-glib-dev # For Gandiva GLib (C)
 sudo apt install -y -V libparquet-dev # For Apache Parquet C++
@@ -131,9 +134,11 @@ sudo dnf install -y arrow-devel # For C++
 sudo dnf install -y arrow-glib-devel # For GLib (C)
 sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
 sudo dnf install -y arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
-sudo dnf install -y arrow-acero-devel # For Apache Arrow Acero
+sudo dnf install -y arrow-acero-devel # For Apache Arrow Acero C++
 sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
 sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
+sudo dnf install -y arrow-flight-sql-devel # For Apache Arrow Flight SQL C++
+sudo dnf install -y arrow-flight-sql-glib-devel # For Apache Arrow Flight SQL GLib (C)
 sudo dnf install -y gandiva-devel # For Apache Gandiva C++
 sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
 sudo dnf install -y parquet-devel # For Apache Parquet C++
@@ -154,18 +159,23 @@ sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
 sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
 ```
 
-Amazon Linux 2:
+Amazon Linux 2023:
 
 ```shell
-sudo amazon-linux-extras install -y epel
-sudo yum install -y https://apache.jfrog.io/artifactory/arrow/amazon-linux/2/apache-arrow-release-latest.rpm
-sudo yum install -y --enablerepo=epel arrow-devel # For C++
-sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
-sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
-sudo yum install -y --enablerepo=epel arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
-sudo yum install -y --enablerepo=epel arrow-acero-devel # For Apache Arrow Acero
-sudo yum install -y --enablerepo=epel parquet-devel # For Apache Parquet C++
-sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GLib (C)
+sudo dnf install -y https://apache.jfrog.io/artifactory/arrow/amazon-linux/$(cut -d: -f6 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
+sudo dnf install -y arrow-devel # For C++
+sudo dnf install -y arrow-glib-devel # For GLib (C)
+sudo dnf install -y arrow-acero-devel # For Apache Arrow Acero
+sudo dnf install -y arrow-dataset-devel # For Apache Arrow Dataset C++
+sudo dnf install -y arrow-dataset-glib-devel # For Apache Arrow Dataset GLib (C)
+sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
+sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
+sudo dnf install -y arrow-flight-sql-devel # For Apache Arrow Flight SQL C++
+sudo dnf install -y arrow-flight-sql-glib-devel # For Apache Arrow Flight SQL GLib (C)
+sudo dnf install -y gandiva-devel # For Apache Gandiva C++
+sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
+sudo dnf install -y parquet-devel # For Apache Parquet C++
+sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
 ```
 
 ### C# Packages
@@ -185,8 +195,8 @@ For convenience, we also provide packages through several package managers. Many
 Binary conda packages are on [conda-forge][5] for Linux (x86\_64, aarch64, ppc64le), macOS (x86\_64 and arm64), and Windows (x86\_64)
 for the following versions:
 
-* Python 3.7, 3.8, 3.9, 3.10, 3.11
-* R 4.1, 4.2
+* Python 3.8, 3.9, 3.10, 3.11
+* R 4.1, 4.2, 4.3
 
 Install them with:
 
