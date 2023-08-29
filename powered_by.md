@@ -150,6 +150,7 @@ short description of your use case.
 * **[OmniSci][10] (formerly MapD):** In-memory columnar SQL engine designed to run
   on both GPUs and CPUs. OmniSci supports Arrow for data ingest and data interchange
   via CUDA IPC handles. This work is part of the [GPU Open Analytics Initiative][11]
+* **[OpenObserve][50]:** Petabyte scale observability tool for logs, metrics, and traces with visualizations. High focus on usability and simplicity. Supports opentelemetry and many existing log and metrics forwarders.
 * **[pandas][12]:** data analysis toolkit for Python programmers. pandas
   supports reading and writing Parquet files using pyarrow. Several pandas
   core developers are also contributors to Apache Arrow.
@@ -258,3 +259,4 @@ short description of your use case.
 [47]: https://github.com/huggingface/datasets
 [48]: https://github.com/cloudquery/cloudquery
 [49]: https://kaskada.io
+[50]: https://openobserve.ai
