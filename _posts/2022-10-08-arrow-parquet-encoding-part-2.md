@@ -264,8 +264,8 @@ For example, a list with offsets `[0, 2, 3, 3]` contains 3 pairs of offsets, `(0
 
 ```python
 0: [child[0], child[1]]
-1: []
-2: [child[2]]
+1: [child[2]]
+2: []
 ```
 
 For the example above with 4 JSON documents, this would be encoded in Arrow as
