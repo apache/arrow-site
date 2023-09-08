@@ -44,7 +44,7 @@ For example, consider the following three JSON documents
     "b1": 1,   # <-- b1 and b2 are "nested" fields of "b"
     "b2": 3    # <-- b2 is always provided (not nullable)
    },
- "d": {
+  "d": {
    "d1":  1    # <-- d1 is a "nested" field of "d"
   }
 }
@@ -220,7 +220,7 @@ The Parquet encoding of the example would be:
 │ │  Definition  Data  │   │ │  Definition  Data  │ │ Definition Data  │
   │    Levels          │ │   │    Levels          │ │   Levels         │ │
 │ │                    │   │ │                    │ │                  │
-  │  "c.1"             │ │   │  "d.1"             │ │  "d.d2"          │ │
+  │  "c.c1"            │ │   │  "d.d1"            │ │  "d.d2"          │ │
 │ └────────────────────┘   │ └────────────────────┘ └──────────────────┘
      "c"                 │      "d"                                      │
 └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
