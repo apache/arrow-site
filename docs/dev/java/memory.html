@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Memory Management &#8212; Apache Arrow v14.0.0.dev130</title>
+    <title>Memory Management &#8212; Apache Arrow v14.0.0.dev138</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -94,7 +94,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        14.0.0.dev130
+        14.0.0.dev138
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -5210,7 +5210,7 @@ independent section of code has fully cleaned up all allocated buffers, use a ne
 <p>Applications should generally:</p>
 <ul class="simple">
 <li><p>Use the BufferAllocator interface in APIs instead of RootAllocator.</p></li>
-<li><p>Create one RootAllocator at the start of the program.</p></li>
+<li><p>Create one RootAllocator at the start of the program and explicitly pass it when needed.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">close()</span></code> allocators after use (whether they are child allocators or the RootAllocator), either manually or preferably via a try-with-resources statement.</p></li>
 </ul>
 </section>
@@ -5348,6 +5348,51 @@ Allocator(ROOT) 0/1024/1024/9223372036854775807 (res/actual/peak/limit)
 |        at BaseAllocator.close (BaseAllocator.java:405)
 |        at RootAllocator.close (RootAllocator.java:29)
 |        at (#8:1)
+</pre></div>
+</div>
+<p>Sometimes, explicitly passing allocators around is difficult. For example, it
+can be hard to pass around extra state, like an allocator, through layers of
+existing application or framework code. A global or singleton allocator instance
+can be useful here, though it should not be your first choice.</p>
+<p>How this works:</p>
+<ol class="arabic simple">
+<li><p>Set up a global allocator in a singleton class.</p></li>
+<li><p>Provide methods to create child allocators from the global allocator.</p></li>
+<li><p>Give child allocators proper names to make it easier to figure out where
+allocations occurred in case of errors.</p></li>
+<li><p>Ensure that resources are properly closed.</p></li>
+<li><p>Check that the global allocator is empty at some suitable point, such as
+right before program shutdown.</p></li>
+<li><p>If it is not empty, review the above allocation bugs.</p></li>
+</ol>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="c1">//1</span>
+<span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">BufferAllocator</span><span class="w"> </span><span class="n">allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">RootAllocator</span><span class="p">();</span>
+<span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">AtomicInteger</span><span class="w"> </span><span class="n">childNumber</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">AtomicInteger</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">...</span>
+<span class="c1">//2</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">BufferAllocator</span><span class="w"> </span><span class="nf">getChildAllocator</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">allocator</span><span class="p">.</span><span class="na">newChildAllocator</span><span class="p">(</span><span class="n">nextChildName</span><span class="p">(),</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">Long</span><span class="p">.</span><span class="na">MAX_VALUE</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="p">...</span>
+<span class="c1">//3</span>
+<span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">nextChildName</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;Allocator-Child-&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">childNumber</span><span class="p">.</span><span class="na">incrementAndGet</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="p">...</span>
+<span class="c1">//4: Business code</span>
+<span class="k">try</span><span class="w"> </span><span class="p">(</span><span class="n">BufferAllocator</span><span class="w"> </span><span class="n">allocator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">GlobalAllocator</span><span class="p">.</span><span class="na">getChildAllocator</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="p">}</span>
+<span class="p">...</span>
+<span class="c1">//5</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">checkGlobalCleanUpResources</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">allocator</span><span class="p">.</span><span class="na">getChildAllocators</span><span class="p">().</span><span class="na">isEmpty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalStateException</span><span class="p">(...);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">allocator</span><span class="p">.</span><span class="na">getAllocatedMemory</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalStateException</span><span class="p">(...);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>
