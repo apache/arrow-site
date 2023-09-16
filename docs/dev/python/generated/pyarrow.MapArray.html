@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>pyarrow.MapArray &#8212; Apache Arrow v14.0.0.dev141</title>
+    <title>pyarrow.MapArray &#8212; Apache Arrow v14.0.0.dev144</title>
     
     <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -94,7 +94,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        14.0.0.dev141
+        14.0.0.dev144
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -2164,6 +2164,78 @@ by non-empty sub-lists.</p>
 </dl>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<p>First, let’s understand the structure of our dataset when viewed in a rectangular data model. 
+The total of 5 respondents answered the question “How much did you like the movie x?”.
+The value -1 in the integer array means that the value is missing. The boolean array
+represents the null bitmask corresponding to the missing values in the integer array.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pyarrow</span> <span class="k">as</span> <span class="nn">pa</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">movies_rectangular</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">masked_array</span><span class="p">([</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="gp">... </span><span class="p">],</span>
+<span class="gp">... </span><span class="p">[</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span>
+<span class="gp">... </span><span class="p">])</span>
+</pre></div>
+</div>
+<p>To represent the same data with the MapArray and from_arrays, the data is
+formed like this:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">offsets</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="mi">0</span><span class="p">,</span> <span class="c1">#  -- row 1 start</span>
+<span class="gp">... </span>    <span class="mi">1</span><span class="p">,</span> <span class="c1">#  -- row 2 start</span>
+<span class="gp">... </span>    <span class="mi">4</span><span class="p">,</span> <span class="c1">#  -- row 3 start</span>
+<span class="gp">... </span>    <span class="mi">6</span><span class="p">,</span> <span class="c1">#  -- row 4 start</span>
+<span class="gp">... </span>    <span class="mi">6</span><span class="p">,</span> <span class="c1">#  -- row 5 start</span>
+<span class="gp">... </span>    <span class="mi">6</span><span class="p">,</span> <span class="c1">#  -- row 5 end</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">movies</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="s2">&quot;Dark Knight&quot;</span><span class="p">,</span> <span class="c1">#  ---------------------------------- row 1</span>
+<span class="gp">... </span>    <span class="s2">&quot;Dark Knight&quot;</span><span class="p">,</span> <span class="s2">&quot;Meet the Parents&quot;</span><span class="p">,</span> <span class="s2">&quot;Superman&quot;</span><span class="p">,</span> <span class="c1">#  -- row 2</span>
+<span class="gp">... </span>    <span class="s2">&quot;Meet the Parents&quot;</span><span class="p">,</span> <span class="s2">&quot;Superman&quot;</span><span class="p">,</span> <span class="c1">#  ----------------- row 3</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">likings</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="mi">10</span><span class="p">,</span> <span class="c1">#  -------- row 1</span>
+<span class="gp">... </span>    <span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="c1">#  --- row 2</span>
+<span class="gp">... </span>    <span class="mi">10</span><span class="p">,</span> <span class="mi">3</span> <span class="c1">#  ------ row 3</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">MapArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">offsets</span><span class="p">,</span> <span class="n">movies</span><span class="p">,</span> <span class="n">likings</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+<span class="go">0                                  [(Dark Knight, 10)]</span>
+<span class="go">1    [(Dark Knight, 8), (Meet the Parents, 4), (Sup...</span>
+<span class="go">2              [(Meet the Parents, 10), (Superman, 3)]</span>
+<span class="go">3                                                   []</span>
+<span class="go">4                                                   []</span>
+<span class="go">dtype: object</span>
+</pre></div>
+</div>
+<p>If the data in the empty rows needs to be marked as missing, it’s possible
+to do so by modifying the offsets argument, so that we specify <cite>None</cite> as
+the starting positions of the rows we want marked as missing. The end row
+offset still has to refer to the existing value from keys (and values):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">offsets</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="mi">0</span><span class="p">,</span> <span class="c1">#  ----- row 1 start</span>
+<span class="gp">... </span>    <span class="mi">1</span><span class="p">,</span> <span class="c1">#  ----- row 2 start</span>
+<span class="gp">... </span>    <span class="mi">4</span><span class="p">,</span> <span class="c1">#  ----- row 3 start</span>
+<span class="gp">... </span>    <span class="kc">None</span><span class="p">,</span> <span class="c1">#  -- row 4 start</span>
+<span class="gp">... </span>    <span class="kc">None</span><span class="p">,</span> <span class="c1">#  -- row 5 start</span>
+<span class="gp">... </span>    <span class="mi">6</span><span class="p">,</span> <span class="c1">#  ----- row 5 end</span>
+<span class="gp">... </span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">MapArray</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">offsets</span><span class="p">,</span> <span class="n">movies</span><span class="p">,</span> <span class="n">likings</span><span class="p">)</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+<span class="go">0                                  [(Dark Knight, 10)]</span>
+<span class="go">1    [(Dark Knight, 8), (Meet the Parents, 4), (Sup...</span>
+<span class="go">2              [(Meet the Parents, 10), (Superman, 3)]</span>
+<span class="go">3                                                 None</span>
+<span class="go">4                                                 None</span>
+<span class="go">dtype: object</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
