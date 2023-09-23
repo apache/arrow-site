@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Arrow Columnar Format &#8212; Apache Arrow v14.0.0.dev168</title>
+    <title>Arrow Columnar Format &#8212; Apache Arrow v14.0.0.dev181</title>
     
     <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -94,7 +94,7 @@
 
 <div id="version-button" class="dropdown">
     <button type="button" class="btn btn-secondary btn-sm navbar-btn dropdown-toggle" id="version_switcher_button" data-toggle="dropdown">
-        14.0.0.dev168
+        14.0.0.dev181
         <span class="caret"></span>
     </button>
     <div id="version_switcher" class="dropdown-menu list-group-flush py-0" aria-labelledby="version_switcher_button">
@@ -5001,6 +5001,11 @@ function checkPageExistsAndRedirect(event) {
     </a>
    </li>
    <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#variable-size-binary-view-layout">
+     Variable-size Binary View Layout
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
     <a class="reference internal nav-link" href="#variable-size-list-layout">
      Variable-size List Layout
     </a>
@@ -5165,7 +5170,7 @@ function checkPageExistsAndRedirect(event) {
                 
   <section id="arrow-columnar-format">
 <span id="format-columnar"></span><h1>Arrow Columnar Format<a class="headerlink" href="#arrow-columnar-format" title="Permalink to this heading">¶</a></h1>
-<p><em>Version: 1.3</em></p>
+<p><em>Version: 1.4</em></p>
 <p>The “Arrow Columnar Format” includes a language-agnostic in-memory
 data structure specification, metadata serialization, and a protocol
 for serialization and generic data transport.</p>
@@ -5244,6 +5249,10 @@ same byte or bit width</p></li>
 <li><p><strong>Variable-size Binary</strong>: a sequence of values each having a variable
 byte length. Two variants of this layout are supported using 32-bit
 and 64-bit length encoding.</p></li>
+<li><p><strong>Views of Variable-size Binary</strong>: a sequence of values each having a
+variable byte length. In contrast to Variable-size Binary, the values
+of this layout are distributed across potentially multiple buffers
+instead of densely and sequentially packed in a single buffer.</p></li>
 <li><p><strong>Fixed-size List</strong>: a nested layout where each value has the same
 number of elements taken from a child data type.</p></li>
 <li><p><strong>Variable-size List</strong>: a nested layout where each value is a
@@ -5461,6 +5470,44 @@ recommend normalizing the offsets to start at 0.</p>
   <span class="o">|</span> <span class="n">joemark</span>        <span class="o">|</span> <span class="n">unspecified</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">|</span>
 </pre></div>
 </div>
+</section>
+<section id="variable-size-binary-view-layout">
+<h3>Variable-size Binary View Layout<a class="headerlink" href="#variable-size-binary-view-layout" title="Permalink to this heading">¶</a></h3>
+<div class="versionadded">
+<p><span class="versionmodified added">New in version Arrow: </span>Columnar Format 1.4</p>
+</div>
+<p>Each value in this layout consists of 0 or more bytes. These bytes’
+locations are indicated using a <strong>views</strong> buffer, which may point to one
+of potentially several <strong>data</strong> buffers or may contain the characters
+inline.</p>
+<p>The views buffer contains <cite>length</cite> view structures with the following layout:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">Short</span> <span class="n">strings</span><span class="p">,</span> <span class="n">length</span> <span class="o">&lt;=</span> <span class="mi">12</span>
+  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">4</span><span class="o">-</span><span class="mi">15</span>                            <span class="o">|</span>
+  <span class="o">|------------|---------------------------------------|</span>
+  <span class="o">|</span> <span class="n">length</span>     <span class="o">|</span> <span class="n">data</span> <span class="p">(</span><span class="n">padded</span> <span class="k">with</span> <span class="mi">0</span><span class="p">)</span>                  <span class="o">|</span>
+
+<span class="o">*</span> <span class="n">Long</span> <span class="n">strings</span><span class="p">,</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="mi">12</span>
+  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">12</span><span class="o">-</span><span class="mi">15</span> <span class="o">|</span>
+  <span class="o">|------------|------------|------------|-------------|</span>
+  <span class="o">|</span> <span class="n">length</span>     <span class="o">|</span> <span class="n">prefix</span>     <span class="o">|</span> <span class="n">buf</span><span class="o">.</span> <span class="n">index</span> <span class="o">|</span> <span class="n">offset</span>      <span class="o">|</span>
+</pre></div>
+</div>
+<p>In both the long and short string cases, the first four bytes encode the
+length of the string and can be used to determine how the rest of the view
+should be interpreted.</p>
+<p>In the short string case the string’s bytes are inlined- stored inside the
+view itself, in the twelve bytes which follow the length.</p>
+<p>In the long string case, a buffer index indicates which data buffer
+stores the data bytes and an offset indicates where in that buffer the
+data bytes begin. Buffer index 0 refers to the first data buffer, IE
+the first buffer <strong>after</strong> the validity buffer and the views buffer.
+The half-open range <code class="docutils literal notranslate"><span class="pre">[offset,</span> <span class="pre">offset</span> <span class="pre">+</span> <span class="pre">length)</span></code> must be entirely contained
+within the indicated buffer. A copy of the first four bytes of the string is
+stored inline in the prefix, after the length. This prefix enables a
+profitable fast path for string comparisons, which are frequently determined
+within the first four bytes.</p>
+<p>All integers (length, buffer index, and offset) are signed.</p>
+<p>This layout is adapted from TU Munich’s <a class="reference external" href="https://db.in.tum.de/~freitag/papers/p29-neumann-cidr20.pdf">UmbraDB</a>.</p>
 </section>
 <section id="variable-size-list-layout">
 <span id="id1"></span><h3>Variable-size List Layout<a class="headerlink" href="#variable-size-list-layout" title="Permalink to this heading">¶</a></h3>
@@ -5941,16 +5988,18 @@ of memory buffers for each layout.</p>
 <table class="table" id="id4">
 <caption><span class="caption-text">Buffer Layouts</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
 <colgroup>
-<col style="width: 33.3%" />
-<col style="width: 22.2%" />
-<col style="width: 22.2%" />
-<col style="width: 22.2%" />
+<col style="width: 27.3%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
+<col style="width: 18.2%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Layout Type</p></th>
 <th class="head"><p>Buffer 0</p></th>
 <th class="head"><p>Buffer 1</p></th>
 <th class="head"><p>Buffer 2</p></th>
+<th class="head"><p>Variadic Buffers</p></th>
 </tr>
 </thead>
 <tbody>
@@ -5958,48 +6007,64 @@ of memory buffers for each layout.</p>
 <td><p>validity</p></td>
 <td><p>data</p></td>
 <td></td>
+<td></td>
 </tr>
 <tr class="row-odd"><td><p>Variable Binary</p></td>
 <td><p>validity</p></td>
 <td><p>offsets</p></td>
 <td><p>data</p></td>
+<td></td>
 </tr>
-<tr class="row-even"><td><p>List</p></td>
+<tr class="row-even"><td><p>Variable Binary View</p></td>
+<td><p>validity</p></td>
+<td><p>views</p></td>
+<td></td>
+<td><p>data</p></td>
+</tr>
+<tr class="row-odd"><td><p>List</p></td>
 <td><p>validity</p></td>
 <td><p>offsets</p></td>
 <td></td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><p>Fixed-size List</p></td>
+<tr class="row-even"><td><p>Fixed-size List</p></td>
 <td><p>validity</p></td>
 <td></td>
 <td></td>
+<td></td>
 </tr>
-<tr class="row-even"><td><p>Struct</p></td>
+<tr class="row-odd"><td><p>Struct</p></td>
 <td><p>validity</p></td>
 <td></td>
 <td></td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><p>Sparse Union</p></td>
+<tr class="row-even"><td><p>Sparse Union</p></td>
 <td><p>type ids</p></td>
 <td></td>
 <td></td>
+<td></td>
 </tr>
-<tr class="row-even"><td><p>Dense Union</p></td>
+<tr class="row-odd"><td><p>Dense Union</p></td>
 <td><p>type ids</p></td>
 <td><p>offsets</p></td>
 <td></td>
-</tr>
-<tr class="row-odd"><td><p>Null</p></td>
-<td></td>
-<td></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p>Dictionary-encoded</p></td>
+<tr class="row-even"><td><p>Null</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>Dictionary-encoded</p></td>
 <td><p>validity</p></td>
 <td><p>data (indices)</p></td>
 <td></td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><p>Run-end encoded</p></td>
+<tr class="row-even"><td><p>Run-end encoded</p></td>
+<td></td>
 <td></td>
 <td></td>
 <td></td>
@@ -6168,6 +6233,34 @@ piece of memory. Generally these are interpreted relative to the
 bytes. Since this metadata can be used to communicate in-memory pointer
 addresses between libraries, it is recommended to set <code class="docutils literal notranslate"><span class="pre">size</span></code> to the actual
 memory size rather than the padded size.</p>
+<p>Some types such as Utf8View are represented using a variable number of buffers.
+For each such Field in the pre-ordered flattened logical schema, there will be
+an entry in <code class="docutils literal notranslate"><span class="pre">variadicBufferCounts</span></code> to indicate the number of variadic buffers
+which belong to that Field in the current RecordBatch.</p>
+<p>For example, consider the schema</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">col1</span><span class="p">:</span> <span class="n">Struct</span><span class="o">&lt;</span><span class="n">a</span><span class="p">:</span> <span class="n">Int32</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">BinaryView</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="n">Float64</span><span class="o">&gt;</span>
+<span class="n">col2</span><span class="p">:</span> <span class="n">Utf8View</span>
+</pre></div>
+</div>
+<p>This has two fields with variadic buffers, so <code class="docutils literal notranslate"><span class="pre">variadicBufferCounts</span></code> will
+have two entries in each RecordBatch. For a RecordBatch of this schema with
+<code class="docutils literal notranslate"><span class="pre">variadicBufferCounts</span> <span class="pre">=</span> <span class="pre">[3,</span> <span class="pre">2]</span></code>, the flattened buffers would be:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">buffer</span> <span class="mi">0</span><span class="p">:</span>  <span class="n">col1</span>    <span class="n">validity</span>
+<span class="n">buffer</span> <span class="mi">1</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">a</span>  <span class="n">validity</span>
+<span class="n">buffer</span> <span class="mi">2</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">a</span>  <span class="n">values</span>
+<span class="n">buffer</span> <span class="mi">3</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">b</span>  <span class="n">validity</span>
+<span class="n">buffer</span> <span class="mi">4</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">b</span>  <span class="n">views</span>
+<span class="n">buffer</span> <span class="mi">5</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">b</span>  <span class="n">data</span>
+<span class="n">buffer</span> <span class="mi">6</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">b</span>  <span class="n">data</span>
+<span class="n">buffer</span> <span class="mi">7</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">b</span>  <span class="n">data</span>
+<span class="n">buffer</span> <span class="mi">8</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">c</span>  <span class="n">validity</span>
+<span class="n">buffer</span> <span class="mi">9</span><span class="p">:</span>  <span class="n">col1</span><span class="o">.</span><span class="n">c</span>  <span class="n">values</span>
+<span class="n">buffer</span> <span class="mi">10</span><span class="p">:</span> <span class="n">col2</span>    <span class="n">validity</span>
+<span class="n">buffer</span> <span class="mi">11</span><span class="p">:</span> <span class="n">col2</span>    <span class="n">views</span>
+<span class="n">buffer</span> <span class="mi">12</span><span class="p">:</span> <span class="n">col2</span>    <span class="n">data</span>
+<span class="n">buffer</span> <span class="mi">13</span><span class="p">:</span> <span class="n">col2</span>    <span class="n">data</span>
+</pre></div>
+</div>
 </section>
 <section id="byte-order-endianness">
 <h3>Byte Order (<a class="reference external" href="https://en.wikipedia.org/wiki/Endianness">Endianness</a>)<a class="headerlink" href="#byte-order-endianness" title="Permalink to this heading">¶</a></h3>
