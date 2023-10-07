@@ -8,7 +8,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pyarrow.interchange.from_dataframe &#8212; Apache Arrow v14.0.0.dev237</title>
+    <title>pyarrow.interchange.from_dataframe &#8212; Apache Arrow v14.0.0.dev256</title>
   
   
   
@@ -48,7 +48,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.14.1';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = '/docs/_static/versions.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '14.0.0.dev237';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '14.0.0.dev256';
         DOCUMENTATION_OPTIONS.show_version_warning_banner = true;
         </script>
     <link rel="canonical" href="https://arrow.apache.org/docs/_modules/pyarrow/interchange/from_dataframe.html" />
@@ -715,6 +715,7 @@ document.write(`
 
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">Any</span><span class="p">,</span>
+    <span class="n">Tuple</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="kn">from</span> <span class="nn">pyarrow.interchange.column</span> <span class="kn">import</span> <span class="p">(</span>
@@ -749,7 +750,8 @@ document.write(`
     <span class="n">DtypeKind</span><span class="o">.</span><span class="n">FLOAT</span><span class="p">:</span> <span class="p">{</span><span class="mi">16</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">float16</span><span class="p">(),</span>
                       <span class="mi">32</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span>
                       <span class="mi">64</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">float64</span><span class="p">()},</span>
-    <span class="n">DtypeKind</span><span class="o">.</span><span class="n">BOOL</span><span class="p">:</span> <span class="p">{</span><span class="mi">8</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">uint8</span><span class="p">()},</span>
+    <span class="n">DtypeKind</span><span class="o">.</span><span class="n">BOOL</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">(),</span>
+                     <span class="mi">8</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">uint8</span><span class="p">()},</span>
     <span class="n">DtypeKind</span><span class="o">.</span><span class="n">STRING</span><span class="p">:</span> <span class="p">{</span><span class="mi">8</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()},</span>
 <span class="p">}</span>
 
@@ -900,7 +902,9 @@ document.write(`
 <span class="sd">    pa.Array</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">buffers</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get_buffers</span><span class="p">()</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">buffers_to_array</span><span class="p">(</span><span class="n">buffers</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span>
+    <span class="n">data_type</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">buffers_to_array</span><span class="p">(</span><span class="n">buffers</span><span class="p">,</span> <span class="n">data_type</span><span class="p">,</span>
+                            <span class="n">col</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span>
                             <span class="n">col</span><span class="o">.</span><span class="n">describe_null</span><span class="p">,</span>
                             <span class="n">col</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span>
                             <span class="n">allow_copy</span><span class="p">)</span>
@@ -925,17 +929,23 @@ document.write(`
 <span class="sd">    -------</span>
 <span class="sd">    pa.Array</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_copy</span><span class="p">:</span>
+    <span class="n">buffers</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get_buffers</span><span class="p">()</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">buffers</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># If booleans are byte-packed a copy to bit-packed will be made</span>
+    <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="mi">8</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">allow_copy</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
             <span class="s2">&quot;Boolean column will be casted from uint8 and a copy &quot;</span>
             <span class="s2">&quot;is required which is forbidden by allow_copy=False&quot;</span>
         <span class="p">)</span>
 
-    <span class="n">buffers</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get_buffers</span><span class="p">()</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">buffers_to_array</span><span class="p">(</span><span class="n">buffers</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span>
+    <span class="n">data_type</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">buffers_to_array</span><span class="p">(</span><span class="n">buffers</span><span class="p">,</span> <span class="n">data_type</span><span class="p">,</span>
+                            <span class="n">col</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span>
                             <span class="n">col</span><span class="o">.</span><span class="n">describe_null</span><span class="p">,</span>
                             <span class="n">col</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">size</span> <span class="o">==</span> <span class="mi">8</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">())</span>
 
     <span class="k">return</span> <span class="n">data</span>
 
@@ -970,11 +980,15 @@ document.write(`
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
             <span class="s2">&quot;Non-dictionary categoricals not supported yet&quot;</span><span class="p">)</span>
 
+    <span class="c1"># We need to first convert the dictionary column</span>
     <span class="n">cat_column</span> <span class="o">=</span> <span class="n">categorical</span><span class="p">[</span><span class="s2">&quot;categories&quot;</span><span class="p">]</span>
     <span class="n">dictionary</span> <span class="o">=</span> <span class="n">column_to_array</span><span class="p">(</span><span class="n">cat_column</span><span class="p">)</span>
-
+    <span class="c1"># Then we need to convert the indices</span>
+    <span class="c1"># Here we need to use the buffer data type!</span>
     <span class="n">buffers</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">get_buffers</span><span class="p">()</span>
-    <span class="n">indices</span> <span class="o">=</span> <span class="n">buffers_to_array</span><span class="p">(</span><span class="n">buffers</span><span class="p">,</span> <span class="n">col</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">data_type</span> <span class="o">=</span> <span class="n">buffers</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">buffers_to_array</span><span class="p">(</span><span class="n">buffers</span><span class="p">,</span> <span class="n">data_type</span><span class="p">,</span>
+                               <span class="n">col</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span>
                                <span class="n">col</span><span class="o">.</span><span class="n">describe_null</span><span class="p">,</span>
                                <span class="n">col</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
 
@@ -1022,6 +1036,7 @@ document.write(`
 
 <span class="k">def</span> <span class="nf">buffers_to_array</span><span class="p">(</span>
     <span class="n">buffers</span><span class="p">:</span> <span class="n">ColumnBuffers</span><span class="p">,</span>
+    <span class="n">data_type</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">DtypeKind</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
     <span class="n">length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">describe_null</span><span class="p">:</span> <span class="n">ColumnNullType</span><span class="p">,</span>
     <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -1035,6 +1050,9 @@ document.write(`
 <span class="sd">    buffer : ColumnBuffers</span>
 <span class="sd">        Dictionary containing tuples of underlying buffers and</span>
 <span class="sd">        their associated dtype.</span>
+<span class="sd">    data_type : Tuple[DtypeKind, int, str, str],</span>
+<span class="sd">        Dtype description of the column as a tuple ``(kind, bit-width, format string,</span>
+<span class="sd">        endianness)``.</span>
 <span class="sd">    length : int</span>
 <span class="sd">        The number of values in the array.</span>
 <span class="sd">    describe_null: ColumnNullType</span>
@@ -1056,7 +1074,7 @@ document.write(`
 <span class="sd">    is responsible for keeping the memory owner object alive as long as</span>
 <span class="sd">    the returned PyArrow array is being used.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">data_buff</span><span class="p">,</span> <span class="n">data_type</span> <span class="o">=</span> <span class="n">buffers</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+    <span class="n">data_buff</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">buffers</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">validity_buff</span><span class="p">,</span> <span class="n">validity_dtype</span> <span class="o">=</span> <span class="n">buffers</span><span class="p">[</span><span class="s2">&quot;validity&quot;</span><span class="p">]</span>
     <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>

@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Arrow Columnar Format &#8212; Apache Arrow v14.0.0.dev237</title>
+    <title>Arrow Columnar Format &#8212; Apache Arrow v14.0.0.dev256</title>
   
   
   
@@ -49,7 +49,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.14.1';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = '/docs/_static/versions.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '14.0.0.dev237';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '14.0.0.dev256';
         DOCUMENTATION_OPTIONS.show_version_warning_banner = true;
         </script>
     <link rel="canonical" href="https://arrow.apache.org/docs/format/Columnar.html" />
@@ -805,7 +805,7 @@ same byte or bit width</p></li>
 <li><p><strong>Variable-size Binary</strong>: a sequence of values each having a variable
 byte length. Two variants of this layout are supported using 32-bit
 and 64-bit length encoding.</p></li>
-<li><p><strong>Views of Variable-size Binary</strong>: a sequence of values each having a
+<li><p><strong>View of Variable-size Binary</strong>: a sequence of values each having a
 variable byte length. In contrast to Variable-size Binary, the values
 of this layout are distributed across potentially multiple buffers
 instead of densely and sequentially packed in a single buffer.</p></li>
@@ -815,6 +815,11 @@ number of elements taken from a child data type.</p></li>
 variable-length sequence of values taken from a child data type. Two
 variants of this layout are supported using 32-bit and 64-bit length
 encoding.</p></li>
+<li><p><strong>View of Variable-size List</strong>: a nested layout where each value is a
+variable-length sequence of values taken from a child data type. This
+layout differs from <strong>Variable-size List</strong> by having an additional
+buffer containing the sizes of each list value. This removes a constraint
+on the offsets buffer — it does not need to be in order.</p></li>
 <li><p><strong>Struct</strong>: a nested layout consisting of a collection of named
 child <strong>fields</strong> each having the same length but possibly different
 types.</p></li>
@@ -1051,7 +1056,7 @@ inline.</p>
 <p>In both the long and short string cases, the first four bytes encode the
 length of the string and can be used to determine how the rest of the view
 should be interpreted.</p>
-<p>In the short string case the string’s bytes are inlined- stored inside the
+<p>In the short string case the string’s bytes are inlined — stored inside the
 view itself, in the twelve bytes which follow the length.</p>
 <p>In the long string case, a buffer index indicates which data buffer
 stores the data bytes and an offset indicates where in that buffer the
@@ -1068,7 +1073,12 @@ within the first four bytes.</p>
 <section id="variable-size-list-layout">
 <span id="id1"></span><h3>Variable-size List Layout<a class="headerlink" href="#variable-size-list-layout" title="Permalink to this heading">#</a></h3>
 <p>List is a nested type which is semantically similar to variable-size
-binary. It is defined by two buffers, a validity bitmap and an offsets
+binary. There are two list layout variations — “list” and “list-view” —
+and each variation can be delimited by either 32-bit or 64-bit offsets
+integers.</p>
+<section id="list-layout">
+<h4>List Layout<a class="headerlink" href="#list-layout" title="Permalink to this heading">#</a></h4>
+<p>The List layout is defined by two buffers, a validity bitmap and an offsets
 buffer, and a child array. The offsets are the same as in the
 variable-size binary case, and both 32-bit and 64-bit signed integer
 offsets are supported options for the offsets. Rather than referencing
@@ -1099,7 +1109,7 @@ the 64-bit offset version would be denoted by <code class="docutils literal notr
   <span class="o">|------------|-------------|-------------|-------------|-------------|-----------------------|</span>
   <span class="o">|</span> <span class="mi">0</span>          <span class="o">|</span> <span class="mi">3</span>           <span class="o">|</span> <span class="mi">3</span>           <span class="o">|</span> <span class="mi">7</span>           <span class="o">|</span> <span class="mi">7</span>           <span class="o">|</span> <span class="n">unspecified</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">|</span>
 
-<span class="o">*</span> <span class="n">Values</span> <span class="n">array</span> <span class="p">(</span><span class="n">Int8array</span><span class="p">):</span>
+<span class="o">*</span> <span class="n">Values</span> <span class="n">array</span> <span class="p">(</span><span class="n">Int8Array</span><span class="p">):</span>
   <span class="o">*</span> <span class="n">Length</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>  <span class="n">Null</span> <span class="n">count</span><span class="p">:</span> <span class="mi">0</span>
   <span class="o">*</span> <span class="n">Validity</span> <span class="n">bitmap</span> <span class="n">buffer</span><span class="p">:</span> <span class="n">Not</span> <span class="n">required</span>
   <span class="o">*</span> <span class="n">Values</span> <span class="n">buffer</span> <span class="p">(</span><span class="n">int8</span><span class="p">)</span>
@@ -1144,6 +1154,99 @@ the 64-bit offset version would be denoted by <code class="docutils literal notr
       | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 | unspecified (padding) |
 </pre></div>
 </div>
+</section>
+<section id="listview-layout">
+<h4>ListView Layout<a class="headerlink" href="#listview-layout" title="Permalink to this heading">#</a></h4>
+<p>The ListView layout is defined by three buffers: a validity bitmap, an offsets
+buffer, and an additional sizes buffer. Sizes and offsets have the identical bit
+width and both 32-bit and 64-bit signed integer options are supported.</p>
+<p>As in the List layout, the offsets encode the start position of each slot in the
+child array. In contrast to the List layout, list lengths are stored explicitly
+in the sizes buffer instead of inferred. This allows offsets to be out of order.
+Elements of the child array do not have to be stored in the same order they
+logically appear in the list elements of the parent array.</p>
+<p>Every list-view value, including null values, has to guarantee the following
+invariants:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">offsets</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">length</span> <span class="n">of</span> <span class="n">the</span> <span class="n">child</span> <span class="n">array</span>
+<span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">offsets</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">size</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">length</span> <span class="n">of</span> <span class="n">the</span> <span class="n">child</span> <span class="n">array</span>
+</pre></div>
+</div>
+<p>A list-view type is specified like <code class="docutils literal notranslate"><span class="pre">ListView&lt;T&gt;</span></code>, where <code class="docutils literal notranslate"><span class="pre">T</span></code> is any type
+(primitive or nested). In these examples we use 32-bit offsets and sizes where
+the 64-bit version would be denoted by <code class="docutils literal notranslate"><span class="pre">LargeListView&lt;T&gt;</span></code>.</p>
+<p><strong>Example Layout: ``ListView&lt;Int8&gt;`` Array</strong></p>
+<p>We illustrate an example of <code class="docutils literal notranslate"><span class="pre">ListView&lt;Int8&gt;</span></code> with length 4 having values:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[[</span><span class="mi">12</span><span class="p">,</span> <span class="o">-</span><span class="mi">7</span><span class="p">,</span> <span class="mi">25</span><span class="p">],</span> <span class="n">null</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">127</span><span class="p">,</span> <span class="mi">127</span><span class="p">,</span> <span class="mi">50</span><span class="p">],</span> <span class="p">[]]</span>
+</pre></div>
+</div>
+<p>It may have the following representation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">Length</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="n">Null</span> <span class="n">count</span><span class="p">:</span> <span class="mi">1</span>
+<span class="o">*</span> <span class="n">Validity</span> <span class="n">bitmap</span> <span class="n">buffer</span><span class="p">:</span>
+
+  <span class="o">|</span> <span class="n">Byte</span> <span class="mi">0</span> <span class="p">(</span><span class="n">validity</span> <span class="n">bitmap</span><span class="p">)</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">1</span><span class="o">-</span><span class="mi">63</span>            <span class="o">|</span>
+  <span class="o">|--------------------------|-----------------------|</span>
+  <span class="o">|</span> <span class="mi">00001101</span>                 <span class="o">|</span> <span class="mi">0</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span>           <span class="o">|</span>
+
+<span class="o">*</span> <span class="n">Offsets</span> <span class="n">buffer</span> <span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+
+  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span>   <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">12</span><span class="o">-</span><span class="mi">15</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">16</span><span class="o">-</span><span class="mi">63</span>           <span class="o">|</span>
+  <span class="o">|------------|-------------|-------------|-------------|-----------------------|</span>
+  <span class="o">|</span> <span class="mi">0</span>          <span class="o">|</span> <span class="mi">7</span>           <span class="o">|</span> <span class="mi">3</span>           <span class="o">|</span> <span class="mi">0</span>           <span class="o">|</span> <span class="n">unspecified</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">|</span>
+
+<span class="o">*</span> <span class="n">Sizes</span> <span class="n">buffer</span> <span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+
+  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span>   <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">12</span><span class="o">-</span><span class="mi">15</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">16</span><span class="o">-</span><span class="mi">63</span>           <span class="o">|</span>
+  <span class="o">|------------|-------------|-------------|-------------|-----------------------|</span>
+  <span class="o">|</span> <span class="mi">3</span>          <span class="o">|</span> <span class="mi">0</span>           <span class="o">|</span> <span class="mi">4</span>           <span class="o">|</span> <span class="mi">0</span>           <span class="o">|</span> <span class="n">unspecified</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">|</span>
+
+<span class="o">*</span> <span class="n">Values</span> <span class="n">array</span> <span class="p">(</span><span class="n">Int8Array</span><span class="p">):</span>
+  <span class="o">*</span> <span class="n">Length</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>  <span class="n">Null</span> <span class="n">count</span><span class="p">:</span> <span class="mi">0</span>
+  <span class="o">*</span> <span class="n">Validity</span> <span class="n">bitmap</span> <span class="n">buffer</span><span class="p">:</span> <span class="n">Not</span> <span class="n">required</span>
+  <span class="o">*</span> <span class="n">Values</span> <span class="n">buffer</span> <span class="p">(</span><span class="n">int8</span><span class="p">)</span>
+
+    <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">6</span>                    <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">7</span><span class="o">-</span><span class="mi">63</span>            <span class="o">|</span>
+    <span class="o">|------------------------------|-----------------------|</span>
+    <span class="o">|</span> <span class="mi">12</span><span class="p">,</span> <span class="o">-</span><span class="mi">7</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">127</span><span class="p">,</span> <span class="mi">127</span><span class="p">,</span> <span class="mi">50</span> <span class="o">|</span> <span class="n">unspecified</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">|</span>
+</pre></div>
+</div>
+<p><strong>Example Layout: ``ListView&lt;Int8&gt;`` Array</strong></p>
+<p>We continue with the <code class="docutils literal notranslate"><span class="pre">ListView&lt;Int8&gt;</span></code> type, but this instance illustrates out
+of order offsets and sharing of child array values. It is an array with length 5
+having logical values:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[[</span><span class="mi">12</span><span class="p">,</span> <span class="o">-</span><span class="mi">7</span><span class="p">,</span> <span class="mi">25</span><span class="p">],</span> <span class="n">null</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">127</span><span class="p">,</span> <span class="mi">127</span><span class="p">,</span> <span class="mi">50</span><span class="p">],</span> <span class="p">[],</span> <span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">12</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>It may have the following representation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*</span> <span class="n">Length</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="n">Null</span> <span class="n">count</span><span class="p">:</span> <span class="mi">1</span>
+<span class="o">*</span> <span class="n">Validity</span> <span class="n">bitmap</span> <span class="n">buffer</span><span class="p">:</span>
+
+  <span class="o">|</span> <span class="n">Byte</span> <span class="mi">0</span> <span class="p">(</span><span class="n">validity</span> <span class="n">bitmap</span><span class="p">)</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">1</span><span class="o">-</span><span class="mi">63</span>            <span class="o">|</span>
+  <span class="o">|--------------------------|-----------------------|</span>
+  <span class="o">|</span> <span class="mi">00011101</span>                 <span class="o">|</span> <span class="mi">0</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span>           <span class="o">|</span>
+
+<span class="o">*</span> <span class="n">Offsets</span> <span class="n">buffer</span> <span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+
+  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span>   <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">12</span><span class="o">-</span><span class="mi">15</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">16</span><span class="o">-</span><span class="mi">19</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">20</span><span class="o">-</span><span class="mi">63</span>           <span class="o">|</span>
+  <span class="o">|------------|-------------|-------------|-------------|-------------|-----------------------|</span>
+  <span class="o">|</span> <span class="mi">4</span>          <span class="o">|</span> <span class="mi">7</span>           <span class="o">|</span> <span class="mi">0</span>           <span class="o">|</span> <span class="mi">0</span>           <span class="o">|</span> <span class="mi">3</span>           <span class="o">|</span> <span class="n">unspecified</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">|</span>
+
+<span class="o">*</span> <span class="n">Sizes</span> <span class="n">buffer</span> <span class="p">(</span><span class="n">int32</span><span class="p">)</span>
+
+  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">3</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">4</span><span class="o">-</span><span class="mi">7</span>   <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">8</span><span class="o">-</span><span class="mi">11</span>  <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">12</span><span class="o">-</span><span class="mi">15</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">16</span><span class="o">-</span><span class="mi">19</span> <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">20</span><span class="o">-</span><span class="mi">63</span>           <span class="o">|</span>
+  <span class="o">|------------|-------------|-------------|-------------|-------------|-----------------------|</span>
+  <span class="o">|</span> <span class="mi">3</span>          <span class="o">|</span> <span class="mi">0</span>           <span class="o">|</span> <span class="mi">4</span>           <span class="o">|</span> <span class="mi">0</span>           <span class="o">|</span> <span class="mi">2</span>           <span class="o">|</span> <span class="n">unspecified</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">|</span>
+
+<span class="o">*</span> <span class="n">Values</span> <span class="n">array</span> <span class="p">(</span><span class="n">Int8Array</span><span class="p">):</span>
+  <span class="o">*</span> <span class="n">Length</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>  <span class="n">Null</span> <span class="n">count</span><span class="p">:</span> <span class="mi">0</span>
+  <span class="o">*</span> <span class="n">Validity</span> <span class="n">bitmap</span> <span class="n">buffer</span><span class="p">:</span> <span class="n">Not</span> <span class="n">required</span>
+  <span class="o">*</span> <span class="n">Values</span> <span class="n">buffer</span> <span class="p">(</span><span class="n">int8</span><span class="p">)</span>
+
+    <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">0</span><span class="o">-</span><span class="mi">6</span>                    <span class="o">|</span> <span class="n">Bytes</span> <span class="mi">7</span><span class="o">-</span><span class="mi">63</span>            <span class="o">|</span>
+    <span class="o">|------------------------------|-----------------------|</span>
+    <span class="o">|</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">127</span><span class="p">,</span> <span class="mi">127</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="o">-</span><span class="mi">7</span><span class="p">,</span> <span class="mi">25</span> <span class="o">|</span> <span class="n">unspecified</span> <span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">|</span>
+</pre></div>
+</div>
+</section>
 </section>
 <section id="fixed-size-list-layout">
 <h3>Fixed-Size List Layout<a class="headerlink" href="#fixed-size-list-layout" title="Permalink to this heading">#</a></h3>
@@ -1789,6 +1892,9 @@ piece of memory. Generally these are interpreted relative to the
 bytes. Since this metadata can be used to communicate in-memory pointer
 addresses between libraries, it is recommended to set <code class="docutils literal notranslate"><span class="pre">size</span></code> to the actual
 memory size rather than the padded size.</p>
+</section>
+<section id="variadic-buffers">
+<h3>Variadic buffers<a class="headerlink" href="#variadic-buffers" title="Permalink to this heading">#</a></h3>
 <p>Some types such as Utf8View are represented using a variable number of buffers.
 For each such Field in the pre-ordered flattened logical schema, there will be
 an entry in <code class="docutils literal notranslate"><span class="pre">variadicBufferCounts</span></code> to indicate the number of variadic buffers
@@ -2125,7 +2231,11 @@ the Arrow spec.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed-size-primitive-layout">Fixed-size Primitive Layout</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#variable-size-binary-layout">Variable-size Binary Layout</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#variable-size-binary-view-layout">Variable-size Binary View Layout</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#variable-size-list-layout">Variable-size List Layout</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#variable-size-list-layout">Variable-size List Layout</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#list-layout">List Layout</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#listview-layout">ListView Layout</a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed-size-list-layout">Fixed-Size List Layout</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#struct-layout">Struct Layout</a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#struct-validity">Struct Validity</a></li>
@@ -2147,6 +2257,7 @@ the Arrow spec.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#encapsulated-message-format">Encapsulated message format</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#schema-message">Schema message</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#recordbatch-message">RecordBatch message</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#variadic-buffers">Variadic buffers</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#byte-order-endianness">Byte Order (Endianness)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ipc-streaming-format">IPC Streaming Format</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ipc-file-format">IPC File Format</a></li>
