@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Canonical Extension Types &#8212; Apache Arrow v14.0.0.dev298</title>
+    <title>Canonical Extension Types &#8212; Apache Arrow v14.0.0.dev317</title>
   
   
   
@@ -49,7 +49,7 @@
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.14.1';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = '/docs/_static/versions.json';
-        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '14.0.0.dev298';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '14.0.0.dev317';
         DOCUMENTATION_OPTIONS.show_version_warning_banner = true;
         </script>
     <link rel="canonical" href="https://arrow.apache.org/docs/format/CanonicalExtensions.html" />
@@ -176,7 +176,7 @@
     
                     <li class="nav-item current active">
                       <a class="nav-link nav-internal" href="index.html">
-                        Specifications and Protocols
+                        Specifications
                       </a>
                     </li>
                 
@@ -189,7 +189,7 @@
                 
             <li class="nav-item dropdown">
                 <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-header-nav-more-links">
-                    Language implementations
+                    Implementations
                 </button>
                 <ul id="pst-header-nav-more-links" class="dropdown-menu">
                     
@@ -440,7 +440,7 @@ document.write(`
     
                     <li class="nav-item current active">
                       <a class="nav-link nav-internal" href="index.html">
-                        Specifications and Protocols
+                        Specifications
                       </a>
                     </li>
                 
@@ -453,7 +453,7 @@ document.write(`
                 
             <li class="nav-item dropdown">
                 <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-header-nav-more-links">
-                    Language implementations
+                    Implementations
                 </button>
                 <ul id="pst-header-nav-more-links" class="dropdown-menu">
                     
@@ -705,7 +705,7 @@ document.write(`
       </a>
     </li>
     
-    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Specifications and Protocols</a></li>
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Specifications</a></li>
     
     <li class="breadcrumb-item active" aria-current="page">Canonical...</li>
   </ul>
@@ -838,6 +838,104 @@ by this specification. Instead, this extension type lets one use fixed shape ten
 as elements in a field of a RecordBatch or a Table.</p>
 </div>
 </section>
+<section id="variable-shape-tensor">
+<span id="variable-shape-tensor-extension"></span><h3>Variable shape tensor<a class="headerlink" href="#variable-shape-tensor" title="Permalink to this heading">#</a></h3>
+<ul>
+<li><p>Extension name: <cite>arrow.variable_shape_tensor</cite>.</p></li>
+<li><p>The storage type of the extension is: <code class="docutils literal notranslate"><span class="pre">StructArray</span></code> where struct
+is composed of <strong>data</strong> and <strong>shape</strong> fields describing a single
+tensor per row:</p>
+<ul class="simple">
+<li><p><strong>data</strong> is a <code class="docutils literal notranslate"><span class="pre">List</span></code> holding tensor elements (each list element is
+a single tensor). The List’s value type is the value type of the tensor,
+such as an integer or floating-point type.</p></li>
+<li><p><strong>shape</strong> is a <code class="docutils literal notranslate"><span class="pre">FixedSizeList&lt;int32&gt;[ndim]</span></code> of the tensor shape where
+the size of the list <code class="docutils literal notranslate"><span class="pre">ndim</span></code> is equal to the number of dimensions of the
+tensor.</p></li>
+</ul>
+</li>
+<li><p>Extension type parameters:</p>
+<ul class="simple">
+<li><p><strong>value_type</strong> = the Arrow data type of individual tensor elements.</p></li>
+</ul>
+<p>Optional parameters describing the logical layout:</p>
+<ul>
+<li><p><strong>dim_names</strong> = explicit names to tensor dimensions
+as an array. The length of it should be equal to the shape
+length and equal to the number of dimensions.</p>
+<p><code class="docutils literal notranslate"><span class="pre">dim_names</span></code> can be used if the dimensions have well-known
+names and they map to the physical layout (row-major).</p>
+</li>
+<li><p><strong>permutation</strong>  = indices of the desired ordering of the
+original dimensions, defined as an array.</p>
+<p>The indices contain a permutation of the values [0, 1, .., N-1] where
+N is the number of dimensions. The permutation indicates which
+dimension of the logical layout corresponds to which dimension of the
+physical tensor (the i-th dimension of the logical view corresponds
+to the dimension with number <code class="docutils literal notranslate"><span class="pre">permutations[i]</span></code> of the physical tensor).</p>
+<p>Permutation can be useful in case the logical order of
+the tensor is a permutation of the physical order (row-major).</p>
+<p>When logical and physical layout are equal, the permutation will always
+be ([0, 1, .., N-1]) and can therefore be left out.</p>
+</li>
+<li><p><strong>uniform_shape</strong> = sizes of individual tensor’s dimensions which are
+guaranteed to stay constant in uniform dimensions and can vary in
+non-uniform dimensions. This holds over all tensors in the array.
+Sizes in uniform dimensions are represented with int32 values, while
+sizes of the non-uniform dimensions are not known in advance and are
+represented with null. If <code class="docutils literal notranslate"><span class="pre">uniform_shape</span></code> is not provided it is assumed
+that all dimensions are non-uniform.
+An array containing a tensor with shape (2, 3, 4) and whose first and
+last dimensions are uniform would have <code class="docutils literal notranslate"><span class="pre">uniform_shape</span></code> (2, null, 4).
+This allows for interpreting the tensor correctly without accounting for
+uniform dimensions while still permitting optional optimizations that
+take advantage of the uniformity.</p></li>
+</ul>
+</li>
+<li><p>Description of the serialization:</p>
+<p>The metadata must be a valid JSON object that optionally includes
+dimension names with keys <strong>“dim_names”</strong> and  ordering of dimensions
+with key <strong>“permutation”</strong>.
+Shapes of tensors can be defined in a subset of dimensions by providing
+key <strong>“uniform_shape”</strong>.
+Minimal metadata is an empty string.</p>
+<ul>
+<li><p>Example with <code class="docutils literal notranslate"><span class="pre">dim_names</span></code> metadata for NCHW ordered data (note that the first
+logical dimension, <code class="docutils literal notranslate"><span class="pre">N</span></code>, is mapped to the <strong>data</strong> List array: each element in the List
+is a CHW tensor and the List of tensors implicitly constitutes a single NCHW tensor):</p>
+<p><code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&quot;dim_names&quot;:</span> <span class="pre">[&quot;C&quot;,</span> <span class="pre">&quot;H&quot;,</span> <span class="pre">&quot;W&quot;]</span> <span class="pre">}</span></code></p>
+</li>
+<li><p>Example with <code class="docutils literal notranslate"><span class="pre">uniform_shape</span></code> metadata for a set of color images
+with fixed height, variable width and three color channels:</p>
+<p><code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&quot;dim_names&quot;:</span> <span class="pre">[&quot;H&quot;,</span> <span class="pre">&quot;W&quot;,</span> <span class="pre">&quot;C&quot;],</span> <span class="pre">&quot;uniform_shape&quot;:</span> <span class="pre">[400,</span> <span class="pre">null,</span> <span class="pre">3]</span> <span class="pre">}</span></code></p>
+</li>
+<li><p>Example of permuted 3-dimensional tensor:</p>
+<p><code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&quot;permutation&quot;:</span> <span class="pre">[2,</span> <span class="pre">0,</span> <span class="pre">1]</span> <span class="pre">}</span></code></p>
+<p>For example, if the physical <strong>shape</strong> of an individual tensor
+is <code class="docutils literal notranslate"><span class="pre">[100,</span> <span class="pre">200,</span> <span class="pre">500]</span></code>, this permutation would denote a logical shape
+of <code class="docutils literal notranslate"><span class="pre">[500,</span> <span class="pre">100,</span> <span class="pre">200]</span></code>.</p>
+</li>
+</ul>
+</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>With the exception of <code class="docutils literal notranslate"><span class="pre">permutation</span></code>, the parameters and storage
+of VariableShapeTensor relate to the <em>physical</em> storage of the tensor.</p>
+<dl class="simple">
+<dt>For example, consider a tensor with::</dt><dd><p>shape = [10, 20, 30]
+dim_names = [x, y, z]
+permutations = [2, 0, 1]</p>
+</dd>
+</dl>
+<p>This means the logical tensor has names [z, x, y] and shape [30, 10, 20].</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Values inside each <strong>data</strong> tensor element are stored in row-major/C-contiguous
+order according to the corresponding <strong>shape</strong>.</p>
+</div>
+</section>
 </section>
 <section id="community-extension-types">
 <h2>Community Extension Types<a class="headerlink" href="#community-extension-types" title="Permalink to this heading">#</a></h2>
@@ -906,6 +1004,7 @@ finalized.</p>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#official-list">Official List</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed-shape-tensor">Fixed shape tensor</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#variable-shape-tensor">Variable shape tensor</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#community-extension-types">Community Extension Types</a><ul class="visible nav section-nav flex-column">
