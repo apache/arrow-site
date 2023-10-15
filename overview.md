@@ -89,7 +89,7 @@ analytic database systems, data frame libraries, and more.
       <a href="{{ site.baseurl }}/docs/js/">JavaScript</a>,
       <a href="{{ site.baseurl }}/julia/">Julia</a>,
       <a href="https://docs.rs/crate/arrow/">Rust</a>,
-      and <a href="https://github.com/apache/arrow/blob/main/swift/README.md">Swift</a>
+      and <a href="https://github.com/apache/arrow/blob/main/swift">Swift</a>
       libraries contain distinct implementations of the Arrow format. These
       libraries are
       <a href="{{ site.baseurl }}/docs/status.html">integration-tested</a>
