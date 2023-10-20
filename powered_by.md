@@ -154,6 +154,7 @@ short description of your use case.
 * **[pandas][12]:** data analysis toolkit for Python programmers. pandas
   supports reading and writing Parquet files using pyarrow. Several pandas
   core developers are also contributors to Apache Arrow.
+* **[Parseable][51]:** Log analytics platform built for scale and usability. Ingest logs from anywhere and unify logs with Parseable. Parseable uses Arrow as the intermediary, in-memory data format for log data ingestion.
 * **[Perspective][23]:** Perspective is a streaming data visualization engine in JavaScript for building real-time & user-configurable analytics entirely in the browser.
 * **[Petastorm][28]:** Petastorm enables single machine or distributed training
   and evaluation of deep learning models directly from datasets in Apache
@@ -260,3 +261,4 @@ short description of your use case.
 [48]: https://github.com/cloudquery/cloudquery
 [49]: https://kaskada.io
 [50]: https://openobserve.ai
+[51]: https://parseable.io
