@@ -12,7 +12,23 @@ To report a possible security vulnerability, please email [private@arrow.apache.
 
 <hr class="my-5">
 
-### [CVE-2019-12408](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-12408): Uninitialized Memory in C++ ArrayBuilder
+### [CVE-2023-47248](https://www.cve.org/CVERecord?id=CVE-2023-47248): Arbitrary code execution when loading a malicious data file in PyArrow
+
+**Severity**: Critical
+
+**Vendor**: The Apache Software Foundation
+
+**Versions affected**: 0.14.0 to 14.0.0
+
+**Description**: Deserialization of untrusted data in IPC and Parquet readers
+in PyArrow versions 0.14.0 to 14.0.0 allows arbitrary code execution.
+An application is vulnerable if it reads Arrow IPC, Feather or Parquet data
+from untrusted sources (for example user-supplied input files).
+
+**Mitigation**: Upgrade to version 14.0.1 or greater. If not possible, use the
+provided [hotfix package](https://pypi.org/project/pyarrow-hotfix/).
+
+### [CVE-2019-12408](https://www.cve.org/CVERecord?id=CVE-2019-12408): Uninitialized Memory in C++ ArrayBuilder
 
 **Severity**: High
 
@@ -24,9 +40,7 @@ To report a possible security vulnerability, please email [private@arrow.apache.
 
 **Mitigation**: Upgrade to version 0.15.1 or greater.
 
-<hr class="my-5">
-
-### [CVE-2019-12410](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-12410): Uninitialized Memory in C++ Reading from Parquet
+### [CVE-2019-12410](https://www.cve.org/CVERecord?id=CVE-2019-12410): Uninitialized Memory in C++ Reading from Parquet
 
 **Severity**: High
 
