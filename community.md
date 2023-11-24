@@ -138,4 +138,4 @@ For information about how to attend these meetings, see the meeting notes and su
 
 As mentioned above, we use [GitHub](https://github.com/apache/arrow) for our issue
 tracker and for source control. See the
-[contribution guidelines]({{ site.baseurl }}/docs/developers/contributing.html) for more.
+[contribution guidelines]({{ site.baseurl }}/docs/developers/index.html) for more.

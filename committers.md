@@ -89,7 +89,7 @@ repositories and serve as non-voting project maintainers. See the
 
 ### Becoming a committer
 
-There are many ways to [contribute](https://arrow.apache.org/docs/developers/contributing.html)
+There are many ways to [contribute](https://arrow.apache.org/docs/developers/index.html)
 to the Apache Arrow project, including issue reports,
 documentation, tests, and code. Contributors with sustained, high-quality activity
 may be invited to become committers by the PMC
