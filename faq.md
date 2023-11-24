@@ -144,7 +144,7 @@ to ask questions. Don't be shy--we're here to help.
 
 Hopefully! Please make a detailed bug report--that's a valuable contribution to
 the project itself.  See the [contribution guidelines]({{ site.baseurl
-}}/docs/developers/contributing.html) for how to make a report.
+}}/docs/developers/index.html) for how to make a report.
 
 #### **Arrow looks great and I'd totally use it if it only did X. When will it be done?**
 
