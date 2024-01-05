@@ -141,7 +141,7 @@ Then add/commit/push from the `asf-site/` git checkout.
 If you don't wish to change or install `ruby` and `nodejs` locally, you can use docker to build and preview the site with a command like:
 
 ```shell
-docker run -v `pwd`:/arrow-site -p 4000:4000 -it ruby bash
+docker run -v `pwd`:/arrow-site -p 4000:4000 -it ruby:3.2.2-slim-bullseye bash
 cd arrow-site
 apt-get update
 apt-get install -y npm
