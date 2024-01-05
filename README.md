@@ -151,4 +151,4 @@ bundle install
 bundle exec rake HOST=0.0.0.0
 ```
 
-Then open http://locahost:4000 locally
+Then open http://localhost:4000 locally
