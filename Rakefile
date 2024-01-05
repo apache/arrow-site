@@ -51,8 +51,6 @@ task :default => :serve
 desc "Generate site"
 task :generate => webpacked_js do
   command_line = ["jekyll", "build"]
-  base_url = ENV["JEKYLL_BASE_URL"]
-  command_line << "--baseurl=#{base_url}" if base_url
   extra_config = ENV["JEKYLL_EXTRA_CONFIG"]
   command_line << "--config=_config.yml,#{extra_config}" if extra_config
   destination = ENV["JEKYLL_DESTINATION"]

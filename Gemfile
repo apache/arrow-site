@@ -24,7 +24,7 @@ gem "tzinfo-data", platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 gem "webrick"
 
 group :jekyll_plugins do
-  gem "jekyll-feed", "~> 0.6"
+  gem "jekyll-feed", "~> 0.17.0"
   gem "jekyll-jupyter-notebook"
   gem "jekyll-seo-tag"
 end

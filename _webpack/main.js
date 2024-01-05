@@ -15,4 +15,4 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import "bootstrap";
+import { Button, Collapse, Dropdown } from 'bootstrap';
