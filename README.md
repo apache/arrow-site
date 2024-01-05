@@ -100,42 +100,6 @@ to `_site/` locally by the following command line:
 JEKYLL_ENV=production bundle exec rake generate
 ```
 
-## Updating Code Documentation
-
-To update the documentation, you can run the script `./dev/gen_apidocs.sh` in
-the `apache/arrow` repository. This script will run the code documentation
-tools in a fixed environment.
-
-### C (GLib)
-
-First, build Apache Arrow C++ and Apache Arrow GLib. This assumes that you have checkouts your forks of `arrow` and `arrow-site` alongside each other in your file system.
-
-```
-mkdir -p ../cpp/build
-cd ../cpp/build
-cmake .. -DCMAKE_BUILD_TYPE=debug
-make
-cd ../../c_glib
-./autogen.sh
-./configure \
-  --with-arrow-cpp-build-dir=$PWD/../cpp/build \
-  --with-arrow-cpp-build-type=debug \
-  --enable-gtk-doc
-LD_LIBRARY_PATH=$PWD/../cpp/build/debug make GTK_DOC_V_XREF=": "
-rsync -r doc/reference/html/ ../../arrow-site/asf-site/docs/c_glib/
-```
-
-### JavaScript
-
-```
-cd ../js
-npm run doc
-rsync -r doc/ ../../arrow-site/asf-site/docs/js
-```
-
-Then add/commit/push from the `asf-site/` git checkout.
-
-
 ## Using Docker
 
 If you don't wish to change or install `ruby` and `nodejs` locally, you can use docker to build and preview the site with a command like:
