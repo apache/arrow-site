@@ -18,7 +18,7 @@
 source "https://rubygems.org"
 ruby RUBY_VERSION
 
-gem "jekyll", "4.2.0"
+gem "jekyll", "4.3.3"
 gem "rake"
 gem "tzinfo-data", platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 gem "webrick"
