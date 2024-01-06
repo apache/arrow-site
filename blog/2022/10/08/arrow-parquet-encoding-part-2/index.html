@@ -10,7 +10,7 @@
     
 
     <!-- Begin Jekyll SEO tag v2.8.0 -->
-<meta name="generator" content="Jekyll v4.2.0" />
+<meta name="generator" content="Jekyll v4.3.3" />
 <meta property="og:title" content="Arrow and Parquet Part 2: Nested and Hierarchical Data using Structs and Lists" />
 <meta name="author" content="tustvold and alamb" />
 <meta property="og:locale" content="en_US" />
@@ -272,53 +272,53 @@
 <p>For example, consider the following three JSON documents</p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>              <span class="c1"># &lt;-- First record
-</span>  <span class="s">"a"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>      <span class="c1"># &lt;-- the top level fields are a, b, c, and d
-</span>  <span class="s">"b"</span><span class="p">:</span> <span class="p">{</span>       <span class="c1"># &lt;-- b is always provided (not nullable)
-</span>    <span class="s">"b1"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>   <span class="c1"># &lt;-- b1 and b2 are "nested" fields of "b"
-</span>    <span class="s">"b2"</span><span class="p">:</span> <span class="mi">3</span>    <span class="c1"># &lt;-- b2 is always provided (not nullable)
+</span>  <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>      <span class="c1"># &lt;-- the top level fields are a, b, c, and d
+</span>  <span class="sh">"</span><span class="s">b</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span>       <span class="c1"># &lt;-- b is always provided (not nullable)
+</span>    <span class="sh">"</span><span class="s">b1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>   <span class="c1"># &lt;-- b1 and b2 are "nested" fields of "b"
+</span>    <span class="sh">"</span><span class="s">b2</span><span class="sh">"</span><span class="p">:</span> <span class="mi">3</span>    <span class="c1"># &lt;-- b2 is always provided (not nullable)
 </span>   <span class="p">},</span>
-  <span class="s">"d"</span><span class="p">:</span> <span class="p">{</span>
-   <span class="s">"d1"</span><span class="p">:</span>  <span class="mi">1</span>    <span class="c1"># &lt;-- d1 is a "nested" field of "d"
+  <span class="sh">"</span><span class="s">d</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span>
+   <span class="sh">"</span><span class="s">d1</span><span class="sh">"</span><span class="p">:</span>  <span class="mi">1</span>    <span class="c1"># &lt;-- d1 is a "nested" field of "d"
 </span>  <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></div>
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>              <span class="c1"># &lt;-- Second record
-</span>  <span class="s">"a"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
-  <span class="s">"b"</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s">"b2"</span><span class="p">:</span> <span class="mi">4</span>    <span class="c1"># &lt;-- note "b1" is NULL in this record
+</span>  <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+  <span class="sh">"</span><span class="s">b</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">b2</span><span class="sh">"</span><span class="p">:</span> <span class="mi">4</span>    <span class="c1"># &lt;-- note "b1" is NULL in this record
 </span>  <span class="p">},</span>
-  <span class="s">"c"</span><span class="p">:</span> <span class="p">{</span>       <span class="c1"># &lt;-- note "c" was NULL in the first record
-</span>    <span class="s">"c1"</span><span class="p">:</span> <span class="mi">6</span>        <span class="n">but</span> <span class="n">when</span> <span class="s">"c"</span> <span class="ow">is</span> <span class="n">provided</span><span class="p">,</span> <span class="n">c1</span> <span class="ow">is</span> <span class="n">also</span>
-  <span class="p">},</span>               <span class="n">always</span> <span class="n">provided</span> <span class="p">(</span><span class="ow">not</span> <span class="n">nullable</span><span class="p">)</span>
-  <span class="s">"d"</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s">"d1"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="s">"d2"</span><span class="p">:</span> <span class="mi">1</span>
+  <span class="sh">"</span><span class="s">c</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span>       <span class="c1"># &lt;-- note "c" was NULL in the first record
+</span>    <span class="sh">"</span><span class="s">c1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">6</span>        <span class="n">but</span> <span class="n">when</span> <span class="sh">"</span><span class="s">c</span><span class="sh">"</span> <span class="ow">is</span> <span class="n">provided</span><span class="p">,</span> <span class="n">c1</span> <span class="ow">is</span> <span class="n">also</span>
+  <span class="p">},</span>               <span class="n">always</span> <span class="nf">provided </span><span class="p">(</span><span class="ow">not</span> <span class="n">nullable</span><span class="p">)</span>
+  <span class="sh">"</span><span class="s">d</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">d1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">d2</span><span class="sh">"</span><span class="p">:</span> <span class="mi">1</span>
   <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></div>
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>              <span class="c1"># &lt;-- Third record
-</span>  <span class="s">"b"</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s">"b1"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
-    <span class="s">"b2"</span><span class="p">:</span> <span class="mi">6</span>
+</span>  <span class="sh">"</span><span class="s">b</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">b1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">b2</span><span class="sh">"</span><span class="p">:</span> <span class="mi">6</span>
   <span class="p">},</span>
-  <span class="s">"c"</span><span class="p">:</span> <span class="p">{</span>
-    <span class="s">"c1"</span><span class="p">:</span> <span class="mi">7</span>
+  <span class="sh">"</span><span class="s">c</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="sh">"</span><span class="s">c1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">7</span>
   <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></div>
 <p>Documents of this format could be stored in an Arrow <code class="language-plaintext highlighter-rouge">StructArray</code> with this schema</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"a"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
-<span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b1"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"b2"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
+<span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">b</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
+  <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">b1</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
+  <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">b2</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
 <span class="p">])</span>
-<span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"c"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"c1"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
+<span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">c</span><span class="sh">"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
+  <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">c1</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
 <span class="p">])</span>
-<span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"d"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"d1"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"d2"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
+<span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">d</span><span class="sh">"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
+  <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">d1</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
+  <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">d2</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
 <span class="p">])</span>
 </code></pre></div></div>
 
@@ -379,14 +379,14 @@
 <p>A definition level of <code class="language-plaintext highlighter-rouge">1</code> would imply a null at the level of <code class="language-plaintext highlighter-rouge">d.d2</code></p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
-  <span class="s">"d"</span><span class="p">:</span> <span class="p">{</span> <span class="p">}</span>
+  <span class="sh">"</span><span class="s">d</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span> <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></div>
 
 <p>A definition level of <code class="language-plaintext highlighter-rouge">2</code> would imply a defined value for <code class="language-plaintext highlighter-rouge">d.d2</code>:</p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
-  <span class="s">"d"</span><span class="p">:</span> <span class="p">{</span> <span class="s">"d2"</span><span class="p">:</span> <span class="p">..</span> <span class="p">}</span>
+  <span class="sh">"</span><span class="s">d</span><span class="sh">"</span><span class="p">:</span> <span class="p">{</span> <span class="sh">"</span><span class="s">d2</span><span class="sh">"</span><span class="p">:</span> <span class="p">..</span> <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></div>
 
@@ -453,25 +453,25 @@
 <p>Closing out support for nested types are <em>lists</em>, which contain a variable number of other values. For example, the following four documents each have a (nullable) field <code class="language-plaintext highlighter-rouge">a</code> containing a list of integers</p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>                     <span class="c1"># &lt;-- First record
-</span>  <span class="s">"a"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span>           <span class="c1"># &lt;-- top-level field a containing list of integers
+</span>  <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span>           <span class="c1"># &lt;-- top-level field a containing list of integers
 </span><span class="p">}</span>
 </code></pre></div></div>
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>                     <span class="c1"># &lt;-- "a" is not provided (is null)
 </span><span class="p">}</span>
 </code></pre></div></div>
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>                     <span class="c1"># &lt;-- "a" is non-null but empty
-</span>  <span class="s">"a"</span><span class="p">:</span> <span class="p">[]</span>
+</span>  <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">:</span> <span class="p">[]</span>
 <span class="p">}</span>
 </code></pre></div></div>
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
-  <span class="s">"a"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>     <span class="c1"># &lt;-- "a" has a null and non-null elements
+  <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>     <span class="c1"># &lt;-- "a" has a null and non-null elements
 </span><span class="p">}</span>
 </code></pre></div></div>
 
 <p>Documents of this format could be stored in this Arrow schema</p>
 
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"a"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">List</span><span class="p">(</span>
-  <span class="n">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="s">"element"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="nc">List</span><span class="p">(</span>
+  <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">element</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
 <span class="p">)</span>
 </code></pre></div></div>
 
@@ -513,7 +513,7 @@
 <p>The example above with 4 JSON documents can be stored in this Parquet schema</p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">message</span> <span class="n">schema</span> <span class="p">{</span>
-  <span class="n">optional</span> <span class="n">group</span> <span class="n">a</span> <span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">optional</span> <span class="n">group</span> <span class="nf">a </span><span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
       <span class="n">optional</span> <span class="n">int32</span> <span class="n">element</span><span class="p">;</span>
     <span class="p">}</span>
@@ -563,7 +563,7 @@
   <div class="row">
     <div class="col-md-9">
       <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
-      <p>&copy; 2016-2023 The Apache Software Foundation</p>
+      <p>&copy; 2016-2024 The Apache Software Foundation</p>
     </div>
     <div class="col-md-3">
       <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
