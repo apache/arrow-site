@@ -155,7 +155,7 @@ short description of your use case.
   supports reading and writing Parquet files using pyarrow. Several pandas
   core developers are also contributors to Apache Arrow.
 * **[pantab][52]:** Allows high performance read/writes of popular dataframe libraries
-  like pandas, polars pyarrow, etc... to/from Tableau's Hyper database. pantab uses nanoarrow
+  like pandas, polars, pyarrow, etc... to/from Tableau's Hyper database. pantab uses nanoarrow
   and the Arrow PyCapsule interface to make that exchange process seamless.
 * **[Parseable][51]:** Log analytics platform built for scale and usability. Ingest logs from anywhere and unify logs with Parseable. Parseable uses Arrow as the intermediary, in-memory data format for log data ingestion.
 * **[Perspective][23]:** Perspective is a streaming data visualization engine in JavaScript for building real-time & user-configurable analytics entirely in the browser.
