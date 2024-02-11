@@ -129,6 +129,10 @@ short description of your use case.
   natural language processing, and tabular tasks. Dataset objects are wrappers around 
   Arrow Tables and memory-mapped from disk to support out-of-core parallel processing 
   for machine learning workflows.
+* **[iceburst][53]:** A real-time data lake for monitoring and security built 
+  directly on top of Amazon S3. Our approach is simple: ingest the OpenTelemetry data in an S3 bucket as
+  Parquet files in Iceberg table format and query them using DuckDB with milliseond retrieval and zero egress cost.
+  Parquet is converted to Arrow format in-memory enhancing both speed and efficiency.
 * **[InAccel][29]:** A machine learning acceleration framework which leverages
   FPGAs-as-a-service. InAccel supports dataframes backed by Apache Arrow to
   serve as input for our implemented ML algorithms. Those dataframes can be
@@ -266,3 +270,4 @@ short description of your use case.
 [50]: https://openobserve.ai
 [51]: https://parseable.io
 [52]: https://github.com/innobi/pantab
+[53]: https://iceburst.io
