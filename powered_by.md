@@ -86,6 +86,9 @@ short description of your use case.
 * **[Data Preview][31]:** Data Preview is a Visual Studio Code extension
   for viewing text and binary data files. Data Preview uses Arrow JS API
   for loading, transforming and saving Arrow data files and schemas.
+* **[delta-rs][54]:** A native Rust library for Delta Lake, with bindings to Python.
+  It can be integrated with Apache Arrow, increasing the efficiency of data exchange
+  over the network
 * **[Dremio][9]:** A self-service data platform. Dremio makes it easy for
   users to discover, curate, accelerate, and share data from any source.
   It includes a distributed SQL execution engine based on Apache Arrow.
@@ -271,3 +274,4 @@ short description of your use case.
 [51]: https://parseable.io
 [52]: https://github.com/innobi/pantab
 [53]: https://iceburst.io
+[54]: https://github.com/delta-io/delta-rs
