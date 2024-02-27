@@ -61,9 +61,9 @@ native columnar engines such as the proprietary [DataBricks Photon Engine] and
 the [Gluten project].
 
 Comet was originally implemented at Apple and the engineers who worked on the
-project are also significant contributors to Arrow and DataFusion. Now that
-Comet is part of Apache, we expect its development to accelerate and its
-community of contributors and users to grow.
+project are also significant contributors to Arrow and DataFusion. Bringing 
+Comet into the Apache Software Foundation will accelerate its development and 
+grow its community of contributors and users.
 
 [Comet project]: https://github.com/apache/arrow-datafusion-comet
 [Apache Arrow DataFusion]: https://arrow.apache.org/datafusion
