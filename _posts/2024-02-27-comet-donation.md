@@ -1,0 +1,87 @@
+---
+layout: post
+title: "Announcing Apache Arrow DataFusion Comet"
+date: "2024-02-27 00:00:00"
+author: pmc
+categories: [release]
+---
+<!--
+{% comment %}
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to you under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+{% endcomment %}
+-->
+
+# Introduction
+The Apache Arrow PMC is pleased to announce the donation of the [Comet project],
+a native Spark Accelerator built on [Apache Arrow DataFusion].
+
+Comet is a Apache Spark Accelerator that uses Apache Arrow DataFusion to
+accelerate Spark workloads. It is written in Rust and designed as a drop-in
+replacement for Spark's JVM based execution engine and offers significant
+performance improvements for some workloads as shown below.
+
+```text
+┌───────────────────────────┐
+│           Spark           │
+│   Frontend / Optimizer    │
+│        (JVM Based)        │
+└───────────────────────────┘
+              │              
+              ▼              
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃           Comet           ┃
+┃     Execution Engine      ┃
+┃       (Native Code)       ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
+**Figure 1**: With Comet, users interact with the same Spark ecosystem and tools
+such as Spark SQL. However, the jobs are executed by Comet, which significantly
+faster than the JVM based executor due to its fast native execution.
+
+[Rust]: https://www.rust-lang.org/
+
+# Background
+
+Comet is one of a growing class of projects that aim to accelerate Spark using
+native columnar engines such as the proprietary [DataBricks Photon Engine] and
+the [Gluten project].
+
+Comet was originally implemented at Apple and the engineers who worked on the
+project are also significant contributors to Arrow and DataFusion. Now that
+Comet is part of Apache, we expect its development to accelerate and its
+community of contributors and users to grow.
+
+[Comet project]: https://github.com/apache/arrow-datafusion-comet
+[Apache Arrow DataFusion]: https://arrow.apache.org/datafusion
+[DataBricks Photon Engine]: https://www.databricks.com/product/photon
+[Gluten project]: https://incubator.apache.org/projects/gluten.html
+
+# Get Involved
+Comet is still in the early stages of development and we would love to have you
+join us and help shape the project. Here are some ways to get involved:
+
+* Learn more by visiting the [Comet project] page and reading the [mailing list
+  discussion] about the initial donation.
+
+* Help us plan out the [roadmap]
+
+* Try out the project and provide feedback, file issues, and contribute code.
+
+[mailing list discussion]: https://lists.apache.org/thread/0q1rb11jtpopc7vt1ffdzro0omblsh0s
+[roadmap]: https://github.com/apache/arrow-datafusion-comet/issues/19
+
+
