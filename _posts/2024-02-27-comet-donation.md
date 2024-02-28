@@ -34,25 +34,38 @@ replacement for Spark's JVM based SQL execution engine and offers significant
 performance improvements for some workloads as shown below.
 
 ```text
-┌───────────────────────────┐
-│           Spark           │
-│   Frontend / Optimizer    │
-│        (JVM Based)        │
-└───────────────────────────┘
-              │              
-              ▼              
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃           Comet           ┃
-┃     Execution Engine      ┃
-┃       (Native Code)       ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+   ┌─────────────────────────────────────────────────────────────────┐
+   │                                                                 │
+   │ ┌──────────┐ ┌────────────┐ ┌────────────┐       ┌────────────┐ │
+   │ │   SQL    │ │  Cluster   │ │  DAG/Task  │  ...  │  Executor  │ │
+   │ │ Planner  │ │  Manager   │ │ Scheduler  │       │            │ │
+   │ └──────────┘ └────────────┘ └────────────┘       └────────────┘ │
+   │                                                         │       │
+   └─────────────────────────────────────────────────────────────────┘
+     Spark (JVM Based)                                       │        
+                                  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─         
+                                                                      
+                                  │                                   
+                                  ▼                                   
+                 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓                   
+Comet Execution  ┃                                ┃                   
+Engine           ┃  ┌─────────────────────────┐   ┃                   
+(Native Code)    ┃  │ Apache Arrow DataFusion │   ┃                   
+                 ┃  └─────────────────────────┘   ┃                   
+                 ┃                                ┃                   
+                 ┃  ┌─────────────────────────┐   ┃                   
+                 ┃  │    Spark Compatible     │   ┃                   
+                 ┃  │  Expressions/Operators  │   ┃                   
+                 ┃  └─────────────────────────┘   ┃                   
+                 ┃                                ┃                   
+                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛                   
 ```
 
-**Figure 1**: With Comet, users interact with the same Spark ecosystem, tools and APIs
-such as Spark SQL. Users' SQL queries still run through the mature and advantaged query optimizer and planner of Spark SQL.
-
-However, once the optimized and planned queries are ready to execute, the execution jobs are delegated to Comet, which significantly
-faster than the JVM based executor due to its fast native execution.
+**Figure 1**: With Comet, users interact with the same Spark ecosystem, tools
+and APIs such as Spark SQL. Queries still run through Spark's mature and feature
+rich query optimizer and planner. However, the execution is delegated to Comet,
+which is significantly faster and more resource efficient than the  JVM based
+implementation.
 
 [Rust]: https://www.rust-lang.org/
 
