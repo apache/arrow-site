@@ -26,11 +26,11 @@ limitations under the License.
 
 # Introduction
 The Apache Arrow PMC is pleased to announce the donation of the [Comet project],
-a native Spark Accelerator built on [Apache Arrow DataFusion].
+a native Spark SQL Accelerator built on [Apache Arrow DataFusion].
 
-Comet is a Apache Spark Accelerator that uses Apache Arrow DataFusion to
+Comet is an Apache Spark Accelerator that uses Apache Arrow DataFusion to
 accelerate Spark workloads. It is written in Rust and designed as a drop-in
-replacement for Spark's JVM based execution engine and offers significant
+replacement for Spark's JVM based SQL execution engine and offers significant
 performance improvements for some workloads as shown below.
 
 ```text
@@ -48,8 +48,10 @@ performance improvements for some workloads as shown below.
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
-**Figure 1**: With Comet, users interact with the same Spark ecosystem and tools
-such as Spark SQL. However, the jobs are executed by Comet, which significantly
+**Figure 1**: With Comet, users interact with the same Spark ecosystem, tools and APIs
+such as Spark SQL. Users' SQL queries still run through the mature and advantaged query optimizer and planner of Spark SQL.
+
+However, once the optimized and planned queries are ready to execute, the execution jobs are delegated to Comet, which significantly
 faster than the JVM based executor due to its fast native execution.
 
 [Rust]: https://www.rust-lang.org/
@@ -58,7 +60,7 @@ faster than the JVM based executor due to its fast native execution.
 
 Comet is one of a growing class of projects that aim to accelerate Spark using
 native columnar engines such as the proprietary [DataBricks Photon Engine] and
-the [Gluten project].
+the open source [Gluten project] and [Spark RAPIDS].
 
 Comet was originally implemented at Apple and the engineers who worked on the
 project are also significant contributors to Arrow and DataFusion. Bringing 
@@ -69,6 +71,7 @@ grow its community of contributors and users.
 [Apache Arrow DataFusion]: https://arrow.apache.org/datafusion
 [DataBricks Photon Engine]: https://www.databricks.com/product/photon
 [Gluten project]: https://incubator.apache.org/projects/gluten.html
+[Spark RAPIDS]: https://github.com/NVIDIA/spark-rapids
 
 # Get Involved
 Comet is still in the early stages of development and we would love to have you
