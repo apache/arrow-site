@@ -28,8 +28,8 @@ limitations under the License.
 The Apache Arrow PMC is pleased to announce the donation of the [Comet project],
 a native Spark SQL Accelerator built on [Apache Arrow DataFusion].
 
-Comet is an Apache Spark Accelerator that uses Apache Arrow DataFusion to
-accelerate Spark workloads. It is written in Rust and designed as a drop-in
+Comet is an Apache Spark plugin that uses Apache Arrow DataFusion to
+accelerate Spark workloads. It is designed as a drop-in
 replacement for Spark's JVM based SQL execution engine and offers significant
 performance improvements for some workloads as shown below.
 
