@@ -88,7 +88,10 @@ grow its community of contributors and users.
 
 # Get Involved
 Comet is still in the early stages of development and we would love to have you
-join us and help shape the project. Here are some ways to get involved:
+join us and help shape the project. We are working on an initial release, and 
+expect to post another update with more details at that time.
+
+Before then, here are some ways to get involved:
 
 * Learn more by visiting the [Comet project] page and reading the [mailing list
   discussion] about the initial donation.
