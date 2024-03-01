@@ -33,43 +33,25 @@ accelerate Spark workloads. It is designed as a drop-in
 replacement for Spark's JVM based SQL execution engine and offers significant
 performance improvements for some workloads as shown below.
 
-```text
-   ┌─────────────────────────────────────────────────────────────────┐
-   │                                                                 │
-   │ ┌──────────┐ ┌────────────┐ ┌────────────┐       ┌────────────┐ │
-   │ │   SQL    │ │  Cluster   │ │  DAG/Task  │  ...  │  Executor  │ │
-   │ │ Planner  │ │  Manager   │ │ Scheduler  │       │            │ │
-   │ └──────────┘ └────────────┘ └────────────┘       └────────────┘ │
-   │                                                         │       │
-   └─────────────────────────────────────────────────────────────────┘
-     Spark (JVM Based)                                       │        
-                                  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─         
-                                                                      
-                                  │                                   
-                                  ▼                                   
-                 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓                   
-Comet Execution  ┃                                ┃                   
-Engine           ┃  ┌─────────────────────────┐   ┃                   
-(Native Code)    ┃  │ Apache Arrow DataFusion │   ┃                   
-                 ┃  └─────────────────────────┘   ┃                   
-                 ┃                                ┃                   
-                 ┃  ┌─────────────────────────┐   ┃                   
-                 ┃  │    Spark Compatible     │   ┃                   
-                 ┃  │  Expressions/Operators  │   ┃                   
-                 ┃  └─────────────────────────┘   ┃                   
-                 ┃                                ┃                   
-                 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛                   
-```
+<figure style="text-align: center;">
+  <img 
+    src="{{ site.baseurl }}/img/datafusion-comet/comet-architecture.png" 
+    width="100%" 
+    class="img-responsive" 
+    alt="Fig 1: Adaptive Arrow schema architecture overview."
+  >
+  <figcaption>
+   <b>Figure 1</b>: With Comet, users interact with the same Spark ecosystem, tools
+    and APIs such as Spark SQL. Queries still run through Spark's query optimizer and planner. 
+    However, the execution is delegated to Comet,
+    which is significantly faster and more resource efficient than a JVM based
+    implementation.
+</figcaption>
+</figure>
 
-**Figure 1**: With Comet, users interact with the same Spark ecosystem, tools
-and APIs such as Spark SQL. Queries still run through Spark's mature and feature
-rich query optimizer and planner. However, the execution is delegated to Comet,
-which is significantly faster and more resource efficient than the  JVM based
-implementation.
+
 
 [Rust]: https://www.rust-lang.org/
-
-# Background
 
 Comet is one of a growing class of projects that aim to accelerate Spark using
 native columnar engines such as the proprietary [Databricks Photon Engine] and
@@ -103,4 +85,4 @@ Before then, here are some ways to get involved:
 [mailing list discussion]: https://lists.apache.org/thread/0q1rb11jtpopc7vt1ffdzro0omblsh0s
 [roadmap]: https://github.com/apache/arrow-datafusion-comet/issues/19
 
-
+ 
