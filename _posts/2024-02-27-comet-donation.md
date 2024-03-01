@@ -55,7 +55,8 @@ performance improvements for some workloads as shown below.
 
 Comet is one of a growing class of projects that aim to accelerate Spark using
 native columnar engines such as the proprietary [Databricks Photon Engine] and
-the open source [Gluten project] and [Spark RAPIDS].
+open source projects [Gluten], [Spark RAPIDS], and [Blaze] (also built using
+DataFusion).
 
 Comet was originally implemented at Apple and the engineers who worked on the
 project are also significant contributors to Arrow and DataFusion. Bringing 
@@ -65,7 +66,8 @@ grow its community of contributors and users.
 [Comet project]: https://github.com/apache/arrow-datafusion-comet
 [Apache Arrow DataFusion]: https://arrow.apache.org/datafusion
 [Databricks Photon Engine]: https://www.databricks.com/product/photon
-[Gluten project]: https://incubator.apache.org/projects/gluten.html
+[Gluten]: https://incubator.apache.org/projects/gluten.html
+[Blaze]: https://github.com/kwai/blaze
 [Spark RAPIDS]: https://github.com/NVIDIA/spark-rapids
 
 # Get Involved
