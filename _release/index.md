@@ -26,7 +26,7 @@ limitations under the License.
 
 Navigate to the release page for downloads and the changelog.
 
-* [15.0.2 (19 March 2024)][1]
+* [15.0.2 (18 March 2024)][1]
 * [15.0.1 (7 March 2024)][2]
 * [15.0.0 (21 January 2024)][3]
 * [14.0.2 (19 December 2023)][4]
