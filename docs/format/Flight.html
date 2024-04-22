@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Arrow Flight RPC &#8212; Apache Arrow v15.0.2</title>
+    <title>Arrow Flight RPC &#8212; Apache Arrow v16.0.0</title>
   
   
   
@@ -50,7 +50,7 @@
         DOCUMENTATION_OPTIONS.theme_version = '0.15.2';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = '/docs/_static/versions.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = '';
-        DOCUMENTATION_OPTIONS.show_version_warning_banner = false;
+        DOCUMENTATION_OPTIONS.show_version_warning_banner = true;
         </script>
     <link rel="canonical" href="https://arrow.apache.org/docs/format/Flight.html" />
     <link rel="icon" href="../_static/favicon.ico"/>
@@ -154,8 +154,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v15.0.2 - Home"/>
-    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v15.0.2 - Home"/>`);</script>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v16.0.0 - Home"/>
+    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v16.0.0 - Home"/>`);</script>
   
   
 </a></div>
@@ -211,7 +211,7 @@
                 
 
                     <li class="nav-item">
-                      <a class="nav-link dropdown-item nav-external" href="https://pkg.go.dev/github.com/apache/arrow/go">
+                      <a class="nav-link dropdown-item nav-external" href="https://pkg.go.dev/github.com/apache/arrow/go/v16">
                         Go
                       </a>
                     </li>
@@ -241,6 +241,13 @@
                     <li class="nav-item">
                       <a class="nav-link dropdown-item nav-external" href="https://github.com/apache/arrow/blob/main/matlab/README.md">
                         MATLAB
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/nanoarrow/">
+                        nanoarrow
                       </a>
                     </li>
                 
@@ -485,7 +492,7 @@ document.write(`
                 
 
                     <li class="nav-item">
-                      <a class="nav-link dropdown-item nav-external" href="https://pkg.go.dev/github.com/apache/arrow/go">
+                      <a class="nav-link dropdown-item nav-external" href="https://pkg.go.dev/github.com/apache/arrow/go/v16">
                         Go
                       </a>
                     </li>
@@ -515,6 +522,13 @@ document.write(`
                     <li class="nav-item">
                       <a class="nav-link dropdown-item nav-external" href="https://github.com/apache/arrow/blob/main/matlab/README.md">
                         MATLAB
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/nanoarrow/">
+                        nanoarrow
                       </a>
                     </li>
                 
@@ -828,6 +842,12 @@ server and not a different location, then it can return an empty
 list of locations. The client can then reuse the existing
 connection to the original server to fetch data. Otherwise, the
 client must connect to one of the indicated locations.</p>
+<p>The server may list “itself” as a location alongside other server
+locations.  Normally this requires the server to know its public
+address, but it may also use the special URI string
+<code class="docutils literal notranslate"><span class="pre">arrow-flight-reuse-connection://?</span></code> to tell clients that they may
+reuse an existing connection to the same server, without having to
+be able to name itself.  See <a class="reference internal" href="#connection-reuse">Connection Reuse</a> below.</p>
 <p>In this way, the locations inside an endpoint can also be thought
 of as performing look-aside load balancing or service discovery
 functions. And the endpoints can represent data that is partitioned
@@ -999,13 +1019,14 @@ available when TLS is also enabled.</p>
 <p>Some Flight implementations may expose the underlying gRPC API as
 well, in which case any <a class="reference external" href="https://grpc.io/docs/guides/auth/">authentication method supported by gRPC</a> is available.</p>
 </section>
-<section id="transport-implementations">
-<h2>Transport Implementations<a class="headerlink" href="#transport-implementations" title="Permalink to this heading">#</a></h2>
+<section id="location-uris">
+<h2>Location URIs<a class="headerlink" href="#location-uris" title="Permalink to this heading">#</a></h2>
 <p>Flight is primarily defined in terms of its Protobuf and gRPC
 specification below, but Arrow implementations may also support
-alternative transports (see <a class="reference internal" href="../status.html#status-flight-rpc"><span class="std std-ref">Flight RPC</span></a>). In that case,
-implementations should use the following URI schemes for the given
-transport implementations:</p>
+alternative transports (see <a class="reference internal" href="../status.html#status-flight-rpc"><span class="std std-ref">Flight RPC</span></a>).  Clients and
+servers need to know which transport to use for a given URI in a
+Location, so Flight implementations should use the following URI
+schemes for the given transports:</p>
 <table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Transport</p></th>
@@ -1022,11 +1043,37 @@ transport implementations:</p>
 <tr class="row-even"><td><p>gRPC (Unix domain socket)</p></td>
 <td><p>grpc+unix:</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference external" href="https://openucx.org/">UCX</a> (plaintext)</p></td>
+<tr class="row-odd"><td><p>(reuse connection)</p></td>
+<td><p>arrow-flight-reuse-connection:</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference external" href="https://openucx.org/">UCX</a> (plaintext)</p></td>
 <td><p>ucx:</p></td>
 </tr>
 </tbody>
 </table>
+<section id="connection-reuse">
+<h3>Connection Reuse<a class="headerlink" href="#connection-reuse" title="Permalink to this heading">#</a></h3>
+<p>“Reuse connection” above is not a particular transport.  Instead, it
+means that the client may try to execute DoGet against the same server
+(and through the same connection) that it originally obtained the
+FlightInfo from (i.e., that it called GetFlightInfo against).  This is
+interpreted the same way as when no specific <code class="docutils literal notranslate"><span class="pre">Location</span></code> are
+returned.</p>
+<p>This allows the server to return “itself” as one possible location to
+fetch data without having to know its own public address, which can be
+useful in deployments where knowing this would be difficult or
+impossible.  For example, a developer may forward a remote service in
+a cloud environment to their local machine; in this case, the remote
+service would have no way to know the local hostname and port that it
+is being accessed over.</p>
+<p>For compatibility reasons, the URI should always be
+<code class="docutils literal notranslate"><span class="pre">arrow-flight-reuse-connection://?</span></code>, with the trailing empty query
+string.  Java’s URI implementation does not accept <code class="docutils literal notranslate"><span class="pre">scheme:</span></code> or
+<code class="docutils literal notranslate"><span class="pre">scheme://</span></code>, and C++’s implementation does not accept an empty
+string, so the obvious candidates are not compatible.  The chosen
+representation can be parsed by both implementations, as well as Go’s
+<code class="docutils literal notranslate"><span class="pre">net/url</span></code> and Python’s <code class="docutils literal notranslate"><span class="pre">urllib.parse</span></code>.</p>
+</section>
 </section>
 <section id="error-handling">
 <h2>Error Handling<a class="headerlink" href="#error-handling" title="Permalink to this heading">#</a></h2>
@@ -1467,7 +1514,7 @@ by the client for connectivity reasons.</p></td>
 <span class="linenos">369</span>
 <span class="linenos">370</span><span class="w">  </span><span class="cm">/*</span>
 <span class="linenos">371</span><span class="cm">   * Application-defined metadata.</span>
-<span class="linenos">372</span><span class="cm">   * </span>
+<span class="linenos">372</span><span class="cm">   *</span>
 <span class="linenos">373</span><span class="cm">   * There is no inherent or required relationship between this</span>
 <span class="linenos">374</span><span class="cm">   * and the app_metadata fields in the FlightEndpoints or resulting</span>
 <span class="linenos">375</span><span class="cm">   * FlightData messages. Since this metadata is application-defined,</span>
@@ -1538,91 +1585,209 @@ by the client for connectivity reasons.</p></td>
 <span class="linenos">440</span><span class="cm">   * be redeemed on the current service where the ticket was</span>
 <span class="linenos">441</span><span class="cm">   * generated.</span>
 <span class="linenos">442</span><span class="cm">   *</span>
-<span class="linenos">443</span><span class="cm">   * If the list is not empty, the expectation is that the ticket can</span>
-<span class="linenos">444</span><span class="cm">   * be redeemed at any of the locations, and that the data returned</span>
-<span class="linenos">445</span><span class="cm">   * will be equivalent. In this case, the ticket may only be redeemed</span>
-<span class="linenos">446</span><span class="cm">   * at one of the given locations, and not (necessarily) on the</span>
-<span class="linenos">447</span><span class="cm">   * current service.</span>
-<span class="linenos">448</span><span class="cm">   *</span>
-<span class="linenos">449</span><span class="cm">   * In other words, an application can use multiple locations to</span>
-<span class="linenos">450</span><span class="cm">   * represent redundant and/or load balanced services.</span>
-<span class="linenos">451</span><span class="cm">   */</span>
-<span class="linenos">452</span><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">Location</span><span class="w"> </span><span class="na">location</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
-<span class="linenos">453</span>
-<span class="linenos">454</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">455</span><span class="cm">   * Expiration time of this stream. If present, clients may assume</span>
-<span class="linenos">456</span><span class="cm">   * they can retry DoGet requests. Otherwise, it is</span>
-<span class="linenos">457</span><span class="cm">   * application-defined whether DoGet requests may be retried.</span>
-<span class="linenos">458</span><span class="cm">   */</span>
-<span class="linenos">459</span><span class="w">  </span><span class="n">google.protobuf.Timestamp</span><span class="w"> </span><span class="na">expiration_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
-<span class="linenos">460</span>
-<span class="linenos">461</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">462</span><span class="cm">   * Application-defined metadata.</span>
-<span class="linenos">463</span><span class="cm">   * </span>
-<span class="linenos">464</span><span class="cm">   * There is no inherent or required relationship between this</span>
-<span class="linenos">465</span><span class="cm">   * and the app_metadata fields in the FlightInfo or resulting</span>
-<span class="linenos">466</span><span class="cm">   * FlightData messages. Since this metadata is application-defined,</span>
-<span class="linenos">467</span><span class="cm">   * a given application could define there to be a relationship,</span>
-<span class="linenos">468</span><span class="cm">   * but there is none required by the spec.</span>
-<span class="linenos">469</span><span class="cm">   */</span>
-<span class="linenos">470</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
-<span class="linenos">471</span><span class="p">}</span>
-<span class="linenos">472</span>
-<span class="linenos">473</span><span class="cm">/*</span>
-<span class="linenos">474</span><span class="cm"> * A location where a Flight service will accept retrieval of a particular</span>
-<span class="linenos">475</span><span class="cm"> * stream given a ticket.</span>
-<span class="linenos">476</span><span class="cm"> */</span>
-<span class="linenos">477</span><span class="kd">message</span><span class="w"> </span><span class="nc">Location</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">478</span><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">uri</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">479</span><span class="p">}</span>
-<span class="linenos">480</span>
-<span class="linenos">481</span><span class="cm">/*</span>
-<span class="linenos">482</span><span class="cm"> * An opaque identifier that the service can use to retrieve a particular</span>
-<span class="linenos">483</span><span class="cm"> * portion of a stream.</span>
-<span class="linenos">484</span><span class="cm"> *</span>
-<span class="linenos">485</span><span class="cm"> * Tickets are meant to be single use. It is an error/application-defined</span>
-<span class="linenos">486</span><span class="cm"> * behavior to reuse a ticket.</span>
-<span class="linenos">487</span><span class="cm"> */</span>
-<span class="linenos">488</span><span class="kd">message</span><span class="w"> </span><span class="nc">Ticket</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">489</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">ticket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">490</span><span class="p">}</span>
-<span class="linenos">491</span>
-<span class="linenos">492</span><span class="cm">/*</span>
-<span class="linenos">493</span><span class="cm"> * A batch of Arrow data as part of a stream of batches.</span>
-<span class="linenos">494</span><span class="cm"> */</span>
-<span class="linenos">495</span><span class="kd">message</span><span class="w"> </span><span class="nc">FlightData</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">496</span>
-<span class="linenos">497</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">498</span><span class="cm">   * The descriptor of the data. This is only relevant when a client is</span>
-<span class="linenos">499</span><span class="cm">   * starting a new DoPut stream.</span>
-<span class="linenos">500</span><span class="cm">   */</span>
-<span class="linenos">501</span><span class="w">  </span><span class="n">FlightDescriptor</span><span class="w"> </span><span class="na">flight_descriptor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">502</span>
-<span class="linenos">503</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">504</span><span class="cm">   * Header for message data as described in Message.fbs::Message.</span>
-<span class="linenos">505</span><span class="cm">   */</span>
-<span class="linenos">506</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">data_header</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
-<span class="linenos">507</span>
-<span class="linenos">508</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">509</span><span class="cm">   * Application-defined metadata.</span>
-<span class="linenos">510</span><span class="cm">   */</span>
-<span class="linenos">511</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
-<span class="linenos">512</span>
-<span class="linenos">513</span><span class="w">  </span><span class="cm">/*</span>
-<span class="linenos">514</span><span class="cm">   * The actual batch of Arrow data. Preferably handled with minimal-copies</span>
-<span class="linenos">515</span><span class="cm">   * coming last in the definition to help with sidecar patterns (it is</span>
-<span class="linenos">516</span><span class="cm">   * expected that some implementations will fetch this field off the wire</span>
-<span class="linenos">517</span><span class="cm">   * with specialized code to avoid extra memory copies).</span>
-<span class="linenos">518</span><span class="cm">   */</span>
-<span class="linenos">519</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">data_body</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
-<span class="linenos">520</span><span class="p">}</span>
-<span class="linenos">521</span>
-<span class="linenos">522</span><span class="cm">/**</span>
-<span class="linenos">523</span><span class="cm"> * The response message associated with the submission of a DoPut.</span>
-<span class="linenos">524</span><span class="cm"> */</span>
-<span class="linenos">525</span><span class="kd">message</span><span class="w"> </span><span class="nc">PutResult</span><span class="w"> </span><span class="p">{</span>
-<span class="linenos">526</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="linenos">527</span><span class="p">}</span>
+<span class="linenos">443</span><span class="cm">   * If the list is not empty, the expectation is that the ticket can be</span>
+<span class="linenos">444</span><span class="cm">   * redeemed at any of the locations, and that the data returned will be</span>
+<span class="linenos">445</span><span class="cm">   * equivalent. In this case, the ticket may only be redeemed at one of the</span>
+<span class="linenos">446</span><span class="cm">   * given locations, and not (necessarily) on the current service. If one</span>
+<span class="linenos">447</span><span class="cm">   * of the given locations is &quot;arrow-flight-reuse-connection://?&quot;, the</span>
+<span class="linenos">448</span><span class="cm">   * client may redeem the ticket on the service where the ticket was</span>
+<span class="linenos">449</span><span class="cm">   * generated (i.e., the same as above), in addition to the other</span>
+<span class="linenos">450</span><span class="cm">   * locations. (This URI was chosen to maximize compatibility, as &#39;scheme:&#39;</span>
+<span class="linenos">451</span><span class="cm">   * or &#39;scheme://&#39; are not accepted by Java&#39;s java.net.URI.)</span>
+<span class="linenos">452</span><span class="cm">   *</span>
+<span class="linenos">453</span><span class="cm">   * In other words, an application can use multiple locations to</span>
+<span class="linenos">454</span><span class="cm">   * represent redundant and/or load balanced services.</span>
+<span class="linenos">455</span><span class="cm">   */</span>
+<span class="linenos">456</span><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">Location</span><span class="w"> </span><span class="na">location</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="linenos">457</span>
+<span class="linenos">458</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">459</span><span class="cm">   * Expiration time of this stream. If present, clients may assume</span>
+<span class="linenos">460</span><span class="cm">   * they can retry DoGet requests. Otherwise, it is</span>
+<span class="linenos">461</span><span class="cm">   * application-defined whether DoGet requests may be retried.</span>
+<span class="linenos">462</span><span class="cm">   */</span>
+<span class="linenos">463</span><span class="w">  </span><span class="n">google.protobuf.Timestamp</span><span class="w"> </span><span class="na">expiration_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="linenos">464</span>
+<span class="linenos">465</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">466</span><span class="cm">   * Application-defined metadata.</span>
+<span class="linenos">467</span><span class="cm">   *</span>
+<span class="linenos">468</span><span class="cm">   * There is no inherent or required relationship between this</span>
+<span class="linenos">469</span><span class="cm">   * and the app_metadata fields in the FlightInfo or resulting</span>
+<span class="linenos">470</span><span class="cm">   * FlightData messages. Since this metadata is application-defined,</span>
+<span class="linenos">471</span><span class="cm">   * a given application could define there to be a relationship,</span>
+<span class="linenos">472</span><span class="cm">   * but there is none required by the spec.</span>
+<span class="linenos">473</span><span class="cm">   */</span>
+<span class="linenos">474</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="linenos">475</span><span class="p">}</span>
+<span class="linenos">476</span>
+<span class="linenos">477</span><span class="cm">/*</span>
+<span class="linenos">478</span><span class="cm"> * A location where a Flight service will accept retrieval of a particular</span>
+<span class="linenos">479</span><span class="cm"> * stream given a ticket.</span>
+<span class="linenos">480</span><span class="cm"> */</span>
+<span class="linenos">481</span><span class="kd">message</span><span class="w"> </span><span class="nc">Location</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">482</span><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">uri</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">483</span><span class="p">}</span>
+<span class="linenos">484</span>
+<span class="linenos">485</span><span class="cm">/*</span>
+<span class="linenos">486</span><span class="cm"> * An opaque identifier that the service can use to retrieve a particular</span>
+<span class="linenos">487</span><span class="cm"> * portion of a stream.</span>
+<span class="linenos">488</span><span class="cm"> *</span>
+<span class="linenos">489</span><span class="cm"> * Tickets are meant to be single use. It is an error/application-defined</span>
+<span class="linenos">490</span><span class="cm"> * behavior to reuse a ticket.</span>
+<span class="linenos">491</span><span class="cm"> */</span>
+<span class="linenos">492</span><span class="kd">message</span><span class="w"> </span><span class="nc">Ticket</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">493</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">ticket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">494</span><span class="p">}</span>
+<span class="linenos">495</span>
+<span class="linenos">496</span><span class="cm">/*</span>
+<span class="linenos">497</span><span class="cm"> * A batch of Arrow data as part of a stream of batches.</span>
+<span class="linenos">498</span><span class="cm"> */</span>
+<span class="linenos">499</span><span class="kd">message</span><span class="w"> </span><span class="nc">FlightData</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">500</span>
+<span class="linenos">501</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">502</span><span class="cm">   * The descriptor of the data. This is only relevant when a client is</span>
+<span class="linenos">503</span><span class="cm">   * starting a new DoPut stream.</span>
+<span class="linenos">504</span><span class="cm">   */</span>
+<span class="linenos">505</span><span class="w">  </span><span class="n">FlightDescriptor</span><span class="w"> </span><span class="na">flight_descriptor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">506</span>
+<span class="linenos">507</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">508</span><span class="cm">   * Header for message data as described in Message.fbs::Message.</span>
+<span class="linenos">509</span><span class="cm">   */</span>
+<span class="linenos">510</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">data_header</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="linenos">511</span>
+<span class="linenos">512</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">513</span><span class="cm">   * Application-defined metadata.</span>
+<span class="linenos">514</span><span class="cm">   */</span>
+<span class="linenos">515</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="linenos">516</span>
+<span class="linenos">517</span><span class="w">  </span><span class="cm">/*</span>
+<span class="linenos">518</span><span class="cm">   * The actual batch of Arrow data. Preferably handled with minimal-copies</span>
+<span class="linenos">519</span><span class="cm">   * coming last in the definition to help with sidecar patterns (it is</span>
+<span class="linenos">520</span><span class="cm">   * expected that some implementations will fetch this field off the wire</span>
+<span class="linenos">521</span><span class="cm">   * with specialized code to avoid extra memory copies).</span>
+<span class="linenos">522</span><span class="cm">   */</span>
+<span class="linenos">523</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">data_body</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
+<span class="linenos">524</span><span class="p">}</span>
+<span class="linenos">525</span>
+<span class="linenos">526</span><span class="cm">/**</span>
+<span class="linenos">527</span><span class="cm"> * The response message associated with the submission of a DoPut.</span>
+<span class="linenos">528</span><span class="cm"> */</span>
+<span class="linenos">529</span><span class="kd">message</span><span class="w"> </span><span class="nc">PutResult</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">530</span><span class="w">  </span><span class="kt">bytes</span><span class="w"> </span><span class="na">app_metadata</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">531</span><span class="p">}</span>
+<span class="linenos">532</span>
+<span class="linenos">533</span><span class="cm">/*</span>
+<span class="linenos">534</span><span class="cm"> * EXPERIMENTAL: Union of possible value types for a Session Option to be set to.</span>
+<span class="linenos">535</span><span class="cm"> *</span>
+<span class="linenos">536</span><span class="cm"> * By convention, an attempt to set a valueless SessionOptionValue should</span>
+<span class="linenos">537</span><span class="cm"> * attempt to unset or clear the named option value on the server.</span>
+<span class="linenos">538</span><span class="cm"> */</span>
+<span class="linenos">539</span><span class="kd">message</span><span class="w"> </span><span class="nc">SessionOptionValue</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">540</span><span class="w">  </span><span class="kd">message</span><span class="w"> </span><span class="nc">StringListValue</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">541</span><span class="w">    </span><span class="k">repeated</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">values</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">542</span><span class="w">  </span><span class="p">}</span>
+<span class="linenos">543</span>
+<span class="linenos">544</span><span class="w">  </span><span class="k">oneof</span><span class="w"> </span><span class="n">option_value</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">545</span><span class="w">    </span><span class="kt">string</span><span class="w"> </span><span class="na">string_value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">546</span><span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="na">bool_value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="linenos">547</span><span class="w">    </span><span class="kt">sfixed64</span><span class="w"> </span><span class="na">int64_value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="linenos">548</span><span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="na">double_value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="linenos">549</span><span class="w">    </span><span class="n">StringListValue</span><span class="w"> </span><span class="na">string_list_value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="linenos">550</span><span class="w">  </span><span class="p">}</span>
+<span class="linenos">551</span><span class="p">}</span>
+<span class="linenos">552</span>
+<span class="linenos">553</span><span class="cm">/*</span>
+<span class="linenos">554</span><span class="cm"> * EXPERIMENTAL: A request to set session options for an existing or new (implicit)</span>
+<span class="linenos">555</span><span class="cm"> * server session.</span>
+<span class="linenos">556</span><span class="cm"> *</span>
+<span class="linenos">557</span><span class="cm"> * Sessions are persisted and referenced via a transport-level state management, typically</span>
+<span class="linenos">558</span><span class="cm"> * RFC 6265 HTTP cookies when using an HTTP transport.  The suggested cookie name or state</span>
+<span class="linenos">559</span><span class="cm"> * context key is &#39;arrow_flight_session_id&#39;, although implementations may freely choose their</span>
+<span class="linenos">560</span><span class="cm"> * own name.</span>
+<span class="linenos">561</span><span class="cm"> *</span>
+<span class="linenos">562</span><span class="cm"> * Session creation (if one does not already exist) is implied by this RPC request, however</span>
+<span class="linenos">563</span><span class="cm"> * server implementations may choose to initiate a session that also contains client-provided</span>
+<span class="linenos">564</span><span class="cm"> * session options at any other time, e.g. on authentication, or when any other call is made</span>
+<span class="linenos">565</span><span class="cm"> * and the server wishes to use a session to persist any state (or lack thereof).</span>
+<span class="linenos">566</span><span class="cm"> */</span>
+<span class="linenos">567</span><span class="kd">message</span><span class="w"> </span><span class="nc">SetSessionOptionsRequest</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">568</span><span class="w">  </span><span class="n">map</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="n">SessionOptionValue</span><span class="p">&gt;</span><span class="w"> </span><span class="na">session_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">569</span><span class="p">}</span>
+<span class="linenos">570</span>
+<span class="linenos">571</span><span class="cm">/*</span>
+<span class="linenos">572</span><span class="cm"> * EXPERIMENTAL: The results (individually) of setting a set of session options.</span>
+<span class="linenos">573</span><span class="cm"> *</span>
+<span class="linenos">574</span><span class="cm"> * Option names should only be present in the response if they were not successfully</span>
+<span class="linenos">575</span><span class="cm"> * set on the server; that is, a response without an Error for a name provided in the</span>
+<span class="linenos">576</span><span class="cm"> * SetSessionOptionsRequest implies that the named option value was set successfully.</span>
+<span class="linenos">577</span><span class="cm"> */</span>
+<span class="linenos">578</span><span class="kd">message</span><span class="w"> </span><span class="nc">SetSessionOptionsResult</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">579</span><span class="w">  </span><span class="kd">enum</span><span class="w"> </span><span class="n">ErrorValue</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">580</span><span class="w">    </span><span class="c1">// Protobuf deserialization fallback value: The status is unknown or unrecognized.</span>
+<span class="linenos">581</span><span class="w">    </span><span class="c1">// Servers should avoid using this value. The request may be retried by the client.</span>
+<span class="linenos">582</span><span class="w">    </span><span class="na">UNSPECIFIED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">583</span><span class="w">    </span><span class="c1">// The given session option name is invalid.</span>
+<span class="linenos">584</span><span class="w">    </span><span class="na">INVALID_NAME</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">585</span><span class="w">    </span><span class="c1">// The session option value or type is invalid.</span>
+<span class="linenos">586</span><span class="w">    </span><span class="na">INVALID_VALUE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="linenos">587</span><span class="w">    </span><span class="c1">// The session option cannot be set.</span>
+<span class="linenos">588</span><span class="w">    </span><span class="na">ERROR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="linenos">589</span><span class="w">  </span><span class="p">}</span>
+<span class="linenos">590</span>
+<span class="linenos">591</span><span class="w">  </span><span class="kd">message</span><span class="w"> </span><span class="nc">Error</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">592</span><span class="w">    </span><span class="n">ErrorValue</span><span class="w"> </span><span class="na">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">593</span><span class="w">  </span><span class="p">}</span>
+<span class="linenos">594</span>
+<span class="linenos">595</span><span class="w">  </span><span class="n">map</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="n">Error</span><span class="p">&gt;</span><span class="w"> </span><span class="na">errors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">596</span><span class="p">}</span>
+<span class="linenos">597</span>
+<span class="linenos">598</span><span class="cm">/*</span>
+<span class="linenos">599</span><span class="cm"> * EXPERIMENTAL: A request to access the session options for the current server session.</span>
+<span class="linenos">600</span><span class="cm"> *</span>
+<span class="linenos">601</span><span class="cm"> * The existing session is referenced via a cookie header or similar (see</span>
+<span class="linenos">602</span><span class="cm"> * SetSessionOptionsRequest above); it is an error to make this request with a missing,</span>
+<span class="linenos">603</span><span class="cm"> * invalid, or expired session cookie header or other implementation-defined session</span>
+<span class="linenos">604</span><span class="cm"> * reference token.</span>
+<span class="linenos">605</span><span class="cm"> */</span>
+<span class="linenos">606</span><span class="kd">message</span><span class="w"> </span><span class="nc">GetSessionOptionsRequest</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">607</span><span class="p">}</span>
+<span class="linenos">608</span>
+<span class="linenos">609</span><span class="cm">/*</span>
+<span class="linenos">610</span><span class="cm"> * EXPERIMENTAL: The result containing the current server session options.</span>
+<span class="linenos">611</span><span class="cm"> */</span>
+<span class="linenos">612</span><span class="kd">message</span><span class="w"> </span><span class="nc">GetSessionOptionsResult</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">613</span><span class="w">    </span><span class="n">map</span><span class="p">&lt;</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="n">SessionOptionValue</span><span class="p">&gt;</span><span class="w"> </span><span class="na">session_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">614</span><span class="p">}</span>
+<span class="linenos">615</span>
+<span class="linenos">616</span><span class="cm">/*</span>
+<span class="linenos">617</span><span class="cm"> * Request message for the &quot;Close Session&quot; action.</span>
+<span class="linenos">618</span><span class="cm"> *</span>
+<span class="linenos">619</span><span class="cm"> * The exiting session is referenced via a cookie header.</span>
+<span class="linenos">620</span><span class="cm"> */</span>
+<span class="linenos">621</span><span class="kd">message</span><span class="w"> </span><span class="nc">CloseSessionRequest</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">622</span><span class="p">}</span>
+<span class="linenos">623</span>
+<span class="linenos">624</span><span class="cm">/*</span>
+<span class="linenos">625</span><span class="cm"> * The result of closing a session.</span>
+<span class="linenos">626</span><span class="cm"> */</span>
+<span class="linenos">627</span><span class="kd">message</span><span class="w"> </span><span class="nc">CloseSessionResult</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">628</span><span class="w">  </span><span class="kd">enum</span><span class="w"> </span><span class="n">Status</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">629</span><span class="w">    </span><span class="c1">// Protobuf deserialization fallback value: The session close status is unknown or</span>
+<span class="linenos">630</span><span class="w">    </span><span class="c1">// not recognized. Servers should avoid using this value (send a NOT_FOUND error if</span>
+<span class="linenos">631</span><span class="w">    </span><span class="c1">// the requested session is not known or expired). Clients can retry the request.</span>
+<span class="linenos">632</span><span class="w">    </span><span class="na">UNSPECIFIED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="linenos">633</span><span class="w">    </span><span class="c1">// The session close request is complete. Subsequent requests with</span>
+<span class="linenos">634</span><span class="w">    </span><span class="c1">// the same session produce a NOT_FOUND error.</span>
+<span class="linenos">635</span><span class="w">    </span><span class="na">CLOSED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">636</span><span class="w">    </span><span class="c1">// The session close request is in progress. The client may retry</span>
+<span class="linenos">637</span><span class="w">    </span><span class="c1">// the close request.</span>
+<span class="linenos">638</span><span class="w">    </span><span class="na">CLOSING</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="linenos">639</span><span class="w">    </span><span class="c1">// The session is not closeable. The client should not retry the</span>
+<span class="linenos">640</span><span class="w">    </span><span class="c1">// close request.</span>
+<span class="linenos">641</span><span class="w">    </span><span class="na">NOT_CLOSEABLE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="linenos">642</span><span class="w">  </span><span class="p">}</span>
+<span class="linenos">643</span>
+<span class="linenos">644</span><span class="w">  </span><span class="n">Status</span><span class="w"> </span><span class="na">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="linenos">645</span><span class="p">}</span>
 </pre></div>
 </div>
 </section>
@@ -1682,7 +1847,10 @@ by the client for connectivity reasons.</p></td>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#authentication">Authentication</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#transport-implementations">Transport Implementations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#location-uris">Location URIs</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#connection-reuse">Connection Reuse</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#external-resources">External Resources</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#protocol-buffer-definitions">Protocol Buffer Definitions</a></li>
@@ -1701,15 +1869,6 @@ by the client for connectivity reasons.</p></td>
           Edit on GitHub
         
       
-    </a>
-  </div>
-</div>
-
-  <div class="sidebar-secondary-item">
-
-  <div class="tocsection sourcelink">
-    <a href="../_sources/format/Flight.rst.txt">
-      <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>
 </div>
