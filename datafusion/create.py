@@ -60,6 +60,7 @@ layout: article
 title: Apache DataFusion Redirect
 description: Link to the Apache Arrow DataFusion project (formerly a sub project of Apache Arrow)
 redirect_to: {redirect_url}
+redirect_from: {url}
 ---
 <!--
 {{% comment %}}
@@ -83,7 +84,7 @@ limitations under the License.
 <!-- Content to show if the redirect above is not followed -->
 
 Moved to {redirect_url}
-""".format(redirect_url=redirect_url)
+""".format(redirect_url=redirect_url, url=url)
 
 
     dirname = os.path.dirname(local_file)
