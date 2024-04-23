@@ -1,8 +1,8 @@
 ---
 layout: article
-title: Apache DataFusion
+title: Apache DataFusion Redirect
 description: Link to the Apache Arrow DataFusion project (formerly a sub project of Apache Arrow)
-redirect_to: https://datafusion.apache.org/user-guide/cli/index.html
+redirect_to: https://datafusion.apache.org/contributor-guide/roadmap.html
 ---
 <!--
 {% comment %}
@@ -25,4 +25,4 @@ limitations under the License.
 
 <!-- Content to show if the redirect above is not followed -->
 
-Moved to https://datafusion.apache.org/user-guide/cli/index.html
+Moved to https://datafusion.apache.org/contributor-guide/roadmap.html
