@@ -58,7 +58,7 @@ for url in urls:
     content = """---
 layout: article
 title: Apache DataFusion Redirect
-description: Link to the Apache Arrow DataFusion project (formerly a sub project of Apache Arrow)
+description: Link to the Apache DataFusion project (formerly a sub project of Apache Arrow)
 redirect_to: {redirect_url}
 redirect_from: datafusion/{url}
 ---
