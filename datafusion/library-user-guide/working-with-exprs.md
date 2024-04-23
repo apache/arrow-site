@@ -3,7 +3,7 @@ layout: article
 title: Apache DataFusion Redirect
 description: Link to the Apache Arrow DataFusion project (formerly a sub project of Apache Arrow)
 redirect_to: https://datafusion.apache.org/library-user-guide/working-with-exprs.html
-redirect_from: library-user-guide/working-with-exprs.html
+redirect_from: datafusion/library-user-guide/working-with-exprs.html
 ---
 <!--
 {% comment %}

@@ -3,7 +3,7 @@ layout: article
 title: Apache DataFusion Redirect
 description: Link to the Apache Arrow DataFusion project (formerly a sub project of Apache Arrow)
 redirect_to: https://datafusion.apache.org/contributor-guide/communication.html
-redirect_from: contributor-guide/communication.html
+redirect_from: datafusion/contributor-guide/communication.html
 ---
 <!--
 {% comment %}
