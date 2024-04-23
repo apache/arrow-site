@@ -2,7 +2,7 @@
 layout: article
 title: Apache DataFusion
 description: Link to the Apache Arrow DataFusion project (formerly a sub project of Apache Arrow)
-redirect_to: https://datafusion.apache.org/
+redirect_to: https://datafusion.apache.org/user-guide/cli/index.html
 ---
 <!--
 {% comment %}
@@ -25,8 +25,4 @@ limitations under the License.
 
 <!-- Content to show if the redirect above is not followed -->
 
-# Apache (Arrow) DataFusion
-[Apache DataFusion](https://datafusion.apache.org/) was formerly a sub project
-of Apache Arrow and is now a top level Apache Software Foundation Project.
-Please update your links and bookmarks appropriately
-
+Moved to https://datafusion.apache.org
