@@ -27,4 +27,5 @@ group :jekyll_plugins do
   gem "jekyll-feed", "~> 0.6"
   gem "jekyll-jupyter-notebook"
   gem "jekyll-seo-tag"
+  gem 'jekyll-redirect-from'
 end
