@@ -3,7 +3,9 @@ layout: article
 title: Apache DataFusion Redirect
 description: Link to the Apache Arrow DataFusion project (formerly a sub project of Apache Arrow)
 redirect_to: https://datafusion.apache.org/user-guide/cli/index.html
-redirect_from: datafusion/user-guide/cli/index.html
+redirect_from:
+    - datafusion/user-guide/cli/index.html
+    - datafusion/user-guide/cli.html
 ---
 <!--
 {% comment %}
