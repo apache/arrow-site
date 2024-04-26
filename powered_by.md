@@ -176,6 +176,7 @@ short description of your use case.
   (e.g. multi-threading, SIMD vectorization, hiding memory latencies). 
   Polars is built upon Apache Arrow and uses its columnar memory, compute kernels,
   and several IO utilities. Polars is written in Rust and available in Rust and Python.
+* **[protarrow][55]:** A Python library for converting from Apache Arrow to Protocol Buffers and back. 
 * **[Quilt Data][13]:** Quilt is a data package manager, designed to make
   managing data as easy as managing code. It supports Parquet format via
   pyarrow for data access.
@@ -275,3 +276,4 @@ short description of your use case.
 [52]: https://github.com/innobi/pantab
 [53]: https://iceburst.io
 [54]: https://github.com/delta-io/delta-rs
+[55]: https://github.com/tradewelltech/protarrow
