@@ -73,6 +73,11 @@ person meetup] passed [5000 stars] on GitHub, [wrote a paper that was accepted
 at SIGMOD 2024], and began work on [Comet], an [Apache Spark] accelerator
 [initially donated by Apple].
 
+Thank you to everyone in the Arrow community who helped DataFusion grow and
+mature over the years, and we look forward to continuing our collaboration as
+projects. All future blogs and announcements will be posted on the [Apache
+DataFusion] website.
+
 
 [10s of known projects built with DataFusion]: https://datafusion.apache.org/user-guide/introduction.html#known-users
 [first in person meetup]: https://github.com/apache/datafusion/discussions/8522
@@ -82,7 +87,7 @@ at SIGMOD 2024], and began work on [Comet], an [Apache Spark] accelerator
 [Apache Spark]: https://spark.apache.org/
 [initially donated by Apple]: https://arrow.apache.org/blog/2024/03/06/comet-donation/
 
-## How to Get Involved
+## Get Involved
 
 If you are interested in joining the community, we would love to have you join
 us. Get in touch using [Communication Doc] and learn how to get involved in the
