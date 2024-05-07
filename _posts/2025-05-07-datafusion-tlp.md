@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Announcing Apache Arrow DataFusion is now Apache DataFusion"
-date: "2024-05-01 00:00:00"
+date: "2024-05-07 00:00:00"
 author: pmc
 categories: [subprojects]
 ---
@@ -33,7 +33,7 @@ TLDR; [Apache Arrow] DataFusion --> [Apache DataFusion]
 
 The Arrow PMC and newly created DataFusion PMC are happy to announce that as of
 April 16, 2024 the Apache Arrow DataFusion subproject is now a top level
-[Apache Software Foundation] project. 
+[Apache Software Foundation] project.
 
 [Apache Arrow]: https://arrow.apache.org/
 [Apache DataFusion]: https://datafusion.apache.org/
@@ -42,7 +42,7 @@ April 16, 2024 the Apache Arrow DataFusion subproject is now a top level
 ## Background
 
 Apache DataFusion is a fast, extensible query engine for building high-quality
-data-centric systems in Rust, using the Apache Arrow in-memory format. 
+data-centric systems in Rust, using the Apache Arrow in-memory format.
 
 When DataFusion was [donated to the Apache Software Foundation] in 2019, the
 DataFusion community was not large enough to stand on its own and the Arrow
@@ -91,9 +91,9 @@ DataFusion] website.
 
 If you are interested in joining the community, we would love to have you join
 us. Get in touch using [Communication Doc] and learn how to get involved in the
-[Contributor Guide]. We welcome everyone to try DataFusion on their 
+[Contributor Guide]. We welcome everyone to try DataFusion on their
 own data and projects and let us know how it goes, contribute suggestions,
-documentation, bug reports, or a PR with documentation, tests or code. 
+documentation, bug reports, or a PR with documentation, tests or code.
 
 
 [communication doc]: https://datafusion.apache.org/contributor-guide/communication.html
