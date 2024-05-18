@@ -127,7 +127,7 @@ We host online meetings to provide spaces for synchronous discussions about the 
   </tr>
   <tr>
     <td>Arrow Rust sync meeting</td>
-    <td>Biweekly</td>
+    <td>Varies</td>
     <td><a href="https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/">Google Doc</a></td>
   </tr>
 </tbody></table>
