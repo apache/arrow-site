@@ -197,6 +197,10 @@ short description of your use case.
   genomic, clinical, images, sensor, environmental, and IoT data -
   all in one analytical platform. [SciDB streaming][22] and
   [accelerated_io_tools][24] are powered by Apache Arrow.
+* **[Spice.ai OSS][56]:** A unified SQL query interface and portable runtime built in Rust
+  to locally materialize, accelerate, and query datasets from any database,
+  data warehouse, or data lake. Spice.ai OSS uses Arrow along with DataFusion internally,
+  and supports Flight and Flight SQL connectivity.
 * **[TileDB][32]:** TileDB is an open-source, cloud-optimized engine for storing
   and accessing dense/sparse multi-dimensional arrays and dataframes. It is an
   embeddable C++ library that works on Linux, macOS, and Windows, which comes
@@ -277,3 +281,4 @@ short description of your use case.
 [53]: https://iceburst.io
 [54]: https://github.com/delta-io/delta-rs
 [55]: https://github.com/tradewelltech/protarrow
+[56]: https://github.com/spiceai/spiceai
