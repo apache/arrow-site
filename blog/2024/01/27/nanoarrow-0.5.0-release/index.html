@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Apache Arrow nanoarrow 0.5.0 Release | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.3.3" />
+<meta property="og:title" content="Apache Arrow nanoarrow 0.5.0 Release" />
+<meta name="author" content="pmc" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="The Apache Arrow team is pleased to announce the 0.5.0 release of Apache Arrow nanoarrow. This release covers 79 resolved issues from 9 contributors. Release Highlights The primary focus of the nanoarrow 0.5.0 release was expanding the initial Python bindings that were released in 0.4.0. The nanoarrow Python package can now create and consume most Arrow data types, arrays, and array streams, including conversion to/from objects compatible with the Python buffer protocol and conversion to/from lists of Python objects. The nanoarrow 0.5.0 release also includes updates to its build configuration to make it possible to use nanoarrow with FetchContent in projects with a wider variety of CMake usage. In addition to CMake, nanoarrow now supports the Meson build system. Thanks to @vyasr and @WillAyd for contributing these changes! In the R bindings, support for reading IPC streams is now accessible with read_nanoarrow()! Finally, build system helpers and helpers to reconcile modern C++ usage with nanorrow C structures (e.g., iterating over an ArrowArrayStream or ArrowArray using a range-for loop) were added to nanoarrow.hpp. Thanks to @bkeitz for contributing these changes! See the Changelog for a detailed list of contributions to this release. Breaking Changes Most changes included in the nanoarrow 0.5.0 release will not break downstream code; however, several changes in the C library are breaking changes to previous behaviour. ArrowBufferResize() and ArrowBitmapResize() now adjust size_bytes/ size_bits in addition to capacity_bytes/buffer.capacity_bytes. Preivously these functions only adjusted the capacity of the underlying buffer which caused some understandable confusion even though this behaviour was documented. This change affects all usage of ArrowBufferReisze() and ArrowBitmapResize() that increased the size of the underlying buffer (i.e., usage where shrink_to_fit was non zero should be unaffected). ArrowBufferReset() now always calls the allocator’s free() callback. Previously, a call to the free() callback was skipped if the pointer was NULL; however, this led to some confusion and made it easy to accidentally leak a custom deallocator whose pointer happened to be NULL. As a consequence of the above, it is now mandatory to call ArrowBufferInit() before calling ArrowBufferReset(). There was some existing usage of nanoarrow that zero-ed the memory for an ArrowBuffer and then (sometimes) called ArrowBufferReset(). Preivously this was a no-op; however, after 0.5.0 this will crash. This is consistent with other structures in the nanoarrow C library (which require an initialization before it is safe to reset/release them). Python bindings The nanoarrow Python bindings are distributed as the nanoarrow package on PyPI and conda-forge: pip install nanoarrow conda install nanoarrow -c conda-forge High level users can use the Schema, Array, and ArrayStream classes to interact with data types, arrays, and array streams: import nanoarrow as na na.int32() #&gt; &lt;Schema&gt; int32 na.Array([1, 2, 3], na.int32()) #&gt; nanoarrow.Array&lt;int32&gt;[3] #&gt; 1 #&gt; 2 #&gt; 3 url = &quot;https://github.com/apache/arrow-experiments/raw/main/data/arrow-commits/arrow-commits.arrows&quot; na.ArrayStream.from_url(url) #&gt; nanoarrow.ArrayStream&lt;non-nullable struct&lt;commit: string, time: timestamp(&#39;us&#39;, &#39;UTC&#39;), files: int3...&gt; Low-level users can use c_schema(), c_array(), and c_array_stream() to interact with thin wrappers around the Arrow C Data interface structures: na.c_schema(pa.decimal128(10, 3)) #&gt; &lt;nanoarrow.c_schema.CSchema decimal128(10, 3)&gt; #&gt; - format: &#39;d:10,3&#39; #&gt; - name: &#39;&#39; #&gt; - flags: 2 #&gt; - metadata: NULL #&gt; - dictionary: NULL #&gt; - children[0]: na.c_array([&quot;one&quot;, &quot;two&quot;, &quot;three&quot;, None], na.string()) #&gt; &lt;nanoarrow.c_array.CArray string&gt; #&gt; - length: 4 #&gt; - offset: 0 #&gt; - null_count: 1 #&gt; - buffers: (4754305168, 4754307808, 4754310464) #&gt; - dictionary: NULL #&gt; - children[0]: All nanoarrow type/array-like objects implement the Arrow PyCapsule interface for both producing and consuming and are zero-copy interchangeable with pyarrow objects in many cases: import pyarrow as pa pa.field(na.int32()) #&gt; pyarrow.Field&lt;: int32&gt; na.Schema(pa.string()) #&gt; &lt;Schema&gt; string pa.array(na.Array([4, 5, 6], na.int32())) #&gt; &lt;pyarrow.lib.Int32Array object at 0x11b552500&gt; #&gt; [ #&gt; 4, #&gt; 5, #&gt; 6 #&gt; ] na.Array(pa.array([10, 11, 12])) #&gt; nanoarrow.Array&lt;int64&gt;[3] #&gt; 10 #&gt; 11 #&gt; 12 For a more detailed tour of the nanoarrow Python bindings, see the Getting started in Python guide and the Python API reference. C/C++ The nanoarrow 0.5.0 release includes a number of bugfixes and improvements to the core C library and C++ helpers. First, the CMake build system was refactored to enable FetchContent to work in a wider variety of develop/build/install scenarios. In most cases, CMake-based projects should be able to add the nanoarrow C library as a dependency with: include(FetchContent) fetchcontent_declare(nanoarrow GIT_REPOSITORY https://github.com/apache/arrow-nanoarrow.git GIT_TAG apache-arrow-nanoarrow-0.5.0 GIT_SHALLOW TRUE) fetchcontent_makeavailable(nanoarrow) add_executable(some_target ...) target_link_libraries(some_target nanoarrow::nanoarrow) Projects using the Meson build system can install nanoarrow from WrapDB using: mkdir -p subprojects meson wrap install nanoarrow …and use dependency(&#39;nanoarrow&#39;) to add the dependency: nanoarrow_dep = dependency(&#39;nanoarrow&#39;) example_exec = executable(&#39;some_target&#39;, ..., dependencies: [nanoarrow_dep]) Finally, a set of C++ range/view helpers were added to smooth out some of more verbose aspects of working with nanoarrow in C++. While the new helpers are targeted at more than just nanoarrow’s tests, they have been particularly helpful in allowing nanoarrow’s tests to be more less repetitive and more effective. For example, one particularly verbose test was collapsed to: #include &lt;gtest/gtest.h&gt; #include &lt;gmock/gmock-matchers.h&gt; #include &lt;nanoarrow/nanoarrow_gtest_util.hpp&gt; #include &lt;nanoarrow/nanoarrow.hpp&gt; nanoarrow::UniqueArrayStream array_stream; // ... populate array_stream nanoarrow::ViewArrayStream array_stream_view(array_stream.get()); for (ArrowArray&amp; array : array_stream_view) { EXPECT_THAT(nanoarrow::ViewArrayAs&lt;int32_t&gt;(&amp;array), ElementsAre(1234)); } EXPECT_EQ(array_stream_view.count(), 1); EXPECT_EQ(array_stream_view.code(), NANOARROW_OK); EXPECT_STREQ(array_stream_view.error()-&gt;message, &quot;&quot;); See the new section in the C++ API reference for details. R bindings The nanoarrow R bindings are distributed as the nanoarrow package on CRAN. Whereas nanoarrow has had an IPC reader supporting most features of the IPC streaming format since 0.3.0, the R bindings did not implement bindings until this release. The 0.5.0 release of the R package includes read_nanoarrow() as an entrypoint to reading streams from various sources including URLs, filenames, and R connections: library(nanoarrow) url &lt;- &quot;https://github.com/apache/arrow-experiments/raw/main/data/arrow-commits/arrow-commits.arrows&quot; read_nanoarrow(url) |&gt; tibble::as_tibble() #&gt; # A tibble: 15,487 × 5 #&gt; commit time files merge message #&gt; &lt;chr&gt; &lt;dttm&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt; #&gt; 1 49cdb0fe4e98fda19031c864a18e6156c6ed… 2024-03-07 02:00:52 2 FALSE GH-403… #&gt; 2 1d966e98e41ce817d1f8c5159c0b9caa4de7… 2024-03-06 21:51:34 1 FALSE GH-403… #&gt; 3 96f26a89bd73997f7532643cdb27d04b7097… 2024-03-06 20:29:15 1 FALSE GH-402… #&gt; 4 ee1a8c39a55f3543a82fed900dadca791f6e… 2024-03-06 07:46:45 1 FALSE GH-403… #&gt; 5 3d467ac7bfae03cf2db09807054c5672e195… 2024-03-05 16:13:32 1 FALSE GH-201… #&gt; 6 ef6ea6beed071ed070daf03508f4c14b4072… 2024-03-05 14:53:13 20 FALSE GH-403… #&gt; 7 53e0c745ad491af98a5bf18b67541b12d779… 2024-03-05 12:31:38 2 FALSE GH-401… #&gt; 8 3ba6d286caad328b8572a3b9228045da8c8d… 2024-03-05 08:15:42 6 FALSE GH-400… #&gt; 9 4ce9a5edd2710fb8bf0c642fd0e3863b01c2… 2024-03-05 07:56:25 2 FALSE GH-401… #&gt; 10 2445975162905bd8d9a42ffc9cd0daa0e19d… 2024-03-05 01:04:20 1 FALSE GH-403… #&gt; # ℹ 15,477 more rows In developing the Python bindings, it became clear that a representation of a Arrow C++’s ChunkedArray was an important concept to represent. Whereas the Python bindings have the Array class to provide this structure, the R bindings had only the nanoarrow_array as a thin wrapper around the Arrow C Data interface. When developing the geospatial extension GeoArrow for R, a data structure that maintained chunked Arrow memory as an R vector was needed as an intermediary between an Arrow-native source and an R-native destination. This experimental structure can be created with as_nanoarrow_vctr(): library(nanoarrow) array &lt;- as_nanoarrow_array(c(&quot;one&quot;, &quot;two&quot;, &quot;three&quot;)) convert_array(array, nanoarrow_vctr()) #&gt; &lt;nanoarrow_vctr string[3]&gt; #&gt; [1] &quot;one&quot; &quot;two&quot; &quot;three&quot; Contributors This release consists of contributions from 9 contributors in addition to the invaluable advice and support of the Apache Arrow developer mailing list. $ git shortlog -sn apache-arrow-nanoarrow-0.5.0.dev..apache-arrow-nanoarrow-0.5.0 | grep -v &quot;GitHub Actions&quot; 67 Dewey Dunnington 3 Dirk Eddelbuettel 3 Joris Van den Bossche 2 William Ayd 1 Alenka Frim 1 Benjamin Kietzman 1 Max Conradt 1 Vyas Ramasubramani 1 eitsupi" />
+<meta property="og:description" content="The Apache Arrow team is pleased to announce the 0.5.0 release of Apache Arrow nanoarrow. This release covers 79 resolved issues from 9 contributors. Release Highlights The primary focus of the nanoarrow 0.5.0 release was expanding the initial Python bindings that were released in 0.4.0. The nanoarrow Python package can now create and consume most Arrow data types, arrays, and array streams, including conversion to/from objects compatible with the Python buffer protocol and conversion to/from lists of Python objects. The nanoarrow 0.5.0 release also includes updates to its build configuration to make it possible to use nanoarrow with FetchContent in projects with a wider variety of CMake usage. In addition to CMake, nanoarrow now supports the Meson build system. Thanks to @vyasr and @WillAyd for contributing these changes! In the R bindings, support for reading IPC streams is now accessible with read_nanoarrow()! Finally, build system helpers and helpers to reconcile modern C++ usage with nanorrow C structures (e.g., iterating over an ArrowArrayStream or ArrowArray using a range-for loop) were added to nanoarrow.hpp. Thanks to @bkeitz for contributing these changes! See the Changelog for a detailed list of contributions to this release. Breaking Changes Most changes included in the nanoarrow 0.5.0 release will not break downstream code; however, several changes in the C library are breaking changes to previous behaviour. ArrowBufferResize() and ArrowBitmapResize() now adjust size_bytes/ size_bits in addition to capacity_bytes/buffer.capacity_bytes. Preivously these functions only adjusted the capacity of the underlying buffer which caused some understandable confusion even though this behaviour was documented. This change affects all usage of ArrowBufferReisze() and ArrowBitmapResize() that increased the size of the underlying buffer (i.e., usage where shrink_to_fit was non zero should be unaffected). ArrowBufferReset() now always calls the allocator’s free() callback. Previously, a call to the free() callback was skipped if the pointer was NULL; however, this led to some confusion and made it easy to accidentally leak a custom deallocator whose pointer happened to be NULL. As a consequence of the above, it is now mandatory to call ArrowBufferInit() before calling ArrowBufferReset(). There was some existing usage of nanoarrow that zero-ed the memory for an ArrowBuffer and then (sometimes) called ArrowBufferReset(). Preivously this was a no-op; however, after 0.5.0 this will crash. This is consistent with other structures in the nanoarrow C library (which require an initialization before it is safe to reset/release them). Python bindings The nanoarrow Python bindings are distributed as the nanoarrow package on PyPI and conda-forge: pip install nanoarrow conda install nanoarrow -c conda-forge High level users can use the Schema, Array, and ArrayStream classes to interact with data types, arrays, and array streams: import nanoarrow as na na.int32() #&gt; &lt;Schema&gt; int32 na.Array([1, 2, 3], na.int32()) #&gt; nanoarrow.Array&lt;int32&gt;[3] #&gt; 1 #&gt; 2 #&gt; 3 url = &quot;https://github.com/apache/arrow-experiments/raw/main/data/arrow-commits/arrow-commits.arrows&quot; na.ArrayStream.from_url(url) #&gt; nanoarrow.ArrayStream&lt;non-nullable struct&lt;commit: string, time: timestamp(&#39;us&#39;, &#39;UTC&#39;), files: int3...&gt; Low-level users can use c_schema(), c_array(), and c_array_stream() to interact with thin wrappers around the Arrow C Data interface structures: na.c_schema(pa.decimal128(10, 3)) #&gt; &lt;nanoarrow.c_schema.CSchema decimal128(10, 3)&gt; #&gt; - format: &#39;d:10,3&#39; #&gt; - name: &#39;&#39; #&gt; - flags: 2 #&gt; - metadata: NULL #&gt; - dictionary: NULL #&gt; - children[0]: na.c_array([&quot;one&quot;, &quot;two&quot;, &quot;three&quot;, None], na.string()) #&gt; &lt;nanoarrow.c_array.CArray string&gt; #&gt; - length: 4 #&gt; - offset: 0 #&gt; - null_count: 1 #&gt; - buffers: (4754305168, 4754307808, 4754310464) #&gt; - dictionary: NULL #&gt; - children[0]: All nanoarrow type/array-like objects implement the Arrow PyCapsule interface for both producing and consuming and are zero-copy interchangeable with pyarrow objects in many cases: import pyarrow as pa pa.field(na.int32()) #&gt; pyarrow.Field&lt;: int32&gt; na.Schema(pa.string()) #&gt; &lt;Schema&gt; string pa.array(na.Array([4, 5, 6], na.int32())) #&gt; &lt;pyarrow.lib.Int32Array object at 0x11b552500&gt; #&gt; [ #&gt; 4, #&gt; 5, #&gt; 6 #&gt; ] na.Array(pa.array([10, 11, 12])) #&gt; nanoarrow.Array&lt;int64&gt;[3] #&gt; 10 #&gt; 11 #&gt; 12 For a more detailed tour of the nanoarrow Python bindings, see the Getting started in Python guide and the Python API reference. C/C++ The nanoarrow 0.5.0 release includes a number of bugfixes and improvements to the core C library and C++ helpers. First, the CMake build system was refactored to enable FetchContent to work in a wider variety of develop/build/install scenarios. In most cases, CMake-based projects should be able to add the nanoarrow C library as a dependency with: include(FetchContent) fetchcontent_declare(nanoarrow GIT_REPOSITORY https://github.com/apache/arrow-nanoarrow.git GIT_TAG apache-arrow-nanoarrow-0.5.0 GIT_SHALLOW TRUE) fetchcontent_makeavailable(nanoarrow) add_executable(some_target ...) target_link_libraries(some_target nanoarrow::nanoarrow) Projects using the Meson build system can install nanoarrow from WrapDB using: mkdir -p subprojects meson wrap install nanoarrow …and use dependency(&#39;nanoarrow&#39;) to add the dependency: nanoarrow_dep = dependency(&#39;nanoarrow&#39;) example_exec = executable(&#39;some_target&#39;, ..., dependencies: [nanoarrow_dep]) Finally, a set of C++ range/view helpers were added to smooth out some of more verbose aspects of working with nanoarrow in C++. While the new helpers are targeted at more than just nanoarrow’s tests, they have been particularly helpful in allowing nanoarrow’s tests to be more less repetitive and more effective. For example, one particularly verbose test was collapsed to: #include &lt;gtest/gtest.h&gt; #include &lt;gmock/gmock-matchers.h&gt; #include &lt;nanoarrow/nanoarrow_gtest_util.hpp&gt; #include &lt;nanoarrow/nanoarrow.hpp&gt; nanoarrow::UniqueArrayStream array_stream; // ... populate array_stream nanoarrow::ViewArrayStream array_stream_view(array_stream.get()); for (ArrowArray&amp; array : array_stream_view) { EXPECT_THAT(nanoarrow::ViewArrayAs&lt;int32_t&gt;(&amp;array), ElementsAre(1234)); } EXPECT_EQ(array_stream_view.count(), 1); EXPECT_EQ(array_stream_view.code(), NANOARROW_OK); EXPECT_STREQ(array_stream_view.error()-&gt;message, &quot;&quot;); See the new section in the C++ API reference for details. R bindings The nanoarrow R bindings are distributed as the nanoarrow package on CRAN. Whereas nanoarrow has had an IPC reader supporting most features of the IPC streaming format since 0.3.0, the R bindings did not implement bindings until this release. The 0.5.0 release of the R package includes read_nanoarrow() as an entrypoint to reading streams from various sources including URLs, filenames, and R connections: library(nanoarrow) url &lt;- &quot;https://github.com/apache/arrow-experiments/raw/main/data/arrow-commits/arrow-commits.arrows&quot; read_nanoarrow(url) |&gt; tibble::as_tibble() #&gt; # A tibble: 15,487 × 5 #&gt; commit time files merge message #&gt; &lt;chr&gt; &lt;dttm&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt; #&gt; 1 49cdb0fe4e98fda19031c864a18e6156c6ed… 2024-03-07 02:00:52 2 FALSE GH-403… #&gt; 2 1d966e98e41ce817d1f8c5159c0b9caa4de7… 2024-03-06 21:51:34 1 FALSE GH-403… #&gt; 3 96f26a89bd73997f7532643cdb27d04b7097… 2024-03-06 20:29:15 1 FALSE GH-402… #&gt; 4 ee1a8c39a55f3543a82fed900dadca791f6e… 2024-03-06 07:46:45 1 FALSE GH-403… #&gt; 5 3d467ac7bfae03cf2db09807054c5672e195… 2024-03-05 16:13:32 1 FALSE GH-201… #&gt; 6 ef6ea6beed071ed070daf03508f4c14b4072… 2024-03-05 14:53:13 20 FALSE GH-403… #&gt; 7 53e0c745ad491af98a5bf18b67541b12d779… 2024-03-05 12:31:38 2 FALSE GH-401… #&gt; 8 3ba6d286caad328b8572a3b9228045da8c8d… 2024-03-05 08:15:42 6 FALSE GH-400… #&gt; 9 4ce9a5edd2710fb8bf0c642fd0e3863b01c2… 2024-03-05 07:56:25 2 FALSE GH-401… #&gt; 10 2445975162905bd8d9a42ffc9cd0daa0e19d… 2024-03-05 01:04:20 1 FALSE GH-403… #&gt; # ℹ 15,477 more rows In developing the Python bindings, it became clear that a representation of a Arrow C++’s ChunkedArray was an important concept to represent. Whereas the Python bindings have the Array class to provide this structure, the R bindings had only the nanoarrow_array as a thin wrapper around the Arrow C Data interface. When developing the geospatial extension GeoArrow for R, a data structure that maintained chunked Arrow memory as an R vector was needed as an intermediary between an Arrow-native source and an R-native destination. This experimental structure can be created with as_nanoarrow_vctr(): library(nanoarrow) array &lt;- as_nanoarrow_array(c(&quot;one&quot;, &quot;two&quot;, &quot;three&quot;)) convert_array(array, nanoarrow_vctr()) #&gt; &lt;nanoarrow_vctr string[3]&gt; #&gt; [1] &quot;one&quot; &quot;two&quot; &quot;three&quot; Contributors This release consists of contributions from 9 contributors in addition to the invaluable advice and support of the Apache Arrow developer mailing list. $ git shortlog -sn apache-arrow-nanoarrow-0.5.0.dev..apache-arrow-nanoarrow-0.5.0 | grep -v &quot;GitHub Actions&quot; 67 Dewey Dunnington 3 Dirk Eddelbuettel 3 Joris Van den Bossche 2 William Ayd 1 Alenka Frim 1 Benjamin Kietzman 1 Max Conradt 1 Vyas Ramasubramani 1 eitsupi" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2024/01/27/nanoarrow-0.5.0-release/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2024/01/27/nanoarrow-0.5.0-release/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-01-27T00:00:00-05:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="Apache Arrow nanoarrow 0.5.0 Release" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@pmc" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"pmc"},"dateModified":"2024-01-27T00:00:00-05:00","datePublished":"2024-01-27T00:00:00-05:00","description":"The Apache Arrow team is pleased to announce the 0.5.0 release of Apache Arrow nanoarrow. This release covers 79 resolved issues from 9 contributors. Release Highlights The primary focus of the nanoarrow 0.5.0 release was expanding the initial Python bindings that were released in 0.4.0. The nanoarrow Python package can now create and consume most Arrow data types, arrays, and array streams, including conversion to/from objects compatible with the Python buffer protocol and conversion to/from lists of Python objects. The nanoarrow 0.5.0 release also includes updates to its build configuration to make it possible to use nanoarrow with FetchContent in projects with a wider variety of CMake usage. In addition to CMake, nanoarrow now supports the Meson build system. Thanks to @vyasr and @WillAyd for contributing these changes! In the R bindings, support for reading IPC streams is now accessible with read_nanoarrow()! Finally, build system helpers and helpers to reconcile modern C++ usage with nanorrow C structures (e.g., iterating over an ArrowArrayStream or ArrowArray using a range-for loop) were added to nanoarrow.hpp. Thanks to @bkeitz for contributing these changes! See the Changelog for a detailed list of contributions to this release. Breaking Changes Most changes included in the nanoarrow 0.5.0 release will not break downstream code; however, several changes in the C library are breaking changes to previous behaviour. ArrowBufferResize() and ArrowBitmapResize() now adjust size_bytes/ size_bits in addition to capacity_bytes/buffer.capacity_bytes. Preivously these functions only adjusted the capacity of the underlying buffer which caused some understandable confusion even though this behaviour was documented. This change affects all usage of ArrowBufferReisze() and ArrowBitmapResize() that increased the size of the underlying buffer (i.e., usage where shrink_to_fit was non zero should be unaffected). ArrowBufferReset() now always calls the allocator’s free() callback. Previously, a call to the free() callback was skipped if the pointer was NULL; however, this led to some confusion and made it easy to accidentally leak a custom deallocator whose pointer happened to be NULL. As a consequence of the above, it is now mandatory to call ArrowBufferInit() before calling ArrowBufferReset(). There was some existing usage of nanoarrow that zero-ed the memory for an ArrowBuffer and then (sometimes) called ArrowBufferReset(). Preivously this was a no-op; however, after 0.5.0 this will crash. This is consistent with other structures in the nanoarrow C library (which require an initialization before it is safe to reset/release them). Python bindings The nanoarrow Python bindings are distributed as the nanoarrow package on PyPI and conda-forge: pip install nanoarrow conda install nanoarrow -c conda-forge High level users can use the Schema, Array, and ArrayStream classes to interact with data types, arrays, and array streams: import nanoarrow as na na.int32() #&gt; &lt;Schema&gt; int32 na.Array([1, 2, 3], na.int32()) #&gt; nanoarrow.Array&lt;int32&gt;[3] #&gt; 1 #&gt; 2 #&gt; 3 url = &quot;https://github.com/apache/arrow-experiments/raw/main/data/arrow-commits/arrow-commits.arrows&quot; na.ArrayStream.from_url(url) #&gt; nanoarrow.ArrayStream&lt;non-nullable struct&lt;commit: string, time: timestamp(&#39;us&#39;, &#39;UTC&#39;), files: int3...&gt; Low-level users can use c_schema(), c_array(), and c_array_stream() to interact with thin wrappers around the Arrow C Data interface structures: na.c_schema(pa.decimal128(10, 3)) #&gt; &lt;nanoarrow.c_schema.CSchema decimal128(10, 3)&gt; #&gt; - format: &#39;d:10,3&#39; #&gt; - name: &#39;&#39; #&gt; - flags: 2 #&gt; - metadata: NULL #&gt; - dictionary: NULL #&gt; - children[0]: na.c_array([&quot;one&quot;, &quot;two&quot;, &quot;three&quot;, None], na.string()) #&gt; &lt;nanoarrow.c_array.CArray string&gt; #&gt; - length: 4 #&gt; - offset: 0 #&gt; - null_count: 1 #&gt; - buffers: (4754305168, 4754307808, 4754310464) #&gt; - dictionary: NULL #&gt; - children[0]: All nanoarrow type/array-like objects implement the Arrow PyCapsule interface for both producing and consuming and are zero-copy interchangeable with pyarrow objects in many cases: import pyarrow as pa pa.field(na.int32()) #&gt; pyarrow.Field&lt;: int32&gt; na.Schema(pa.string()) #&gt; &lt;Schema&gt; string pa.array(na.Array([4, 5, 6], na.int32())) #&gt; &lt;pyarrow.lib.Int32Array object at 0x11b552500&gt; #&gt; [ #&gt; 4, #&gt; 5, #&gt; 6 #&gt; ] na.Array(pa.array([10, 11, 12])) #&gt; nanoarrow.Array&lt;int64&gt;[3] #&gt; 10 #&gt; 11 #&gt; 12 For a more detailed tour of the nanoarrow Python bindings, see the Getting started in Python guide and the Python API reference. C/C++ The nanoarrow 0.5.0 release includes a number of bugfixes and improvements to the core C library and C++ helpers. First, the CMake build system was refactored to enable FetchContent to work in a wider variety of develop/build/install scenarios. In most cases, CMake-based projects should be able to add the nanoarrow C library as a dependency with: include(FetchContent) fetchcontent_declare(nanoarrow GIT_REPOSITORY https://github.com/apache/arrow-nanoarrow.git GIT_TAG apache-arrow-nanoarrow-0.5.0 GIT_SHALLOW TRUE) fetchcontent_makeavailable(nanoarrow) add_executable(some_target ...) target_link_libraries(some_target nanoarrow::nanoarrow) Projects using the Meson build system can install nanoarrow from WrapDB using: mkdir -p subprojects meson wrap install nanoarrow …and use dependency(&#39;nanoarrow&#39;) to add the dependency: nanoarrow_dep = dependency(&#39;nanoarrow&#39;) example_exec = executable(&#39;some_target&#39;, ..., dependencies: [nanoarrow_dep]) Finally, a set of C++ range/view helpers were added to smooth out some of more verbose aspects of working with nanoarrow in C++. While the new helpers are targeted at more than just nanoarrow’s tests, they have been particularly helpful in allowing nanoarrow’s tests to be more less repetitive and more effective. For example, one particularly verbose test was collapsed to: #include &lt;gtest/gtest.h&gt; #include &lt;gmock/gmock-matchers.h&gt; #include &lt;nanoarrow/nanoarrow_gtest_util.hpp&gt; #include &lt;nanoarrow/nanoarrow.hpp&gt; nanoarrow::UniqueArrayStream array_stream; // ... populate array_stream nanoarrow::ViewArrayStream array_stream_view(array_stream.get()); for (ArrowArray&amp; array : array_stream_view) { EXPECT_THAT(nanoarrow::ViewArrayAs&lt;int32_t&gt;(&amp;array), ElementsAre(1234)); } EXPECT_EQ(array_stream_view.count(), 1); EXPECT_EQ(array_stream_view.code(), NANOARROW_OK); EXPECT_STREQ(array_stream_view.error()-&gt;message, &quot;&quot;); See the new section in the C++ API reference for details. R bindings The nanoarrow R bindings are distributed as the nanoarrow package on CRAN. Whereas nanoarrow has had an IPC reader supporting most features of the IPC streaming format since 0.3.0, the R bindings did not implement bindings until this release. The 0.5.0 release of the R package includes read_nanoarrow() as an entrypoint to reading streams from various sources including URLs, filenames, and R connections: library(nanoarrow) url &lt;- &quot;https://github.com/apache/arrow-experiments/raw/main/data/arrow-commits/arrow-commits.arrows&quot; read_nanoarrow(url) |&gt; tibble::as_tibble() #&gt; # A tibble: 15,487 × 5 #&gt; commit time files merge message #&gt; &lt;chr&gt; &lt;dttm&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt; #&gt; 1 49cdb0fe4e98fda19031c864a18e6156c6ed… 2024-03-07 02:00:52 2 FALSE GH-403… #&gt; 2 1d966e98e41ce817d1f8c5159c0b9caa4de7… 2024-03-06 21:51:34 1 FALSE GH-403… #&gt; 3 96f26a89bd73997f7532643cdb27d04b7097… 2024-03-06 20:29:15 1 FALSE GH-402… #&gt; 4 ee1a8c39a55f3543a82fed900dadca791f6e… 2024-03-06 07:46:45 1 FALSE GH-403… #&gt; 5 3d467ac7bfae03cf2db09807054c5672e195… 2024-03-05 16:13:32 1 FALSE GH-201… #&gt; 6 ef6ea6beed071ed070daf03508f4c14b4072… 2024-03-05 14:53:13 20 FALSE GH-403… #&gt; 7 53e0c745ad491af98a5bf18b67541b12d779… 2024-03-05 12:31:38 2 FALSE GH-401… #&gt; 8 3ba6d286caad328b8572a3b9228045da8c8d… 2024-03-05 08:15:42 6 FALSE GH-400… #&gt; 9 4ce9a5edd2710fb8bf0c642fd0e3863b01c2… 2024-03-05 07:56:25 2 FALSE GH-401… #&gt; 10 2445975162905bd8d9a42ffc9cd0daa0e19d… 2024-03-05 01:04:20 1 FALSE GH-403… #&gt; # ℹ 15,477 more rows In developing the Python bindings, it became clear that a representation of a Arrow C++’s ChunkedArray was an important concept to represent. Whereas the Python bindings have the Array class to provide this structure, the R bindings had only the nanoarrow_array as a thin wrapper around the Arrow C Data interface. When developing the geospatial extension GeoArrow for R, a data structure that maintained chunked Arrow memory as an R vector was needed as an intermediary between an Arrow-native source and an R-native destination. This experimental structure can be created with as_nanoarrow_vctr(): library(nanoarrow) array &lt;- as_nanoarrow_array(c(&quot;one&quot;, &quot;two&quot;, &quot;three&quot;)) convert_array(array, nanoarrow_vctr()) #&gt; &lt;nanoarrow_vctr string[3]&gt; #&gt; [1] &quot;one&quot; &quot;two&quot; &quot;three&quot; Contributors This release consists of contributions from 9 contributors in addition to the invaluable advice and support of the Apache Arrow developer mailing list. $ git shortlog -sn apache-arrow-nanoarrow-0.5.0.dev..apache-arrow-nanoarrow-0.5.0 | grep -v &quot;GitHub Actions&quot; 67 Dewey Dunnington 3 Dirk Eddelbuettel 3 Joris Van den Bossche 2 William Ayd 1 Alenka Frim 1 Benjamin Kietzman 1 Max Conradt 1 Vyas Ramasubramani 1 eitsupi","headline":"Apache Arrow nanoarrow 0.5.0 Release","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2024/01/27/nanoarrow-0.5.0-release/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"pmc"},"url":"https://arrow.apache.org/blog/2024/01/27/nanoarrow-0.5.0-release/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="/julia/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/arrow/latest">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/adbc">ADBC</a>
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="https://datafusion.apache.org">DataFusion</a>
+            <a class="dropdown-item" href="/nanoarrow">nanoarrow</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/index.html">Contributing</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/issues">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Apache Arrow nanoarrow 0.5.0 Release
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    27 Jan 2024
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a class="mr-3" href="https://arrow.apache.org">The Apache Arrow PMC (pmc) </a>
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p>The Apache Arrow team is pleased to announce the 0.5.0 release of
+Apache Arrow nanoarrow. This release covers 79 resolved issues from
+9 contributors.</p>
+
+<h2 id="release-highlights">Release Highlights</h2>
+
+<p>The primary focus of the nanoarrow 0.5.0 release was expanding the
+initial <a href="#python-bindings">Python bindings</a> that were released in 0.4.0.
+The nanoarrow Python package can now create and consume most Arrow
+data types, arrays, and array streams, including conversion to/from
+objects compatible with the Python buffer protocol and conversion
+to/from lists of Python objects.</p>
+
+<p>The nanoarrow 0.5.0 release also includes updates to its build
+configuration to make it possible to use nanoarrow with <code class="language-plaintext highlighter-rouge">FetchContent</code>
+in projects with a wider variety of CMake usage. In addition to CMake,
+nanoarrow now supports the Meson build system. Thanks to
+<a href="https://github.com/vyasr">@vyasr</a> and <a href="https://github.com/WillAyd">@WillAyd</a>
+for contributing these changes!</p>
+
+<p>In the <a href="#r-bindings">R bindings</a>, support for reading IPC streams
+is now accessible with <code class="language-plaintext highlighter-rouge">read_nanoarrow()</code>!</p>
+
+<p>Finally, build system helpers and helpers to reconcile modern C++ usage
+with nanorrow C structures (e.g., iterating over an <code class="language-plaintext highlighter-rouge">ArrowArrayStream</code> or
+<code class="language-plaintext highlighter-rouge">ArrowArray</code> using a range-for loop) were added to <code class="language-plaintext highlighter-rouge">nanoarrow.hpp</code>.
+Thanks to <a href="https://github.com/bkietz">@bkeitz</a> for contributing these
+changes!</p>
+
+<p>See the
+<a href="https://github.com/apache/arrow-nanoarrow/blob/apache-arrow-nanoarrow-0.5.0/CHANGELOG.md">Changelog</a>
+for a detailed list of contributions to this release.</p>
+
+<h2 id="breaking-changes">Breaking Changes</h2>
+
+<p>Most changes included in the nanoarrow 0.5.0 release will not break downstream
+code; however, several changes in the C library are breaking changes to previous
+behaviour.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">ArrowBufferResize()</code> and <code class="language-plaintext highlighter-rouge">ArrowBitmapResize()</code> now adjust <code class="language-plaintext highlighter-rouge">size_bytes</code>/
+<code class="language-plaintext highlighter-rouge">size_bits</code> in addition to <code class="language-plaintext highlighter-rouge">capacity_bytes</code>/<code class="language-plaintext highlighter-rouge">buffer.capacity_bytes</code>.
+Preivously these functions only adjusted the capacity of the underlying
+buffer which caused some understandable confusion even though this
+behaviour was documented. This change affects all usage of
+<code class="language-plaintext highlighter-rouge">ArrowBufferReisze()</code> and <code class="language-plaintext highlighter-rouge">ArrowBitmapResize()</code> that <em>increased</em> the size
+of the underlying buffer (i.e., usage where <code class="language-plaintext highlighter-rouge">shrink_to_fit</code> was non zero
+should be unaffected).</li>
+  <li><code class="language-plaintext highlighter-rouge">ArrowBufferReset()</code> now <em>always</em> calls the allocator’s <code class="language-plaintext highlighter-rouge">free()</code> callback.
+Previously, a call to the <code class="language-plaintext highlighter-rouge">free()</code> callback was skipped if the pointer was
+<code class="language-plaintext highlighter-rouge">NULL</code>; however, this led to some confusion and made it easy to accidentally
+leak a custom deallocator whose pointer happened to be <code class="language-plaintext highlighter-rouge">NULL</code>.</li>
+  <li>As a consequence of the above, it is now mandatory to call <code class="language-plaintext highlighter-rouge">ArrowBufferInit()</code>
+before calling <code class="language-plaintext highlighter-rouge">ArrowBufferReset()</code>. There was some existing usage of nanoarrow
+that zero-ed the memory for an <code class="language-plaintext highlighter-rouge">ArrowBuffer</code> and then (sometimes) called
+<code class="language-plaintext highlighter-rouge">ArrowBufferReset()</code>. Preivously this was a no-op; however, after 0.5.0 this
+will crash. This is consistent with other structures in the nanoarrow C library
+(which require an initialization before it is safe to reset/release them).</li>
+</ul>
+
+<h3 id="python-bindings">Python bindings</h3>
+
+<p>The nanoarrow Python bindings are distributed as the <code class="language-plaintext highlighter-rouge">nanoarrow</code> package on
+<a href="https://pypi.org/project/nanoarrow/">PyPI</a> and <a href="https://anaconda.org/conda-forge/nanoarrow">conda-forge</a>:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>nanoarrow
+conda <span class="nb">install </span>nanoarrow <span class="nt">-c</span> conda-forge
+</code></pre></div></div>
+
+<p>High level users can use the <code class="language-plaintext highlighter-rouge">Schema</code>, <code class="language-plaintext highlighter-rouge">Array</code>, and <code class="language-plaintext highlighter-rouge">ArrayStream</code> classes
+to interact with data types, arrays, and array streams:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">nanoarrow</span> <span class="k">as</span> <span class="n">na</span>
+
+<span class="n">na</span><span class="p">.</span><span class="nf">int32</span><span class="p">()</span>
+<span class="c1">#&gt; &lt;Schema&gt; int32
+</span>
+<span class="n">na</span><span class="p">.</span><span class="nc">Array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">na</span><span class="p">.</span><span class="nf">int32</span><span class="p">())</span>
+<span class="c1">#&gt; nanoarrow.Array&lt;int32&gt;[3]
+#&gt; 1
+#&gt; 2
+#&gt; 3
+</span>
+<span class="n">url</span> <span class="o">=</span> <span class="sh">"</span><span class="s">https://github.com/apache/arrow-experiments/raw/main/data/arrow-commits/arrow-commits.arrows</span><span class="sh">"</span>
+<span class="n">na</span><span class="p">.</span><span class="n">ArrayStream</span><span class="p">.</span><span class="nf">from_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+<span class="c1">#&gt; nanoarrow.ArrayStream&lt;non-nullable struct&lt;commit: string, time: timestamp('us', 'UTC'), files: int3...&gt;
+</span></code></pre></div></div>
+
+<p>Low-level users can use <code class="language-plaintext highlighter-rouge">c_schema()</code>, <code class="language-plaintext highlighter-rouge">c_array()</code>, and <code class="language-plaintext highlighter-rouge">c_array_stream()</code> to interact
+with thin wrappers around the Arrow C Data interface structures:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">na</span><span class="p">.</span><span class="nf">c_schema</span><span class="p">(</span><span class="n">pa</span><span class="p">.</span><span class="nf">decimal128</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="c1">#&gt; &lt;nanoarrow.c_schema.CSchema decimal128(10, 3)&gt;
+#&gt; - format: 'd:10,3'
+#&gt; - name: ''
+#&gt; - flags: 2
+#&gt; - metadata: NULL
+#&gt; - dictionary: NULL
+#&gt; - children[0]:
+</span>
+<span class="n">na</span><span class="p">.</span><span class="nf">c_array</span><span class="p">([</span><span class="sh">"</span><span class="s">one</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">two</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">three</span><span class="sh">"</span><span class="p">,</span> <span class="bp">None</span><span class="p">],</span> <span class="n">na</span><span class="p">.</span><span class="nf">string</span><span class="p">())</span>
+<span class="c1">#&gt; &lt;nanoarrow.c_array.CArray string&gt;
+#&gt; - length: 4
+#&gt; - offset: 0
+#&gt; - null_count: 1
+#&gt; - buffers: (4754305168, 4754307808, 4754310464)
+#&gt; - dictionary: NULL
+#&gt; - children[0]:
+</span></code></pre></div></div>
+
+<p>All nanoarrow type/array-like objects implement the
+<a href="https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html">Arrow PyCapsule interface</a>
+for both producing and consuming and are zero-copy interchangeable with <code class="language-plaintext highlighter-rouge">pyarrow</code>
+objects in many cases:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
+
+<span class="n">pa</span><span class="p">.</span><span class="nf">field</span><span class="p">(</span><span class="n">na</span><span class="p">.</span><span class="nf">int32</span><span class="p">())</span>
+<span class="c1">#&gt; pyarrow.Field&lt;: int32&gt;
+</span>
+<span class="n">na</span><span class="p">.</span><span class="nc">Schema</span><span class="p">(</span><span class="n">pa</span><span class="p">.</span><span class="nf">string</span><span class="p">())</span>
+<span class="c1">#&gt; &lt;Schema&gt; string
+</span>
+<span class="n">pa</span><span class="p">.</span><span class="nf">array</span><span class="p">(</span><span class="n">na</span><span class="p">.</span><span class="nc">Array</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="n">na</span><span class="p">.</span><span class="nf">int32</span><span class="p">()))</span>
+<span class="c1">#&gt; &lt;pyarrow.lib.Int32Array object at 0x11b552500&gt;
+#&gt; [
+#&gt;   4,
+#&gt;   5,
+#&gt;   6
+#&gt; ]
+</span>
+<span class="n">na</span><span class="p">.</span><span class="nc">Array</span><span class="p">(</span><span class="n">pa</span><span class="p">.</span><span class="nf">array</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]))</span>
+<span class="c1">#&gt; nanoarrow.Array&lt;int64&gt;[3]
+#&gt; 10
+#&gt; 11
+#&gt; 12
+</span></code></pre></div></div>
+
+<p>For a more detailed tour of the nanoarrow Python bindings, see the
+<a href="https://arrow.apache.org/nanoarrow/latest/getting-started/python.html">Getting started in Python guide</a> and the
+<a href="https://arrow.apache.org/nanoarrow/latest/reference/python/index.html">Python API reference</a>.</p>
+
+<h3 id="cc">C/C++</h3>
+
+<p>The nanoarrow 0.5.0 release includes a number of bugfixes and improvements
+to the core C library and C++ helpers.</p>
+
+<p>First, the CMake build system was refactored to enable <code class="language-plaintext highlighter-rouge">FetchContent</code> to
+work in a wider variety of
+<a href="https://github.com/apache/arrow-nanoarrow/tree/main/examples/cmake-scenarios">develop/build/install scenarios</a>. In most cases, CMake-based projects should be able
+to add the nanoarrow C library as a dependency with:</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">include</span><span class="p">(</span>FetchContent<span class="p">)</span>
+<span class="nf">fetchcontent_declare</span><span class="p">(</span>nanoarrow
+                     GIT_REPOSITORY https://github.com/apache/arrow-nanoarrow.git
+                     GIT_TAG  apache-arrow-nanoarrow-0.5.0
+                     GIT_SHALLOW TRUE<span class="p">)</span>
+<span class="nf">fetchcontent_makeavailable</span><span class="p">(</span>nanoarrow<span class="p">)</span>
+
+<span class="nb">add_executable</span><span class="p">(</span>some_target ...<span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span>some_target nanoarrow::nanoarrow<span class="p">)</span>
+</code></pre></div></div>
+
+<p>Projects using the <a href="https://mesonbuild.com/">Meson</a> build system can install
+nanoarrow from <a href="https://mesonbuild.com/Wrapdb-projects.html">WrapDB</a> using:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> subprojects
+meson wrap <span class="nb">install </span>nanoarrow
+</code></pre></div></div>
+
+<p>…and use <code class="language-plaintext highlighter-rouge">dependency('nanoarrow')</code> to add the dependency:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nanoarrow_dep = dependency('nanoarrow')
+example_exec = executable('some_target',
+                          ...,
+                          dependencies: [nanoarrow_dep])
+</code></pre></div></div>
+
+<p>Finally, a set of C++ range/view helpers were added to smooth out some
+of more verbose aspects of working with nanoarrow in C++. While the
+new helpers are targeted at more than just nanoarrow’s tests, they have been
+particularly helpful in allowing nanoarrow’s tests to be more less repetitive
+and more effective. For example, one particularly verbose test was collapsed
+to:</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;gtest/gtest.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;gmock/gmock-matchers.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;nanoarrow/nanoarrow_gtest_util.hpp&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;nanoarrow/nanoarrow.hpp&gt;</span><span class="cp">
+</span>
+<span class="n">nanoarrow</span><span class="o">::</span><span class="n">UniqueArrayStream</span> <span class="n">array_stream</span><span class="p">;</span>
+<span class="c1">// ... populate array_stream</span>
+<span class="n">nanoarrow</span><span class="o">::</span><span class="n">ViewArrayStream</span> <span class="nf">array_stream_view</span><span class="p">(</span><span class="n">array_stream</span><span class="p">.</span><span class="n">get</span><span class="p">());</span>
+
+<span class="k">for</span> <span class="p">(</span><span class="n">ArrowArray</span><span class="o">&amp;</span> <span class="n">array</span> <span class="o">:</span> <span class="n">array_stream_view</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">EXPECT_THAT</span><span class="p">(</span><span class="n">nanoarrow</span><span class="o">::</span><span class="n">ViewArrayAs</span><span class="o">&lt;</span><span class="kt">int32_t</span><span class="o">&gt;</span><span class="p">(</span><span class="o">&amp;</span><span class="n">array</span><span class="p">),</span> <span class="n">ElementsAre</span><span class="p">(</span><span class="mi">1234</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="n">EXPECT_EQ</span><span class="p">(</span><span class="n">array_stream_view</span><span class="p">.</span><span class="n">count</span><span class="p">(),</span> <span class="mi">1</span><span class="p">);</span>
+<span class="n">EXPECT_EQ</span><span class="p">(</span><span class="n">array_stream_view</span><span class="p">.</span><span class="n">code</span><span class="p">(),</span> <span class="n">NANOARROW_OK</span><span class="p">);</span>
+<span class="n">EXPECT_STREQ</span><span class="p">(</span><span class="n">array_stream_view</span><span class="p">.</span><span class="n">error</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">,</span> <span class="s">""</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>See the new section in the
+<a href="https://arrow.apache.org/nanoarrow/latest/reference/cpp.html#range-for-utilities">C++ API reference</a> for details.</p>
+
+<h3 id="r-bindings">R bindings</h3>
+
+<p>The nanoarrow R bindings are distributed as the <code class="language-plaintext highlighter-rouge">nanoarrow</code> package on
+<a href="https://cran.r-project.org/">CRAN</a>.</p>
+
+<p>Whereas nanoarrow has had an IPC reader supporting most features of the
+IPC streaming format since 0.3.0, the R bindings did not implement bindings
+until this release. The 0.5.0 release of the R package includes <code class="language-plaintext highlighter-rouge">read_nanoarrow()</code>
+as an entrypoint to reading streams from various sources including URLs,
+filenames, and R connections:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">nanoarrow</span><span class="p">)</span><span class="w">
+
+</span><span class="n">url</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="s2">"https://github.com/apache/arrow-experiments/raw/main/data/arrow-commits/arrow-commits.arrows"</span><span class="w">
+
+</span><span class="n">read_nanoarrow</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w">
+  </span><span class="n">tibble</span><span class="o">::</span><span class="n">as_tibble</span><span class="p">()</span><span class="w">
+</span><span class="c1">#&gt; # A tibble: 15,487 × 5</span><span class="w">
+</span><span class="c1">#&gt;    commit                                time                files merge message</span><span class="w">
+</span><span class="c1">#&gt;    &lt;chr&gt;                                 &lt;dttm&gt;              &lt;int&gt; &lt;lgl&gt; &lt;chr&gt;</span><span class="w">
+</span><span class="c1">#&gt;  1 49cdb0fe4e98fda19031c864a18e6156c6ed… 2024-03-07 02:00:52     2 FALSE GH-403…</span><span class="w">
+</span><span class="c1">#&gt;  2 1d966e98e41ce817d1f8c5159c0b9caa4de7… 2024-03-06 21:51:34     1 FALSE GH-403…</span><span class="w">
+</span><span class="c1">#&gt;  3 96f26a89bd73997f7532643cdb27d04b7097… 2024-03-06 20:29:15     1 FALSE GH-402…</span><span class="w">
+</span><span class="c1">#&gt;  4 ee1a8c39a55f3543a82fed900dadca791f6e… 2024-03-06 07:46:45     1 FALSE GH-403…</span><span class="w">
+</span><span class="c1">#&gt;  5 3d467ac7bfae03cf2db09807054c5672e195… 2024-03-05 16:13:32     1 FALSE GH-201…</span><span class="w">
+</span><span class="c1">#&gt;  6 ef6ea6beed071ed070daf03508f4c14b4072… 2024-03-05 14:53:13    20 FALSE GH-403…</span><span class="w">
+</span><span class="c1">#&gt;  7 53e0c745ad491af98a5bf18b67541b12d779… 2024-03-05 12:31:38     2 FALSE GH-401…</span><span class="w">
+</span><span class="c1">#&gt;  8 3ba6d286caad328b8572a3b9228045da8c8d… 2024-03-05 08:15:42     6 FALSE GH-400…</span><span class="w">
+</span><span class="c1">#&gt;  9 4ce9a5edd2710fb8bf0c642fd0e3863b01c2… 2024-03-05 07:56:25     2 FALSE GH-401…</span><span class="w">
+</span><span class="c1">#&gt; 10 2445975162905bd8d9a42ffc9cd0daa0e19d… 2024-03-05 01:04:20     1 FALSE GH-403…</span><span class="w">
+</span><span class="c1">#&gt; # ℹ 15,477 more rows</span><span class="w">
+</span></code></pre></div></div>
+
+<p>In developing the Python bindings, it became clear that a representation of
+a Arrow C++’s <code class="language-plaintext highlighter-rouge">ChunkedArray</code> was an important concept to represent. Whereas
+the Python bindings have the <code class="language-plaintext highlighter-rouge">Array</code> class to provide this structure, the
+R bindings had only the <code class="language-plaintext highlighter-rouge">nanoarrow_array</code> as a thin wrapper around the
+Arrow C Data interface. When developing the geospatial extension
+<a href="https://github.com/geoarrow/geoarrow-r">GeoArrow for R</a>, a data structure that
+maintained chunked Arrow memory as an R vector was needed as an intermediary
+between an Arrow-native source and an R-native destination. This experimental
+structure can be created with <code class="language-plaintext highlighter-rouge">as_nanoarrow_vctr()</code>:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">nanoarrow</span><span class="p">)</span><span class="w">
+
+</span><span class="n">array</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">as_nanoarrow_array</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="s2">"one"</span><span class="p">,</span><span class="w"> </span><span class="s2">"two"</span><span class="p">,</span><span class="w"> </span><span class="s2">"three"</span><span class="p">))</span><span class="w">
+</span><span class="n">convert_array</span><span class="p">(</span><span class="n">array</span><span class="p">,</span><span class="w"> </span><span class="n">nanoarrow_vctr</span><span class="p">())</span><span class="w">
+</span><span class="c1">#&gt; &lt;nanoarrow_vctr string[3]&gt;</span><span class="w">
+</span><span class="c1">#&gt; [1] "one"   "two"   "three"</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="contributors">Contributors</h2>
+
+<p>This release consists of contributions from 9 contributors in addition
+to the invaluable advice and support of the Apache Arrow developer mailing list.</p>
+
+<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp">$</span><span class="w"> </span>git shortlog <span class="nt">-sn</span> apache-arrow-nanoarrow-0.5.0.dev..apache-arrow-nanoarrow-0.5.0 | <span class="nb">grep</span> <span class="nt">-v</span> <span class="s2">"GitHub Actions"</span>
+<span class="go">  67  Dewey Dunnington
+  3  Dirk Eddelbuettel
+  3  Joris Van den Bossche
+  2  William Ayd
+  1  Alenka Frim
+  1  Benjamin Kietzman
+  1  Max Conradt
+  1  Vyas Ramasubramani
+  1  eitsupi
+</span></code></pre></div></div>
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2024 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
