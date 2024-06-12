@@ -66,10 +66,10 @@ Developers have a few options:
   Libraries like [Turbodbc][turbodbc] and [arrow-jdbc][arrow-jdbc] handle row-to-columnar conversions for clients.
   But this doesn't fundamentally solve the problem.
   Unnecessary data conversions are still required.
-- *Use vendor-specific protocols*.
-  For some databases, applications can use a database-specific protocol or SDK to directly get Arrow data.
-  For example, applications could use Dremio via [Arrow Flight SQL][flight-sql].
-  But client applications that want to support multiple database vendors would need to integrate with each of them.
+- *Directly use database protocols*.
+  For some databases, applications can use a database protocol or SDK to directly get Arrow data.
+  For example, applications could use be written with [Arrow Flight SQL][flight-sql] to connect to Dremio and other databases that support the Flight SQL protocol.
+  But not all databases support the Flight SQL protocol. An example is Google BigQuery, which has a separate SDK that returns Arrow data. In this case, client applications that want to support additional protocols would need to integrate with each of them.
   (Look at all the [connectors](https://trino.io/docs/current/connector.html) that Trino implements.)
   And databases like PostgreSQL don't offer an option supporting Arrow in the first place.
 
@@ -144,7 +144,7 @@ ADBC fills a specific niche that related projects do not address. It is both:
     <tr>
       <th></th>
       <th class="align-top" style="width: 40%" scope="col">Vendor-neutral (database APIs)</th>
-      <th class="align-top" style="width: 40%" scope="col">Vendor-specific (database protocols)</th>
+      <th class="align-top" style="width: 40%" scope="col">Database protocols</th>
     </tr>
   </thead>
 
