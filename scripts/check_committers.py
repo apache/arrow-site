@@ -37,8 +37,11 @@ committers_yaml = os.path.join(git_root, "_data", "committers.yml")
 # See https://home.apache.org/phonebook-about.html
 # for available resources
 committers_url = "https://whimsy.apache.org/public/public_ldap_projects.json"
+people_url = "https://whimsy.apache.org/public/public_ldap_people.json"
 
 Roster = namedtuple('Roster', ('committers', 'pmcs'))
+Committers = namedtuple('Committers', ('apache_id', 'name'))
+PMCs = namedtuple('PMCs', ('apache_id', 'name'))
 
 def get_asf_roster():
     r = requests.get(committers_url)
@@ -47,6 +50,19 @@ def get_asf_roster():
     pmcs = set(proj['owners'])
     committers = set(proj['members']) - pmcs
     return Roster(committers, pmcs)
+
+def get_names(ids):
+    r = requests.get(people_url)
+    j = r.json()
+    names = {}
+    for id in ids:
+        names[id] = j['people'][id]['name']
+    return names
+
+def print_names_and_ids(names):
+    print("{:<15} {:<40}".format('Apache Id','NAME'))
+    for key, value in names.items():
+        print("{:<15} {:<40}".format(key,value))
 
 def get_duplicates():
     with open(committers_yaml, "r") as f:
@@ -91,10 +107,14 @@ if __name__ == "__main__":
     missing_pmcs = asf_roster.pmcs - local_roster.pmcs
 
     if missing_pmcs:
-        print("Missing PMCs in local list:", sorted(missing_pmcs))
+        missing_pmcs_names = get_names(missing_pmcs)
+        print("Missing PMCs in local list")
+        print_names_and_ids(missing_pmcs_names)
     missing_committers = asf_roster.committers - local_roster.committers
     if missing_committers:
-        print("Missing committers in local list:", sorted(missing_committers))
+        missing_committers_names = get_names(missing_committers)
+        print("Missing committers in local list:")
+        print_names_and_ids(missing_committers_names)
     unexpected_members = ((local_roster.pmcs | local_roster.committers) -
                           (asf_roster.pmcs | asf_roster.committers))
     if unexpected_members:
