@@ -201,7 +201,8 @@ short description of your use case.
   to locally materialize, accelerate, and query datasets from any database,
   data warehouse, or data lake. Spice.ai OSS uses Arrow along with DataFusion internally,
   and supports Flight and Flight SQL connectivity.
-* **[Squey][57]:** Squey is an open-source visualization software designed to interactively explore and understand large amounts of columnar data.
+* **[Squey][57]:** Squey is an open-source visualization software designed to interactively
+  explore and understand large amounts of columnar data.
   It uses Apache Arrow C++ library (with Arrow Compute) to import and export Parquet files.
 * **[TileDB][32]:** TileDB is an open-source, cloud-optimized engine for storing
   and accessing dense/sparse multi-dimensional arrays and dataframes. It is an
