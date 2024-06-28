@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>The Arrow PyCapsule Interface &#8212; Apache Arrow v17.0.0.dev401</title>
+    <title>The Arrow PyCapsule Interface &#8212; Apache Arrow v17.0.0.dev414</title>
   
   
   
@@ -155,8 +155,8 @@
       
     
     
-    <img src="../../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v17.0.0.dev401 - Home"/>
-    <script>document.write(`<img src="../../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v17.0.0.dev401 - Home"/>`);</script>
+    <img src="../../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v17.0.0.dev414 - Home"/>
+    <script>document.write(`<img src="../../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v17.0.0.dev414 - Home"/>`);</script>
   
   
 </a></div>
@@ -767,8 +767,8 @@ document.write(`
 </div>
 <section id="rationale">
 <h2>Rationale<a class="headerlink" href="#rationale" title="Permalink to this heading">#</a></h2>
-<p>The <a class="reference internal" href="../CDataInterface.html#c-data-interface"><span class="std std-ref">C data interface</span></a> and
-<a class="reference internal" href="../CStreamInterface.html#c-stream-interface"><span class="std std-ref">C stream interface</span></a> allow moving Arrow data between
+<p>The <a class="reference internal" href="../CDataInterface.html#c-data-interface"><span class="std std-ref">C data interface</span></a>, <a class="reference internal" href="../CStreamInterface.html#c-stream-interface"><span class="std std-ref">C stream interface</span></a>
+and <a class="reference internal" href="../CDeviceDataInterface.html#c-device-data-interface"><span class="std std-ref">C device interface</span></a> allow moving Arrow data between
 different implementations of Arrow. However, these interfaces don’t specify how
 Python libraries should expose these structs to other libraries. Prior to this,
 many libraries simply provided export to PyArrow data structures, using the
@@ -781,7 +781,7 @@ libraries that understand the same protocol.</p>
 <h3>Goals<a class="headerlink" href="#goals" title="Permalink to this heading">#</a></h3>
 <ul class="simple">
 <li><p>Standardize the <a class="reference external" href="https://docs.python.org/3/c-api/capsule.html">PyCapsule</a> objects that represent <code class="docutils literal notranslate"><span class="pre">ArrowSchema</span></code>, <code class="docutils literal notranslate"><span class="pre">ArrowArray</span></code>,
-and <code class="docutils literal notranslate"><span class="pre">ArrowArrayStream</span></code>.</p></li>
+<code class="docutils literal notranslate"><span class="pre">ArrowArrayStream</span></code>, <code class="docutils literal notranslate"><span class="pre">ArrowDeviceArray</span></code> and <code class="docutils literal notranslate"><span class="pre">ArrowDeviceArrayStream</span></code>.</p></li>
 <li><p>Define standard methods that export Arrow data into such capsule objects,
 so that any Python library wanting to accept Arrow data as input can call the
 corresponding method instead of hardcoding support for specific Arrow
@@ -825,6 +825,12 @@ Arrow structures are recognized, the following names must be used:</p>
 <tr class="row-even"><td><p>ArrowArrayStream</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">arrow_array_stream</span></code></p></td>
 </tr>
+<tr class="row-odd"><td><p>ArrowDeviceArray</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">arrow_device_array</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>ArrowDeviceArrayStream</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">arrow_device_array_stream</span></code></p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -838,6 +844,9 @@ case the capsule was never passed to another consumer.</p>
 the data and marked the release callback as null, so there isn’t a risk of
 releasing data the consumer is using.
 <a class="reference internal" href="../CDataInterface.html#c-data-interface-released"><span class="std std-ref">Read more in the C Data Interface specification</span></a>.</p>
+<p>In case of a device struct, the above mentioned release callback is the
+<code class="docutils literal notranslate"><span class="pre">release</span></code> member of the embedded <code class="docutils literal notranslate"><span class="pre">ArrowArray</span></code> structure.
+<a class="reference internal" href="../CDeviceDataInterface.html#c-device-data-interface-semantics"><span class="std std-ref">Read more in the C Device Interface specification</span></a>.</p>
 <p>Just like in the C Data Interface, the PyCapsule objects defined here can only
 be consumed once.</p>
 <p>For an example of a PyCapsule with a destructor, see <a class="reference internal" href="#create-a-pycapsule">Create a PyCapsule</a>.</p>
@@ -851,12 +860,17 @@ be consumed once.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">ArrowArrayExportable</span></code>, which defines the <code class="docutils literal notranslate"><span class="pre">__arrow_c_array__</span></code> method.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ArrowStreamExportable</span></code>, which defines the <code class="docutils literal notranslate"><span class="pre">__arrow_c_stream__</span></code> method.</p></li>
 </ul>
+<p>Two additional protocols are defined for the Device interface:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ArrowDeviceArrayExportable</span></code>, which defines the <code class="docutils literal notranslate"><span class="pre">__arrow_c_device_array__</span></code> method.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ArrowDeviceStreamExportable</span></code>, which defines the <code class="docutils literal notranslate"><span class="pre">__arrow_c_device_stream__</span></code> method.</p></li>
+</ul>
 <section id="arrowschema-export">
 <h3>ArrowSchema Export<a class="headerlink" href="#arrowschema-export" title="Permalink to this heading">#</a></h3>
 <p>Schemas, fields, and data types can implement the method <code class="docutils literal notranslate"><span class="pre">__arrow_c_schema__</span></code>.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="arrow_c_schema__">
-<span class="sig-name descname"><span class="pre">__arrow_c_schema__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><span class="pre">object</span></a></span></span><a class="headerlink" href="#arrow_c_schema__" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">__arrow_c_schema__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arrow_c_schema__" title="Permalink to this definition">#</a></dt>
 <dd><p>Export the object as an ArrowSchema.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -873,7 +887,7 @@ object. The capsule must have a name of <code class="docutils literal notranslat
 <code class="docutils literal notranslate"><span class="pre">__arrow_c_array__</span></code>.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="arrow_c_array__">
-<span class="sig-name descname"><span class="pre">__arrow_c_array__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_schema</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><span class="pre">object</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><span class="pre">object</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><span class="pre">object</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#arrow_c_array__" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">__arrow_c_array__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arrow_c_array__" title="Permalink to this definition">#</a></dt>
 <dd><p>Export the object as a pair of ArrowSchema and ArrowArray structures.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -889,13 +903,39 @@ and the array capsule should have the name <code class="docutils literal notrans
 </dl>
 </dd></dl>
 
+<p>Libraries supporting the Device interface can implement a <code class="docutils literal notranslate"><span class="pre">__arrow_c_device_array__</span></code>
+method on those objects, which works the same as <code class="docutils literal notranslate"><span class="pre">__arrow_c_array__</span></code> except
+for returning an ArrowDeviceArray structure instead of an ArrowArray structure:</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="arrow_c_device_array__">
+<span class="sig-name descname"><span class="pre">__arrow_c_device_array__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arrow_c_device_array__" title="Permalink to this definition">#</a></dt>
+<dd><p>Export the object as a pair of ArrowSchema and ArrowDeviceArray structures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>requested_schema</strong> (<em>PyCapsule</em><em> or </em><em>None</em>) – A PyCapsule containing a C ArrowSchema representation
+of a requested schema. Conversion to this schema is best-effort. See
+<a class="reference internal" href="#schema-requests">Schema Requests</a>.</p></li>
+<li><p><strong>kwargs</strong> – Additional keyword arguments should only be accepted if they have
+a default value of <code class="docutils literal notranslate"><span class="pre">None</span></code>, to allow for future addition of new keywords.
+See <a class="reference internal" href="#arrow-pycapsule-interface-device-support"><span class="std std-ref">Device Support</span></a> for more details.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pair of PyCapsules containing a C ArrowSchema and ArrowDeviceArray,
+respectively. The schema capsule should have the name <code class="docutils literal notranslate"><span class="pre">&quot;arrow_schema&quot;</span></code>
+and the array capsule should have the name <code class="docutils literal notranslate"><span class="pre">&quot;arrow_device_array&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="arrowstream-export">
 <h3>ArrowStream Export<a class="headerlink" href="#arrowstream-export" title="Permalink to this heading">#</a></h3>
 <p>Tables / DataFrames and streams can implement the method <code class="docutils literal notranslate"><span class="pre">__arrow_c_stream__</span></code>.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="arrow_c_stream__">
-<span class="sig-name descname"><span class="pre">__arrow_c_stream__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_schema</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><span class="pre">object</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><span class="pre">object</span></a></span></span><a class="headerlink" href="#arrow_c_stream__" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">__arrow_c_stream__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arrow_c_stream__" title="Permalink to this definition">#</a></dt>
 <dd><p>Export the object as an ArrowArrayStream.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -906,6 +946,32 @@ of a requested schema. Conversion to this schema is best-effort. See
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A PyCapsule containing a C ArrowArrayStream representation of the
 object. The capsule must have a name of <code class="docutils literal notranslate"><span class="pre">&quot;arrow_array_stream&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p>Libraries supporting the Device interface can implement a <code class="docutils literal notranslate"><span class="pre">__arrow_c_device_stream__</span></code>
+method on those objects, which works the same as <code class="docutils literal notranslate"><span class="pre">__arrow_c_stream__</span></code> except
+for returning an ArrowDeviceArrayStream structure instead of an ArrowArrayStream
+structure:</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="arrow_c_device_stream__">
+<span class="sig-name descname"><span class="pre">__arrow_c_device_stream__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">requested_schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arrow_c_device_stream__" title="Permalink to this definition">#</a></dt>
+<dd><p>Export the object as an ArrowDeviceArrayStream.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>requested_schema</strong> (<em>PyCapsule</em><em> or </em><em>None</em>) – A PyCapsule containing a C ArrowSchema representation
+of a requested schema. Conversion to this schema is best-effort. See
+<a class="reference internal" href="#schema-requests">Schema Requests</a>.</p></li>
+<li><p><strong>kwargs</strong> – Additional keyword arguments should only be accepted if they have
+a default value of <code class="docutils literal notranslate"><span class="pre">None</span></code>, to allow for future addition of new keywords.
+See <a class="reference internal" href="#arrow-pycapsule-interface-device-support"><span class="std std-ref">Device Support</span></a> for more details.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A PyCapsule containing a C ArrowDeviceArrayStream representation of the
+object. The capsule must have a name of <code class="docutils literal notranslate"><span class="pre">&quot;arrow_device_array_stream&quot;</span></code>.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -932,6 +998,52 @@ raise an exception. The requested schema mechanism is only meant to negotiate
 between different representations of the same data and not to allow arbitrary
 schema transformations.</p>
 </section>
+<section id="device-support">
+<span id="arrow-pycapsule-interface-device-support"></span><h3>Device Support<a class="headerlink" href="#device-support" title="Permalink to this heading">#</a></h3>
+<p>The PyCapsule interface has cross hardware support through using the
+<a class="reference internal" href="../CDeviceDataInterface.html#c-device-data-interface"><span class="std std-ref">C device interface</span></a>. This means it is possible
+to exchange data on non-CPU devices (e.g. CUDA GPUs) and to inspect on what
+device the exchanged data lives.</p>
+<p>For exchanging the data structures, this interface has two sets of protocol
+methods: the standard CPU-only versions (<a class="reference internal" href="#arrow_c_array__" title="__arrow_c_array__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__arrow_c_array__()</span></code></a> and
+<a class="reference internal" href="#arrow_c_stream__" title="__arrow_c_stream__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__arrow_c_stream__()</span></code></a>) and the equivalent device-aware versions
+(<a class="reference internal" href="#arrow_c_device_array__" title="__arrow_c_device_array__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__arrow_c_device_array__()</span></code></a>, and <a class="reference internal" href="#arrow_c_device_stream__" title="__arrow_c_device_stream__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__arrow_c_device_stream__()</span></code></a>).</p>
+<p>For CPU-only producers, it is allowed to either implement only the standard
+CPU-only protocol methods, or either implement both the CPU-only and device-aware
+methods. The absence of the device version methods implies CPU-only data. For
+CPU-only consumers, it is encouraged to be able to consume both versions of the
+protocol.</p>
+<p>For a device-aware producer whose data structures can only reside in
+non-CPU memory, it is recommended to only implement the device version of the
+protocol (e.g. only add <code class="docutils literal notranslate"><span class="pre">__arrow_c_device_array__</span></code>, and not add <code class="docutils literal notranslate"><span class="pre">__arrow_c_array__</span></code>).
+Producers that have data structures that can live both on CPU or non-CPU devices
+can implement both versions of the protocol, but the CPU-only versions
+(<a class="reference internal" href="#arrow_c_array__" title="__arrow_c_array__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__arrow_c_array__()</span></code></a> and <a class="reference internal" href="#arrow_c_stream__" title="__arrow_c_stream__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__arrow_c_stream__()</span></code></a>) should be guaranteed
+to contain valid pointers for CPU memory (thus, when trying to export non-CPU data,
+either raise an error or make a copy to CPU memory).</p>
+<p>Producing the <code class="docutils literal notranslate"><span class="pre">ArrowDeviceArray</span></code> and <code class="docutils literal notranslate"><span class="pre">ArrowDeviceArrayStream</span></code> structures
+is expected to not involve any cross-device copying of data.</p>
+<p>The device-aware methods (<a class="reference internal" href="#arrow_c_device_array__" title="__arrow_c_device_array__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__arrow_c_device_array__()</span></code></a>, and <a class="reference internal" href="#arrow_c_device_stream__" title="__arrow_c_device_stream__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__arrow_c_device_stream__()</span></code></a>)
+should accept additional keyword arguments (<code class="docutils literal notranslate"><span class="pre">**kwargs</span></code>), if they have a
+default value of <code class="docutils literal notranslate"><span class="pre">None</span></code>. This allows for future addition of new optional
+keywords, where the default value for such a new keyword will always be <code class="docutils literal notranslate"><span class="pre">None</span></code>.
+The implementor is responsible for raising a <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> for any
+additional keyword being passed by the user which is not recognised. For
+example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">__arrow_c_device_array__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">requested_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="n">non_default_kwargs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="n">non_default_kwargs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Received unsupported keyword argument(s): </span><span class="si">{</span><span class="n">non_default_kwargs</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="o">...</span>
+</pre></div>
+</div>
+</section>
 <section id="protocol-typehints">
 <h3>Protocol Typehints<a class="headerlink" href="#protocol-typehints" title="Permalink to this heading">#</a></h3>
 <p>The following typehints can be copied into your library to annotate that a
@@ -953,6 +1065,22 @@ function accepts an object implementing one of these protocols.</p>
     <span class="k">def</span> <span class="nf">__arrow_c_stream__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">requested_schema</span><span class="p">:</span> <span class="nb">object</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+        <span class="o">...</span>
+
+<span class="k">class</span> <span class="nc">ArrowDeviceArrayExportable</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__arrow_c_device_array__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">requested_schema</span><span class="p">:</span> <span class="nb">object</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="nb">object</span><span class="p">]:</span>
+        <span class="o">...</span>
+
+<span class="k">class</span> <span class="nc">ArrowDeviceStreamExportable</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__arrow_c_device_stream__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">requested_schema</span><span class="p">:</span> <span class="nb">object</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
         <span class="o">...</span>
 </pre></div>
@@ -1221,13 +1349,16 @@ also limited to arrays and does not support schemas, tabular structures, or stre
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#arrowarray-export">ArrowArray Export</a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#arrow_c_array__"><code class="docutils literal notranslate"><span class="pre">__arrow_c_array__()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#arrow_c_device_array__"><code class="docutils literal notranslate"><span class="pre">__arrow_c_device_array__()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#arrowstream-export">ArrowStream Export</a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#arrow_c_stream__"><code class="docutils literal notranslate"><span class="pre">__arrow_c_stream__()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#arrow_c_device_stream__"><code class="docutils literal notranslate"><span class="pre">__arrow_c_device_stream__()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#schema-requests">Schema Requests</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#device-support">Device Support</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#protocol-typehints">Protocol Typehints</a></li>
 </ul>
 </li>
