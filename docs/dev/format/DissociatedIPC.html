@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Dissociated IPC Protocol &#8212; Apache Arrow v18.0.0.dev245</title>
+    <title>Dissociated IPC Protocol &#8212; Apache Arrow v18.0.0.dev258</title>
   
   
   
@@ -159,8 +159,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v18.0.0.dev245 - Home"/>
-    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v18.0.0.dev245 - Home"/>`);</script>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v18.0.0.dev258 - Home"/>
+    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v18.0.0.dev258 - Home"/>`);</script>
   
   
 </a></div>
@@ -944,6 +944,50 @@ only have been tested using UCX and libfabric transports so far, but that’s al
 <li><p>The streams of metadata and body data are sent simultaneously across the
 same connection</p></li>
 </ol>
+<object data="../_images/mermaid-e962a4be5befa97b0166c4cae51c8201f88d2bb5.svg" type="image/svg+xml">
+            <p class="warning">%% Licensed to the Apache Software Foundation (ASF) under one
+%% or more contributor license agreements.  See the NOTICE file
+%% distributed with this work for additional information
+%% regarding copyright ownership.  The ASF licenses this file
+%% to you under the Apache License, Version 2.0 (the
+%% &quot;License&quot;); you may not use this file except in compliance
+%% with the License.  You may obtain a copy of the License at
+%%
+%%   http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing,
+%% software distributed under the License is distributed on an
+%% &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+%% KIND, either express or implied.  See the License for the
+%% specific language governing permissions and limitations
+%% under the License.
+
+sequenceDiagram    
+  participant C as Client
+  participant S as Server
+  activate C
+  C--&gt;&gt;+S: TaggedMessage(server.want_data, bytes=ID_of_desired_data)
+  S--&gt;&gt;C: Message(bytes([1]) + le_bytes(sequence_number) + schema_metadata)
+  par
+    loop each chunk
+      S--&gt;&gt;C: Message(bytes([1]) + le_bytes(sequence_number) + batch_metadata)
+    end
+    S--&gt;&gt;C: Message(bytes([0]) + le_bytes(sequence_number))
+  and
+    loop each chunk
+      alt
+        S--&gt;&gt;C: TaggedMessage((bytes[0] &lt;&lt; 55) | le_bytes(sequence_number),&lt;br/&gt;bytes=batch_data)
+      else
+        S--&gt;&gt;C: TaggedMessage((bytes[1] &lt;&lt; 55) | le_bytes(sequence_number),&lt;br/&gt;bytes=uint64_pairs)
+      end
+    end
+  end
+  
+  loop
+    C--&gt;&gt;S: TaggedMessage(server.free_data, bytes=uint64_list)
+  end
+  deactivate S
+  deactivate C</p></object>
 <section id="server-sequence">
 <h3>Server Sequence<a class="headerlink" href="#server-sequence" title="Permalink to this heading">#</a></h3>
 <p>There can be either a single server handling both the IPC Metadata stream and the
@@ -1004,6 +1048,13 @@ to send to the client.</p>
 <p>For each IPC message in the stream of data, a <strong>tagged</strong> message <strong>MUST</strong> be sent on the data
 stream if that message has a body (i.e. a Record Batch or Dictionary message). The
 <span class="xref std std-term">tag</span> for each message should be structured as follows:</p>
+<object data="../_images/mermaid-4a15cc28d43fb7ee5221b8108ca361508723820b.svg" type="image/svg+xml">
+            <p class="warning">block-beta
+columns 8
+
+S[&quot;Sequence number\nBytes 0-3&quot;]:4
+U[&quot;Unused (Reserved)\nBytes 4-6&quot;]:3
+T[&quot;Message type\nByte 7&quot;]:1</p></object>
 <ul class="simple">
 <li><p>The <em>least significant</em> 4-bytes (bits 0 - 31) of the tag should be the unsigned 32-bit, little-endian sequence
 number of the message.</p></li>
