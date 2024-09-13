@@ -181,9 +181,10 @@ as Parquet data cannot be directly operated on but must be decoded in
 large chunks.
 
 Conversely, Arrow is an in-memory format meant for direct and efficient use
-for computational purposes.  Arrow data is not compressed (or only lightly so,
-when using dictionary encoding) but laid out in natural format for the CPU,
-so that data can be accessed at arbitrary places at full speed.
+for computational purposes.  Arrow data is typically not compressed but laid
+out in natural format for the CPU, so that data can be accessed at arbitrary
+places at full speed. (However, Arrow does provide some limited options for
+compression, including dictionary encoding and buffer compression.)
 
 Therefore, Arrow and Parquet complement each other
 and are commonly used together in applications.  Storing your data on disk
