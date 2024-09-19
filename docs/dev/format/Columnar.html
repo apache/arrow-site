@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Arrow Columnar Format &#8212; Apache Arrow v18.0.0.dev341</title>
+    <title>Arrow Columnar Format &#8212; Apache Arrow v18.0.0.dev347</title>
   
   
   
@@ -157,8 +157,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v18.0.0.dev341 - Home"/>
-    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v18.0.0.dev341 - Home"/>`);</script>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v18.0.0.dev347 - Home"/>
+    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v18.0.0.dev347 - Home"/>`);</script>
   
   
 </a></div>
@@ -2101,7 +2101,7 @@ appropriate field.</p></li>
 own application defined metadata to customize behavior.</p>
 </section>
 <section id="recordbatch-message">
-<h3>RecordBatch message<a class="headerlink" href="#recordbatch-message" title="Permalink to this heading">#</a></h3>
+<span id="ipc-recordbatch-message"></span><h3>RecordBatch message<a class="headerlink" href="#recordbatch-message" title="Permalink to this heading">#</a></h3>
 <p>A RecordBatch message contains the actual data buffers corresponding
 to the physical memory layout determined by a schema. The metadata for
 this message provides the location and size of each buffer, permitting
@@ -2193,6 +2193,63 @@ have two entries in each RecordBatch. For a RecordBatch of this schema with
 <span class="n">buffer</span> <span class="mi">12</span><span class="p">:</span> <span class="n">col2</span>    <span class="n">data</span>
 <span class="n">buffer</span> <span class="mi">13</span><span class="p">:</span> <span class="n">col2</span>    <span class="n">data</span>
 </pre></div>
+</div>
+</section>
+<section id="compression">
+<h3>Compression<a class="headerlink" href="#compression" title="Permalink to this heading">#</a></h3>
+<p>There are three different options for compression of record batch
+body buffers: Buffers can be uncompressed, buffers can be
+compressed with the <code class="docutils literal notranslate"><span class="pre">lz4</span></code> compression codec, or buffers can be
+compressed with the <code class="docutils literal notranslate"><span class="pre">zstd</span></code> compression codec. Buffers in the
+flat sequence of a message body must be compressed separately using
+the same codec. Specific buffers in the sequence of compressed
+buffers may be left uncompressed (for example if compressing those
+specific buffers would not appreciably reduce their size).</p>
+<p>The compression type used is defined in the <code class="docutils literal notranslate"><span class="pre">data</span> <span class="pre">header</span></code>
+of the <a class="reference internal" href="#ipc-recordbatch-message"><span class="std std-ref">RecordBatch message</span></a> in the optional <code class="docutils literal notranslate"><span class="pre">compression</span></code>
+field with the default being uncompressed.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">lz4</span></code> compression codec means the
+<a class="reference external" href="https://github.com/lz4/lz4/blob/dev/doc/lz4_Frame_format.md">LZ4 frame format</a>
+and should not to be confused with
+<a class="reference external" href="https://github.com/lz4/lz4/blob/dev/doc/lz4_Block_format.md">“raw” (also called “block”) format</a>.</p>
+</div>
+<p>The difference between compressed and uncompressed buffers in the
+serialized form is as follows:</p>
+<ul class="simple">
+<li><p>If the buffers in the <a class="reference internal" href="#ipc-recordbatch-message"><span class="std std-ref">RecordBatch message</span></a> are <strong>compressed</strong></p>
+<ul>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">data</span> <span class="pre">header</span></code> includes the length and memory offset
+of each <strong>compressed buffer</strong> in the record batch’s body together
+with the compression type</p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">body</span></code> includes a flat sequence of <strong>compressed buffers</strong>
+together with the <strong>length of the uncompressed buffer</strong> as a 64-bit
+little-endian signed integer stored in the first 8 bytes of each
+buffer in the sequence. This uncompressed length can be set to <code class="docutils literal notranslate"><span class="pre">-1</span></code> to indicate
+that that specific buffer is left uncompressed.</p></li>
+</ul>
+</li>
+<li><p>If the buffers in the <a class="reference internal" href="#ipc-recordbatch-message"><span class="std std-ref">RecordBatch message</span></a> are <strong>uncompressed</strong></p>
+<ul>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">data</span> <span class="pre">header</span></code> includes the length and memory offset
+of each <strong>uncompressed buffer</strong> in the record batch’s body</p></li>
+<li><p>the <code class="docutils literal notranslate"><span class="pre">body</span></code> includes a flat sequence of <strong>uncompressed buffers</strong>.</p></li>
+</ul>
+</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Some Arrow implementations lack support for producing and consuming
+IPC data with compressed buffers using one or either of the codecs
+listed above. See <a class="reference internal" href="../status.html"><span class="doc">Implementation Status</span></a> for details.</p>
+<p>Some applications might apply compression in the protocol they use
+to store or transport Arrow IPC data. (For example, an HTTP server
+might serve gzip-compressed Arrow IPC streams.) Applications that
+already use compression in their storage or transport protocols
+should avoid using buffer compression. Double compression typically
+worsens performance and does not substantially improve compression
+ratios.</p>
 </div>
 </section>
 <section id="byte-order-endianness">
@@ -2394,12 +2451,12 @@ of the <code class="docutils literal notranslate"><span class="pre">ExtensionTyp
 they should not be used for third-party extension types.</p>
 </div>
 <p>This extension metadata can annotate any of the built-in Arrow logical
-types. The intent is that an implementation that does not support an
-extension type can still handle the underlying data. For example a
-16-byte UUID value could be embedded in <code class="docutils literal notranslate"><span class="pre">FixedSizeBinary(16)</span></code>, and
-implementations that do not have this extension type can still work
-with the underlying binary values and pass along the
-<code class="docutils literal notranslate"><span class="pre">custom_metadata</span></code> in subsequent Arrow protocol messages.</p>
+types. For example, Arrow specifies a canonical extension type that
+represents a UUID as a <code class="docutils literal notranslate"><span class="pre">FixedSizeBinary(16)</span></code>. Arrow implementations are
+not required to support canonical extensions, so an implementation that
+does not support this UUID type will simply interpret it as a
+<code class="docutils literal notranslate"><span class="pre">FixedSizeBinary(16)</span></code> and pass along the <code class="docutils literal notranslate"><span class="pre">custom_metadata</span></code> in
+subsequent Arrow protocol messages.</p>
 <p>Extension types may or may not use the
 <code class="docutils literal notranslate"><span class="pre">'ARROW:extension:metadata'</span></code> field. Let’s consider some example
 extension types:</p>
@@ -2532,6 +2589,7 @@ the Arrow spec.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#schema-message">Schema message</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#recordbatch-message">RecordBatch message</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#variadic-buffers">Variadic buffers</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#compression">Compression</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#byte-order-endianness">Byte Order (Endianness)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ipc-streaming-format">IPC Streaming Format</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#ipc-file-format">IPC File Format</a></li>

@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Extending pyarrow &#8212; Apache Arrow v18.0.0.dev341</title>
+    <title>Extending pyarrow &#8212; Apache Arrow v18.0.0.dev347</title>
   
   
   
@@ -157,8 +157,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v18.0.0.dev341 - Home"/>
-    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v18.0.0.dev341 - Home"/>`);</script>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v18.0.0.dev347 - Home"/>
+    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v18.0.0.dev347 - Home"/>`);</script>
   
   
 </a></div>
@@ -1643,69 +1643,97 @@ and schemas.</p>
 </section>
 <section id="defining-extension-types-user-defined-types">
 <h2>Defining extension types (“user-defined types”)<a class="headerlink" href="#defining-extension-types-user-defined-types" title="Permalink to this heading">#</a></h2>
-<p>Arrow has the notion of extension types in the metadata specification as a
-possibility to extend the built-in types. This is done by annotating any of the
-built-in Arrow data types (the “storage type”) with a custom type name and
-optional serialized representation (“ARROW:extension:name” and
-“ARROW:extension:metadata” keys in the Field’s custom_metadata of an IPC
-message).
-See the <a class="reference internal" href="../format/Columnar.html#format-metadata-extension-types"><span class="std std-ref">Extension Types</span></a> section of the metadata
-specification for more details.</p>
-<p>Pyarrow allows you to define such extension types from Python by subclassing
-<a class="reference internal" href="generated/pyarrow.ExtensionType.html#pyarrow.ExtensionType" title="pyarrow.ExtensionType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtensionType</span></code></a> and giving the derived class its own extension name
-and serialization mechanism. The extension name and serialized metadata
-can potentially be recognized by other (non-Python) Arrow implementations
+<p>Arrow affords a notion of extension types which allow users to annotate data
+types with additional semantics. This allows developers both to
+specify custom serialization and deserialization routines (for example,
+to <a class="reference internal" href="#custom-scalar-conversion"><span class="std std-ref">Python scalars</span></a> and
+<a class="reference internal" href="#conversion-to-pandas"><span class="std std-ref">pandas</span></a>) and to more easily interpret data.</p>
+<p>In Arrow, <a class="reference internal" href="../format/Columnar.html#format-metadata-extension-types"><span class="std std-ref">extension types</span></a>
+are specified by annotating any of the built-in Arrow data types
+(the “storage type”) with a custom type name and, optionally, a
+bytestring that can be used to provide additional metadata (referred to as
+“parameters” in this documentation). These appear as the
+<code class="docutils literal notranslate"><span class="pre">ARROW:extension:name</span></code> and <code class="docutils literal notranslate"><span class="pre">ARROW:extension:metadata</span></code> keys in the
+Field’s <code class="docutils literal notranslate"><span class="pre">custom_metadata</span></code>.</p>
+<p>Note that since these annotations are part of the Arrow specification,
+they can potentially be recognized by other (non-Python) Arrow consumers
 such as PySpark.</p>
-<p>For example, we could define a custom UUID type for 128-bit numbers which can
-be represented as <code class="docutils literal notranslate"><span class="pre">FixedSizeBinary</span></code> type with 16 bytes:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">UuidType</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">ExtensionType</span><span class="p">):</span>
+<p>PyArrow allows you to define extension types from Python by subclassing
+<a class="reference internal" href="generated/pyarrow.ExtensionType.html#pyarrow.ExtensionType" title="pyarrow.ExtensionType"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtensionType</span></code></a> and giving the derived class its own extension name
+and mechanism to (de)serialize any parameters. For example, we could define
+a custom rational type for fractions which can be represented as a pair of
+integers:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">RationalType</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">ExtensionType</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">binary</span><span class="p">(</span><span class="mi">16</span><span class="p">),</span> <span class="s2">&quot;my_package.uuid&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_type</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">DataType</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pa</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">data_type</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data_type must be an integer type not </span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__arrow_ext_serialize__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Since we don&#39;t have a parameterized type, we don&#39;t need extra</span>
-        <span class="c1"># metadata to be deserialized</span>
-        <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">pa</span><span class="o">.</span><span class="n">struct</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="p">(</span><span class="s2">&quot;numer&quot;</span><span class="p">,</span> <span class="n">data_type</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;denom&quot;</span><span class="p">,</span> <span class="n">data_type</span><span class="p">),</span>
+                <span class="p">],</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;my_package.rational&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__arrow_ext_serialize__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+        <span class="c1"># No parameters are necessary</span>
+        <span class="k">return</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">__arrow_ext_deserialize__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">storage_type</span><span class="p">,</span> <span class="n">serialized</span><span class="p">):</span>
         <span class="c1"># Sanity checks, not required but illustrate the method signature.</span>
-        <span class="k">assert</span> <span class="n">storage_type</span> <span class="o">==</span> <span class="n">pa</span><span class="o">.</span><span class="n">binary</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">serialized</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
-        <span class="c1"># Return an instance of this subclass given the serialized</span>
-        <span class="c1"># metadata.</span>
-        <span class="k">return</span> <span class="n">UuidType</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">pa</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_struct</span><span class="p">(</span><span class="n">storage_type</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">pa</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_integer</span><span class="p">(</span><span class="n">storage_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">storage_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">storage_type</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">type</span>
+        <span class="k">assert</span> <span class="n">serialized</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span>
+
+        <span class="c1"># return an instance of this subclass</span>
+        <span class="k">return</span> <span class="n">RationalType</span><span class="p">(</span><span class="n">storage_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The special methods <code class="docutils literal notranslate"><span class="pre">__arrow_ext_serialize__</span></code> and <code class="docutils literal notranslate"><span class="pre">__arrow_ext_deserialize__</span></code>
-define the serialization of an extension type instance. For non-parametric
-types such as the above, the serialization payload can be left empty.</p>
+define the serialization and deserialization of an extension type instance.</p>
 <p>This can now be used to create arrays and tables holding the extension type:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">uuid_type</span> <span class="o">=</span> <span class="n">UuidType</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">uuid_type</span><span class="o">.</span><span class="n">extension_name</span>
-<span class="go">&#39;my_package.uuid&#39;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">uuid_type</span><span class="o">.</span><span class="n">storage_type</span>
-<span class="go">FixedSizeBinaryType(fixed_size_binary[16])</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rational_type</span> <span class="o">=</span> <span class="n">RationalType</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rational_type</span><span class="o">.</span><span class="n">extension_name</span>
+<span class="go">&#39;my_package.rational&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rational_type</span><span class="o">.</span><span class="n">storage_type</span>
+<span class="go">StructType(struct&lt;numer: int32, denom: int32&gt;)</span>
 
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">uuid</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">storage_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">bytes</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)],</span> <span class="n">pa</span><span class="o">.</span><span class="n">binary</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ExtensionArray</span><span class="o">.</span><span class="n">from_storage</span><span class="p">(</span><span class="n">uuid_type</span><span class="p">,</span> <span class="n">storage_array</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">storage_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="p">[</span>
+<span class="gp">... </span>        <span class="p">{</span><span class="s2">&quot;numer&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;denom&quot;</span><span class="p">:</span> <span class="mi">17</span><span class="p">},</span>
+<span class="gp">... </span>        <span class="p">{</span><span class="s2">&quot;numer&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;denom&quot;</span><span class="p">:</span> <span class="mi">13</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">],</span>
+<span class="gp">... </span>    <span class="nb">type</span><span class="o">=</span><span class="n">rational_type</span><span class="o">.</span><span class="n">storage_type</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">rational_type</span><span class="o">.</span><span class="n">wrap_array</span><span class="p">(</span><span class="n">storage_array</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># or equivalently</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">ExtensionArray</span><span class="o">.</span><span class="n">from_storage</span><span class="p">(</span><span class="n">rational_type</span><span class="p">,</span> <span class="n">storage_array</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span>
-<span class="go">&lt;pyarrow.lib.ExtensionArray object at 0x7f75c2f300a0&gt;</span>
-<span class="go">[</span>
-<span class="go">  A6861959108644B797664AEEE686B682,</span>
-<span class="go">  718747F48E5F4058A7261E2B6B228BE8,</span>
-<span class="go">  7FE201227D624D96A5CD8639DEF2A68B,</span>
-<span class="go">  C6CA8C7F95744BFD9462A40B3F57A86C</span>
-<span class="go">]</span>
+<span class="go">&lt;pyarrow.lib.ExtensionArray object at 0x1067f5420&gt;</span>
+<span class="go">-- is_valid: all not null</span>
+<span class="go">-- child 0 type: int32</span>
+<span class="go">  [</span>
+<span class="go">    10,</span>
+<span class="go">    20</span>
+<span class="go">  ]</span>
+<span class="go">-- child 1 type: int32</span>
+<span class="go">  [</span>
+<span class="go">    17,</span>
+<span class="go">    13</span>
+<span class="go">  ]</span>
 </pre></div>
 </div>
 <p>This array can be included in RecordBatches, sent over IPC and received in
 another Python process. The receiving process must explicitly register the
 extension type for deserialization, otherwise it will fall back to the
 storage type:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">register_extension_type</span><span class="p">(</span><span class="n">UuidType</span><span class="p">())</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">register_extension_type</span><span class="p">(</span><span class="n">RationalType</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">()))</span>
 </pre></div>
 </div>
 <p>For example, creating a RecordBatch and writing it to a stream using the
@@ -1720,18 +1748,44 @@ IPC protocol:</p>
 <p>and then reading it back yields the proper type:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">pa</span><span class="o">.</span><span class="n">ipc</span><span class="o">.</span><span class="n">open_stream</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
 <span class="gp">... </span>   <span class="n">result</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_all</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s1">&#39;ext&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">type</span>
-<span class="go">UuidType(FixedSizeBinaryType(fixed_size_binary[16]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;ext&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">type</span>
+<span class="go">RationalType(StructType(struct&lt;numer: int32, denom: int32&gt;))</span>
+</pre></div>
+</div>
+<p>Further, note that while we registered the concrete type
+<code class="docutils literal notranslate"><span class="pre">RationalType(pa.int32())</span></code>, the same extension name
+(<code class="docutils literal notranslate"><span class="pre">&quot;my_package.rational&quot;</span></code>) is used by <code class="docutils literal notranslate"><span class="pre">RationalType(integer_type)</span></code>
+for <em>all</em> Arrow integer types. As such, the above code also allows users to
+(de)serialize these data types:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">big_rational_type</span> <span class="o">=</span> <span class="n">RationalType</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int64</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">storage_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="p">[</span>
+<span class="gp">... </span>        <span class="p">{</span><span class="s2">&quot;numer&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;denom&quot;</span><span class="p">:</span> <span class="mi">17</span><span class="p">},</span>
+<span class="gp">... </span>        <span class="p">{</span><span class="s2">&quot;numer&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;denom&quot;</span><span class="p">:</span> <span class="mi">13</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">],</span>
+<span class="gp">... </span>    <span class="nb">type</span><span class="o">=</span><span class="n">big_rational_type</span><span class="o">.</span><span class="n">storage_type</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">big_rational_type</span><span class="o">.</span><span class="n">wrap_array</span><span class="p">(</span><span class="n">storage_array</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">RecordBatch</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">([</span><span class="n">arr</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;ext&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sink</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">BufferOutputStream</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">pa</span><span class="o">.</span><span class="n">RecordBatchStreamWriter</span><span class="p">(</span><span class="n">sink</span><span class="p">,</span> <span class="n">batch</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+<span class="gp">... </span>   <span class="n">writer</span><span class="o">.</span><span class="n">write_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">buf</span> <span class="o">=</span> <span class="n">sink</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">pa</span><span class="o">.</span><span class="n">ipc</span><span class="o">.</span><span class="n">open_stream</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span> <span class="k">as</span> <span class="n">reader</span><span class="p">:</span>
+<span class="gp">... </span>   <span class="n">result</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_all</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">&quot;ext&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">type</span>
+<span class="go">RationalType(StructType(struct&lt;numer: int64, denom: int64&gt;))</span>
 </pre></div>
 </div>
 <p>The receiving application doesn’t need to be Python but can still recognize
-the extension type as a “my_package.uuid” type, if it has implemented its own
+the extension type as a “my_package.rational” type if it has implemented its own
 extension type to receive it. If the type is not registered in the receiving
 application, it will fall back to the storage type.</p>
 <section id="parameterized-extension-type">
 <h3>Parameterized extension type<a class="headerlink" href="#parameterized-extension-type" title="Permalink to this heading">#</a></h3>
-<p>The above example used a fixed storage type with no further metadata. But
-more flexible, parameterized extension types are also possible.</p>
+<p>The above example illustrated how to construct an extension type that requires
+no additional metadata beyond its storage type. But Arrow also provides more
+flexible, parameterized extension types.</p>
 <p>The example given here implements an extension type for the <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#time-span-representation">pandas “period”
 data type</a>,
 representing time spans (e.g., a frequency of a day, a month, a quarter, etc).
@@ -1743,7 +1797,7 @@ of the given frequency since 1970.</p>
         <span class="c1"># attributes need to be set first before calling</span>
         <span class="c1"># super init (as that calls serialize)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_freq</span> <span class="o">=</span> <span class="n">freq</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int64</span><span class="p">(),</span> <span class="s1">&#39;my_package.period&#39;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int64</span><span class="p">(),</span> <span class="s2">&quot;my_package.period&quot;</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">freq</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -1758,7 +1812,7 @@ of the given frequency since 1970.</p>
         <span class="c1"># metadata.</span>
         <span class="n">serialized</span> <span class="o">=</span> <span class="n">serialized</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
         <span class="k">assert</span> <span class="n">serialized</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;freq=&quot;</span><span class="p">)</span>
-        <span class="n">freq</span> <span class="o">=</span> <span class="n">serialized</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">freq</span> <span class="o">=</span> <span class="n">serialized</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">PeriodType</span><span class="p">(</span><span class="n">freq</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -1789,7 +1843,7 @@ the data as a 2-D Numpy array <code class="docutils literal notranslate"><span c
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="mi">3</span><span class="p">),</span> <span class="s2">&quot;my_package.Point3DType&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__arrow_ext_serialize__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+        <span class="k">return</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">__arrow_ext_deserialize__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">storage_type</span><span class="p">,</span> <span class="n">serialized</span><span class="p">):</span>
@@ -1829,7 +1883,7 @@ extension array class will be preserved (as long as the receiving process regist
 the extension type using <a class="reference internal" href="generated/pyarrow.register_extension_type.html#pyarrow.register_extension_type" title="pyarrow.register_extension_type"><code class="xref py py-func docutils literal notranslate"><span class="pre">register_extension_type()</span></code></a> before reading the IPC data).</p>
 </section>
 <section id="custom-scalar-conversion">
-<h3>Custom scalar conversion<a class="headerlink" href="#custom-scalar-conversion" title="Permalink to this heading">#</a></h3>
+<span id="id1"></span><h3>Custom scalar conversion<a class="headerlink" href="#custom-scalar-conversion" title="Permalink to this heading">#</a></h3>
 <p>If you want scalars of your custom extension type to convert to a custom type when
 <a class="reference internal" href="generated/pyarrow.ExtensionScalar.html#pyarrow.ExtensionScalar.as_py" title="pyarrow.ExtensionScalar.as_py"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ExtensionScalar.as_py()</span></code></a> is called, you can override the
 <a class="reference internal" href="generated/pyarrow.ExtensionScalar.html#pyarrow.ExtensionScalar.as_py" title="pyarrow.ExtensionScalar.as_py"><code class="xref py py-meth docutils literal notranslate"><span class="pre">ExtensionScalar.as_py()</span></code></a> method by subclassing <a class="reference internal" href="generated/pyarrow.ExtensionScalar.html#pyarrow.ExtensionScalar" title="pyarrow.ExtensionScalar"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtensionScalar</span></code></a>.
@@ -1848,7 +1902,7 @@ For example, if we wanted the above example 3D point type to return a custom
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="mi">3</span><span class="p">),</span> <span class="s2">&quot;my_package.Point3DType&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__arrow_ext_serialize__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+        <span class="k">return</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">__arrow_ext_deserialize__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">storage_type</span><span class="p">,</span> <span class="n">serialized</span><span class="p">):</span>
@@ -1870,7 +1924,7 @@ For example, if we wanted the above example 3D point type to return a custom
 </div>
 </section>
 <section id="conversion-to-pandas">
-<h3>Conversion to pandas<a class="headerlink" href="#conversion-to-pandas" title="Permalink to this heading">#</a></h3>
+<span id="id2"></span><h3>Conversion to pandas<a class="headerlink" href="#conversion-to-pandas" title="Permalink to this heading">#</a></h3>
 <p>The conversion to pandas (in <a class="reference internal" href="generated/pyarrow.Table.html#pyarrow.Table.to_pandas" title="pyarrow.Table.to_pandas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Table.to_pandas()</span></code></a>) of columns with an
 extension type can controlled in case there is a corresponding
 <a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/development/extending.html#extension-types">pandas extension array</a>
@@ -1933,16 +1987,16 @@ shape elements. Then we can create an array of tensors with
 <code class="docutils literal notranslate"><span class="pre">pyarrow.RecordBatch</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="p">[</span>
 <span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]),</span>
-<span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]),</span>
+<span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]),</span>
 <span class="gp">... </span>    <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">True</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">True</span><span class="p">]),</span>
 <span class="gp">... </span>    <span class="n">tensor_array</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">tensor_array_2</span>
 <span class="gp">... </span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">my_schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">([(</span><span class="s1">&#39;f0&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int8</span><span class="p">()),</span>
-<span class="gp">... </span>                       <span class="p">(</span><span class="s1">&#39;f1&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()),</span>
-<span class="gp">... </span>                       <span class="p">(</span><span class="s1">&#39;f2&#39;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">()),</span>
-<span class="gp">... </span>                       <span class="p">(</span><span class="s1">&#39;tensors_int&#39;</span><span class="p">,</span> <span class="n">tensor_type</span><span class="p">),</span>
-<span class="gp">... </span>                       <span class="p">(</span><span class="s1">&#39;tensors_float&#39;</span><span class="p">,</span> <span class="n">tensor_type_2</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">([(</span><span class="s2">&quot;f0&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">int8</span><span class="p">()),</span>
+<span class="gp">... </span>                       <span class="p">(</span><span class="s2">&quot;f1&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">()),</span>
+<span class="gp">... </span>                       <span class="p">(</span><span class="s2">&quot;f2&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">()),</span>
+<span class="gp">... </span>                       <span class="p">(</span><span class="s2">&quot;tensors_int&quot;</span><span class="p">,</span> <span class="n">tensor_type</span><span class="p">),</span>
+<span class="gp">... </span>                       <span class="p">(</span><span class="s2">&quot;tensors_float&quot;</span><span class="p">,</span> <span class="n">tensor_type_2</span><span class="p">)])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">table</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_arrays</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">my_schema</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">table</span>
 <span class="go">pyarrow.Table</span>
@@ -2027,7 +2081,7 @@ example</p>
 </pre></div>
 </div>
 <p>or</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">fixed_shape_tensor</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">(),</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dim_names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_type</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">fixed_shape_tensor</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">(),</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dim_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;H&quot;</span><span class="p">,</span> <span class="s2">&quot;W&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
 <p>for <code class="docutils literal notranslate"><span class="pre">NCHW</span></code> format where:</p>
