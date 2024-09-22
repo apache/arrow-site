@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Dissociated IPC Protocol &#8212; Apache Arrow v18.0.0.dev358</title>
+    <title>Dissociated IPC Protocol &#8212; Apache Arrow v18.0.0.dev361</title>
   
   
   
@@ -159,8 +159,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v18.0.0.dev358 - Home"/>
-    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v18.0.0.dev358 - Home"/>`);</script>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v18.0.0.dev361 - Home"/>
+    <script>document.write(`<img src="../_static/arrow-dark.png" class="logo__image only-dark" alt="Apache Arrow v18.0.0.dev361 - Home"/>`);</script>
   
   
 </a></div>
@@ -940,6 +940,51 @@ only have been tested using UCX and libfabric transports so far, but that’s al
 <ol class="arabic simple">
 <li><p>The streams of metadata and body data are sent across separate connections</p></li>
 </ol>
+<object data="../_images/mermaid-8abfde41766e4e63ac35f7f099c36aab16139fbc.svg" type="image/svg+xml">
+            <p class="warning">%% Licensed to the Apache Software Foundation (ASF) under one
+%% or more contributor license agreements.  See the NOTICE file
+%% distributed with this work for additional information
+%% regarding copyright ownership.  The ASF licenses this file
+%% to you under the Apache License, Version 2.0 (the
+%% &quot;License&quot;); you may not use this file except in compliance
+%% with the License.  You may obtain a copy of the License at
+%%
+%%   http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing,
+%% software distributed under the License is distributed on an
+%% &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+%% KIND, either express or implied.  See the License for the
+%% specific language governing permissions and limitations
+%% under the License.
+
+sequenceDiagram
+  participant D as Data Stream
+  participant C as Client
+  participant M as Metadata Stream
+
+  activate C
+  C--&gt;&gt;+M: TaggedMessage(server.want_data, bytes=ID_of_desired_data)
+  C--&gt;&gt;+D: TaggedMessage(server.want_data, bytes=ID_of_desired_data)
+  M--&gt;&gt;C: Message(bytes([1]) + le_bytes(sequence_number) + schema_metadata)
+  loop each batch
+    par
+      M--&gt;&gt;C: Message(bytes([1]) + le_bytes(sequence_number) + batch_metadata)
+    and
+      alt
+        D--&gt;&gt;C: TaggedMessage((bytes[0] &lt;&lt; 55) | le_bytes(sequence_number),&lt;br/&gt;bytes=batch_data)
+      else
+        D--&gt;&gt;C: TaggedMessage((bytes[1] &lt;&lt; 55) | le_bytes(sequence_number),&lt;br/&gt;bytes=uint64_pairs)
+      end
+    end
+  end
+  M--&gt;&gt;C: Message(bytes([0]) + le_bytes(sequence_number))
+  deactivate M
+  loop
+    C--&gt;&gt;D: TaggedMessage(server.free_data, bytes=uint64_list)
+  end
+  deactivate D
+  deactivate C</p></object>
 <ol class="arabic simple" start="2">
 <li><p>The streams of metadata and body data are sent simultaneously across the
 same connection</p></li>
