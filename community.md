@@ -130,6 +130,11 @@ We host online meetings to provide spaces for synchronous discussions about the 
     <td>Varies</td>
     <td><a href="https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/">Google Doc</a></td>
   </tr>
+  <tr>
+    <td>PyArrow development meeting</td>
+    <td>Every 4 weeks</td>
+    <td><a href="https://docs.google.com/document/d/1ioiJdEYf5mJwQ-rOjzjPYCeHTjOhAPo5ppUHy6iBrxU/">Google Doc</a></td>
+  </tr>
 </tbody></table>
 
 For information about how to attend these meetings, see the meeting notes and subscribe to the <code>dev@</code> mailing list as described above. The hosts of some of these meetings send reminder emails to the mailing list prior to each meeting with information about how to join.
