@@ -46,7 +46,8 @@ been made: we refer you to the [complete changelog][3].
 
 ## Release Highlights
 
-- The BigQuery driver is now properly released to PyPI.
+- The BigQuery driver is now properly released to PyPI. See 
+  [adbc-driver-bigquery](https://pypi.org/project/adbc-driver-bigquery/).```
 - A basic driver for Apache DataFusion is now being developed.
 - The documentation now includes the Doxygen API reference for C/C++, which should give a better/more native experience than the previous Breathe-based documentation.
 - The Java libraries now use the latest arrow-java libraries, and as such require Java 11 or newer.
