@@ -77,7 +77,7 @@ $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-a
 
 ## Roadmap
 
-<!-- TODO: fill this portion in. -->
+There is some discussion on a potential second revision of ADBC to include more missing functionality and asynchronous API support.  For more, see the [milestone](https://github.com/apache/arrow-adbc/milestone/8); the proposed C Data Interface extensions have been accepted.
 
 ## Getting Involved
 
