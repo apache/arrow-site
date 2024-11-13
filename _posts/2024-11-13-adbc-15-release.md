@@ -29,7 +29,7 @@ of the Apache Arrow ADBC libraries. This release includes [**31
 resolved issues**][1] from [**13 distinct contributors**][2].
 
 This is a release of the **libraries**, which are at version
-15.  The [**API specification**](specification) is versioned 
+15.  The [**API specification**][specification] is versioned 
 separately and is at version 1.1.0.
 
 The subcomponents are versioned independently:
