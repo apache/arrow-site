@@ -24,8 +24,8 @@ limitations under the License.
 {% endcomment %}
 -->
 
-The Apache Arrow team is pleased to announce the 15 release of
-the Apache Arrow ADBC libraries. This covers includes [**31
+The Apache Arrow team is pleased to announce the version 15 release 
+of the Apache Arrow ADBC libraries. This release includes [**31
 resolved issues**][1] from [**13 distinct contributors**][2].
 
 This is a release of the **libraries**, which are at version
