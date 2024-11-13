@@ -92,4 +92,4 @@ or the [Arrow mailing lists][5].
 [5]: {% link community.md %}
 
 [opaque]: https://arrow.apache.org/docs/format/CanonicalExtensions.html#opaque
-[specification]: https://arrow.apache.org/adbc/current/format/specification.html
+[specification]: https://arrow.apache.org/adbc/15/format/specification.html
