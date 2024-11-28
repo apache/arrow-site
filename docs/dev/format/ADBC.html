@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>ADBC: Arrow Database Connectivity &#8212; Apache Arrow v19.0.0.dev115</title>
+    <title>ADBC: Arrow Database Connectivity &#8212; Apache Arrow v19.0.0.dev134</title>
   
   
   
@@ -59,12 +59,12 @@
     <link rel="icon" href="../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="ADBC C API Specification" href="ADBC/C.html" />
+    <link rel="next" title="Integration Testing" href="Integration.html" />
     <link rel="prev" title="Arrow Flight SQL" href="FlightSql.html" />
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="19.0.0.dev115" />
+  <meta name="docsearch:version" content="19.0.0.dev134" />
 
   <!-- Matomo -->
   <script>
@@ -149,8 +149,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v19.0.0.dev115 - Home"/>
-    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v19.0.0.dev115 - Home"/>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v19.0.0.dev134 - Home"/>
+    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v19.0.0.dev134 - Home"/>
   
   
 </a></div>
@@ -663,12 +663,7 @@
 <li class="toctree-l1"><a class="reference internal" href="DissociatedIPC.html">Dissociated IPC Protocol</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Flight.html">Arrow Flight RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="FlightSql.html">Arrow Flight SQL</a></li>
-<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">ADBC: Arrow Database Connectivity</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="ADBC/C.html">ADBC C API Specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ADBC/Go.html">ADBC Go API Specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ADBC/Java.html">ADBC Java API Specification</a></li>
-</ul>
-</details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">ADBC: Arrow Database Connectivity</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Integration.html">Integration Testing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Glossary.html">Glossary</a></li>
 </ul>
@@ -729,83 +724,20 @@
   <section id="adbc-arrow-database-connectivity">
 <h1>ADBC: Arrow Database Connectivity<a class="headerlink" href="#adbc-arrow-database-connectivity" title="Permalink to this heading">#</a></h1>
 <p>Full Documentation on ADBC can be found at <a class="reference external" href="https://arrow.apache.org/adbc/">https://arrow.apache.org/adbc/</a>.</p>
-<section id="rationale">
-<h2>Rationale<a class="headerlink" href="#rationale" title="Permalink to this heading">#</a></h2>
-<p>The Arrow ecosystem lacks standard database interfaces built around
-Arrow data, especially for efficiently fetching large datasets
-(i.e. with minimal or no serialization and copying).  Without a common
-API, the end result is a mix of custom protocols (e.g. BigQuery,
-Snowflake) and adapters (e.g. <a class="reference external" href="https://turbodbc.readthedocs.io/en/latest/">Turbodbc</a>) scattered across languages.
-Consumers must laboriously wrap individual systems (as <a class="reference external" href="https://r-dbi.github.io/dbi3/articles/dbi3.html">DBI is
-contemplating</a> and <a class="reference external" href="https://trino.io/docs/current/connector.html">Trino does with connectors</a>).</p>
-<p>ADBC aims to provide a minimal database client API standard, based on
-Arrow, for C, Go, and Java (with bindings for other languages).
-Applications code to this API standard (in much the same way as they
-would with JDBC or ODBC), but fetch result sets in Arrow format
-(e.g. via the <a class="reference internal" href="CDataInterface.html"><span class="doc">C Data Interface</span></a>).  They then
-link to an implementation of the standard: either directly to a
-vendor-supplied driver for a particular database, or to a driver
-manager that abstracts across multiple drivers.  Drivers implement the
-standard using a database-specific API, such as Flight SQL.</p>
-<section id="goals">
-<h3>Goals<a class="headerlink" href="#goals" title="Permalink to this heading">#</a></h3>
-<ul class="simple">
-<li><p>Provide a cross-language, Arrow-based API to standardize how clients
-submit queries to and fetch Arrow data from databases.</p></li>
-<li><p>Support both SQL dialects and the emergent <a class="reference external" href="https://substrait.io">Substrait</a> standard.</p></li>
-<li><p>Support explicitly partitioned/distributed result sets to work
-better with contemporary distributed systems.</p></li>
-<li><p>Allow for a variety of implementations to maximize reach.</p></li>
-</ul>
-</section>
-<section id="non-goals">
-<h3>Non-goals<a class="headerlink" href="#non-goals" title="Permalink to this heading">#</a></h3>
-<ul class="simple">
-<li><p>Replacing JDBC/ODBC in all use cases, particularly <a class="reference external" href="https://en.wikipedia.org/wiki/Online_transaction_processing">OLTP</a> use
-cases.</p></li>
-<li><p>Requiring or enshrining a particular database protocol for the Arrow
-ecosystem.</p></li>
-</ul>
-</section>
-<section id="example-use-cases">
-<h3>Example use cases<a class="headerlink" href="#example-use-cases" title="Permalink to this heading">#</a></h3>
-<p>A C or C++ application wishes to retrieve bulk data from a Postgres
-database for further analysis.  The application is compiled against
-the ADBC header, and executes queries via the ADBC APIs.  The
-application is linked against the ADBC libpq driver.  At runtime, the
-driver submits queries to the database via the Postgres client
-libraries, and retrieves row-oriented results, which it then converts
-to Arrow format before returning them to the application.</p>
-<p>If the application wishes to retrieve data from a database supporting
-Flight SQL instead, it would link against the ADBC Flight SQL driver.
-At runtime, the driver would submit queries via Flight SQL and get
-back Arrow data, which is then passed unchanged and uncopied to the
-application.  (The application may have to edit the SQL queries, as
-ADBC does not translate between SQL dialects.)</p>
-<p>If the application wishes to work with multiple databases, it would
-link against the ADBC driver manager, and specify the desired driver
-at runtime.  The driver manager would pass on API calls to the correct
-driver, which handles the request.</p>
-</section>
-</section>
-<section id="adbc-api-standard-1-0-0">
-<h2>ADBC API Standard 1.0.0<a class="headerlink" href="#adbc-api-standard-1-0-0" title="Permalink to this heading">#</a></h2>
-<p>ADBC is a language-specific set of interface definitions that can be
-implemented directly by a vendor-specific “driver” or a vendor-neutral
-“driver manager”.</p>
-<p>Version 1.0.0 of the standard corresponds to tag adbc-1.0.0 of the
-repository <code class="docutils literal notranslate"><span class="pre">apache/arrow-adbc</span></code>, which is commit
-<a class="reference external" href="https://github.com/apache/arrow-adbc/commit/f044edf5256abfb4c091b0ad2acc73afea2c93c0">f044edf5256abfb4c091b0ad2acc73afea2c93c0</a>.  Note that is separate
-from releases of the actual implementations.</p>
-<p>See the language-specific pages for details:</p>
-<div class="toctree-wrapper compound">
+<p>ADBC is:</p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="ADBC/C.html">ADBC C API Specification</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ADBC/Go.html">ADBC Go API Specification</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ADBC/Java.html">ADBC Java API Specification</a></li>
+<li><p>A set of abstract APIs in different languages (C/C++, Go, and Java, with
+more on the way) for working with databases and Arrow data.</p>
+<p>For example, result sets of queries in ADBC are all returned as streams of
+Arrow data, not row-by-row.</p>
+</li>
+<li><p>A set of implementations of that API in different languages (C/C++, C#/.NET,
+Go, Java, Python, and Ruby) that target different databases
+(e.g. PostgreSQL, SQLite, any database supporting Flight SQL).</p></li>
 </ul>
-</div>
-</section>
+<p>See the <a class="reference external" href="https://arrow.apache.org/adbc/current/format/specification.html" title="(in ADBC v15)"><span class="xref std std-doc">ADBC Specification</span></a> for
+details.</p>
+<p>The ADBC specification is currently at version 1.1.0.</p>
 <section id="updating-this-specification">
 <h2>Updating this specification<a class="headerlink" href="#updating-this-specification" title="Permalink to this heading">#</a></h2>
 <p>ADBC is versioned separately from the core Arrow project.  The API
@@ -816,154 +748,10 @@ separately, but both follow semantic versioning.</p>
 backwards-incompatible versions such as 2.0.0, but which still
 implement the API standard version 1.0.0.</p>
 <p>Similarly, this documentation describes the ADBC API standard version
-1.0.0.  If/when an ABI-compatible revision is made
+1.1.0.  If/when an ABI-compatible revision is made
 (e.g. new standard options are defined), the next version would be
-1.1.0.  If incompatible changes are made (e.g. new API functions), the
+1.2.0.  If incompatible changes are made (e.g. new API functions), the
 next version would be 2.0.0.</p>
-</section>
-<section id="related-work">
-<h2>Related work<a class="headerlink" href="#related-work" title="Permalink to this heading">#</a></h2>
-<p>In the initial proposal, a survey of existing solutions and systems
-was included, which is reproduced below for context, though note the
-descriptions are only kept up-to-date on a best-effort basis.</p>
-<section id="comparison-with-arrow-flight-sql">
-<h3>Comparison with Arrow Flight SQL<a class="headerlink" href="#comparison-with-arrow-flight-sql" title="Permalink to this heading">#</a></h3>
-<p>Flight SQL is a <strong>client-server protocol</strong> oriented at database
-developers.  By implementing Flight SQL, a database can support
-clients that use ADBC, JDBC, and ODBC.</p>
-<p>ADBC is an <strong>API specification</strong> oriented at database clients.  By
-coding to ADBC, an application can get Arrow data from a variety of
-databases that use different client technologies underneath.</p>
-<p>Hence, the two projects complement each other.  While Flight SQL
-provides a client that can be used directly, we expect applications
-would prefer to use ADBC instead of tying themselves to a particular
-database.</p>
-</section>
-<section id="comparison-with-jdbc-odbc">
-<h3>Comparison with JDBC/ODBC<a class="headerlink" href="#comparison-with-jdbc-odbc" title="Permalink to this heading">#</a></h3>
-<p>JDBC is a row-based API, so bridging JDBC to Arrow is hard to do
-efficiently.</p>
-<p>ODBC provides support for bulk data with <a class="reference external" href="https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/block-cursors?view=sql-server-ver15">block cursors</a>, and
-<a class="reference external" href="https://turbodbc.readthedocs.io/en/latest/">Turbodbc</a> demonstrates that a performant Arrow-based API can be built
-on top. However, it is still an awkward fit for Arrow:</p>
-<ul class="simple">
-<li><p>Nulls (‘indicator’ values) are <a class="reference external" href="https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/using-length-and-indicator-values?view=sql-server-ver15">represented as integers</a>, requiring
-conversion.</p></li>
-<li><p><a class="reference external" href="https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/allocating-and-freeing-buffers?view=sql-server-ver15">Result buffers are caller-allocated</a>. This can force unnecessarily
-copying data. ADBC uses the C Data Interface instead, eliminating
-copies when possible (e.g. if the driver uses Flight SQL).</p></li>
-<li><p>Some data types are represented differently, and require
-conversion. <a class="reference external" href="https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/transferring-data-in-its-binary-form?view=sql-server-ver15">SQL_C_BINARY</a> can sidestep this for drivers and
-applications that cooperate, but then applications would have to
-treat Arrow-based and non-Arrow-based data sources differently.</p>
-<ul>
-<li><p><a class="reference external" href="https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/character-data-and-c-strings?view=sql-server-ver15">Strings must be null-terminated</a>, which would require a copy
-into an Arrow array, or require that the application handle null
-terminated strings in an array.</p></li>
-<li><p>It is implementation-defined whether strings may have embedded
-nulls, but Arrow specifies UTF-8 strings for which 0x00 is a valid
-byte.</p></li>
-<li><p>Because buffers are caller-allocated, the driver and application
-must cooperate to handle large strings; <a class="reference external" href="https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/data-length-buffer-length-and-truncation?view=sql-server-ver15">the driver must truncate
-the value</a>, and the application can try to fetch the value again.</p></li>
-<li><p>ODBC uses length buffers rather than offsets, requiring another
-conversion to/from Arrow string arrays.</p></li>
-<li><p><a class="reference external" href="https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/c-interval-structure?view=sql-server-ver15">Time intervals use different representations</a>.</p></li>
-</ul>
-</li>
-</ul>
-<p>Hence, we think just extending ODBC is insufficient to meet the goals
-of ADBC. ODBC will always be valuable for wider database support, and
-providing an Arrow-based API on top of ODBC is useful. ADBC would
-allow implementing/optimizing this conversion in a common library,
-provide a simpler interface for consumers, and would provide an API
-that Arrow-native or otherwise columnar systems can implement to
-bypass this wrapper.</p>
-<figure class="align-default">
-<img alt="../_images/ADBCQuadrants.svg" src="../_images/ADBCQuadrants.svg" /></figure>
-<p>ADBC, JDBC, and ODBC are database-agnostic.  They define the
-API that the application uses, but not how that API is implemented,
-instead deferring to drivers to fulfill requests using the protocol
-of their choice.  JDBC and (generally) ODBC offer results in a
-row-oriented format, while ADBC offers columnar Arrow data.</p>
-<p>Protocols/libraries like libpq (Postgres) and TDS (SQL Server) are
-database-specific and row-oriented.  Multiple databases may
-implement the same protocol to try to reuse each other’s work,
-e.g. several databases implement the Postgres wire protocol to
-benefit from its driver implementations.  But the protocol itself
-was not designed with multiple databases in mind, nor are the
-protocols generally meant to be used directly by applications.</p>
-<p>Some database-specific protocols are Arrow-native, like those of
-BigQuery and ClickHouse.  Flight SQL additionally is meant to be
-database-agnostic, but it defines both the client-facing API and
-the underlying protocol, so it’s hard for applications to use it as
-the API for databases that don’t already implement Flight SQL.</p>
-</section>
-<section id="existing-database-client-apis">
-<h3>Existing database client APIs<a class="headerlink" href="#existing-database-client-apis" title="Permalink to this heading">#</a></h3>
-<dl class="simple">
-<dt><a class="reference internal" href="FlightSql.html"><span class="doc">Arrow Flight SQL</span></a></dt><dd><p>A standard building on top of Arrow Flight, defining how to use
-Flight to talk to databases, retrieve metadata, execute queries, and
-so on. Provides a single client in C++ and Java language that talks
-to any database servers implementing the protocol. Models its API
-surface (though not API design) after JDBC and ODBC.</p>
-</dd>
-<dt><a class="reference external" href="https://www.r-dbi.org/">DBI for R</a></dt><dd><p>An R package/ecosystem of packages for database access. Provides a
-single interface with “backends” for specific databases.  While
-row-oriented, <a class="reference external" href="https://r-dbi.github.io/dbi3/articles/dbi3.html#using-arrowparquet-as-an-exchange-format">integration with Arrow is under consideration</a>,
-including a sketch of effectively the same idea as ADBC.</p>
-</dd>
-<dt><a class="reference external" href="https://jcp.org/en/jsr/detail?id=221">JDBC</a></dt><dd><p>A Java library for database access, providing row-based
-APIs. Provides a single interface with drivers for specific
-databases.</p>
-</dd>
-<dt><a class="reference external" href="https://github.com/microsoft/ODBC-Specification">ODBC</a></dt><dd><p>A language-agnostic standard from the ISO/IEC for database access,
-associated with Microsoft. Feature-wise, it is similar to JDBC (and
-indeed JDBC can wrap ODBC drivers), but it offers columnar data
-support through fetching buffers of column values. (See above for
-caveats.) Provides a single C interface with drivers for specific
-databases.</p>
-</dd>
-<dt><a class="reference external" href="https://www.python.org/dev/peps/pep-0249/">PEP 249</a> (DBAPI 2.0)</dt><dd><p>A Python standard for database access providing row-based APIs. Not
-a singular package, but rather a set of interfaces that packages
-implement.</p>
-</dd>
-</dl>
-</section>
-<section id="existing-libraries">
-<h3>Existing libraries<a class="headerlink" href="#existing-libraries" title="Permalink to this heading">#</a></h3>
-<p>These are libraries which either 1) implement columnar data access for
-a particular system; or 2) could be used to implement such access.</p>
-<dl class="simple">
-<dt><a class="reference internal" href="Flight.html"><span class="doc">Arrow Flight</span></a></dt><dd><p>An RPC framework optimized for transferring Arrow record batches,
-with application-specific extension points but without any higher
-level semantics.</p>
-</dd>
-<dt><a class="reference internal" href="../java/jdbc.html"><span class="doc">Arrow JDBC</span></a></dt><dd><p>A Java submodule, part of Arrow/Java, that uses the JDBC API to
-produce Arrow data. Internally, it can read data only row-at-a-time.</p>
-</dd>
-<dt><a class="reference external" href="https://github.com/pacman82/arrow-odbc">arrow-odbc</a></dt><dd><p>A Rust community project that uses the ODBC API to produce Arrow
-data, using ODBC’s buffer-based API to perform bulk copies. (See
-also: Turbodbc.)</p>
-</dd>
-<dt><a class="reference external" href="https://github.com/jorgecarleitao/arrowdantic/">Arrowdantic</a></dt><dd><p>Python bindings for an implementation of ODBC&lt;&gt;Arrow in Rust.</p>
-</dd>
-<dt><a class="reference external" href="https://github.com/0x0L/pgeon">pgeon</a></dt><dd><p>A client that manually parses the Postgres wire format and produces
-Arrow data, bypassing JDBC/ODBC. While it attempts to optimize this
-case, the Postgres wire protocol is still row-oriented.</p>
-</dd>
-<dt><a class="reference external" href="https://turbodbc.readthedocs.io/en/latest/">Turbodbc</a></dt><dd><p>A set of Python ODBC bindings, implementing PEP 249, that also
-provides APIs to fetch data as Arrow batches, optimizing the
-conversion internally.</p>
-</dd>
-</dl>
-</section>
-<section id="papers">
-<h3>Papers<a class="headerlink" href="#papers" title="Permalink to this heading">#</a></h3>
-<p>Raasveldt, Mark, and Hannes Mühleisen. <a class="reference external" href="https://ir.cwi.nl/pub/26415">“Don’t Hold My Data Hostage -
-A Case for Client Protocol Redesign”</a>. In <em>Proceedings of the VLDB
-Endowment</em>, 1022–1033, 2017.</p>
-</section>
 </section>
 </section>
 
@@ -987,11 +775,11 @@ Endowment</em>, 1022–1033, 2017.</p>
       </div>
     </a>
     <a class="right-next"
-       href="ADBC/C.html"
+       href="Integration.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">ADBC C API Specification</p>
+        <p class="prev-next-title">Integration Testing</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -1014,22 +802,7 @@ Endowment</em>, 1022–1033, 2017.</p>
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rationale">Rationale</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#goals">Goals</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#non-goals">Non-goals</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-use-cases">Example use cases</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#adbc-api-standard-1-0-0">ADBC API Standard 1.0.0</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#updating-this-specification">Updating this specification</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-work">Related work</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#comparison-with-arrow-flight-sql">Comparison with Arrow Flight SQL</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#comparison-with-jdbc-odbc">Comparison with JDBC/ODBC</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#existing-database-client-apis">Existing database client APIs</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#existing-libraries">Existing libraries</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#papers">Papers</a></li>
-</ul>
-</li>
 </ul>
   </nav></div>
 
