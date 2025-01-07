@@ -58,7 +58,7 @@ In a columnar (column-oriented) data format, the values for each column in the d
   <figcaption>Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a logical table containing three rows and five columns.</figcaption>
 </figure>
 
-High-performance analytic databases, data warehouses, query engines, and storage systems have converged on columnar architecture because it speeds up the most common types of analytic queries. Examples of modern columnar query systems include Amazon Redshift, Apache DataFusion, ClickHouse, Databricks Photon Engine, DuckDB, Google BigQuery, Microsoft Azure Synapse Analytics, Snowflake, and Voltron Data Theseus.
+High-performance analytic databases, data warehouses, query engines, and storage systems have converged on columnar architecture because it speeds up the most common types of analytic queries. Examples of modern columnar query systems include Amazon Redshift, Apache DataFusion, ClickHouse, Databricks Photon Engine, DuckDB, Google BigQuery, Microsoft Azure Synapse Analytics, OpenText Analytics Database (Vertica), Snowflake, and Voltron Data Theseus.
 
 Likewise, many destinations for analytic query results (such as business intelligence tools, data application platforms, dataframe libraries, and machine learning platforms) use columnar architecture. Examples of columnar business intelligence tools include Amazon QuickSight, Domo, GoodData, Power BI, Qlik Sense, Spotfire, and Tableau. Examples of columnar dataframe libraries include cuDF, pandas, and Polars.
 
