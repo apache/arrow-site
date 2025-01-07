@@ -119,8 +119,6 @@ On the receiving side, data practitioners can maximize speedups by using Arrow-b
 
 Stay tuned for upcoming posts in this series, which will compare the Arrow format to other data formats and describe the protocols and APIs that clients can use to fetch results in Arrow format.
 
-_________________
-
 [^1]: The transfer format may also be called the wire format or serialization format.
 [^2]: From the 1990s to today, increases in network performance outpaced increases in CPU performance. For example, in the late 1990s, a mainstream desktop CPU could perform roughly 1 GFLOPS and a typical WAN connection speed was 56 Kb/s. Today, a mainstream desktop CPU can perform roughly 100 GFLOPS and WAN connection speeds of around 1 Gb/s are common. So while the CPU performance increased by about 100x, network speed increased by about 10,000x.
 [^3]: An upcoming post in this series will compare the Arrow format to these and other formats in more technical detail.
