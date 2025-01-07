@@ -60,7 +60,7 @@ In a columnar (column-oriented) data format, the values for each column in the d
 
 High-performance analytic databases, data warehouses, query engines, and storage systems have converged on columnar architecture because it speeds up the most common types of analytic queries. Examples of modern columnar query systems include Amazon Redshift, ClickHouse, Databricks Photon Engine, DuckDB, Google BigQuery, Microsoft Azure Synapse Analytics, Snowflake, and Voltron Data Theseus.
 
-Likewise, many destinations for analytic query results (such as business intelligence tools, data application platforms, dataframe libraries, and machine learning platforms) use columnar architecture. Examples of columnar business intelligence tools include Tableau, Power BI, and Qlik Sense. Examples of columnar dataframe libraries include cuDF, pandas, and Polars.
+Likewise, many destinations for analytic query results (such as business intelligence tools, data application platforms, dataframe libraries, and machine learning platforms) use columnar architecture. Examples of columnar business intelligence tools include Amazon QuickSight, Domo, Power BI, Qlik Sense, Spotfire, and Tableau. Examples of columnar dataframe libraries include cuDF, pandas, and Polars.
 
 So it is increasingly common for both the source format and the target format of a query result to be columnar formats. The most efficient way to transfer data between a columnar source and a columnar target is to use a columnar transfer format. This eliminates the need for a time-consuming transpose of the data from columns to rows at the source during the serialization step and another time-consuming transpose of the data from rows to columns at the destination during the deserialization step.
 
