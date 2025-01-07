@@ -86,7 +86,7 @@ The Arrow format was designed to be highly efficient as an in-memory format for 
 
 ### 4. The Arrow format enables streaming.
 
-A streamable data format is one that can be processed sequentially, one chunk at a time, without waiting for the full dataset. When data is being transmitted in a streamable format, the receiving system can begin processing it as soon as the first chunk arrives. This can speed up data transfer in several ways: transfer time can overlap with processing time; the receiving system can use memory more efficiently; and multiple streams can be transferred in parallel, speeding up transfer, deserialization, and processing.
+A streamable data format is one that can be processed sequentially, one chunk at a time, without waiting for the full dataset. When data is being transmitted in a streamable format, the receiving system can begin processing it as soon as the first chunk arrives. This can speed up data transfer in several ways: transfer time can overlap with processing time; the receiving system can use memory more efficiently; and multiple streams can be transferred in parallel, speeding up transmission, deserialization, and processing.
 
 CSV is an example of a streamable data format, because the column names (if included) are in a header at the top of the file, and the lines in the file can be processed sequentially. Parquet and ORC are examples of data formats that do not enable streaming, because the schema and other metadata, which is required to interpret the data, is held in a footer at the bottom of the file, making it necessary to download the entire file before processing any data.
 
@@ -118,6 +118,8 @@ As more commercial and open source tools have added support for Arrow, fast quer
 On the receiving side, data practitioners can maximize speedups by using Arrow-based tools and Arrow libraries, interfaces, and protocols. In 2025, as more projects and vendors implement support for the [ADBC](https://arrow.apache.org/adbc/) standard, we expect to see accelerating growth in the number of tools that can receive query results in Arrow format.
 
 Stay tuned for upcoming posts in this series, which will compare the Arrow format to other data formats and describe the protocols and APIs that clients can use to fetch results in Arrow format.
+
+_________________
 
 [^1]: The transfer format may also be called the wire format or serialization format.
 [^2]: From the 1990s to today, increases in network performance outpaced increases in CPU performance. For example, in the late 1990s, a mainstream desktop CPU could perform roughly 1 GFLOPS and a typical WAN connection speed was 56 Kb/s. Today, a mainstream desktop CPU can perform roughly 100 GFLOPS and WAN connection speeds of around 1 Gb/s are common. So while the CPU performance increased by about 100x, network speed increased by about 10,000x.
