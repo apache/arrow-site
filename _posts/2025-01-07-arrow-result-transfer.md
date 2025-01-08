@@ -82,7 +82,7 @@ As a result of these design choices, Arrow can serve not only as a transfer form
 
 This means that at the source system, if data exists in memory or on disk in Arrow format, that data can be transmitted over the network in Arrow format without any serialization. And at the destination system, Arrow-formatted data can be read off the network into memory or into Arrow files on disk without any deserialization.
 
-The Arrow format was designed to be highly efficient as an in-memory format for analytic operations. Because of this, many columnar data systems have been built using Arrow as their in-memory format. These include Apache DataFusion, cuDF, Dremio, InfluxDB, Polars, and Voltron Data Theseus. When one of these systems is the source or destination of a transfer, ser/de overheads can be fully eliminated. With most other columnar data systems, the proprietary in-memory formats they use are very similar to Arrow. With those systems, serialization to Arrow and deserialization from Arrow format are fast and efficient.
+The Arrow format was designed to be highly efficient as an in-memory format for analytic operations. Because of this, many columnar data systems have been built using Arrow as their in-memory format. These include Apache DataFusion, cuDF, Dremio, InfluxDB, Polars, Velox, and Voltron Data Theseus. When one of these systems is the source or destination of a transfer, ser/de overheads can be fully eliminated. With most other columnar data systems, the proprietary in-memory formats they use are very similar to Arrow. With those systems, serialization to Arrow and deserialization from Arrow format are fast and efficient.
 
 ### 4. The Arrow format enables streaming.
 
