@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "How the Apache Arrow Format Accelerates Query Result Transfer"
-date: "2025-01-07 00:00:00"
+date: "2025-01-10 00:00:00"
 author: Ian Cook, David Li, Matt Topol
 categories: [application]
 ---
