@@ -51,7 +51,7 @@ The Apache Arrow open source project defines a [data format](https://arrow.apach
 
 ### 1. The Arrow format is columnar.
 
-In a columnar (column-oriented) data format, the values for each column in the data are held in contiguous blocks of memory. This is in contrast to row-oriented formats, in which the values for each row are held in contiguous blocks of memory.
+Columnar (column-oriented) data formats hold the values for each column in contiguous blocks of memory. This is in contrast to row-oriented data formats, which hold the values for each row in contiguous blocks of memory.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a logical table containing three rows and five columns.">
@@ -64,7 +64,7 @@ Likewise, many destinations for analytic query results (such as business intelli
 
 So it is increasingly common for both the source format and the target format of a query result to be columnar formats. The most efficient way to transfer data between a columnar source and a columnar target is to use a columnar transfer format. This eliminates the need for a time-consuming transpose of the data from columns to rows at the source during the serialization step and another time-consuming transpose of the data from rows to columns at the destination during the deserialization step.
 
-The Arrow format is a columnar data format. The column-oriented layout of data in the Arrow format is similar—and in some cases identical—to the layout of data in many widely used columnar data source systems and destination systems.
+Arrow is a columnar data format. The column-oriented layout of data in the Arrow format is similar—and in some cases identical—to the layout of data in many widely used columnar source systems and destination systems.
 
 ### 2. The Arrow format is self-describing and type-safe.
 
@@ -127,5 +127,5 @@ Stay tuned for upcoming posts in this series, which will compare the Arrow forma
 _________________
 
 [^1]: The transfer format may also be called the wire format or serialization format.
-[^2]: From the 1990s to today, increases in network performance outpaced increases in CPU performance. For example, in the late 1990s, a mainstream desktop CPU could perform roughly 1 GFLOPS and a typical WAN connection speed was 56 Kb/s. Today, a mainstream desktop CPU can perform roughly 100 GFLOPS and WAN connection speeds of around 1 Gb/s are common. So while the CPU performance increased by about 100x, network speed increased by about 10,000x.
+[^2]: From the 1990s to today, increases in network performance outpaced increases in CPU performance. For example, in the late 1990s, a mainstream desktop CPU could perform roughly 1 GFLOPS and a typical WAN connection speed was 56 Kb/s. Today, a mainstream desktop CPU can perform roughly 100 GFLOPS and WAN connection speeds of around 1 Gb/s are common. So while CPU performance increased by about 100x, network speed increased by about 10,000x.
 [^3]: An upcoming post in this series will compare the Arrow format to these and other formats in more technical detail.
