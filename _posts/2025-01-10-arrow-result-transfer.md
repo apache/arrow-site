@@ -47,7 +47,7 @@ Yet many query results today continue to flow through legacy APIs and protocols 
 
 Enter Arrow.
 
-The Apache Arrow open source project defines a [data format](https://arrow.apache.org/docs/format/Columnar.html){:target="_blank"} that is designed to speed up—and in some cases eliminate—ser/de in query result transfer. Since its creation in 2016, the Arrow format and the multi-language toolbox built around it have gained widespread use, but the technical details of how Arrow is able to slash ser/de overheads remain poorly understood. To help address this, we outline five key attributes of the Arrow format that make this possible.
+The Apache Arrow open source project defines a [data format](https://arrow.apache.org/docs/format/Columnar.html){:target="_blank"} that is designed to speed up—and in many cases eliminate—ser/de in query result transfer. Since its creation in 2016, the Arrow format and the multi-language toolbox built around it have gained widespread use, but the technical details of how Arrow is able to slash ser/de overheads remain poorly understood. To help address this, we outline five key attributes of the Arrow format that make this possible.
 
 ### 1. The Arrow format is columnar.
 
@@ -64,7 +64,7 @@ Likewise, many destinations for analytic query results (such as business intelli
 
 So it is increasingly common for both the source format and the target format of a query result to be columnar formats. The most efficient way to transfer data between a columnar source and a columnar target is to use a columnar transfer format. This eliminates the need for a time-consuming transpose of the data from columns to rows at the source during the serialization step and another time-consuming transpose of the data from rows to columns at the destination during the deserialization step.
 
-Arrow is a columnar data format. The column-oriented layout of data in the Arrow format is similar—and in some cases identical—to the layout of data in many widely used columnar source systems and destination systems.
+Arrow is a columnar data format. The column-oriented layout of data in the Arrow format is similar—and in many cases identical—to the layout of data in many widely used columnar source systems and destination systems.
 
 ### 2. The Arrow format is self-describing and type-safe.
 
@@ -74,16 +74,16 @@ An important property of some self-describing data formats is the ability to enf
 
 When reading data from a non-self-describing, type-unsafe format (such as CSV), all this scanning, inferring, and checking contributes to large deserialization overheads. Worse, such formats can lead to ambiguities, debugging trouble, maintenance challenges, and security vulnerabilities.
 
-The Arrow format is self-describing and enforces type safety. Furthermore, Arrow’s type system is similar—and in some cases identical—to the type systems of many widely used data sources and destinations. This includes most columnar data systems and many row-oriented systems such as Apache Spark and various relational databases. When using the Arrow format, these systems can quickly and safely convert data values between their native types and the corresponding Arrow types.
+The Arrow format is self-describing and enforces type safety. Furthermore, Arrow’s type system is similar to—and in many cases identical to or a superset of—the type systems of many widely used data sources and destinations. This includes most columnar data systems and many row-oriented systems such as Apache Spark and various relational databases. When using the Arrow format, these systems can quickly and safely convert data values between their native types and the corresponding Arrow types.
 
 
 ### 3. The Arrow format enables zero-copy.
 
-A zero-copy operation is one in which data is transferred from one medium to another without creating any intermediate copies. When a data format supports zero-copy operations, this means that its structure in memory is the same as its structure on disk or on the network. So, for example, the data can be read off of the network directly into a usable data structure in memory without performing any intermediate copies or conversions.
+A zero-copy operation is one in which data is transferred from one medium to another without creating any intermediate copies. When a data format supports zero-copy operations, this implies that its structure in memory is the same as its structure on disk or on the network. So, for example, the data can be read off of the network directly into a usable data structure in memory without performing any intermediate copies or conversions.
 
-The Arrow format supports zero-copy operations. Arrow defines a column-oriented tabular data structure called a [record batch](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc){:target="_blank"} which can be held in memory, sent over a network, or stored on disk. The binary structure of an Arrow record batch is the same regardless of which medium it is on. Also, to hold schemas and other metadata, Arrow uses FlatBuffers, a format created by Google which also has the same binary structure regardless of which medium it is on.
+The Arrow format supports zero-copy operations. Arrow defines a column-oriented tabular data structure called a [record batch](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc){:target="_blank"} which can be held in memory, sent over a network, or stored on disk. The binary structure of an Arrow record batch is the same regardless of which medium it is on and which system generated it. Also, to hold schemas and other metadata, Arrow uses FlatBuffers, a format created by Google which also has the same binary structure regardless of which medium it is on.
 
-As a result of these design choices, Arrow can serve not only as a transfer format but also as an in-memory format and on-disk format. This is in contrast to text-based formats such as JSON and CSV, which encode data values as plain text strings separated by delimiters and other structural syntax. To load data from these formats into a usable in-memory data structure, the data must be parsed and decoded. This is also in contrast to binary formats such as Parquet and ORC, which use encodings and compression to reduce the size of the data on disk. To load data from these formats into a usable in-memory data structure, it must be decompressed and decoded.[^3]
+As a result of these design choices, Arrow can serve not only as a transfer format but also as an in-memory format and on-disk format. This is in contrast to text-based formats such as JSON and CSV, and serialized binary formats such as Protocol Buffers and Thrift, which encode data values using dedicated structural syntax. To load data from these formats into a usable in-memory data structure, the data must be parsed and decoded. This is also in contrast to binary formats such as Parquet and ORC, which use encodings and compression to reduce the size of the data on disk. To load data from these formats into a usable in-memory data structure, it must be decompressed and decoded.[^3]
 
 This means that at the source system, if data exists in memory or on disk in Arrow format, that data can be transmitted over the network in Arrow format without any serialization. And at the destination system, Arrow-formatted data can be read off the network into memory or into Arrow files on disk without any deserialization.
 
@@ -93,7 +93,7 @@ The Arrow format was designed to be highly efficient as an in-memory format for 
 
 A streamable data format is one that can be processed sequentially, one chunk at a time, without waiting for the full dataset. When data is being transmitted in a streamable format, the receiving system can begin processing it as soon as the first chunk arrives. This can speed up data transfer in several ways: transfer time can overlap with processing time; the receiving system can use memory more efficiently; and multiple streams can be transferred in parallel, speeding up transmission, deserialization, and processing.
 
-CSV is an example of a streamable data format, because the column names (if included) are in a header at the top of the file, and the lines in the file can be processed sequentially. Parquet and ORC are examples of data formats that do not enable streaming, because the schema and other metadata, which are required to process the data, are held in a footer at the bottom of the file, making it necessary to download the entire file before any processing can begin.
+CSV is an example of a streamable data format, because the column names (if included) are in a header at the top of the file, and the lines in the file can be processed sequentially. Parquet and ORC are examples of data formats that do not enable streaming, because the schema and other metadata, which are required to process the data, are held in a footer at the bottom of the file, making it necessary to download the entire file (or seek to the end of the file and download the footer separately) before any processing can begin.[^4]
 
 Arrow is a streamable data format. A dataset can be represented in Arrow as a sequence of record batches that all have the same schema. Arrow defines a [streaming format](https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format){:target="_blank"} consisting of the schema followed by one or more record batches. A system receiving an Arrow stream can process the record batches sequentially as they arrive.
 
@@ -128,4 +128,5 @@ _________________
 
 [^1]: The transfer format may also be called the wire format or serialization format.
 [^2]: From the 1990s to today, increases in network performance outpaced increases in CPU performance. For example, in the late 1990s, a mainstream desktop CPU could perform roughly 1 GFLOPS and a typical WAN connection speed was 56 Kb/s. Today, a mainstream desktop CPU can perform roughly 100 GFLOPS and WAN connection speeds of around 1 Gb/s are common. So while CPU performance increased by about 100x, network speed increased by about 10,000x.
-[^3]: An upcoming post in this series will compare the Arrow format to these and other formats in more technical detail.
+[^3]: This is not intended to imply that Arrow is faster than Parquet or ORC in other applications such as archival storage. An upcoming post in this series will compare the Arrow format to these and other formats in more technical detail and describe how they often complement each other.
+[^4]: This is not intended to imply that CSV will transfer results faster than Parquet or ORC. When comparing the transfer performance of CSV to Parquet or ORC, the other attributes described here will typically outweigh this one.
