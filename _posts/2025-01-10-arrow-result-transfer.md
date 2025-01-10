@@ -54,8 +54,8 @@ The Apache Arrow open source project defines a [data format](https://arrow.apach
 Columnar (column-oriented) data formats hold the values for each column in contiguous blocks of memory. This is in contrast to row-oriented data formats, which hold the values for each row in contiguous blocks of memory.
 
 <figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a logical table containing three rows and five columns.">
-  <figcaption>Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a logical table containing three rows and five columns.</figcaption>
+  <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three rows and five columns.">
+  <figcaption>Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three rows and five columns.</figcaption>
 </figure>
 
 High-performance analytic databases, data warehouses, query engines, and storage systems have converged on columnar architecture because it speeds up the most common types of analytic queries. Examples of modern columnar query systems include Amazon Redshift, Apache DataFusion, ClickHouse, Databricks Photon Engine, DuckDB, Google BigQuery, Microsoft Azure Synapse Analytics, OpenText Analytics Database (Vertica), Snowflake, and Voltron Data Theseus.
@@ -98,8 +98,8 @@ CSV is an example of a streamable data format, because the column names (if incl
 Arrow is a streamable data format. A dataset can be represented in Arrow as a sequence of record batches that all have the same schema. Arrow defines a [streaming format](https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format){:target="_blank"} consisting of the schema followed by one or more record batches. A system receiving an Arrow stream can process the record batches sequentially as they arrive.
 
 <figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-2-arrow-stream.png" width="100%" class="img-responsive" alt="Figure 2: An illustration of an Arrow stream transmitting the data from a logical table with three columns. The first record batch contains the values for the first three rows, the second record batch contains the values for the next three rows, and so on. Actual Arrow record batches might contain thousands to millions of rows.">
-  <figcaption>Figure 2: An illustration of an Arrow stream transmitting the data from a logical table with three columns. The first record batch contains the values for the first three rows, the second record batch contains the values for the next three rows, and so on. Actual Arrow record batches might contain thousands to millions of rows.</figcaption>
+  <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-2-arrow-stream.png" width="100%" class="img-responsive" alt="Figure 2: An illustration of an Arrow stream transmitting data from a table with three columns. The first record batch contains the values for the first three rows, the second record batch contains the values for the next three rows, and so on. Actual Arrow record batches might contain thousands to millions of rows.">
+  <figcaption>Figure 2: An illustration of an Arrow stream transmitting data from a table with three columns. The first record batch contains the values for the first three rows, the second record batch contains the values for the next three rows, and so on. Actual Arrow record batches might contain thousands to millions of rows.</figcaption>
 </figure>
 
 ### 5. The Arrow format is universal.
@@ -128,5 +128,5 @@ _________________
 
 [^1]: The transfer format may also be called the wire format or serialization format.
 [^2]: From the 1990s to today, increases in network performance outpaced increases in CPU performance. For example, in the late 1990s, a mainstream desktop CPU could perform roughly 1 GFLOPS and a typical WAN connection speed was 56 Kb/s. Today, a mainstream desktop CPU can perform roughly 100 GFLOPS and WAN connection speeds of around 1 Gb/s are common. So while CPU performance increased by about 100x, network speed increased by about 10,000x.
-[^3]: This is not intended to imply that Arrow is faster than Parquet or ORC in other applications such as archival storage. An upcoming post in this series will compare the Arrow format to these and other formats in more technical detail and describe how they often complement each other.
-[^4]: This is not intended to imply that CSV will transfer results faster than Parquet or ORC. When comparing the transfer performance of CSV to Parquet or ORC, the other attributes described here will typically outweigh this one.
+[^3]: This does not imply that Arrow is faster than Parquet or ORC in other applications such as archival storage. An upcoming post in this series will compare the Arrow format to these and other formats in more technical detail and describe how they often complement each other.
+[^4]: This does not imply that CSV will transfer results faster than Parquet or ORC. When comparing the transfer performance of CSV to Parquet or ORC, the other attributes described here will typically outweigh this one.
