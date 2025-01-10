@@ -1,9 +1,14 @@
 ---
 layout: post
 title: "How the Apache Arrow Format Accelerates Query Result Transfer"
+description: "Arrow speeds up query result transfer by slashing (de)serialization overheads. We outline five key attributes of the Arrow format that enable this."
 date: "2025-01-10 00:00:00"
 author: Ian Cook, David Li, Matt Topol
 categories: [application]
+image:
+  path: /img/arrow-result-transfer/part-1-share-image.png
+  height: 1200
+  width: 705
 ---
 
 <!--
