@@ -26,10 +26,12 @@ limitations under the License.
 
 ## Current Version: {{site.data.versions['current'].number}} ({{site.data.versions['current'].date}})
 
-See the [release notes][10] for more about what's new. For information on previous releases, see [here][19]. Rust and Julia libraries are released separately. See the following pages for details:
+See the [release notes][release-notes] for more about what's new. For information on previous releases, see [release list][release-list]. Go, Java, Julia and Rust libraries are released separately. See the following pages for details:
 
-* Rust: [documentation for arrow crate][26]
-* Julia: [repository for Arrow.jl package][27]
+* Go: [repository for Apache Arrow Go][arrow-go]
+* Java: [repository for Apache Arrow Java][arrow-java]
+* Julia: [repository for Arrow.jl package][arrow-julia]
+* Rust: [documentation for arrow crate][arrow-rust]
 
 This page is a reference listing of release artifacts and package managers. For language-specific user guides, see the pages listed in the "Documentation" menu above.
 
@@ -37,53 +39,32 @@ This page is a reference listing of release artifacts and package managers. For 
 
 ### Source Release
 
-* **Source Release**: [{{site.data.versions['current'].tarball-name}}][6]
-* **Verification**: [asc signature][13], [sha256 checksum][14], [sha512 checksum][15], ([verification instructions][12])
-* [Git tag {{site.data.versions['current'].git-tag}}][2]
-* [GPG keys for release signatures][11]
-
-### Java Packages
-
-[Java Artifacts on Maven Central][4]
+* **Source Release**: [{{site.data.versions['current'].tarball-name}}][tarball]
+* **Verification**: [asc signature][signature], [sha256 checksum][checksum-sha256], [sha512 checksum][checksum-sha512], ([verification instructions][how-to-verify])
+* [Git tag {{site.data.versions['current'].git-tag}}][git-tag]
+* [GPG keys for release signatures][gpg-keys]
 
 ### Python Wheels
 
 We have provided official binary wheels on PyPI for Linux, macOS, and Windows:
 
 ```shell
-pip install pyarrow=={{site.data.versions['current'].pinned_number}}
+pip install 'pyarrow=={{site.data.versions['current'].pinned_number}}'
 ```
 
-We recommend pinning `{{site.data.versions['current'].pinned_number}}`
-in `requirements.txt` to install the latest patch release.
+We recommend pinning `{{site.data.versions['current'].pinned_number}}` in `requirements.txt` to install the latest patch release.
 
-These include the Apache Arrow and Apache Parquet C++ binary libraries bundled
-with the wheel.
+These include the Apache Arrow and Apache Parquet C++ binary libraries bundled with the wheel.
 
-### Go Module
+### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu, AlmaLinux, CentOS, Red Hat Enterprise Linux, Amazon Linux and Oracle Linux
 
-The Go Module is tagged with its version and can be easily installed with `go get`:
+We have provided APT and Yum repositories for Apache Arrow C++ and Apache Arrow GLib (C). Here are supported platforms:
 
-```shell
-go get github.com/apache/arrow/go/v{{site.data.versions['current'].major_number}}@v{{site.data.versions['current'].number}}
-```
-
-The Apache Arrow module can then be imported using:
-
-```go
-import "github.com/apache/arrow/go/v{{site.data.version['current'].major_number}}/arrow"
-```
-
-### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu, AlmaLinux, CentOS and Amazon Linux
-
-We have provided APT and Yum repositories for Apache Arrow C++ and
-Apache Arrow GLib (C). Here are supported platforms:
-
-* Debian GNU/Linux bullseye
 * Debian GNU/Linux bookworm
 * Debian GNU/Linux trixie
 * Ubuntu 20.04 LTS
 * Ubuntu 22.04 LTS
+* Ubuntu 24.04 LTS
 * AlmaLinux 8
 * AlmaLinux 9
 * CentOS 7
@@ -182,34 +163,35 @@ sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
 
 We have provided NuGet packages for Apache Arrow C#:
 
-* [Apache.Arrow][22]
-* [Apache.Arrow.Flight][23]
-* [Apache.Arrow.Flight.AspNetCore][24]
+* [Apache.Arrow][arrow-csharp-arrow]
+* [Apache.Arrow.Compression][arrow-csharp-arrow-compression]
+* [Apache.Arrow.Flight][arrow-csharp-arrow-flight]
+* [Apache.Arrow.Flight.AspNetCore][arrow-csharp-arrow-flight-asp-net-core]
 
 ## Other Installers
 
 For convenience, we also provide packages through several package managers. Many of them are provided as binary, built from the source release. As the Apache Arrow PMC has not explicitly voted on these packages, they are technically considered unofficial releases.
 
-### C++ and Python Conda Packages
+### C++, GLib (C), Python and R Conda Packages
 
-Binary conda packages are on [conda-forge][5] for Linux (x86\_64, aarch64, ppc64le), macOS (x86\_64 and arm64), and Windows (x86\_64)
+Binary conda packages are on [conda-forge][conda-forge] for Linux (x86\_64, aarch64, ppc64le), macOS (x86\_64 and arm64), and Windows (x86\_64)
 for the following versions:
 
-* Python 3.8, 3.9, 3.10, 3.11
-* R 4.1, 4.2, 4.3
+* Python 3.9, 3.10, 3.11, 3.12, 3.13
+* R 4.3, 4.4
 
 Install them with:
 
 ```shell
-conda install arrow-cpp={{site.data.versions['current'].pinned_number}} -c conda-forge
+conda install libarrow-all={{site.data.versions['current'].pinned_number}} -c conda-forge
+conda install arrow-c-glib={{site.data.versions['current'].pinned_number}} -c conda-forge
 conda install pyarrow={{site.data.versions['current'].pinned_number}} -c conda-forge
 conda install r-arrow={{site.data.versions['current'].pinned_number}} -c conda-forge
 ```
 
 ### C++ and GLib (C) Packages on Homebrew
 
-On macOS, you can install the C++ library using
-[Homebrew][17]:
+On macOS, you can install the C++ library using [Homebrew][homebrew]:
 
 ```shell
 brew install apache-arrow
@@ -223,30 +205,35 @@ brew install apache-arrow-glib
 
 ### C++ and GLib (C) Packages for MSYS2
 
-The MSYS2 packages include [Apache Arrow C++ and GLib (C)
-package][16]. You can install the package by `pacman`.
+The MSYS2 packages include [Apache Arrow C++ and GLib (C) package][msys2]. You can install the package by `pacman`.
 
-UCRT 64-bit version:
+GCC + x86\_64 + UCRT version:
 
 ```shell
 pacman -S --noconfirm mingw-w64-ucrt-x86_64-arrow
 ```
 
-64-bit version:
+GCC + x86\_64 version:
 
 ```shell
 pacman -S --noconfirm mingw-w64-x86_64-arrow
 ```
 
-32-bit version:
+Clang + x86\_64 version:
 
 ```shell
-pacman -S --noconfirm mingw-w64-i686-arrow
+pacman -S --noconfirm mingw-w64-clang-x86_64-arrow
+```
+
+Clang + aarch64 version:
+
+```shell
+pacman -S --noconfirm mingw-w64-clang-aarch64-arrow
 ```
 
 ### C++ Package on vcpkg
 
-You can download and install Apache Arrow C++ using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
+You can download and install Apache Arrow C++ using the [vcpkg][vcpkg] dependency manager:
 
 ```shell
 git clone https://github.com/Microsoft/vcpkg.git
@@ -256,11 +243,20 @@ cd vcpkg
 ./vcpkg install arrow
 ```
 
-The Apache Arrow C++ port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request][18] on the vcpkg repository.
+The Apache Arrow C++ port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request on the vcpkg repository][vcpkg].
+
+### C++ Package on Conan
+
+You can download and install Apache Arrow C++ using the [Conan][conan] package manager. For example, you can use the following `conanfile.txt`:
+
+```ini
+[requires]
+arrow/{{site.data.versions['current'].number}}
+```
 
 ### R Package on CRAN
 
-Install the R package from [CRAN][20] with
+Install the R package from [CRAN][cran] with
 
 ```r
 install.packages("arrow")
@@ -268,7 +264,7 @@ install.packages("arrow")
 
 ### Ruby Packages on RubyGems
 
-Install the Ruby packages for Ruby 3.0, 3.1 and 3.2 from [RubyGems][25] with
+Install the Ruby packages for maintained Ruby from [RubyGems][rubygems] with:
 
 ```shell
 gem install red-arrow
@@ -280,24 +276,27 @@ gem install red-gandiva # For Gandiva support
 gem install red-parquet # For Apache Parquet support
 ```
 
-[2]: {{site.data.versions['current'].github-tag-link}}
-[4]: {{site.data.versions['current'].java-artifacts}}
-[5]: https://conda-forge.github.io
-[6]: {{site.data.versions['current'].tarball-url}}
-[10]: {{ site.baseurl }}/release/{{site.data.versions['current'].number}}.html
-[11]: https://downloads.apache.org/arrow/KEYS
-[12]: https://www.apache.org/dyn/closer.cgi#verify
-[13]: {{site.data.versions['current'].asc}}
-[14]: {{site.data.versions['current'].sha256}}
-[15]: {{site.data.versions['current'].sha512}}
-[16]: https://github.com/msys2/MINGW-packages/tree/HEAD/mingw-w64-arrow
-[17]: https://brew.sh/
-[18]: https://github.com/Microsoft/vcpkg
-[19]: {{ site.baseurl }}/release/
-[20]: https://cran.r-project.org/
-[22]: https://www.nuget.org/packages/Apache.Arrow/
-[23]: https://www.nuget.org/packages/Apache.Arrow.Fligth/
-[24]: https://www.nuget.org/packages/Apache.Arrow.Flight.AspNetCore/
-[25]: https://rubygems.org/
-[26]: https://docs.rs/crate/arrow/latest
-[27]: https://github.com/apache/arrow-julia/#readme
+[arrow-csharp-arrow-compression]: https://www.nuget.org/packages/Apache.Arrow.Compression/
+[arrow-csharp-arrow-flight-asp-net-core]: https://www.nuget.org/packages/Apache.Arrow.Flight.AspNetCore/
+[arrow-csharp-arrow-flight]: https://www.nuget.org/packages/Apache.Arrow.Flight/
+[arrow-csharp-arrow]: https://www.nuget.org/packages/Apache.Arrow/
+[arrow-go]: https://github.com/apache/arrow-go/#readme
+[arrow-java]: https://github.com/apache/arrow-java/#readme
+[arrow-julia]: https://github.com/apache/arrow-julia/#readme
+[arrow-rust]: https://docs.rs/crate/arrow/latest
+[checksum-sha256]: {{site.data.versions['current'].sha256}}
+[checksum-sha512]: {{site.data.versions['current'].sha512}}
+[conan]: https://conan.io/
+[conda-forge]: https://conda-forge.org/
+[cran]: https://cran.r-project.org/
+[git-tag]: {{site.data.versions['current'].github-tag-link}}
+[gpg-keys]: https://downloads.apache.org/arrow/KEYS
+[homebrew]: https://brew.sh/
+[how-to-verify]: https://www.apache.org/dyn/closer.lua#verify
+[msys2]: https://github.com/msys2/MINGW-packages/tree/HEAD/mingw-w64-arrow
+[release-list]: {{ site.baseurl }}/release/
+[release-notes]: {{ site.baseurl }}/release/{{site.data.versions['current'].number}}.html
+[rubygems]: https://rubygems.org/
+[signature]: {{site.data.versions['current'].asc}}
+[tarball]: {{site.data.versions['current'].tarball-url}}
+[vcpkg]: https://github.com/Microsoft/vcpkg

@@ -100,19 +100,13 @@ to `_site/` locally by the following command line:
 JEKYLL_ENV=production bundle exec rake generate
 ```
 
-## Using Docker
+## Using Docker Compose
 
-If you don't wish to change or install `ruby` and `nodejs` locally, you can use docker to build and preview the site with a command like:
+If you don't wish to change or install `ruby` and `nodejs` locally,
+you can use Docker Compose to build and preview the site with a command like:
 
 ```shell
-docker run -v `pwd`:/arrow-site -p 4000:4000 -it ruby bash
-cd arrow-site
-apt-get update
-apt-get install -y npm
-gem install bundler
-bundle install
-# Serve using local container address
-bundle exec rake HOST=0.0.0.0
+docker compose run
 ```
 
 Then open http://localhost:4000 locally
