@@ -28,8 +28,7 @@ Navigate to the release page for downloads and the changelog.
 
 * [19.0.1 (16 February 2025)][1]
 * [19.0.0 (16 January 2025)][2]
-* [18.1.0 (24 November 2024)
-18.1.0 (2024-11-24)][3]
+* [18.1.0 (24 November 2024)][3]
 * [18.0.0 (28 October 2024)][4]
 * [17.0.0 (16 July 2024)][5]
 * [16.1.0 (14 May 2024)][6]
