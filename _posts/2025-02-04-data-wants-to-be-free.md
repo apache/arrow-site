@@ -50,7 +50,7 @@ Arrow as a data interchange format for databases and query engines._
 
 As data practitioners, we often find our data “held hostage”. Instead of being
 able to use data as soon as we get it, we have to spend time—time to parse and
-clean up inefficient CSV files, time to wait for an outdated query engine to
+clean up inefficient and messy CSV files, time to wait for an outdated query engine to
 struggle with a few gigabytes of data, and time to wait for the data to make
 it across a socket. It’s that last point we’ll focus on today. In an age of
 multi-gigabit networks, why is it even a problem in the first place? And it is
@@ -67,7 +67,7 @@ PostgreSQL and Arrow encode the same data to illustrate the impact of the data
 serialization format. Then we’ll tour various ways to build protocols with
 Arrow, like Arrow HTTP and Arrow Flight, and how you might use each of them.
 
-# PostgreSQL vs Arrow: Data Serialization
+## PostgreSQL vs Arrow: Data Serialization
 
 Let’s compare the [PostgreSQL binary
 format](https://www.postgresql.org/docs/current/sql-copy.html#id-1.9.3.55.9.4)
@@ -264,38 +264,41 @@ How does Arrow compare? We can use [ADBC](https://arrow.apache.org/adbc/current/
 
 Arrow looks quite…intimidating…at first glance. There’s a giant header, and lots of things that don’t seem related to our dataset at all, plus mysterious padding that seems to exist solely to take up space. But the important thing is that **the overhead is fixed**. Whether you’re transferring one row or a billion, the overhead doesn’t change. And unlike PostgreSQL, **no per-value parsing is required**.
 
-Instead of putting lengths of values everywhere, Arrow groups values of the same column (and hence same type) together, so it just needs the length of the buffer. Strings do still require a length per value, but the overhead isn’t added where it isn’t otherwise needed. And nullability is instead stored in a bitmap, which is omitted if there aren’t any NULL values in the first place, saving space. Because of that, more rows of data doesn’t increase the overhead; instead, the more data you have, the less you pay\!
+Instead of putting lengths of values everywhere, Arrow groups values of the same column (and hence same type) together, so it just needs the length of the buffer. Strings do still require a length per value, but the overhead isn’t added where it isn’t otherwise needed. And nullability is instead stored in a bitmap, which is omitted if there aren’t any NULL values in the first place, saving space. Because of that, more rows of data doesn’t increase the overhead; instead, the more data you have, the less you pay.
 
 Even the header isn’t actually the disadvantage it looks like. The header contains the schema, which makes the data stream self-describing. With PostgreSQL, you need to get the schema from somewhere else. So we aren’t making an apples-to-apples comparison in the first place: PostgreSQL still has to transfer the schema, it’s just not part of the “binary format” that we’re looking at here.
 Meanwhile, there’s actually a more insidious problem with PostgreSQL we’ve overlooked so far: alignment. Remember that 2 byte field count at the start of every row? Well, that means all the 4 byte integers after it are now unaligned…so you can’t use them without copying them (or doing a very slow unaligned load). Arrow, on the other hand, strategically adds some padding (overhead) to align the data, and lets you use little-endian or big-endian byte order depending on your data. And Arrow doesn’t apply expensive encodings to the data that require further parsing; there’s just optional compression that can be enabled if it suits your data[^2]. So **you can use Arrow data as-is without having to parse every value**.
 
-That’s the benefit of Arrow being a standardized, in-memory data format. Data coming off the wire is already in Arrow format, and can be passed on directly to DuckDB, pandas, polars, cuDF, DataFusion, or any number of systems. Even if the PostgreSQL format fixed many of these problems we’ve discussed—adding padding to align fields, using little-endian or making endianness configurable, trimming the overhead—you’d still end up having to convert the data to another format to use downstream. And even then, if you really did want to use the PostgreSQL binary format[^3], the documentation rather unfortunately points you to the source code for the details. Arrow, on the other hand, has a specification, documentation, and multiple implementations (including third-party ones) across a dozen languages for you to pick up and use in your own applications.
+That’s the benefit of Arrow being a standardized, in-memory data format. Data coming off the wire is already in Arrow format, and can be passed on directly to [DuckDB](https://duckdb.org), [pandas](https://pandas.pydata.org), [polars](https://pola.rs), [cuDF](https://docs.rapids.ai/api/cudf/stable/), [DataFusion](https://datafusion.apache.org), or any number of systems. Even if the PostgreSQL format fixed many of these problems we’ve discussed—adding padding to align fields, using little-endian or making endianness configurable, trimming the overhead—you’d still end up having to convert the data to another format to use downstream. And even then, if you really did want to use the PostgreSQL binary format[^3], the documentation rather unfortunately points you to the source code for the details. Arrow, on the other hand, has a specification, documentation, and multiple implementations (including third-party ones) across a dozen languages for you to pick up and use in your own applications.
 
-Now, we don’t mean to pick on PostgreSQL here. Obviously, PostgreSQL is a full-featured database with a storied history and many happy users. Arrow isn’t trying to compete in that space anyways. But their domains do intersect. PostgreSQL’s wire protocol has [become a de facto standard](https://datastation.multiprocess.io/blog/2022-02-08-the-world-of-postgresql-wire-compatibility.html), with even brand new products like Google’s AlloyDB using it, and so its design affects many projects[^4]. In fact, AlloyDB is a great example of a shiny new columnar query engine being locked behind a row-oriented client protocol from the 90s. So [Amdahl’s law](https://en.wikipedia.org/wiki/Amdahl's_law) rears its head again—optimizing the “front” and “back” of your data pipeline doesn’t matter when the middle is slow as molasses.
+Now, we don’t mean to pick on PostgreSQL here. Obviously, PostgreSQL is a full-featured database with a storied history, a different set of goals and constraints than Arrow, and many happy users. Arrow isn’t trying to compete in that space anyways. But their domains do intersect. PostgreSQL’s wire protocol has [become a de facto standard](https://datastation.multiprocess.io/blog/2022-02-08-the-world-of-postgresql-wire-compatibility.html), with even brand new products like Google’s AlloyDB using it, and so its design affects many projects[^4]. In fact, AlloyDB is a great example of a shiny new columnar query engine being locked behind a row-oriented client protocol from the 90s. So [Amdahl’s law](https://en.wikipedia.org/wiki/Amdahl's_law) rears its head again—optimizing the “front” and “back” of your data pipeline doesn’t matter when the middle is slow as molasses.
 
-# A quiver of Arrow (projects)
+## A quiver of Arrow (projects)
 
 So if Arrow is so great, how can we actually use it to build our own protocols? Luckily, Arrow comes with a variety of building blocks for different situations.
 
 * We just talked about [**Arrow IPC**](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc) before. Where Arrow is the in-memory format defining how arrays of data are laid out, er, in memory, Arrow IPC defines how to serialize and deserialize Arrow data so it can be sent somewhere else—whether that means being written to a file, to a socket, into a shared buffer, or otherwise. Arrow IPC organizes data as a sequence of messages, making it easy to stream over your favorite transport, like WebSockets.
 * [**Arrow HTTP**](https://github.com/apache/arrow-experiments/tree/main/http) is “just” streaming Arrow IPC over HTTP. It’s standardized so that different clients agree on how exactly to do this, and there’s examples of clients and servers across several languages, how to use HTTP Range requests, using multipart/mixed requests to send combined JSON and Arrow responses, and more. While not a full protocol in and of itself, it’ll fit right in when building REST APIs.
 * [**Disassociated IPC**](https://arrow.apache.org/docs/format/DissociatedIPC.html) combines Arrow with advanced network transports like [UCX](https://openucx.org/) and [libfabric](https://ofiwg.github.io/libfabric/). For those who require the absolute best performance and have the specialized hardware to boot, this allows you to send Arrow data at full throttle, taking advantage of scatter-gather, Infiniband, and more.
-* [**Arrow Flight SQL**](https://arrow.apache.org/docs/format/FlightSql.html) is a fully defined protocol for accessing relational databases. Think of it as an alternative to the full PostgreSQL wire protocol: it defines how to connect to a database, execute queries, fetch results, view the catalog, and so on. For database developers, Flight SQL provides a fully Arrow-native protocol with clients for several programming languages and drivers for ADBC, JDBC, and ODBC—all of which you don’t have to build yourself\!
+* [**Arrow Flight SQL**](https://arrow.apache.org/docs/format/FlightSql.html) is a fully defined protocol for accessing relational databases. Think of it as an alternative to the full PostgreSQL wire protocol: it defines how to connect to a database, execute queries, fetch results, view the catalog, and so on. For database developers, Flight SQL provides a fully Arrow-native protocol with clients for several programming languages and drivers for ADBC, JDBC, and ODBC—all of which you don’t have to build yourself.
 * And finally, [**ADBC**](https://arrow.apache.org/docs/format/ADBC.html) actually isn’t a protocol. Instead, it’s an API abstraction layer for working with databases (like JDBC and ODBC—bet you didn’t see that coming), that’s Arrow-native and doesn’t require transposing or converting columnar data back and forth. ADBC gives you a single API to access data from multiple databases, whether they use Flight SQL or something else under the hood, and if a conversion is absolutely necessary, ADBC handles the details so that you don’t have to build out a dozen connectors on your own.
 
 So to summarize:
 
 * If you’re *using* a database or other data system, you want **ADBC**.
-* If you’re *building* a database, you want **Arrow Flight SQL**.
-* If you’re working with specialized networking hardware (you’ll know if you are—that stuff doesn’t come cheap\!), you want **Disassociated IPC**.
+* If you’re *building* a database, you want [**Arrow Flight SQL**](https://arrow.apache.org/docs/format/FlightSql.html).
+* If you’re working with specialized networking hardware (you’ll know if you are—that stuff doesn’t come cheap), you want the [**Disassociated IPC Protocol**](https://arrow.apache.org/docs/format/DissociatedIPC.html).
 * If you’re *designing* a REST-ish API, you want **Arrow HTTP**. (gRPC users: stay tuned.)
-* And otherwise, you can roll-your-own with **Arrow IPC**.
+* And otherwise, you can roll-your-own with [**Arrow IPC**](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc).
 
 ![][image1]
 
-# Conclusion
+## Conclusion
 
 Existing client protocols can be absurdly wasteful, but Arrow offers better efficiency and avoids design pitfalls from the past. And Arrow makes it easy to build and consume data APIs with a variety of standards like Arrow IPC, Arrow HTTP, and ADBC. By using Arrow serialization in protocols, everyone benefits from easier, faster, and simpler data access, and we can avoid accidentally holding data captive behind slow and inefficient interfaces.
+
+
+## Footnotes
 
 [^1]: Of course, it’s not fully wasted, as null/not-null is data as well. But for accounting purposes, we’ll be consistent and call lengths, padding, bitmaps, etc. “overhead”.
 
