@@ -55,7 +55,7 @@ struggle with a few gigabytes of data, and time to wait for the data to make
 it across a socket. It’s that last point we’ll focus on today. In an age of
 multi-gigabit networks, why is it even a problem in the first place? And it is
 a problem—research by Mark Raasveldt and Hannes Mühleisen in their [2017
-paper](https://ir.cwi.nl/pub/26415/p852-muehleisen.pdf) demonstrated that some
+paper](https://doi.org/10.14778/3115404.3115408) demonstrated that some
 systems take over **ten minutes** to transfer a dataset that should only take
 ten *seconds*.
 
