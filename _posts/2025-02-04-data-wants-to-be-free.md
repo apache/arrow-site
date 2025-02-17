@@ -285,7 +285,7 @@ So if Arrow is so great, how can we actually use it to build our own protocols? 
 
 So to summarize:
 
-* If you’re *using* a database or other data system, you want **ADBC**.
+* If you’re *using* a database or other data system, you want [**ADBC**](https://arrow.apache.org/adbc/).
 * If you’re *building* a database, you want [**Arrow Flight SQL**](https://arrow.apache.org/docs/format/FlightSql.html).
 * If you’re working with specialized networking hardware (you’ll know if you are—that stuff doesn’t come cheap), you want the [**Disassociated IPC Protocol**](https://arrow.apache.org/docs/format/DissociatedIPC.html).
 * If you’re *designing* a REST-ish API, you want **Arrow HTTP**. (gRPC users: stay tuned.)
