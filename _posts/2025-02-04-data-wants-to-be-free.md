@@ -134,12 +134,14 @@ How does Arrow compare? We can use [ADBC](https://arrow.apache.org/adbc/current/
 
 ```console
 >>> import adbc_driver_postgresql.dbapi
->>> import pyarrow.feather
+>>> import pyarrow.ipc
 >>> conn = adbc_driver_postgresql.dbapi.connect("...")
 >>> cur = conn.cursor()
 >>> cur.execute("SELECT * FROM demo")
 >>> data = cur.fetchallarrow()
->>> pyarrow.feather.write_feather(data, "demo.arrow")
+>>> writer = pyarrow.ipc.new_file("demo.arrow", data.schema)
+>>> writer.write_table(data)
+>>> writer.close()
 ```
 
 (Aside: look how easy that is!)
