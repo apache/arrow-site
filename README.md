@@ -106,7 +106,7 @@ If you don't wish to change or install `ruby` and `nodejs` locally,
 you can use Docker Compose to build and preview the site with a command like:
 
 ```shell
-docker compose run
+docker compose up
 ```
 
-Then open http://localhost:4000 locally
+Then open http://localhost:4000 locally.

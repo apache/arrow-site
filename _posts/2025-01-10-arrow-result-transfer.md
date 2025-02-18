@@ -9,6 +9,9 @@ image:
   path: /img/arrow-result-transfer/part-1-share-image.png
   height: 1200
   width: 705
+translations:
+  - language: 日本語
+    post_id: 2025-01-10-arrow-result-transfer-japanese
 ---
 
 <!--

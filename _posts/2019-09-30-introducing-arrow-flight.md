@@ -9,7 +9,7 @@ author: wesm
 categories: [application]
 translations:
   - language: 日本語
-    url: 2019/10/13/introducing-arrow-flight-japanese/
+    post_id: 2019-09-30-introducing-arrow-flight-japanese
 ---
 <!--
 {% comment %}
