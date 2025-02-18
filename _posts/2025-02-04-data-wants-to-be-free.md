@@ -32,16 +32,20 @@ limitations under the License.
 
 <style>
 .a-header {
-  color: purple;
+  color: #984EA3;
+  font-weight: bold;
 }
 .a-data {
-  color: blue;
+  color: #377EB8;
+  font-weight: bold;
 }
 .a-length {
-  color: orange;
+  color: #FF7F00;
+  font-weight: bold;
 }
 .a-padding {
-  color: red;
+  color: #E41A1C;
+  font-weight: bold;
 }
 </style>
 
@@ -50,14 +54,14 @@ Arrow as a data interchange format for databases and query engines._
 
 As data practitioners, we often find our data “held hostage”. Instead of being
 able to use data as soon as we get it, we have to spend time—time to parse and
-clean up inefficient and messy CSV files, time to wait for an outdated query engine to
-struggle with a few gigabytes of data, and time to wait for the data to make
-it across a socket. It’s that last point we’ll focus on today. In an age of
-multi-gigabit networks, why is it even a problem in the first place? And it is
-a problem—research by Mark Raasveldt and Hannes Mühleisen in their [2017
-paper](https://doi.org/10.14778/3115404.3115408) demonstrated that some
-systems take over **ten minutes** to transfer a dataset that should only take
-ten *seconds*.
+clean up inefficient and messy CSV files, time to wait for an outdated query
+engine to struggle with a few gigabytes of data, and time to wait for the data
+to make it across a socket. It’s that last point we’ll focus on today. In an
+age of multi-gigabit networks, why is it even a problem in the first place?
+And make no mistake, it is a problem—research by Mark Raasveldt and Hannes
+Mühleisen in their [2017 paper](https://doi.org/10.14778/3115404.3115408)
+found that some systems take over **ten minutes** to transfer a dataset that
+should only take ten *seconds*.
 
 Why are we waiting 60 times as long as we need to? [As we've argued before,
 serialization overheads plague our
@@ -104,31 +108,31 @@ Then we can look at the actual bytes of the data and annotate them, based on the
 00000008: <span class="a-header">0d 0a 00 00 00 00 00 00  ........</span>  <span class="a-header">and extension</span>
 00000010: <span class="a-header">00 00 00</span> <span class="a-padding">00 03</span> <span class="a-length">00 00 00</span>  <span class="a-header">...</span><span class="a-padding">..</span><span class="a-length">...</span>  <span class="a-padding">Values in row</span>
 00000018: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>  <span class="a-length">Length of value</span>
-00000020: <span class="a-data">01</span> 00 00 00 03 66 6f 6f  <span class="a-data">.</span>....foo  <span class="a-data">Data</span>
-00000028: 00 00 00 08 00 00 00 00  ........
-00000030: 00 00 00 40 00 03 00 00  ...@....
-00000038: 00 08 00 00 00 00 00 00  ........
-00000040: 00 02 00 00 00 0f 61 20  ......a
-00000048: 6c 6f 6e 67 65 72 20 73  longer s
-00000050: 74 72 69 6e 67 00 00 00  tring...
-00000058: 08 00 00 00 00 00 00 00  ........
-00000060: 80 00 03 00 00 00 08 00  ........
-00000068: 00 00 00 00 00 00 03 00  ........
-00000070: 00 00 12 79 65 74 20 61  ...yet a
-00000078: 6e 6f 74 68 65 72 20 73  nother s
-00000080: 74 72 69 6e 67 00 00 00  tring...
-00000088: 08 00 00 00 00 00 00 00  ........
-00000090: 0a ff ff                 ...</code></pre></div></div>
+00000020: <span class="a-data">01</span> <span class="a-length">00 00 00 03</span> <span class="a-data">66 6f 6f</span>  <span class="a-data">.</span><span class="a-length">....</span><span class="a-data">foo</span>  <span class="a-data">Data</span>
+00000028: <span class="a-length">00 00 00 08</span> <span class="a-data">00 00 00 00</span>  <span class="a-length">....</span><span class="a-data">....</span>
+00000030: <span class="a-data">00 00 00 40</span> <span class="a-padding">00 03</span> <span class="a-length">00 00</span>  <span class="a-data">...@</span><span class="a-padding">..</span><span class="a-length">..</span>
+00000038: <span class="a-length">00 08</span> <span class="a-data">00 00 00 00 00 00</span>  <span class="a-length">..</span><span class="a-data">......</span>
+00000040: <span class="a-data">00 02</span> <span class="a-length">00 00 00 0f</span> <span class="a-data">61 20</span>  <span class="a-data">..</span><span class="a-length">....</span><span class="a-data">a </span>
+00000048: <span class="a-data">6c 6f 6e 67 65 72 20 73  longer s</span>
+00000050: <span class="a-data">74 72 69 6e 67</span> <span class="a-length">00 00 00</span>  <span class="a-data">tring</span><span class="a-length">...</span>
+00000058: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>
+00000060: <span class="a-data">80</span> <span class="a-padding">00 03</span> <span class="a-length">00 00 00 08</span> <span class="a-data">00</span>  <span class="a-data">.</span><span class="a-padding">..</span><span class="a-length">....</span><span class="a-data">.</span>
+00000068: <span class="a-data">00 00 00 00 00 00 03</span> <span class="a-length">00</span>  <span class="a-data">.......</span><span class="a-length">.</span>
+00000070: <span class="a-length">00 00 12</span> <span class="a-data">79 65 74 20 61</span>  <span class="a-length">...</span><span class="a-data">yet a</span>
+00000078: <span class="a-data">6e 6f 74 68 65 72 20 73  nother s</span>
+00000080: <span class="a-data">74 72 69 6e 67</span> <span class="a-length">00 00 00</span>  <span class="a-data">tring</span><span class="a-length">...</span>
+00000088: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>
+00000090: <span class="a-data">0a</span> <span class="a-padding">ff ff</span>                 <span class="a-data">.</span><span class="a-padding">..</span>       <span class="a-padding">End of stream</span></code></pre></div></div>
 
-Honestly, PostgreSQL’s binary format is quite understandable, and pretty compact at first glance. But a closer look isn’t so favorable. **PostgreSQL has overheads proportional to the number of rows and columns**:
+Honestly, PostgreSQL’s binary format is quite understandable, and compact at first glance. It's just a series of length-prefixed fields. But a closer look isn’t so favorable. **PostgreSQL has overheads proportional to the number of rows and columns**:
 
 * Every row has a 2 byte prefix for the number of values in the row. *But the data is tabular—we already know this info, and it doesn’t change\!*
 * Every value of every row has a 4 byte prefix for the length of the following data, or \-1 if the value is NULL. *But we know the data types, and those don’t change—most values have a fixed, known length\!*
 * All values are big-endian. *But most of our devices are little-endian, so the data has to be converted.*
 
-Sure, we need to store if a value is NULL or not, but 4 bytes is a *bit* much for a boolean. String data and other non-fixed-length types need per-value lengths, but PostgreSQL adds the length for *every* type of value. And converting big-endian to little-endian is pretty trivial…but it’s still work that stands in between you and your data. To PostgreSQL’s credit, its format is at least cheap and easy to parse—[other formats](https://protobuf.dev/programming-guides/encoding/) get fancy with tricks like “varint” encoding which are quite expensive.
-
 For example, a single column of int32 values would have 4 bytes of data and 6 bytes of overhead per row—**60% is “wasted\!”**[^1] The ratio gets a little better with more columns (but not with more rows); in the limit we approach “only” 50% overhead.
+
+Sure, we need to store if a value is NULL or not, but 4 bytes is a *bit* much for a boolean. String data and other non-fixed-length types need per-value lengths, but PostgreSQL adds the length for *every* type of value. And converting big-endian to little-endian is pretty trivial…but it’s still work that stands in between you and your data. To PostgreSQL’s credit, its format is at least cheap and easy to parse—[other formats](https://protobuf.dev/programming-guides/encoding/) get fancy with tricks like “varint” encoding which are quite expensive.
 
 How does Arrow compare? We can use [ADBC](https://arrow.apache.org/adbc/current/driver/postgresql.html) to pull the PostgreSQL table into an Arrow table, then annotate it like before:
 
@@ -297,7 +301,7 @@ So to summarize:
 * If you’re *using* a database or other data system, you want [**ADBC**](https://arrow.apache.org/adbc/).
 * If you’re *building* a database, you want [**Arrow Flight SQL**](https://arrow.apache.org/docs/format/FlightSql.html).
 * If you’re working with specialized networking hardware (you’ll know if you are—that stuff doesn’t come cheap), you want the [**Disassociated IPC Protocol**](https://arrow.apache.org/docs/format/DissociatedIPC.html).
-* If you’re *designing* a REST-ish API, you want **Arrow HTTP**.
+* If you’re *designing* a REST-ish API, you want [**Arrow HTTP**](https://github.com/apache/arrow-experiments/tree/main/http).
 * And otherwise, you can roll-your-own with [**Arrow IPC**](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc).
 
 ![A flowchart of the decision points.]({{ site.baseurl }}/assets/data_wants_to_be_free/flowchart.png){:class="img-responsive" width="100%"}
