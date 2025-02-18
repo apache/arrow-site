@@ -300,7 +300,7 @@ So to summarize:
 * If you’re *designing* a REST-ish API, you want **Arrow HTTP**.
 * And otherwise, you can roll-your-own with [**Arrow IPC**](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc).
 
-![][image1]
+![A flowchart of the decision points.]({{ site.baseurl }}/assets/data_wants_to_be_free/flowchart.png){:class="img-responsive" width="100%"}
 
 ## Conclusion
 
