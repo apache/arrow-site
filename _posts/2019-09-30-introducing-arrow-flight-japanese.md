@@ -7,7 +7,7 @@ author: wesm
 categories: [application,translation]
 translations:
   - language: 原文（English）
-    url: 2019/10/13/introducing-arrow-flight/
+    post_id: 2019-09-30-introducing-arrow-flight
 ---
 <!--
 {% comment %}
