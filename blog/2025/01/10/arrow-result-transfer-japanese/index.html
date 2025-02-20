@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Apache Arrowフォーマットはどのようにクエリー結果の転送を高速にしているのか | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.3.3" />
+<meta property="og:title" content="Apache Arrowフォーマットはどのようにクエリー結果の転送を高速にしているのか" />
+<meta name="author" content="Ian Cook, David Li, Matt Topol" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Arrowはシリアライズ・デシリアライズのオーバーヘッドを削減することでクエリー結果の転送を高速にします。これに関するArrowフォーマットの5つの特徴を説明します。" />
+<meta property="og:description" content="Arrowはシリアライズ・デシリアライズのオーバーヘッドを削減することでクエリー結果の転送を高速にします。これに関するArrowフォーマットの5つの特徴を説明します。" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2025/01/10/arrow-result-transfer-japanese/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2025/01/10/arrow-result-transfer-japanese/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png" />
+<meta property="og:image:height" content="1200" />
+<meta property="og:image:width" content="705" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-01-10T00:00:00-05:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png" />
+<meta property="twitter:title" content="Apache Arrowフォーマットはどのようにクエリー結果の転送を高速にしているのか" />
+<meta name="twitter:site" content="@ApacheArrow" />
+<meta name="twitter:creator" content="@Ian Cook, David Li, Matt Topol" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Ian Cook, David Li, Matt Topol"},"dateModified":"2025-01-10T00:00:00-05:00","datePublished":"2025-01-10T00:00:00-05:00","description":"Arrowはシリアライズ・デシリアライズのオーバーヘッドを削減することでクエリー結果の転送を高速にします。これに関するArrowフォーマットの5つの特徴を説明します。","headline":"Apache Arrowフォーマットはどのようにクエリー結果の転送を高速にしているのか","image":{"height":1200,"width":705,"url":"https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png","@type":"imageObject"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2025/01/10/arrow-result-transfer-japanese/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"Ian Cook, David Li, Matt Topol"},"url":"https://arrow.apache.org/blog/2025/01/10/arrow-result-transfer-japanese/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic,900">
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Source Code</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Documentation
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="/julia/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/arrow/latest">Rust</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/adbc">ADBC</a>
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="https://datafusion.apache.org">DataFusion</a>
+            <a class="dropdown-item" href="/nanoarrow">nanoarrow</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/index.html">Contributing</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/issues">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Apache Arrowフォーマットはどのようにクエリー結果の転送を高速にしているのか
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    10 Jan 2025
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    Ian Cook, David Li, Matt Topol
+  
+
+  
+    <br />
+    <span class="badge badge-secondary">Translations</span>
+    
+      <a href="/blog/2025/01/10/arrow-result-transfer/">原文（English）</a>
+    
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p><em>この記事はデータベースとクエリーエンジン間のデータ交換フォーマットとしてなぜArrowが使われているのかという謎を解くシリーズの最初の記事です。</em></p>
+
+<p><img src="/img/arrow-result-transfer/part-1-banner.png" width="100%" class="img-responsive" alt="" aria-hidden="true" /></p>
+
+<p>「どうしてこんなに時間がかかるの？」</p>
+
+<p>これはデータを扱っている人がクエリー結果を待っている間によく考える質問です。たくさんの回答が考えられます。もしかしたら、データソースが適切にパーティショニングされていないかもしれません。もしかしたら、SaaSのデータウェアハウスのリソースが足りないのかもしれません。もしかしたら、クエリーオプティマイザーがSQL文を効率的な実行計画に落とし込めなかったのかもしれません。</p>
+
+<p>しかし、驚くほど多くの場合、クエリ結果をクライアントに転送するために非効率なプロトコルを使っていることが答えになります。<a href="https://www.vldb.org/pvldb/vol10/p1022-muehleisen.pdf" target="_blank">2017年の論文</a>では、Mark RaasveldtとHannes Mühleisenは、特にクエリー結果が大きい場合、クエリー結果の転送がクエリー実行時間の大部分を占めることがよくあることを観測しました。しかし、ボトルネックはあなたが予想している場所ではありません。</p>
+
+<p>送信元から受信先へのクエリー結果の転送は次の3つのステップになります。</p>
+
+<ol>
+  <li>送信元：結果を元のフォーマットから転送用のフォーマットにシリアライズ</li>
+  <li>送信元：転送用のフォーマットでネットワーク経由でデータを送信<sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup></li>
+  <li>受信先：転送用のフォーマットのデータを扱いやすいフォーマットにデシリアライズ</li>
+</ol>
+
+<p>ネットワークが遅かった時代は、通常はデータ転送ステップ（ステップ2）がボトルネックでした。そのため、シリアライズステップ（ステップ1）とデシリアライズステップ（ステップ3）を高速にする動機はほとんどありませんでした。その代わり、転送するデータを小さくすることに重点がおかれていました。多くの場合は転送時間を短縮するためにデータを圧縮していました。広く使われているデータベース接続API（ODBCとJDBC）とデータベースクライアントプロトコル（MySQLのクライアント・サーバープロトコルやPostgreSQLのフロントエンド・バックエンドプロトコル）はこの時代に設計されました。しかし、ネットワークは高速になり、転送時間が短縮されたため、ボトルネックはシリアライズステップとデシリアライズステップに移ってきました<sup id="fnref:2"><a href="#fn:2" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>。これは大きな結果を生成するクエリーで特に当てはまります。多くのデータエンジニアリングパイプライン・データ分析パイプラインではこのようなクエリーがよく実行されます。</p>
+
+<p>今でも多くのクエリー結果はレガシーなAPI・プロトコルで転送されています。これらのAPI・プロトコルでは非効率な転送用のフォーマットを使わないといけないので、多くのシリアライズ・デシリアライズオーバーヘッドがあります。<a href="https://www.vldb.org/pvldb/vol14/p534-li.pdf" target="_blank">2021年の論文</a>では、Tianyu LiらはODBCとPostgreSQLプロトコルを使う例を示しました。この例では、総クエリー実行時間の99.996%がシリアライズ・デシリアライズに費やされていました。これは極端なケースですが、90%以上費やされている実例をたくさん見てきました。今では、データエンジニアリングクエリー・データ分析クエリーのために、シリアライズ・デシリアライズを高速にする転送用フォーマットを選択する強い動機があります。</p>
+
+<p>そこでArrowですよ！</p>
+
+<p>Apache Arrowオープンソースプロジェクトは<a href="https://arrow.apache.org/docs/format/Columnar.html" target="_blank">データフォーマット</a>を定義しています。このフォーマットはクエリー結果転送時のシリアライズ・デシリアライズを高速にするために設計されています。多くの場合は、シリアライズ・デシリアライズは不要になります。2016年に作られて以来、Arrowフォーマットおよびこのフォーマットを中心に構築された多言語対応ツールボックスは広く使われるようになりました。しかし、Arrowがどのようにシリアライズ・デシリアライズのオーバーヘッドを削減しているかの技術的な詳細はあまり理解されていません。この問題を解決するために、シリアライズ・デシリアライズのオーバーヘッドを削減することを可能にするArrowフォーマットの5つの特徴を説明します。</p>
+
+<h3 id="1-arrowフォーマットは列指向">1. Arrowフォーマットは列指向</h3>
+
+<p>列指向（カラムナー）データフォーマットは各カラムの値をメモリー上の連続した領域に保持します。これは行指向データフォーマットとは対象的です。行指向データフォーマットは各行の値をメモリー上の連続した領域に保持します。</p>
+
+<figure style="text-align: center;">
+  <img src="/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="図1：3行5列のテーブルの物理メモリーレイアウトは行指向と列指向でどのように違うのか。" />
+  <figcaption>図1：3行5列のテーブルの物理メモリーレイアウトは行指向と列指向でどのように違うのか。</figcaption>
+</figure>
+
+<p>高性能な分析データベース・データウェアハウス・クエリーエンジン・ストレージシステムは列指向アーキテクチャーを採用することが多いです。これは、よく使われる分析クエリーを高速に実行するためです。最新の列指向クエリーシステムは、Amazon Redshift・Apache DataFusion・ClickHouse・Databricks Photon Engine・DuckDB・Google BigQuery・Microsoft Azure Synapse Analytics・OpenText Analytics Database (Vertica)・Snowflake・Voltron Data Theseusなどです。</p>
+
+<p>同様に、分析用クエリー結果の多くの出力先も列指向アーキテクチャーを採用しています。出力先は、たとえば、BIツール・データアプリケーションプラットフォーム・データフレームライブラリー・機械学習プラットフォームなどです。列指向のBIツールは、Amazon QuickSight・Domo・GoodData・Power BI・Qlik Sense・Spotfire・Tableauなどです。列指向のデータフレームライブラリーは、cuDF・pandas・Polarsなどです。</p>
+
+<p>そのため、クエリー結果の送信元のフォーマットと受信先のフォーマットがどちらも列指向フォーマットであることがますます一般的になっています。列指向の送信元と列指向の受信先でもっとも効率的にデータを転送する方法は列指向の転送用フォーマットを使うことです。これにより、行と列を転置するという時間のかかる処理をせずに済みます。行指向の転送用フォーマットを使うと、データ転送元のシリアライズ処理で列を行に転置し、データ受信先のデシリアライズ処理で行を列に転置しないといけません。</p>
+
+<p>Arrowは列指向のデータフォーマットです。Arrowフォーマットのデータの列指向のレイアウトは、広く使われている送信元システム・受信先システムでのデータのレイアウトと似ています。多くのケースでは似ているのではなく同一のレイアウトになっています。</p>
+
+<h3 id="2-arrowフォーマットは自己記述的で型安全">2. Arrowフォーマットは自己記述的で型安全</h3>
+
+<p>自己記述的なデータフォーマットではスキーマ（カラムの名前と型）とスキーマ以外のメタデータ（データの構造を説明するメタデータ）は、データの中に入っています。自己記述的なフォーマットはデータを安全かつ効率的に処理するために必要なすべての情報を受信したシステムに提供します。一方、自己記述的ではないフォーマットでは、受信したシステムはスキーマや構造を推測する（これは遅くエラーが発生しやすい処理）か、別途スキーマを取得しなければいけません。</p>
+
+<p>いくつかの自己記述的なデータフォーマットの重要な特徴は型安全を強制することです。フォーマットが型安全を強制する場合、データの値は指定された型に準拠していることが保証されるため、受信したシステムはデータを処理するときに型エラーが発生する可能性を排除できます。一方、型安全を強制しないフォーマットでは、受信したシステムはデータ内の各値の有効性をチェックする（これは計算コストが高い処理）か、データを処理するときに型エラーを処理する必要があります。</p>
+
+<p>自己記述的でなく型安全でもないCSVのようなデータを読むとき、データのスキャン・推測・チェックのすべての処理がデシリアライズの大きなオーバーヘッドになります。さらに悪いことに、このようなフォーマットはあいまいさ・デバッグの問題・メンテナンスの課題・セキュリティの脆弱性につながる可能性があります。</p>
+
+<p>Arrowフォーマットは自己記述的で型安全を強制します。さらに、Arrowの型システムは広く使われているデータ送信元・受信先と似ています。多くのケースでは同じかそれらのスーパーセット（それらよりも表現力が高い）になっています。ここでのデータ送信元・データ受信先には、ほぼすべての列指向データシステムと多くの行指向データシステムが含まれています。たとえば、Apache Sparkやリレーショナル・データベースなどが含まれています。Arrowフォーマットを使うと、これらのシステムはネイティブな型と対応するArrowの型の間ですばやく安全にデータの値を変換できます。</p>
+
+<h3 id="3-arrowフォーマットはゼロコピー可能">3. Arrowフォーマットはゼロコピー可能</h3>
+
+<p>ゼロコピー操作とは、中間コピーをまったく作成せずにあるメディアから別のメディアにデータを転送する操作です。データフォーマットがゼロコピー操作をサポートしている場合、メモリー上の構造はディスク上あるいはネットワーク上の構造と同じになります。そのため、たとえば、メモリー上で使える構造のデータをネットワークから直接読み込めます。このとき、中間コピーや変換をする必要はありません。</p>
+
+<p>Arrowフォーマットはゼロコピー操作をサポートしています。データの値の集まりを保持するために、Arrowは<a href="https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc" target="_blank">レコードバッチ</a>と呼んでいる列指向の表形式のデータ構造を定義しています。Arrowのレコードバッチはメモリー上に保持することもできますし、ネットワーク経由で送信することもできますし、ディスクに保存することもできます。レコードバッチがどのメディアにあってもどのシステムで生成されてもバイナリー構造は変わりません。スキーマと他のメタデータを保存するために、ArrowはFlatBuffersを使っています。FlatBuffersはGoogleが作ったフォーマットです。FlatBuffersも、どのメディア上でも同じバイナリー構造になります。</p>
+
+<p>これらの設計判断により、Arrowは転送用のフォーマットとしてだけでなく、メモリー上のフォーマットとしてもディスク上のフォーマットとしても使えます。これは、JSONやCSVといったテキストベースのフォーマットやProtocol BuffersやThriftといったシリアライズされたバイナリーフォーマットとは対照的です。これらのフォーマットは専用の構文を使ってデータをエンコードします。これらのフォーマットのデータをメモリー上で使える構造にロードするには、データをパースしてデコードする必要があります。これはParquetやORCといったバイナリーフォーマットとも対照的です。これらはディスク上でのデータサイズを削減するためにエンコードしたり圧縮したりします。これらのフォーマットのデータをメモリー上で使える構造にロードするためには、展開してデコードする必要があります<sup id="fnref:3"><a href="#fn:3" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>。</p>
+
+<p>データ送信元のシステムでは、メモリー上あるいはディスク上にArrowフォーマットのデータがあればシリアライズせずにArrowフォーマットでネットワーク越しにデータ転送できるということです。また、データ受信先のシステムでは、デシリアライズせずにネットワークからメモリー上にデータを読み込んだりディスク上にArrowファイルとして書き出したりできるということです。</p>
+
+<p>Arrowフォーマットは非常に効率よく分析操作できるメモリー上のフォーマットとして設計されています。このため、多くの列指向データシステムは内部のメモリー上のフォーマットとしてArrowを採用しています。たとえば、Apache DataFusion・cuDF・Dremio・InfluxDB・Polars・Velox・Voltron Data Theseusなどが採用しています。これらのシステムがデータ送信元あるいはデータ受信先である場合、シリアライズ・デシリアライズのオーバーヘッドは完全になくなります。他の多くの列指向のデータシステムの場合、それらが使っているプロプライエタリなメモリー上のフォーマットはArrowと非常に似ています。それらのシステムでは、Arrowフォーマットとのシリアライズ・デシリアライズ処理は高速で効率的です。</p>
+
+<h3 id="4-arrowフォーマットはストリーム可能">4. Arrowフォーマットはストリーム可能</h3>
+
+<p>ストリーム可能なデータフォーマットはデータセット全体を待たずに1つのチャンクずつ順番に処理できます。データがストリーム可能なフォーマットで転送されているとき、受信先のシステムは最初のチャンクが到着したらすぐに処理を開始できます。これによりいくつかの方法でデータ転送を高速化できます。たとえば、データを処理している間に次のデータを受信できます。たとえば、受信先のシステムはメモリーをより効率的に使うことができます。たとえば、複数のストリームを並列に転送することができます。これにより、データ転送・データのデシリアライズ・データ処理を高速化できます。</p>
+
+<p>たとえば、CSVはストリーム可能なデータフォーマットです。なぜなら、（もし含まれているなら）ファイルの先頭のヘッダーにカラム名があって、ファイル中のそれ以降の行は順番に処理できるからです。一方、ParquetとORCはストリーム可能ではないデータフォーマットです。なぜなら、データを処理するために必要なスキーマと他のメタデータがファイルの最後のフッターにあるからです。処理を始める前にファイル全体をダウンロードする（あるいはファイルの最後まで移動してフッターを別途ダウンロードする）必要があります<sup id="fnref:4"><a href="#fn:4" class="footnote" rel="footnote" role="doc-noteref">4</a></sup>。</p>
+
+<p>Arrowはストリーム可能なデータフォーマットです。データセットは同じスキーマを持つレコードバッチの列としてArrowで表現できます。Arrowは<a href="https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format" target="_blank">ストリーミングフォーマット</a>を定義しています。このフォーマットでは、まずスキーマがあり、そのあと、1つ以上のレコードバッチがあります。Arrowストリームを受信するシステムは受信した順にレコードバッチを処理できます。</p>
+
+<figure style="text-align: center;">
+  <img src="/img/arrow-result-transfer/part-1-figure-2-arrow-stream.png" width="100%" class="img-responsive" alt="図2：3列の表を転送するArrowストリーム。最初のレコードバッチは最初の3行の値だけを含み、2つめのレコードバッチは次の3行のデータが含まれている。実際のArrowレコードバッチには数千から数百万行が含まれていることもある。" />
+  <figcaption>図2：3列の表を転送するArrowストリーム。最初のレコードバッチは最初の3行の値だけを含み、2つめのレコードバッチは次の3行のデータが含まれている。実際のArrowレコードバッチには数千から数百万行が含まれていることもある。</figcaption>
+</figure>
+
+<h3 id="5-arrowフォーマットは汎用的">5. Arrowフォーマットは汎用的</h3>
+
+<p>Arrowは表形式のデータをメモリー上で扱うためのデファクトスタンダードなフォーマットとして登場しました。Arrowは言語に依存しないオープンな標準です。様々な言語向けにArrowデータを扱うためのライブラリーが用意されています。たとえば、C・C++・C#・Go・Java・JavaScript・Julia・MATLAB・Python・R・Ruby・Rust・Swift用の公式ライブラリーがあります。主流の言語で開発されているアプリケーションはArrowフォーマットでデータを送受信する機能をサポートできます。JDBCなどのいくつかデータベース接続APIでは特定の言語のランタイムを使わないといけませんが、Arrowフォーマットではそのような必要はありません。</p>
+
+<p>Arrowの汎用性により、実際のデータシステムを高速化する際の基本的な問題に対処できます。その問題とは、性能向上はシステムのボトルネックに律速するということです。この問題は<a href="https://ja.wikipedia.org/wiki/%E3%82%A2%E3%83%A0%E3%83%80%E3%83%BC%E3%83%AB%E3%81%AE%E6%B3%95%E5%89%87" target="_blank">Amdahlの法則</a>として知られています。実際のデータパイプラインでは、クエリー結果が複数のステージを流れることはよくあり、各ステージでシリアライズ・デシリアライズのオーバーヘッドがあります。たとえば、もし、あなたのデータパイプラインに5つのステージがあり、そのうちの4つのステージでシリアライズ・デシリアライズオーバーヘッドを取り除くことができたとしても、あなたのシステムは速くならないでしょう。なぜなら、残った1ステージのシリアライズ・デシリアライズがパイプライン全体のボトルネックになるからです。</p>
+
+<p>Arrowはどんな技術スタック上でも効率的に動くので、この問題の解決に役立ちます。たとえば、こんなデータフローがあったとしたらどうでしょう。NVIDIAのGPUを積んだワーカーを持つScalaベースの分散バックエンド→JettyベースのHTTPサーバー→Pyodideベースのブラウザーフロントエンドを持つNode.jsベースの機械学習フレームワークを使ってユーザーとやりとりするRailsベースの特徴量エンジニアリングアプリ。問題ありません。Arrowライブラリーはこれらのすべてのコンポーネント間のシリアライズ・デシリアライズオーバーヘッドを取り除けます。</p>
+
+<h3 id="まとめ">まとめ</h3>
+
+<p>より多くの商用・オープンソースのツールがArrowに対応するにつれ、シリアライズ・デシリアライズのないあるいは少ない高速なクエリー転送がますます一般的になっています。現在では、多くのデータベース・データプラットフォーム・クエリーエンジンがArrowフォーマットでクエリー結果を転送できます。たとえば、Databricks・Dremio・Google BigQuery・InfluxDB・Snowflake・Voltron Data Theseusといった商用プロダクトや、Apache DataFusion・Apache Doris・Apache Spark・ClickHouse・DuckDBといったオープンソースプロダクトがサポートしています。これにより大幅に高速化しています。</p>
+
+<ul>
+  <li>Apache Doris: <a href="https://doris.apache.org/blog/arrow-flight-sql-in-apache-doris-for-10x-faster-data-transfer" target="_blank">「20倍から数百倍」高速化</a></li>
+  <li>Google BigQuery: <a href="https://medium.com/google-cloud/announcing-google-cloud-bigquery-version-1-17-0-1fc428512171" target="_blank">最大「31倍高速化」</a></li>
+  <li>Dremio: <a href="https://www.dremio.com/press-releases/dremio-announces-support-for-apache-arrow-flight-high-performance-data-transfer/" target="_blank">「10倍以上高速化」</a></li>
+  <li>DuckDB: <a href="https://duckdb.org/2023/08/04/adbc.html#benchmark-adbc-vs-odbc" target="_blank">「38倍」高速化</a></li>
+  <li>Snowflake: <a href="https://www.snowflake.com/en/blog/fetching-query-results-from-snowflake-just-got-a-lot-faster-with-apache-arrow/" target="_blank">「最大10倍」高速化</a></li>
+</ul>
+
+<p>データ受信側では、データを扱っている人はArrowベースのツール・ライブラリー・インターフェイス・プロトコルを使うことでこの高速化を最大化できます。2025年には、より多くのプロジェクトとベンダーが<a href="https://arrow.apache.org/adbc/" target="_blank">ADBC</a>標準をサポートして、Arrowフォーマットでクエリー結果を受け取ることができるツールの数が増大するでしょう。</p>
+
+<p>このシリーズの今後の記事を楽しみにしていてください。Arrowフォーマットと他のデータフォーマットを比較して、Arrowフォーマットで結果を取得するためにクライアントが使うことのできるプロトコルとAPIを説明します。</p>
+
+<hr />
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1">
+      <p>転送用のフォーマットは「ワイヤーフォーマット」や「シリアライズフォーマット」と呼ばれることもあります。 <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:2">
+      <p>1990年代から現在に至るまで、ネットワーク性能の向上はCPU性能の向上を上回っています。たとえば、1990年代後半は、主流のデスクトップCPUはおおよそ1GFLOPSで処理でき、一般的なWANの接続速度は56Kb/sでした。現在、主流のデスクトップCPUはおおよそ100GFLOPSで処理でき、一般的なWANの接続速度は1Gb/sです。つまり、CPUの性能はおよそ100倍向上していて、ネットワーク速度はおよそ1万倍向上しています。 <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:3">
+      <p>これはアーカイブ用のストレージのようなアプリケーションにおいてもParquetやORCよりArrowの方が速いということではありません。このシリーズの今後の記事では、ArrowフォーマットとParquet・ORC・それ以外のフォーマットをより技術的な詳細に踏み込んで比較します。そして、これらが相互に補完しあうものであることを説明します。 <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:4">
+      <p>これはCSVがParquet・ORCよりも高速に結果を転送できるということではありません。CSVとParquet・ORCの転送性能を比べるときは、通常、この特徴よりもここで説明している他の4つの特徴の影響の方が大きいです。 <a href="#fnref:4" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2025 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
