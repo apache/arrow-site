@@ -30,7 +30,7 @@ limitations under the License.
 
 #### **What *is* Apache Arrow?**
 
-Apache Arrow is a software development platform for building high performance
+Apache Arrow is a multi-language toolbox for building high performance
 applications that process and transport large data sets. It is designed to both
 improve the performance of analytical algorithms and the efficiency of moving
 data from one system (or programming language to another).
