@@ -62,8 +62,8 @@ Apache Arrowオープンソースプロジェクトは[データフォーマッ�
 列指向（カラムナー）データフォーマットは各カラムの値をメモリー上の連続した領域に保持します。これは行指向データフォーマットとは対象的です。行指向データフォーマットは各行の値をメモリー上の連続した領域に保持します。
 
 <figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="図1：3行5列のテーブルの物理メモリーレイアウトは行指向と列指向でどのように違うのか。">
-  <figcaption>図1：3行5列のテーブルの物理メモリーレイアウトは行指向と列指向でどのように違うのか。</figcaption>
+  <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="図1：5行3列のテーブルの物理メモリーレイアウトは行指向と列指向でどのように違うのか。">
+  <figcaption>図1：5行3列のテーブルの物理メモリーレイアウトは行指向と列指向でどのように違うのか。</figcaption>
 </figure>
 
 高性能な分析データベース・データウェアハウス・クエリーエンジン・ストレージシステムは列指向アーキテクチャーを採用することが多いです。これは、よく使われる分析クエリーを高速に実行するためです。最新の列指向クエリーシステムは、Amazon Redshift・Apache DataFusion・ClickHouse・Databricks Photon Engine・DuckDB・Google BigQuery・Microsoft Azure Synapse Analytics・OpenText Analytics Database (Vertica)・Snowflake・Voltron Data Theseusなどです。

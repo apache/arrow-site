@@ -62,8 +62,8 @@ The Apache Arrow open source project defines a [data format](https://arrow.apach
 Columnar (column-oriented) data formats hold the values for each column in contiguous blocks of memory. This is in contrast to row-oriented data formats, which hold the values for each row in contiguous blocks of memory.
 
 <figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three rows and five columns.">
-  <figcaption>Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three rows and five columns.</figcaption>
+  <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three columns and five rows.">
+  <figcaption>Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three columns and five rows.</figcaption>
 </figure>
 
 High-performance analytic databases, data warehouses, query engines, and storage systems have converged on columnar architecture because it speeds up the most common types of analytic queries. Examples of modern columnar query systems include Amazon Redshift, Apache DataFusion, ClickHouse, Databricks Photon Engine, DuckDB, Google BigQuery, Microsoft Azure Synapse Analytics, OpenText Analytics Database (Vertica), Snowflake, and Voltron Data Theseus.
