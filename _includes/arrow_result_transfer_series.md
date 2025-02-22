@@ -20,4 +20,4 @@ limitations under the License.
 Posts in this series:
 
 1. [How the Apache Arrow Format Accelerates Query Result Transfer]({% link _posts/2025-01-10-arrow-result-transfer.md %})
-1. [ Data wants to be free: fast data exchange with Apache Arrow ]({% link _posts/2025-02-28-data-wants-to-be-free.md %})
+1. [Data Wants to Be Free: Fast Data Exchange with Apache Arrow]({% link _posts/2025-02-28-data-wants-to-be-free.md %})
