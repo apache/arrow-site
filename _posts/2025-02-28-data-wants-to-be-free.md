@@ -2,7 +2,7 @@
 layout: post
 title: "Data wants to be free: fast data exchange with Apache Arrow"
 description: ""
-date: "2025-02-04 00:00:00"
+date: "2025-02-28 00:00:00"
 author: David Li, Ian Cook, Matt Topol
 categories: [application]
 image:
@@ -50,8 +50,9 @@ limitations under the License.
 </style>
 
 _This is the second in a series of posts that aims to demystify the use of
-Arrow as a data interchange format for databases and query engines.
-[Read the first post here.](https://arrow.apache.org/blog/2025/01/10/arrow-result-transfer/)_
+Arrow as a data interchange format for databases and query engines._
+
+{% include arrow_result_transfer_series.md %}
 
 As data practitioners, we often find our data “held hostage”. Instead of being
 able to use data as soon as we get it, we have to spend time—time to parse and
