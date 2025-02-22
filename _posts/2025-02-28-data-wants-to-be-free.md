@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Data wants to be free: fast data exchange with Apache Arrow"
+title: "Data Wants to Be Free: Fast Data Exchange with Apache Arrow"
 description: ""
 date: "2025-02-28 00:00:00"
 author: David Li, Ian Cook, Matt Topol
