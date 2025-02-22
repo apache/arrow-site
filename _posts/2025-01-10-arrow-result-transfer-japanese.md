@@ -3,7 +3,7 @@ layout: post
 title: "Apache Arrowフォーマットはどのようにクエリー結果の転送を高速にしているのか"
 description: "Arrowはシリアライズ・デシリアライズのオーバーヘッドを削減することでクエリー結果の転送を高速にします。これに関するArrowフォーマットの5つの特徴を説明します。"
 date: "2025-01-10 00:00:00"
-author: Ian Cook, David Li, Matt Topol
+author: Ian Cook, David Li, Matt Topol, Sutou Kouhei [訳]
 categories: [application]
 image:
   path: /img/arrow-result-transfer/part-1-share-image.png
