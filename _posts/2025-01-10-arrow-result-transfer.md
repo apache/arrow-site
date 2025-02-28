@@ -35,6 +35,8 @@ limitations under the License.
 
 _This is the first in a series of posts that aims to demystify the use of Arrow as a data interchange format for databases and query engines._
 
+{% include arrow_result_transfer_series.md %}
+
 <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-banner.png" width="100%" class="img-responsive" alt="" aria-hidden="true">
 
 “Why is this taking so long?”
