@@ -60,7 +60,9 @@ I'd used DuckDB to process and analyse Parquet data so I knew it could do that v
 The slides listed DuckDB's limitations:  
 <img src="{{ site.baseurl }}/img/adbc-duckdb/duckdb.png" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
 The poster's solution batches data at the application layer managing to scale up ingestion 100x to \~20k inserts/second, noting that they thought that using the DuckDB Appender API could possibly increase this 10x. So, potentially \~200k inserts/second. Yayyyyy...  
+
 <img src="{{ site.baseurl }}/img/adbc-duckdb/Yay.gif" width="30%" class="img-responsive" alt="" aria-hidden="true"> 
+
 Then I noticed the data schema in the slides was flat and had only 4 fields (vs. [OpenRTB](https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#31---object-model-) schema with deeply nested Lists and Structs); and then looked at our monitoring dashboards whereupon I realized that at peak our system was emitting \>250k events/second. \[cue sad trombone\]
 
 Undeterred (and not particularly enamored with the idea of setting up/running/maintaining a Spark cluster), I suspected that Apache Arrow's columnar memory representation might still make DuckDB viable since it has an Arrow API; getting Parquet files would be as easy as running `COPY...TO (format parquet)`.
@@ -182,11 +184,11 @@ How many rows/second could we get if we only inserted the flat, normalized data?
 # Challenges/Learnings
 
 * DuckDB insertions are the bottleneck; network speed, Protobuf deserialization, **building Arrow Records are not**  
-* Records should contain at least 122880 rows (to align with DuckDB storage row group size) for fastest record inserts  
+* Arrow Records being inserted into DuckDB should contain at least 122880 rows (to align with DuckDB storage row group size) for fastest record inserts  
 * DuckDB ADBC API won't let you open more than one database at once (results in a segfault). DuckDB is designed to run only a single instance in memory, with its catalog having the ability to add connections to other databases.  
   * Workaround: Open a single DuckDB database and use [ATTACH](https://duckdb.org/docs/stable/sql/statements/attach.html) to attach other DB files  
 * Flat data is much, much faster to insert than nested data
 
-<img src="{{ site.baseurl }}/img/adbc-duckdb/whatdoesitallmean.gif" width="80%" class="img-responsive" alt="" aria-hidden="true"> 
+<img src="{{ site.baseurl }}/img/adbc-duckdb/whatdoesitallmean.gif" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
 
 ADBC provides DuckDB with a truly high-throughput data ingestion API, unlocking a slew of use cases for using DuckDB with streaming data, making this an ever more useful tool for data practitioners.
