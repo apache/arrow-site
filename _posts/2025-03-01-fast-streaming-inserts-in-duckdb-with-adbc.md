@@ -6,7 +6,7 @@ date: "2025-03-01 00:00:00"
 author: loicalleyne
 categories: [application]
 image:
-  path: /img/adbc-duckdb/adbc-duckdb_w.png
+  path: /img/adbc-duckdb/adbc-duckdb.png
   height: 560
   width: 1200
 ---
