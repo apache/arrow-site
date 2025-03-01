@@ -61,7 +61,9 @@ The slides listed DuckDB's limitations:
 <img src="{{ site.baseurl }}/img/adbc-duckdb/duckdb.png" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
 The poster's solution batches data at the application layer managing to scale up ingestion 100x to \~20k inserts/second, noting that they thought that using the DuckDB Appender API could possibly increase this 10x. So, potentially \~200k inserts/second. Yayyyyy...  
 
-<img src="{{ site.baseurl }}/img/adbc-duckdb/Yay.gif" width="30%" class="img-responsive" alt="" aria-hidden="true"> 
+<figure style="text-align: center;">
+  <img src="{{ site.baseurl }}/img/adbc-duckdb/Yay.gif" width="40%" class="img-responsive" alt="Figure 2: Yay">
+</figure> 
 
 Then I noticed the data schema in the slides was flat and had only 4 fields (vs. [OpenRTB](https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#31---object-model-) schema with deeply nested Lists and Structs); and then looked at our monitoring dashboards whereupon I realized that at peak our system was emitting \>250k events/second. \[cue sad trombone\]
 
