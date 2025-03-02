@@ -41,7 +41,7 @@ DuckDB is rapidly becoming an essential part of data practitioners' toolbox, fin
 
 The company I work for is the leading digital out-of-home marketing platform, including a programmatic ad tech stack. For several years, my technical operations team was making use of logs emitted by the real-time programmatic auction system in the [Apache Avro](http://avro.apache.org/) format. Over time we've built an entire operations and analytics back end using this data. Avro files are row-based which is less than ideal for analytics at scale, in fact it's downright painful. So much so that I developed and contributed an Avro reader feature to the [Apache Arrow  Go](https://github.com/apache/arrow-go) library to be able to convert Avro files to parquet. This data pipeline is now humming along transforming hundreds of GB/day from Avro to Parquet.
 
-Since "any problem in computer science can be solved with another layer of indirection", the original system has grown layers (like an onion) and started to emit other logs, this time in [Apache Parquet](https://parquet.apache.org/) format..  
+Since "any problem in computer science can be solved with another layer of indirection", the original system has grown layers (like an onion) and started to emit other logs, this time in [Apache Parquet](https://parquet.apache.org/) format...  
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/adbc-duckdb/muchrejoicing.gif" width="80%" class="img-responsive" alt="Figure 1: And there was much rejoicing">
   <figcaption>Figure 1: A pseudo-medieval tapestry displaying intrepid data practitioners rejoicing due to a columnar data storage format.</figcaption>
@@ -119,17 +119,17 @@ Reasoning that if unnesting deeply nested data in Arrow Record arrays was causin
 
 *   **Normalizer**: a Bufarrow API used in the in the deserialization function to normalize the message data and append it to another Arrow Record, inserted into a separate table
 
-This approach allowed throughput to go back to levels almost as high as without Normalizer \- flat data is much faster to process.
+This approach allowed throughput to go back to levels almost as high as without Normalizer \- flat data is much faster to process and insert.
 
 # Oh, we're halfway there...livin' on a prayer
 
 Next, I tried opening concurrent connections to multiple databases. **BAM\!** ***Segfault***. DuckDB concurrency model isn't [designed](https://duckdb.org/docs/stable/connect/concurrency.html#handling-concurrency) that way. From within a process only a single database (in-memory or file) can be opened, then other database files can be [attached](https://duckdb.org/docs/stable/sql/statements/attach.html) to the central db's catalog. 
 
-Having already decided to rotate DB files, I decided to make a separate program ([Runner](https://github.com/loicalleyne/quacfka-runner)) to process the database files as they were rotated, running table dumps to parquet and aggregations on normalized data. This meant setting up an RPC connection between the two and figuring out a backpressure mechanism to avoid ‘disk full’ events.
+Having already decided to rotate DB files, I decided to make a separate program ([Runner](https://github.com/loicalleyne/quacfka-runner)) to process the database files as they were rotated, running aggregations on normalized data and table dumps to parquet. This meant setting up an RPC connection between the two and figuring out a backpressure mechanism to avoid `disk full` events.
 
 However having the two running simultaneously was causing memory pressure issues, not to mention massively slowing down the throughput. Upgrading the VM to one with more vCPUs and memory only helped a little, there was clearly some resource contention going on.
 
-Since Go 1.5, the default GOMAXPROCS value is the number of CPU cores. What if it was reduced to "sandbox" the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. [Runner](https://github.com/loicalleyne/quacfka-runner) runs the `COPY...TO...parquet` queries, walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold in [Quafka-Service](https://github.com/loicalleyne/quacfka-service) allows Runner to keep up and avoid a backlog of DB files on disk. 
+Since Go 1.5, the default GOMAXPROCS value is the number of CPU cores available. What if this was reduced to "sandbox" the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. [Runner](https://github.com/loicalleyne/quacfka-runner) runs the `COPY...TO...parquet` queries, walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold in [Quafka-Service](https://github.com/loicalleyne/quacfka-service) allows Runner to keep up and avoid a backlog of DB files on disk. 
 
 # Results
 
