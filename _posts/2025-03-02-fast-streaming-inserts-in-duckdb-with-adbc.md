@@ -117,13 +117,13 @@ The first two either ran into issues of data locality or weren't optimized enoug
 
 Reasoning that if unnesting deeply nested data in Arrow Record arrays was causing data locality issues:
 
-*   **Normalizer**: a Bufarrow API to append normalized data to another Arrow Record in the deserialization function
+*   **Normalizer**: a Bufarrow API used in the in the deserialization function to normalize the message data and append it to another Arrow Record, inserted into a separate table
 
 This approach allowed throughput to go back to levels almost as high as without Normalizer \- flat data is much faster to process.
 
 # Oh, we're halfway there...livin' on a prayer
 
-Next, I tried opening concurrent connections to multiple databases. **BAM\!** ***Segfault***. DuckDB concurrency model isn't [designed](https://duckdb.org/docs/stable/connect/concurrency.html#handling-concurrency) that way. Either everything is read-only, or one central database (in-memory or file) is opened, then other database files can be [attached](https://duckdb.org/docs/stable/sql/statements/attach.html) to the central db's catalog. 
+Next, I tried opening concurrent connections to multiple databases. **BAM\!** ***Segfault***. DuckDB concurrency model isn't [designed](https://duckdb.org/docs/stable/connect/concurrency.html#handling-concurrency) that way. From within a process only a single database (in-memory or file) can be opened, then other database files can be [attached](https://duckdb.org/docs/stable/sql/statements/attach.html) to the central db's catalog. 
 
 Having already decided to rotate DB files, I decided to make a separate program ([Runner](https://github.com/loicalleyne/quacfka-runner)) to process the database files as they were rotated, running table dumps to parquet and aggregations on normalized data. This meant setting up an RPC connection between the two and figuring out a backpressure mechanism to avoid ‘disk full’ events.
 
@@ -186,8 +186,8 @@ How many rows/second could we get if we only inserted the flat, normalized data?
 # Challenges/Learnings
 
 * DuckDB insertions are the bottleneck; network speed, Protobuf deserialization, **building Arrow Records are not**  
-* Arrow Records being inserted into DuckDB should contain at least 122880 rows (to align with DuckDB storage row group size) for fastest record inserts  
-* DuckDB won't let you open more than one database at once (results in a segfault). DuckDB is designed to run only once in a process, with a central database's catalog having the ability to add connections to other databases.   
+* For fastest insertion into DuckDB Arrow Records should contain at least 122880 rows (to align with DuckDB storage row group size)   
+* DuckDB won't let you open more than one database at once within the same process (results in a segfault). DuckDB is designed to run only once in a process, with a central database's catalog having the ability to add connections to other databases.   
   * Workarounds: 
     - Separate processes for writing and reading multiple database files
     - Open a single DuckDB database and use [ATTACH](https://duckdb.org/docs/stable/sql/statements/attach.html) to attach other DB files
