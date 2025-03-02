@@ -1,8 +1,8 @@
 ---
 layout: post
-title: "Fast Streaming Inserts in DuckDB with ADBC"
+title: "Fast Streaming Insertion in DuckDB with ADBC"
 description: "ADBC enables high throughput insertion into DuckDB"
-date: "2025-03-01 00:00:00"
+date: "2025-03-02 00:00:00"
 author: loicalleyne
 categories: [application]
 image:
@@ -32,7 +32,7 @@ limitations under the License.
 
 # Fast Streaming Inserts in DuckDB with ADBC
 
-<img src="{{ site.baseurl }}/img/adbc-duckdb/adbc-duckdb_w.png" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
+<img src="{{ site.baseurl }}/img/adbc-duckdb/adbc-duckdb.png" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
 # TL;DR
 
 DuckDB is rapidly becoming an essential part of data practitioners' toolbox, finding use cases in data engineering, machine learning, and local analytics. In many cases DuckDB has been used to query and process data that has already been saved to storage (file-based or external database) by another process. Arrow Database Connectivity APIs enable high-throughput data processing using DuckDB as the engine.
@@ -58,7 +58,7 @@ Due to the firehose of data the cluster size over time grew to \> 25 nodes and w
 I'd used DuckDB to process and analyse Parquet data so I knew it could do that very quickly. Then I came across this post on LinkedIn ([Real-Time Analytics using Kafka and DuckDB](https://www.linkedin.com/posts/shubham-dhal-349626ba_real-time-analytics-with-kafka-and-duckdb-activity-7258424841538555904-xfU6?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAKpZH4BXyH73YVJKpMXzYU2IejhmIVUbSU)), where someone has built a system for near-realtime analytics in Go using DuckDB.
 
 The slides listed DuckDB's limitations:  
-<img src="{{ site.baseurl }}/img/adbc-duckdb/duckdb.png" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
+<img src="{{ site.baseurl }}/img/adbc-duckdb/duckdb.png" width="100%" class="img-responsive" alt="DuckDB slide" aria-hidden="true"> 
 The poster's solution batches data at the application layer managing to scale up ingestion 100x to \~20k inserts/second, noting that they thought that using the DuckDB Appender API could possibly increase this 10x. So, potentially \~200k inserts/second. Yayyyyy...  
 
 <figure style="text-align: center;">
@@ -79,7 +79,7 @@ To make sure this was really the right solution, I also tried out DuckDB's Appen
 
 In a discussion on the Gopher Slack, Matthew Topol aka [zeroshade](https://github.com/zeroshade) suggested using [ADBC](http://arrow.apache.org/adbc) with its much simpler API. Who is Matt Topol you ask? Just the guy who literally wrote the book on Apache Arrow, that's who ([***In-Memory Analytics with Apache Arrow: Perform fast and efficient data analytics on both flat and hierarchical structured data 2nd Edition***](https://www.packtpub.com/en-ca/product/in-memory-analytics-with-apache-arrow-9781835461228)). It's an excellent resource and guide for working with Arrow.   
 BTW, should you prefer an acronym to remember the name of the book, it's ***IMAAA:PFEDAOBFHSD2E***.  
-<img src="{{ site.baseurl }}/img/adbc-duckdb/imaaapfedaobfhsd2e.png" width="100%" class="img-responsive" alt="" aria-hidden="true">  
+<img src="{{ site.baseurl }}/img/adbc-duckdb/imaaapfedaobfhsd2e.png" width="100%" class="img-responsive" alt="In-Memory Analytics with Apache Arrow: Perform fast and efficient data analytics on both flat and hierarchical structured data 2nd Edition aka IMAAA:PFEDAOBFHSD2E" aria-hidden="true">  
 But I digress. Matt is also a member of the Apache Arrow PMC, a major contributor to Apache Iceberg \- Go and generally a nice, helpful guy.
 
 # ADBC
@@ -99,19 +99,19 @@ I first ran these in series to determine how fast each could run:
   *2025/01/23 23:40:04 ADBC IngestCreateAppend start with 32 connections*  
   *2025/01/23 23:40:25 duck ADBC insert 15728642 records in 21.145649535 secs @ **743824.007783 rows/sec***
 
-<img src="{{ site.baseurl }}/img/adbc-duckdb/holdmybeer.png" width="100%" class="img-responsive" alt="" aria-hidden="true">  
+<img src="{{ site.baseurl }}/img/adbc-duckdb/holdmybeer.png" width="100%" class="img-responsive" alt="20k rows/sec? Hold my beer" aria-hidden="true">  
 
 With this architecture decided, I then started running the workers concurrently, instrumenting the system, profiling my code to identify performance issues and tweaking the settings to maximize throughput. It seemed to me that there was enough performance headroom to allow for in-flight aggregations.
 
-One issue: DuckDB inserts were making the file size increase at a rate of \~8GB/minute, putting inserts on hold to export the Parquet files and release the storage would reduce the overall throughput too much. I decided to rotate database files and have a separate process to run the *COPY...TO*  parquet. 
+One issue: DuckDB inserts from this source were making the file size increase at a rate of ***\~8GB/minute***, putting inserts on hold to export the Parquet files and release the storage would reduce the overall throughput too much. I decided to implement a rotation of database files based on a file size threshold. 
 
-DuckDB being able to query Hive partitioned parquet on disk or in object storage, the analytics part could be decoupled from the data ingestion pipeline by running a separate querying server pointing at wherever the parquet files end up. 
+DuckDB being able to query Hive partitioned parquet on disk or in object storage, the analytics part could be decoupled from the data ingestion pipeline by running a separate querying server pointing at wherever the parquet files would end up. 
 
 Iterating, I created several APIs to try to make the in-flight aggregations efficient enough to keep the overall throughput above my 250k rows/second target. 
 
-The first two either ran into issues of data locality or weren't optimized enough:
+The first two either ran into issues of data locality or weren't optimized (with SIMD/assembler) enough:
 
-*    **CustomArrows** : functions to run on each Arrow Record to create a new Record to insert along with the original  
+*    **CustomArrows** : functions to run on each Arrow Record to create a new Record to insert along with the original
 *    **DuckRunner** : run a series of queries on the database file before rotation
 
 
@@ -123,20 +123,20 @@ This approach allowed throughput to go back to levels almost as high as without 
 
 # Oh, we're halfway there...livin' on a prayer
 
-Next, I tried opening concurrent connections to multiple databases. **BAM\!** ***Segfault***. DuckDB is not designed for concurrency, at least not that way. One central database (in-memory or file) is opened, then others can be [attached](https://duckdb.org/docs/stable/sql/statements/attach.html). 
+Next, I tried opening concurrent connections to multiple databases. **BAM\!** ***Segfault***. DuckDB is not designed for concurrency, at least not that way. One central database (in-memory or file) is opened, then others can be [attached](https://duckdb.org/docs/stable/sql/statements/attach.html) to the central db's catalog. 
 
 Having already decided to rotate DB files, I decided to make a separate program ([Runner](https://github.com/loicalleyne/quacfka-runner)) to process the database files as they were rotated, running table dumps to parquet and aggregations on normalized data. This meant setting up an RPC connection between the two and figuring out a backpressure mechanism to avoid ‘disk full’ events.
 
 However having the two running simultaneously was causing memory pressure issues, not to mention massively slowing down the throughput. Upgrading the VM to one with more vCPUs and memory only helped a little, there was clearly some resource contention going on.
 
-Since Go 1.5, the default GOMAXPROCS value is the number of CPU cores. What if it was reduced to "sandbox" the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. The Runner walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold allows it to keep up and avoid a backlog of DB files on disk. 
+Since Go 1.5, the default GOMAXPROCS value is the number of CPU cores. What if it was reduced to "sandbox" the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. The ([Runner](https://github.com/loicalleyne/quacfka-runner)) walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold in [Quafka-Service](https://github.com/loicalleyne/quacfka-service) allows Runner to keep up and avoid a backlog of DB files on disk. 
 
 # Results
 
-<img src="{{ site.baseurl }}/img/adbc-duckdb/btop.png" width="100%" class="img-responsive" alt="" aria-hidden="true">  
-Note: both runs with GOMAXPROCS set to the number of DuckDB insertion routines
+<img src="{{ site.baseurl }}/img/adbc-duckdb/btop.png" width="100%" class="img-responsive" alt="btop utility showing CPU and memory usage of quacfka-service and runner" aria-hidden="true">  
+Note: both runs with GOMAXPROCS set to 24 (the number of DuckDB insertion routines)
 
-Ingesting the raw data (14 fields with deeply nested LIST.STRUCT.LIST field) \+ normalized data:  
+Ingesting the raw data (14 fields with one deeply nested LIST.STRUCT.LIST field) \+ normalized data:  
   *num\_cpu: 60*  
   *runtime\_os: linux*  
   *kafka\_clients: 5*  
@@ -159,7 +159,7 @@ Ingesting the raw data (14 fields with deeply nested LIST.STRUCT.LIST field) \+ 
   *duckdb\_files\_MB: 38429*  
   *file\_avg\_duration: 33.579s*
 
-How many rows/second could we get if we only inserted the flat, normalized data?  
+How many rows/second could we get if we only inserted the flat, normalized data? (Note: original records are still processed, just not inserted) 
   *num\_cpu: 60*  
   *runtime\_os: linux*  
   *kafka\_clients: 10*  
@@ -181,16 +181,16 @@ How many rows/second could we get if we only inserted the flat, normalized data?
   *duckdb\_files: 5*  
   *duckdb\_files\_MB: 20056*  
   *file\_avg\_duration: 58.975s*  
-<img src="{{ site.baseurl }}/img/adbc-duckdb/onemillionrows.png" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
+<img src="{{ site.baseurl }}/img/adbc-duckdb/onemillionrows.png" width="100%" class="img-responsive" alt="One million rows/second" aria-hidden="true"> 
 
 # Challenges/Learnings
 
 * DuckDB insertions are the bottleneck; network speed, Protobuf deserialization, **building Arrow Records are not**  
 * Arrow Records being inserted into DuckDB should contain at least 122880 rows (to align with DuckDB storage row group size) for fastest record inserts  
 * DuckDB ADBC API won't let you open more than one database at once (results in a segfault). DuckDB is designed to run only a single instance in memory, with its catalog having the ability to add connections to other databases.  
-  * Workaround: Open a single DuckDB database and use [ATTACH](https://duckdb.org/docs/stable/sql/statements/attach.html) to attach other DB files  
+  * Workaround: Open a single DuckDB database and use [ATTACH](https://duckdb.org/docs/stable/sql/statements/attach.html) to attach other DB files
 * Flat data is much, much faster to insert than nested data
 
-<img src="{{ site.baseurl }}/img/adbc-duckdb/whatdoesitallmean.gif" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
+<img src="{{ site.baseurl }}/img/adbc-duckdb/whatdoesitallmean.gif" width="100%" class="img-responsive" alt="Whoopdy doo, what does it all mean Basil?" aria-hidden="true"> 
 
-ADBC provides DuckDB with a truly high-throughput data ingestion API, unlocking a slew of use cases for using DuckDB with streaming data, making this an ever more useful tool for data practitioners.
+ADBC provides DuckDB with a truly high-throughput data ingestion API, unlocking a slew of use cases for using DuckDB with streaming data, making this an ever more useful tool for data practitioners. 
