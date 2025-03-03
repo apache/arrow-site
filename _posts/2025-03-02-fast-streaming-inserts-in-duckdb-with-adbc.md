@@ -41,8 +41,11 @@ DuckDB is rapidly becoming an essential part of data practitioners' toolbox, fin
 
 The company I work for is the leading digital out-of-home marketing platform, including a programmatic ad tech stack. For several years, my technical operations team was making use of logs emitted by the real-time programmatic auction system in the [Apache Avro](http://avro.apache.org/) format. Over time we've built an entire operations and analytics back end using this data. Avro files are row-based which is less than ideal for analytics at scale, in fact it's downright painful. So much so that I developed and contributed an Avro reader feature to the [Apache Arrow  Go](https://github.com/apache/arrow-go) library to be able to convert Avro files to parquet. This data pipeline is now humming along transforming hundreds of GB/day from Avro to Parquet.
 
-Since "any problem in computer science can be solved with another layer of indirection", the original system has grown layers (like an onion) and started to emit other logs, this time in [Apache Parquet](https://parquet.apache.org/) format... And there was much rejoicing. \[NB: Monty Python reference] 
-
+Since "any problem in computer science can be solved with another layer of indirection", the original system has grown layers (like an onion) and started to emit other logs, this time in [Apache Parquet](https://parquet.apache.org/) format...  
+<figure style="text-align: center;">
+  <img src="{{ site.baseurl }}/img/adbc-duckdb/muchrejoicing.gif" width="80%" class="img-responsive" alt="Figure 1: And there was much rejoicing">
+  <figcaption>Figure 1: A pseudo-medieval tapestry displaying intrepid data practitioners rejoicing due to a columnar data storage format.</figcaption>
+</figure> 
 As we learned in Shrek, onions are like ogres: they're green, they have layers and they make you cry, so this rejoicing was rather short-lived, as the mechanism chosen to emit the parquet files was rather inefficient:
 
 * the new onion-layer (ahem...system component) sends Protobuf encoded messages to Kafka topics  
@@ -58,6 +61,10 @@ The slides listed DuckDB's limitations:
 <img src="{{ site.baseurl }}/img/adbc-duckdb/duckdb.png" width="100%" class="img-responsive" alt="DuckDB limitations: Single Pod, *Data should fit in memory, *Low Query Concurrency, *Low Ingest Rate - *Solvable with some efforts" aria-hidden="true"> 
 The poster's solution batches data at the application layer managing to scale up ingestion 100x to \~20k inserts/second, noting that they thought that using the DuckDB Appender API could possibly increase this 10x. So, potentially \~200k inserts/second. Yayyyyy...  
 
+<figure style="text-align: center;">
+  <img src="{{ site.baseurl }}/img/adbc-duckdb/Yay.gif" width="40%" class="img-responsive" alt="Figure 2: Yay">
+</figure> 
+
 Then I noticed the data schema in the slides was flat and had only 4 fields (vs. [OpenRTB](https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#31---object-model-) schema with deeply nested Lists and Structs); and then looked at our monitoring dashboards whereupon I realized that at peak our system was emitting \>250k events/second. \[cue sad trombone\]
 
 Undeterred (and not particularly enamored with the idea of setting up/running/maintaining a Spark cluster), I suspected that Apache Arrow's columnar memory representation might still make DuckDB viable since it has an Arrow API; getting Parquet files would be as easy as running `COPY...TO (format parquet)`.
@@ -72,7 +79,7 @@ To make sure this was really the right solution, I also tried out DuckDB's Appen
 
 In a discussion on the Gopher Slack, Matthew Topol aka [zeroshade](https://github.com/zeroshade) suggested using [ADBC](http://arrow.apache.org/adbc) with its much simpler API. Who is Matt Topol you ask? Just the guy who *literally* wrote the book on Apache Arrow, that's who ([***In-Memory Analytics with Apache Arrow: Perform fast and efficient data analytics on both flat and hierarchical structured data 2nd Edition***](https://www.packtpub.com/en-ca/product/in-memory-analytics-with-apache-arrow-9781835461228)). It's an excellent resource and guide for working with Arrow.   
 BTW, should you prefer an acronym to remember the name of the book, it's ***IMAAA:PFEDAOBFHSD2E***.  
-<img src="{{ site.baseurl }}/img/adbc-duckdb/imaaapfedaobfhsd2e.png" width="100%" class="img-responsive" alt="Episode IX: In-Memory Analytics with Apache Arrow: Perform fast and efficient data analytics on both flat and hierarchical structured data 2nd Edition by Matt Topol" aria-hidden="true">  
+<img src="{{ site.baseurl }}/img/adbc-duckdb/imaaapfedaobfhsd2e.png" width="100%" class="img-responsive" alt="Episode IX: In-Memory Analytics with Apache Arrow: Perform fast and efficient data analytics on both flat and hierarchical structured data 2nd Edition aka IMAAA:PFEDAOBFHSD2E by Matt Topol" aria-hidden="true">  
 But I digress. Matt is also a member of the Apache Arrow PMC, a major contributor to Apache Iceberg \- Go and generally a nice, helpful guy.
 
 # ADBC
@@ -92,7 +99,7 @@ I first ran these in series to determine how fast each could run:
   *2025/01/23 23:40:04 ADBC IngestCreateAppend start with 32 connections*  
   *2025/01/23 23:40:25 duck ADBC insert 15728642 records in 21.145649535 secs @ **743824.007783 rows/sec***
 
-# 20k rows/sec, eh? Hold my beer...
+<img src="{{ site.baseurl }}/img/adbc-duckdb/holdmybeer.png" width="100%" class="img-responsive" alt="20k rows/sec? Hold my beer" aria-hidden="true">  
 
 With this architecture decided, I then started running the workers concurrently, instrumenting the system, profiling my code to identify performance issues and tweaking the settings to maximize throughput. It seemed to me that there was enough performance headroom to allow for in-flight aggregations.
 
@@ -126,7 +133,7 @@ Since Go 1.5, the default GOMAXPROCS value is the number of CPU cores available.
 
 # Results
 
-<img src="{{ site.baseurl }}/img/adbc-duckdb/screenshot-btop.png" width="100%" class="img-responsive" alt="btop utility showing CPU and memory usage of quacfka-service and runner" aria-hidden="true">  
+<img src="{{ site.baseurl }}/img/adbc-duckdb/btop.png" width="100%" class="img-responsive" alt="btop utility showing CPU and memory usage of quacfka-service and runner" aria-hidden="true">  
 Note: both runs with GOMAXPROCS set to 24 (the number of DuckDB insertion routines)
 
 Ingesting the raw data (14 fields with one deeply nested LIST.STRUCT.LIST field) \+ normalized data:  
@@ -174,8 +181,7 @@ How many rows/second could we get if we only inserted the flat, normalized data?
   *duckdb\_files: 5*  
   *duckdb\_files\_MB: 20056*  
   *file\_avg\_duration: 58.975s*  
-
-***One million rows/sec...mwahahaha***
+<img src="{{ site.baseurl }}/img/adbc-duckdb/onemillionrows.png" width="100%" class="img-responsive" alt="One million rows/second" aria-hidden="true"> 
 
 # Challenges/Learnings
 
@@ -187,6 +193,6 @@ How many rows/second could we get if we only inserted the flat, normalized data?
     - Open a single DuckDB database and use [ATTACH](https://duckdb.org/docs/stable/sql/statements/attach.html) to attach other DB files
 * Flat data is much, much faster to insert than nested data
 
-# Whoopdy doo, what does it all mean Basil?
+<img src="{{ site.baseurl }}/img/adbc-duckdb/whatdoesitallmean.gif" width="100%" class="img-responsive" alt="Whoopdy doo, what does it all mean Basil?" aria-hidden="true"> 
 
 ADBC provides DuckDB with a truly high-throughput data ingestion API, unlocking a slew of use cases for using DuckDB with streaming data, making this an ever more useful tool for data practitioners. 
