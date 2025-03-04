@@ -183,6 +183,9 @@ How many rows/second could we get if we only inserted the flat, normalized data?
   *file\_avg\_duration: 58.975s*  
 <img src="{{ site.baseurl }}/img/adbc-duckdb/onemillionrows.png" width="100%" class="img-responsive" alt="One million rows/second" aria-hidden="true"> 
 
+Once deployed, the number of parquet files fall from ~3000 small files per hour to ~12 files per hour. Goodbye small files!
+<img src="{{ site.baseurl }}/img/adbc-duckdb/kip_yes.gif" width="25%" class="img-responsive" alt="Yesss" aria-hidden="true"> 
+
 # Challenges/Learnings
 
 * DuckDB insertions are the bottleneck; network speed, Protobuf deserialization, **building Arrow Records are not**  
