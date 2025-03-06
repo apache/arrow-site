@@ -134,7 +134,7 @@ Since Go 1.5, the default `GOMAXPROCS` value is the number of CPU cores availabl
 # Results
 
 <img src="{{ site.baseurl }}/img/adbc-duckdb/btop.png" width="100%" class="img-responsive" alt="btop utility showing CPU and memory usage of quacfka-service and runner" aria-hidden="true">  
-Note: both runs with GOMAXPROCS set to 24 (the number of DuckDB insertion routines)
+Note: both runs with `GOMAXPROCS` set to 24 (the number of DuckDB insertion routines)
 
 Ingesting the raw data (14 fields with one deeply nested LIST.STRUCT.LIST field) \+ normalized data:  
   *num\_cpu: 60*  
