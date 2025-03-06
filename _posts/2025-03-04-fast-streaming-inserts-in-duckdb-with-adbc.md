@@ -129,7 +129,7 @@ Having already decided to rotate DB files, I decided to make a separate program 
 
 However having the two running simultaneously was causing memory pressure issues, not to mention massively slowing down the throughput. Upgrading the VM to one with more vCPUs and memory only helped a little, there was clearly some resource contention going on.
 
-Since Go 1.5, the default GOMAXPROCS value is the number of CPU cores available. What if this was reduced to "sandbox" the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. [Runner](https://github.com/loicalleyne/quacfka-runner) runs the `COPY...TO...parquet` queries, walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold in [Quafka-Service](https://github.com/loicalleyne/quacfka-service) allows Runner to keep up and avoid a backlog of DB files on disk. 
+Since Go 1.5, the default `GOMAXPROCS` value is the number of CPU cores available. What if this was reduced to "sandbox" the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. [Runner](https://github.com/loicalleyne/quacfka-runner) runs the `COPY...TO...parquet` queries, walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold in [Quafka-Service](https://github.com/loicalleyne/quacfka-service) allows Runner to keep up and avoid a backlog of DB files on disk. 
 
 # Results
 
