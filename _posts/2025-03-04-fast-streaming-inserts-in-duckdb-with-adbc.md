@@ -80,7 +80,7 @@ To make sure this was really the right solution, I also tried out DuckDB's Appen
 In a discussion on the Gopher Slack, Matthew Topol aka [zeroshade](https://github.com/zeroshade) suggested using [ADBC](http://arrow.apache.org/adbc) with its much simpler API. Who is Matt Topol you ask? Just the guy who *literally* wrote the book on Apache Arrow, that's who ([***In-Memory Analytics with Apache Arrow: Accelerate data analytics for efficient processing of flat and hierarchical data structures 2nd Edition***](https://www.packtpub.com/en-ca/product/in-memory-analytics-with-apache-arrow-9781835461228)). It's an excellent resource and guide for working with Arrow.   
 BTW, should you prefer an acronym to remember the name of the book, it's ***IMAAA:ADAFEPOFAHDS2E***.  
 <img src="{{ site.baseurl }}/img/adbc-duckdb/imaaapfedaobfhsd2e.png" width="100%" class="img-responsive" alt="Episode IX: In-Memory Analytics with Apache Arrow: Perform fast and efficient data analytics on both flat and hierarchical structured data 2nd Edition aka IMAAA:PFEDAOBFHSD2E by Matt Topol" aria-hidden="true">  
-But I digress. Matt is also a member of the Apache Arrow PMC, a major contributor to Apache Iceberg \- Go and generally a nice, helpful guy.
+But I digress. Matt is also a member of the Apache Arrow PMC, a major contributor to the Go implementation of Apache Iceberg and generally a nice, helpful guy.
 
 # ADBC
 
