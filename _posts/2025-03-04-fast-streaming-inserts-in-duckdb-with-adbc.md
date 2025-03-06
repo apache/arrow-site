@@ -190,7 +190,7 @@ Once deployed, the number of parquet files fall from ~3000 small files per hour 
 # Challenges/Learnings
 
 * DuckDB insertions are the bottleneck; network speed, Protobuf deserialization, **building Arrow Records are not**  
-* For fastest insertion into DuckDB Arrow Records should contain at least 122880 rows (to align with DuckDB storage row group size)   
+* For fastest insertion into DuckDB, Arrow Record Batches should contain at least 122880 rows (to align with DuckDB storage row group size)   
 * DuckDB won't let you open more than one database at once within the same process (results in a segfault). DuckDB is designed to run only once in a process, with a central database's catalog having the ability to add connections to other databases.   
   * Workarounds: 
     - Separate processes for writing and reading multiple database files
