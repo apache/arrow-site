@@ -51,7 +51,7 @@ As we learned in Shrek, onions are like ogres: they're green, they have layers a
 * the new onion-layer (ahem...system component) sends Protobuf encoded messages to Kafka topics  
 * a Kafka Connect cluster with the S3 sink connector consumes topics and saves the parquet files to object storage
 
-Due to the firehose of data the cluster size over time grew to \> 25 nodes and was producing thousands of small parquet files (13 MB or smaller) an hour. This led to ever-increasing query latency, in some cases breaking our tools due to query timeouts (aka [the Small Files Problem](https://www.dremio.com/blog/compaction-in-apache-iceberg-fine-tuning-your-iceberg-tables-data-files/#h-the-small-files-problem)). Not to mention that running aggregations on the raw data in our data warehouse wasn't fast or cheap.
+Due to the firehose of data, the cluster size over time grew to \> 25 nodes and was producing thousands of small Parquet files (13 MB or smaller) an hour. This led to ever-increasing query latency, in some cases breaking our tools due to query timeouts (aka [the small files problem](https://www.dremio.com/blog/compaction-in-apache-iceberg-fine-tuning-your-iceberg-tables-data-files/#h-the-small-files-problem)). Not to mention that running aggregations on the raw data in our data warehouse wasn't fast or cheap.
 
 # DuckDB to the rescue... I think
 
