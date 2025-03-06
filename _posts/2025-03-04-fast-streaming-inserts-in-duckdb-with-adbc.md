@@ -103,7 +103,7 @@ I first ran these in series to determine how fast each could run:
 
 With this architecture decided, I then started running the workers concurrently, instrumenting the system, profiling my code to identify performance issues and tweaking the settings to maximize throughput. It seemed to me that there was enough performance headroom to allow for in-flight aggregations.
 
-One issue: Despite DuckDB's excellent [lightweight compression](https://duckdb.org/2022/10/28/lightweight-compression.html) inserts from this source were making the file size increase at a rate of ***\~8GB/minute***, putting inserts on hold to export the Parquet files and release the storage would reduce the overall throughput to an unacceptable level. I decided to implement a rotation of database files based on a file size threshold. 
+One issue: Despite DuckDB's excellent [lightweight compression](https://duckdb.org/2022/10/28/lightweight-compression.html), inserts from this source were making the file size increase at a rate of ***\~8GB/minute***. Putting inserts on hold to export the Parquet files and release the storage would reduce the overall throughput to an unacceptable level. I decided to implement a rotation of database files based on a file size threshold. 
 
 DuckDB being able to query Hive partitioned parquet on disk or in object storage, the analytics part could be decoupled from the data ingestion pipeline by running a separate querying server pointing at wherever the parquet files would end up. 
 
