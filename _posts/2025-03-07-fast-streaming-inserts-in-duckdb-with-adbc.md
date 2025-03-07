@@ -184,7 +184,7 @@ total_rows_per_second:  <span class="a-padding">806_210.41</span>
 transfer_rate:          <span class="a-header">500.86 MB/second</span>  
 duckdb_files:           <span class="a-header">9</span>  
 duckdb_files_MB:        <span class="a-header">38429</span>
-file_avg_duration:      <span class="a-header">33.579s</code></pre></div></div>
+file_avg_duration:      <span class="a-header">33.579s</span></code></pre></div></div>
 
 How many rows/second could we get if we only inserted the flat, normalized data? (Note: original records are still processed, just not inserted):
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
