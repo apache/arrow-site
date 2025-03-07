@@ -2,7 +2,7 @@
 layout: post
 title: "Fast Streaming Inserts in DuckDB with ADBC"
 description: "ADBC enables high throughput insertion into DuckDB"
-date: "2025-03-04 00:00:00"
+date: "2025-03-10 00:00:00"
 author: loicalleyne
 categories: [application]
 image:
@@ -83,6 +83,11 @@ BTW, should you prefer an acronym to remember the name of the book, it's ***IMAA
 But I digress. Matt is also a member of the Apache Arrow PMC, a major contributor to the Go implementation of Apache Iceberg and generally a nice, helpful guy.
 
 # ADBC
+ADBC is:
+- A set of [abstract APIs](https://arrow.apache.org/adbc/current/format/specification.html) in different languages (C/C++, Go, and Java, with more on the way) for working with databases and Arrow data.
+
+    For example, result sets of queries in ADBC are all returned as streams of Arrow data, not row-by-row.
+- A set of implementations of that API in different languages (C/C++, C#/.NET, Go, Java, Python, and Ruby) that target different databases (e.g. PostgreSQL, SQLite, DuckDB, any database supporting Flight SQL).
 
 Going back to the drawing board, I created [Quacfka](https://github.com/loicalleyne/quacfka), a Go library built using ADBC and split out my system into 3 worker pools, connected by channels:
 
@@ -91,14 +96,13 @@ Going back to the drawing board, I created [Quacfka](https://github.com/loicalle
 * DuckDB inserters binding the Arrow Records to ADBC statements and executing insertions
 
 I first ran these in series to determine how fast each could run:
-
-  *2025/01/23 23:39:27 kafka read start with 8 readers*  
-  *2025/01/23 23:39:41 read 15728642 kafka records in 14.385530 secs @ 1093365.498477 messages/sec*  
-  *2025/01/23 23:39:41 deserialize \[\]byte to proto, convert to arrow records with 32 goroutines start*  
-  *2025/01/23 23:40:04 deserialize to arrow done \- 15728642 records in 22.283532 secs @ 705841.509812 messages/sec*  
-  *2025/01/23 23:40:04 ADBC IngestCreateAppend start with 32 connections*  
-  *2025/01/23 23:40:25 duck ADBC insert 15728642 records in 21.145649535 secs @ **743824.007783 rows/sec***
-
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
+<code>2025/01/23 23:39:27 <span class="a-header">kafka read start with 8 readers</span>
+2025/01/23 23:39:41 <span class="a-header">read 15728642 kafka records in 14.385530 secs @</span><span class="a-padding">1093365.498477 messages/sec</span>
+2025/01/23 23:39:41 <span class="a-length">deserialize []byte to proto, convert to arrow records with 32 goroutines start</span>
+2025/01/23 23:40:04 <span class="a-length">deserialize to arrow done - 15728642 records in 22.283532 secs @</span><span class="a-padding"> 705841.509812 messages/sec</span>
+2025/01/23 23:40:04 <span class="a-data">ADBC IngestCreateAppend start with 32 connections</span> 
+2025/01/23 23:40:25 <span class="a-data">duck ADBC insert 15728642 records in 21.145649535 secs @</span><class="a-padding"> 743824.007783 rows/sec</span></code></pre></div></div>
 <img src="{{ site.baseurl }}/img/adbc-duckdb/holdmybeer.png" width="100%" class="img-responsive" alt="20k rows/sec? Hold my beer" aria-hidden="true">  
 
 With this architecture decided, I then started running the workers concurrently, instrumenting the system, profiling my code to identify performance issues and tweaking the settings to maximize throughput. It seemed to me that there was enough performance headroom to allow for in-flight aggregations.
@@ -133,57 +137,65 @@ Since Go 1.5, the default `GOMAXPROCS` value is the number of CPU cores availabl
 
 # Results
 
-<img src="{{ site.baseurl }}/img/adbc-duckdb/btop.png" width="100%" class="img-responsive" alt="btop utility showing CPU and memory usage of quacfka-service and runner" aria-hidden="true">  
+<figure style="text-align: center;">
+  <img src="{{ site.baseurl }}/img/adbc-duckdb/btop.png" width="100%" class="img-responsive" alt="Figure 1: btop utility showing CPU and memory usage of quacfka-service and runner">
+  <figcaption>Figure 2: btop utility showing CPU and memory usage of quacfka-service and runner.</figcaption>
+</figure> 
 Note: both runs with `GOMAXPROCS` set to 24 (the number of DuckDB insertion routines)
 
 Ingesting the raw data (14 fields with one deeply nested LIST.STRUCT.LIST field) \+ normalized data:  
-  *num\_cpu: 60*  
-  *runtime\_os: linux*  
-  *kafka\_clients: 5*  
-  *kafka\_queue\_cap: 983040*  
-  *processor\_routines: 32*  
-  *arrow\_queue\_cap: 4*  
-  *duckdb\_threshold\_mb: 4200*  
-  *duckdb\_connections: 24*  
-  *normalizer\_fields: 10*  
-  *start\_time: 2025-02-24T21:06:23Z*  
-  *end\_time: 2025-02-24T21:11:23Z*  
-  *records: 123\_686\_901.00*  
-  *norm\_records: 122\_212\_452.00*  
-  *data\_transferred: 146.53 GB*  
-  *duration: 4m59.585s*  
-  ***records\_per\_second: 398\_271.90***  
-  ***total\_rows\_per\_second: 806\_210.41***  
-  *transfer\_rate: 500.86 MB/second*  
-  *duckdb\_files: 9*  
-  *duckdb\_files\_MB: 38429*  
-  *file\_avg\_duration: 33.579s*
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
+<code>
+num_cpu:                <span class="a-header">60</span>  
+runtime_os:             <span class="a-header">linux</span>  
+kafka_clients:          <span class="a-header">5</span>  
+kafka_queue_cap:        <span class="a-header">983040</span>  
+processor_routines:     <span class="a-header">32</span>  
+arrow_queue_cap:        <span class="a-header">4</span>  
+duckdb_threshold_mb:    <span class="a-header">4200</span>  
+duckdb_connections:     <span class="a-header">24</span>  
+normalizer_fields:      <span class="a-header">10</span>  
+start_time:             <span class="a-header">2025-02-24T21:06:23Z</span>  
+end_time:               <span class="a-header">2025-02-24T21:11:23Z</span>  
+records:                <span class="a-header">123_686_901.00</span>  
+norm_records:           <span class="a-header">122_212_452.00</span>  
+data_transferred:       <span class="a-header">146.53 GB</span>  
+duration:               <span class="a-header">4m59.585s</span>  
+records_per_second:     <span class="a-padding">398_271.90</span>  
+total_rows_per_second:  <span class="a-padding">806_210.41</span>  
+transfer_rate:          <span class="a-header">500.86 MB/second</span>  
+duckdb_files:           <span class="a-header">9</span>  
+duckdb_files_MB:        <span class="a-header">38429</span>
+file_avg_duration:      <span class="a-header">33.579s</code></pre></div></div>
 
 How many rows/second could we get if we only inserted the flat, normalized data? (Note: original records are still processed, just not inserted) 
-  *num\_cpu: 60*  
-  *runtime\_os: linux*  
-  *kafka\_clients: 10*  
-  *kafka\_queue\_cap: 1228800*  
-  *processor\_routines: 32*  
-  *arrow\_queue\_cap: 4*  
-  *duckdb\_threshold\_mb: 4200*  
-  *duckdb\_connections: 24*  
-  *normalizer\_fields: 10*  
-  *start\_time: 2025-02-25T19:04:33Z*  
-  *end\_time: 2025-02-25T19:09:36Z*  
-  *records: 231\_852\_772.00*  
-  *norm\_records: 363\_247\_327.00*  
-  *data\_transferred: 285.76 GB*  
-  *duration: 5m3.059s*  
-  *records\_per\_second: 0.00*  
-  ***total\_rows\_per\_second: 1\_198\_601.39***  
-  *transfer\_rate: 965.54 MB/second*  
-  *duckdb\_files: 5*  
-  *duckdb\_files\_MB: 20056*  
-  *file\_avg\_duration: 58.975s*  
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
+<code>
+num_cpu:                <span class="a-header">60</span>
+runtime_os:             <span class="a-header">linux</span>
+kafka_clients:          <span class="a-header">10</span>
+kafka_queue_cap:        <span class="a-header">1228800</span>  
+processor_routines:     <span class="a-header">32</span>  
+arrow_queue_cap:        <span class="a-header">4</span>  
+duckdb_threshold_mb:    <span class="a-header">4200</span>  
+duckdb_connections:     <span class="a-header">24</span>  
+normalizer_fields:      <span class="a-header">10</span>  
+start_time:             <span class="a-header">2025-02-25T19:04:33Z</span>  
+end_time:               <span class="a-header">2025-02-25T19:09:36Z</span>  
+records:                <span class="a-header">231_852_772.00</span>  
+norm_records:           <span class="a-header">363_247_327.00</span>  
+data_transferred:       <span class="a-header">285.76 GB</span>  
+duration:               <span class="a-header">5m3.059s</span>  
+records_per_second:     <span class="a-header">0.00</span>  
+total_rows_per_second:  <span class="a-padding">1_198_601.39</span> 
+transfer_rate:          <span class="a-header">965.54 MB/second</span> 
+duckdb_files:           <span class="a-header">5</span>  
+duckdb_files_MB:        <span class="a-header">20056</span>  
+file_avg_duration:      <span class="a-header">58.975s</span></code></pre></div></div>
+
 <img src="{{ site.baseurl }}/img/adbc-duckdb/onemillionrows.png" width="100%" class="img-responsive" alt="One million rows/second" aria-hidden="true"> 
 
-Once deployed, the number of parquet files fall from ~3000 small files per hour to ~12 files per hour. Goodbye small files!
+Once deployed, the number of parquet files fell from ~3000 small files per hour to < 20 files per hour. Goodbye small files!
 
 <img src="{{ site.baseurl }}/img/adbc-duckdb/kip_yes.gif" width="25%" class="img-responsive" alt="Yesss" aria-hidden="true"> 
 
