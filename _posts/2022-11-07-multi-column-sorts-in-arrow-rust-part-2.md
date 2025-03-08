@@ -212,7 +212,7 @@ A null value is encoded as a single `0x00` byte, and a non-null value encoded as
 
 ```
                           ┌─────┬─────┬─────┬─────┐
-   "Fabulous"             │ 01  │ 03  │ 05  │ 00  │
+   "Fabulous"             │ 01  │ 01  │ 02  │ 00  │
                           └─────┴─────┴─────┴─────┘
 
                           ┌─────┬─────┬─────┐
