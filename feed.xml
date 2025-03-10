@@ -1,4 +1,226 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2025-03-10T03:34:05-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow ADBC 17 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/03/07/adbc-17-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 17 (Libraries) Release" /><published>2025-03-07T00:00:00-05:00</published><updated>2025-03-07T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2025/03/07/adbc-17-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/03/07/adbc-17-release/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2025-03-10T11:46:54-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Fast Streaming Inserts in DuckDB with ADBC</title><link href="https://arrow.apache.org/blog/2025/03/10/fast-streaming-inserts-in-duckdb-with-adbc/" rel="alternate" type="text/html" title="Fast Streaming Inserts in DuckDB with ADBC" /><published>2025-03-10T00:00:00-04:00</published><updated>2025-03-10T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/03/10/fast-streaming-inserts-in-duckdb-with-adbc</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/03/10/fast-streaming-inserts-in-duckdb-with-adbc/"><![CDATA[<!--
+
+-->
+<style>
+.a-header {
+  color: #984EA3;
+  font-weight: bold;
+}
+.a-data {
+  color: #377EB8;
+  font-weight: bold;
+}
+.a-length {
+  color: #FF7F00;
+  font-weight: bold;
+}
+.a-padding {
+  color: #E41A1C;
+  font-weight: bold;
+}
+</style>
+
+<p><img src="/img/adbc-duckdb/adbc-duckdb.png" width="100%" class="img-responsive" alt="" aria-hidden="true" /></p>
+<h1 id="tldr">TL;DR</h1>
+
+<p>DuckDB is rapidly becoming an essential part of data practitioners’ toolbox, finding use cases in data engineering, machine learning, and local analytics. In many cases DuckDB has been used to query and process data that has already been saved to storage (file-based or external database) by another process. Arrow Database Connectivity APIs enable high-throughput data processing using DuckDB as the engine.</p>
+
+<h1 id="how-it-started">How it started</h1>
+
+<p>The company I work for is the leading digital out-of-home marketing platform, including a programmatic ad tech stack. For several years, my technical operations team was making use of logs emitted by the real-time programmatic auction system in the <a href="http://avro.apache.org/">Apache Avro</a> format. Over time we’ve built an entire operations and analytics back end using this data. Avro files are row-based which is less than ideal for analytics at scale, in fact it’s downright painful. So much so that I developed and contributed an Avro reader feature to the <a href="https://github.com/apache/arrow-go">Apache Arrow  Go</a> library to be able to convert Avro files to parquet. This data pipeline is now humming along transforming hundreds of GB/day from Avro to Parquet.</p>
+
+<p>Since “any problem in computer science can be solved with another layer of indirection”, the original system has grown layers (like an onion) and started to emit other logs, this time in <a href="https://parquet.apache.org/">Apache Parquet</a> format…</p>
+<figure style="text-align: center;">
+  <img src="/img/adbc-duckdb/muchrejoicing.webp" width="80%" class="img-responsive" alt="Figure 1: And there was much rejoicing" />
+  <figcaption>Figure 1: A pseudo-medieval tapestry displaying intrepid data practitioners rejoicing due to a columnar data storage format.</figcaption>
+</figure>
+<p>As we learned in Shrek, onions are like ogres: they’re green, they have layers and they make you cry, so this rejoicing was rather short-lived, as the mechanism chosen to emit the parquet files was rather inefficient:</p>
+
+<ul>
+  <li>the new onion-layer (ahem…system component) sends Protobuf encoded messages to Kafka topics</li>
+  <li>a Kafka Connect cluster with the S3 sink connector consumes topics and saves the parquet files to object storage</li>
+</ul>
+
+<p>Due to the firehose of data, the cluster size over time grew to &gt; 25 nodes and was producing thousands of small Parquet files (13 MB or smaller) an hour. This led to ever-increasing query latency, in some cases breaking our tools due to query timeouts (aka <a href="https://www.dremio.com/blog/compaction-in-apache-iceberg-fine-tuning-your-iceberg-tables-data-files/#h-the-small-files-problem">the small files problem</a>). Not to mention that running aggregations on the raw data in our data warehouse wasn’t fast or cheap.</p>
+
+<h1 id="duckdb-to-the-rescue-i-think">DuckDB to the rescue… I think</h1>
+
+<p>I’d used DuckDB to process and analyse Parquet data so I knew it could do that very quickly. Then I came across this post on LinkedIn (<a href="https://www.linkedin.com/posts/shubham-dhal-349626ba_real-time-analytics-with-kafka-and-duckdb-activity-7258424841538555904-xfU6">Real-Time Analytics using Kafka and DuckDB</a>), where someone has built a system for near-realtime analytics in Go using DuckDB.</p>
+
+<p>The slides listed DuckDB’s limitations:<br />
+<img src="/img/adbc-duckdb/duckdb.png" width="100%" class="img-responsive" alt="DuckDB limitations: Single Pod, *Data should fit in memory, *Low Query Concurrency, *Low Ingest Rate - *Solvable with some efforts" aria-hidden="true" /> 
+The poster’s solution batches data at the application layer managing to scale up ingestion 100x to ~20k inserts/second, noting that they thought that using the DuckDB Appender API could possibly increase this 10x. So, potentially ~200k inserts/second. Yayyyyy…</p>
+
+<figure style="text-align: center;">
+  <img src="/img/adbc-duckdb/Yay.gif" width="40%" class="img-responsive" alt="Figure 2: Yay" />
+</figure>
+
+<p>Then I noticed the data schema in the slides was flat and had only 4 fields (vs. <a href="https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#31---object-model-">OpenRTB</a> schema with deeply nested Lists and Structs); and then looked at our monitoring dashboards whereupon I realized that at peak our system was emitting &gt;250k events/second. [cue sad trombone]</p>
+
+<p>Undeterred (and not particularly enamored with the idea of setting up/running/maintaining a Spark cluster), I suspected that Apache Arrow’s columnar memory representation might still make DuckDB viable since it has an Arrow API; getting Parquet files would be as easy as running <code class="language-plaintext highlighter-rouge">COPY...TO (format parquet)</code>.</p>
+
+<p>Using a pattern found in a Github issue, I wrote a POC using <a href="http://github.com/marcboeker/go-duckdb">github.com/marcboeker/go-duckdb</a> to connect to a DB, retrieve an Arrow, create an Arrow Reader, register a view on the reader, then run an INSERT statement from the view.</p>
+
+<p>This felt a bit like a rabbit pulling itself out of a hat, but no matter, it managed between ~74k and ~110k rows/sec on my laptop.</p>
+
+<p>To make sure this was really the right solution, I also tried out DuckDB’s Appender API (at time of writing the official recommendation for fast inserts) and managed… ~63k rows/sec on my laptop. OK, but… meh.</p>
+
+<h1 id="a-new-hope">A new hope</h1>
+
+<p>In a discussion on the Gopher Slack, Matthew Topol aka <a href="https://github.com/zeroshade">zeroshade</a> suggested using <a href="http://arrow.apache.org/adbc">ADBC</a> with its much simpler API. Who is Matt Topol you ask? Just the guy who <em>literally</em> wrote the book on Apache Arrow, that’s who (<a href="https://www.packtpub.com/en-us/product/in-memory-analytics-with-apache-arrow-9781835461228"><strong><em>In-Memory Analytics with Apache Arrow: Accelerate data analytics for efficient processing of flat and hierarchical data structures 2nd Edition</em></strong></a>). It’s an excellent resource and guide for working with Arrow. <br />
+BTW, should you prefer an acronym to remember the name of the book, it’s <strong><em>IMAAA:ADAFEPOFAHDS2E</em></strong>.<br />
+<img src="/img/adbc-duckdb/imaaapfedaobfhsd2e.png" width="100%" class="img-responsive" alt="Episode IX: In-Memory Analytics with Apache Arrow: Perform fast and efficient data analytics on both flat and hierarchical structured data 2nd Edition aka IMAAA:PFEDAOBFHSD2E by Matt Topol" aria-hidden="true" /><br />
+But I digress. Matt is also a member of the Apache Arrow PMC, a major contributor to the Go implementation of Apache Iceberg and generally a nice, helpful guy.</p>
+
+<h1 id="adbc">ADBC</h1>
+<p>ADBC is:</p>
+<ul>
+  <li>
+    <p>A set of <a href="https://arrow.apache.org/adbc/current/format/specification.html">abstract APIs</a> in different languages (C/C++, Go, and Java, with more on the way) for working with databases and Arrow data.</p>
+
+    <p>For example, result sets of queries in ADBC are all returned as streams of Arrow data, not row-by-row.</p>
+  </li>
+  <li>
+    <p>A set of implementations of that API in different languages (C/C++, C#/.NET, Go, Java, Python, and Ruby) that target different databases (e.g. PostgreSQL, SQLite, DuckDB, any database supporting Flight SQL).</p>
+  </li>
+</ul>
+
+<p>Going back to the drawing board, I created <a href="https://github.com/loicalleyne/quacfka">Quacfka</a>, a Go library built using ADBC and split out my system into 3 worker pools, connected by channels:</p>
+
+<ul>
+  <li>Kafka clients consuming topic messages and writing the bytes to a message channel</li>
+  <li>Processing routines using the <a href="https://github.com/loicalleyne/bufarrow">Bufarrow</a> library to deserialize Protobuf data and append it to Arrow arrays, writing Arrow Records to a record channel</li>
+  <li>DuckDB inserters binding the Arrow Records to ADBC statements and executing insertions</li>
+</ul>
+
+<p>I first ran these in series to determine how fast each could run:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
+<code>2025/01/23 23:39:27 <span class="a-header">kafka read start with 8 readers</span>
+2025/01/23 23:39:41 <span class="a-header">read 15728642 kafka records in 14.385530 secs @</span><span class="a-padding">1093365.498477 messages/sec</span>
+2025/01/23 23:39:41 <span class="a-length">deserialize []byte to proto, convert to arrow records with 32 goroutines start</span>
+2025/01/23 23:40:04 <span class="a-length">deserialize to arrow done - 15728642 records in 22.283532 secs @</span><span class="a-padding"> 705841.509812 messages/sec</span>
+2025/01/23 23:40:04 <span class="a-data">ADBC IngestCreateAppend start with 32 connections</span> 
+2025/01/23 23:40:25 <span class="a-data">duck ADBC insert 15728642 records in 21.145649535 secs @</span><span class="a-padding"> 743824.007783 rows/sec</span></code></pre></div></div>
+<p><img src="/img/adbc-duckdb/holdmybeer.png" width="100%" class="img-responsive" alt="20k rows/sec? Hold my beer" aria-hidden="true" /></p>
+
+<p>With this architecture decided, I then started running the workers concurrently, instrumenting the system, profiling my code to identify performance issues and tweaking the settings to maximize throughput. It seemed to me that there was enough performance headroom to allow for in-flight aggregations.</p>
+
+<p>One issue: Despite DuckDB’s excellent <a href="https://duckdb.org/2022/10/28/lightweight-compression.html">lightweight compression</a>, inserts from this source were making the file size increase at a rate of <strong><em>~8GB/minute</em></strong>. Putting inserts on hold to export the Parquet files and release the storage would reduce the overall throughput to an unacceptable level. I decided to implement a rotation of database files based on a file size threshold.</p>
+
+<p>DuckDB being able to query Hive partitioned parquet on disk or in object storage, the analytics part could be decoupled from the data ingestion pipeline by running a separate querying server pointing at wherever the parquet files would end up.</p>
+
+<p>Iterating, I created several APIs to try to make in-flight aggregations efficient enough to keep the overall throughput above my 250k rows/second target.</p>
+
+<p>The first two either ran into issues of data locality or weren’t optimized enough:</p>
+
+<ul>
+  <li><strong>CustomArrows</strong> : functions to run on each Arrow Record to create a new Record to insert along with the original</li>
+  <li><strong>DuckRunner</strong> : run a series of queries on the database file before rotation</li>
+</ul>
+
+<p>Reasoning that if unnesting deeply nested data in Arrow Record arrays was causing data locality issues:</p>
+
+<ul>
+  <li><strong>Normalizer</strong>: a Bufarrow API used in the in the deserialization function to normalize the message data and append it to another Arrow Record, inserted into a separate table</li>
+</ul>
+
+<p>This approach allowed throughput to go back to levels almost as high as without Normalizer - flat data is much faster to process and insert.</p>
+
+<h1 id="oh-were-halfway-therelivin-on-a-prayer">Oh, we’re halfway there…livin’ on a prayer</h1>
+
+<p>Next, I tried opening concurrent connections to multiple databases. <strong>BAM!</strong> <strong><em>Segfault</em></strong>. DuckDB concurrency model isn’t <a href="https://duckdb.org/docs/stable/connect/concurrency.html#handling-concurrency">designed</a> that way. From within a process only a single database (in-memory or file) can be opened, then other database files can be <a href="https://duckdb.org/docs/stable/sql/statements/attach.html">attached</a> to the central db’s catalog.</p>
+
+<p>Having already decided to rotate DB files, I decided to make a separate program (<a href="https://github.com/loicalleyne/quacfka-runner">Runner</a>) to process the database files as they were rotated, running aggregations on normalized data and table dumps to parquet. This meant setting up an RPC connection between the two and figuring out a backpressure mechanism to avoid <code class="language-plaintext highlighter-rouge">disk full</code> events.</p>
+
+<p>However having the two running simultaneously was causing memory pressure issues, not to mention massively slowing down the throughput. Upgrading the VM to one with more vCPUs and memory only helped a little, there was clearly some resource contention going on.</p>
+
+<p>Since Go 1.5, the default <code class="language-plaintext highlighter-rouge">GOMAXPROCS</code> value is the number of CPU cores available. What if this was reduced to “sandbox” the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. <a href="https://github.com/loicalleyne/quacfka-runner">Runner</a> runs the <code class="language-plaintext highlighter-rouge">COPY...TO...parquet</code> queries, walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold in <a href="https://github.com/loicalleyne/quacfka-service">Quafka-Service</a> allows Runner to keep up and avoid a backlog of DB files on disk.</p>
+
+<h1 id="results">Results</h1>
+
+<figure style="text-align: center;">
+  <img src="/img/adbc-duckdb/btop.png" width="100%" class="img-responsive" alt="Figure 1: btop utility showing CPU and memory usage of quacfka-service and runner" />
+  <figcaption>Figure 2: btop utility showing CPU and memory usage of quacfka-service and runner.</figcaption>
+</figure>
+<p>Note: both runs with <code class="language-plaintext highlighter-rouge">GOMAXPROCS</code> set to 24 (the number of DuckDB insertion routines)</p>
+
+<p>Ingesting the raw data (14 fields with one deeply nested LIST.STRUCT.LIST field) + normalized data:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
+<code>
+num_cpu:                <span class="a-header">60</span>  
+runtime_os:             <span class="a-header">linux</span>  
+kafka_clients:          <span class="a-header">5</span>  
+kafka_queue_cap:        <span class="a-header">983040</span>  
+processor_routines:     <span class="a-header">32</span>  
+arrow_queue_cap:        <span class="a-header">4</span>  
+duckdb_threshold_mb:    <span class="a-header">4200</span>  
+duckdb_connections:     <span class="a-header">24</span>  
+normalizer_fields:      <span class="a-header">10</span>  
+start_time:             <span class="a-header">2025-02-24T21:06:23Z</span>  
+end_time:               <span class="a-header">2025-02-24T21:11:23Z</span>  
+records:                <span class="a-header">123_686_901.00</span>  
+norm_records:           <span class="a-header">122_212_452.00</span>  
+data_transferred:       <span class="a-header">146.53 GB</span>  
+duration:               <span class="a-header">4m59.585s</span>  
+records_per_second:     <span class="a-padding">398_271.90</span>  
+total_rows_per_second:  <span class="a-padding">806_210.41</span>  
+transfer_rate:          <span class="a-header">500.86 MB/second</span>  
+duckdb_files:           <span class="a-header">9</span>  
+duckdb_files_MB:        <span class="a-header">38429</span>
+file_avg_duration:      <span class="a-header">33.579s</span></code></pre></div></div>
+
+<p>How many rows/second could we get if we only inserted the flat, normalized data? (Note: original records are still processed, just not inserted):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
+<code>
+num_cpu:                <span class="a-header">60</span>
+runtime_os:             <span class="a-header">linux</span>
+kafka_clients:          <span class="a-header">10</span>
+kafka_queue_cap:        <span class="a-header">1228800</span>  
+processor_routines:     <span class="a-header">32</span>  
+arrow_queue_cap:        <span class="a-header">4</span>  
+duckdb_threshold_mb:    <span class="a-header">4200</span>  
+duckdb_connections:     <span class="a-header">24</span>  
+normalizer_fields:      <span class="a-header">10</span>  
+start_time:             <span class="a-header">2025-02-25T19:04:33Z</span>  
+end_time:               <span class="a-header">2025-02-25T19:09:36Z</span>  
+records:                <span class="a-header">231_852_772.00</span>  
+norm_records:           <span class="a-header">363_247_327.00</span>  
+data_transferred:       <span class="a-header">285.76 GB</span>  
+duration:               <span class="a-header">5m3.059s</span>  
+records_per_second:     <span class="a-header">0.00</span>  
+total_rows_per_second:  <span class="a-padding">1_198_601.39</span> 
+transfer_rate:          <span class="a-header">965.54 MB/second</span> 
+duckdb_files:           <span class="a-header">5</span>  
+duckdb_files_MB:        <span class="a-header">20056</span>  
+file_avg_duration:      <span class="a-header">58.975s</span></code></pre></div></div>
+
+<p><img src="/img/adbc-duckdb/onemillionrows.png" width="100%" class="img-responsive" alt="One million rows/second" aria-hidden="true" /></p>
+
+<p>Once deployed, the number of parquet files fell from ~3000 small files per hour to &lt; 20 files per hour. Goodbye small files!</p>
+
+<p><img src="/img/adbc-duckdb/kip_yes.gif" width="25%" class="img-responsive" alt="Yesss" aria-hidden="true" /></p>
+
+<h1 id="challengeslearnings">Challenges/Learnings</h1>
+
+<ul>
+  <li>DuckDB insertions are the bottleneck; network speed, Protobuf deserialization, <strong>building Arrow Records are not</strong>.</li>
+  <li>For fastest insertion into DuckDB, Arrow Record Batches should contain at least 122880 rows (to align with DuckDB storage row group size).</li>
+  <li>DuckDB won’t let you open more than one database at once within the same process (results in a segfault). DuckDB is designed to run only once in a process, with a central database’s catalog having the ability to add connections to other databases.
+    <ul>
+      <li>Workarounds:
+        <ul>
+          <li>Use separate processes for writing and reading multiple database files.</li>
+          <li>Open a single DuckDB database and use <a href="https://duckdb.org/docs/stable/sql/statements/attach.html">ATTACH</a> to attach other DB files.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Flat data is much, much faster to insert than nested data.</li>
+</ul>
+
+<p><img src="/img/adbc-duckdb/whatdoesitallmean.gif" width="100%" class="img-responsive" alt="Whoopdy doo, what does it all mean Basil?" aria-hidden="true" /></p>
+
+<p>ADBC provides DuckDB with a truly high-throughput data ingestion API, unlocking a slew of use cases for using DuckDB with streaming data, making this an ever more useful tool for data practitioners.</p>]]></content><author><name>loicalleyne</name></author><category term="application" /><summary type="html"><![CDATA[ADBC enables high throughput insertion into DuckDB]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/adbc-duckdb/adbc-duckdb.png" /><media:content medium="image" url="https://arrow.apache.org/img/adbc-duckdb/adbc-duckdb.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow ADBC 17 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/03/07/adbc-17-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 17 (Libraries) Release" /><published>2025-03-07T00:00:00-05:00</published><updated>2025-03-07T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2025/03/07/adbc-17-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/03/07/adbc-17-release/"><![CDATA[<!--
 
 -->
 
@@ -947,45 +1169,4 @@ This minor release covers 32 commits from 6 distinct contributors.</p>
       <p>This does not imply that CSV will transfer results faster than Parquet or ORC. When comparing the transfer performance of CSV to Parquet or ORC, the other attributes described here will typically outweigh this one. <a href="#fnref:4" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
   </ol>
-</div>]]></content><author><name>Ian Cook, David Li, Matt Topol</name></author><category term="application" /><summary type="html"><![CDATA[Arrow speeds up query result transfer by slashing (de)serialization overheads. We outline five key attributes of the Arrow format that enable this.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 18.1.0 Release</title><link href="https://arrow.apache.org/blog/2024/11/21/18.1.0-release/" rel="alternate" type="text/html" title="Apache Arrow 18.1.0 Release" /><published>2024-11-21T00:00:00-05:00</published><updated>2024-11-21T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2024/11/21/18.1.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2024/11/21/18.1.0-release/"><![CDATA[<!--
-
--->
-
-<p>The Apache Arrow team is pleased to announce the 18.1.0 release. This
-covers roughly one month of development work and includes <a href="https://github.com/apache/arrow/milestone/67?closed=1"><strong>15 resolved
-issues</strong></a> on <a href="/release/18.1.0.html#contributors"><strong>25 distinct commits</strong></a> from <a href="/release/18.1.0.html#contributors"><strong>8 distinct
-contributors</strong></a>. See the <a href="https://arrow.apache.org/install/">Install Page</a> to
-learn how to get the libraries for your platform.</p>
-
-<p>The primary motivation for this minor release was to address packaging issues
-for Python, Java, C#, R and MATLAB which caused binaries for those platforms to
-report a version of <code class="language-plaintext highlighter-rouge">18.0.0-SNAPSHOT</code> instead of <code class="language-plaintext highlighter-rouge">18.0.0</code>. The affected binaries
-were otherwise built correctly. See <a href="https://lists.apache.org/thread/t8k7l2hsbgdt7cszj7hrpjdfpn91n5zb">this mailing list
-post</a> for more
-details.</p>
-
-<p>The release notes below are not exhaustive and only expose selected
-highlights of the release. Numerous other bugfixes and improvements have been made:
-we refer you to the <a href="/release/18.1.0.html#changelog">complete changelog</a>.</p>
-
-<h2 id="c-notes">C++ notes</h2>
-
-<ul>
-  <li>Moved <code class="language-plaintext highlighter-rouge">ChunkResolver</code> into the public API. <a href="https://github.com/apache/arrow/issues/34535">GH-34535</a></li>
-</ul>
-
-<h2 id="c-notes-1">C# notes</h2>
-
-<ul>
-  <li>Fixed <a href="https://github.com/apache/arrow/issues/44360">GH-44360</a> - [C#] Flight DoExchange server is incompatible with C++/PyArrow client</li>
-</ul>
-
-<h2 id="rust-and-go-notes">Rust and Go notes</h2>
-
-<p>The Rust and Go projects have moved to separate repositories outside the
-main Arrow monorepo. For notes on the latest release of the Rust
-implementation, see the latest <a href="https://github.com/apache/arrow-rs/tags">Arrow Rust changelog</a>.
-For notes on the latest release of the Go implementation, see the latest
-<a href="https://github.com/apache/arrow-go/tags">Arrow Go changelog</a></p>
-
-<h2 id="linux-packages-notes">Linux packages notes</h2>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 18.1.0 release. This covers roughly one month of development work and includes 15 resolved issues on 25 distinct commits from 8 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The primary motivation for this minor release was to address packaging issues for Python, Java, C#, R and MATLAB which caused binaries for those platforms to report a version of 18.0.0-SNAPSHOT instead of 18.0.0. The affected binaries were otherwise built correctly. See this mailing list post for more details. The release notes below are not exhaustive and only expose selected highlights of the release. Numerous other bugfixes and improvements have been made: we refer you to the complete changelog. C++ notes Moved ChunkResolver into the public API. GH-34535 C# notes Fixed GH-44360 - [C#] Flight DoExchange server is incompatible with C++/PyArrow client Rust and Go notes The Rust and Go projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Rust implementation, see the latest Arrow Rust changelog. For notes on the latest release of the Go implementation, see the latest Arrow Go changelog Linux packages notes]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+</div>]]></content><author><name>Ian Cook, David Li, Matt Topol</name></author><category term="application" /><summary type="html"><![CDATA[Arrow speeds up query result transfer by slashing (de)serialization overheads. We outline five key attributes of the Arrow format that enable this.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
