@@ -61,7 +61,7 @@ The company I work for is the leading digital out-of-home marketing platform, in
 
 Since "any problem in computer science can be solved with another layer of indirection", the original system has grown layers (like an onion) and started to emit other logs, this time in [Apache Parquet](https://parquet.apache.org/) format...  
 <figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/adbc-duckdb/muchrejoicing.gif" width="80%" class="img-responsive" alt="Figure 1: And there was much rejoicing">
+  <img src="{{ site.baseurl }}/img/adbc-duckdb/muchrejoicing.webp" width="80%" class="img-responsive" alt="Figure 1: And there was much rejoicing">
   <figcaption>Figure 1: A pseudo-medieval tapestry displaying intrepid data practitioners rejoicing due to a columnar data storage format.</figcaption>
 </figure> 
 As we learned in Shrek, onions are like ogres: they're green, they have layers and they make you cry, so this rejoicing was rather short-lived, as the mechanism chosen to emit the parquet files was rather inefficient:
