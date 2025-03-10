@@ -20,4 +20,4 @@ limitations under the License.
 シリーズの記事：
 
 1. [Apache Arrowフォーマットはどのようにクエリー結果の転送を高速にしているのか]({% link _posts/2025-01-10-arrow-result-transfer-japanese.md %})
-1. [データは自由になりたい：Apache Arrowでデータ交換は高速]({% link _posts/2025-03-10-data-wants-to-be-free-japanese.md %})
+1. [データは自由になりたい：Apache Arrowで高速データ交換]({% link _posts/2025-03-10-data-wants-to-be-free-japanese.md %})

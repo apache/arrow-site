@@ -35,6 +35,8 @@ limitations under the License.
 
 _この記事はデータベースとクエリーエンジン間のデータ交換フォーマットとしてなぜArrowが使われているのかという謎を解くシリーズの最初の記事です。_
 
+{% include arrow-result-transfer-series-japanese.md %}
+
 <img src="{{ site.baseurl }}/img/arrow-result-transfer/part-1-banner.png" width="100%" class="img-responsive" alt="" aria-hidden="true">
 
 「どうしてこんなに時間がかかるの？」

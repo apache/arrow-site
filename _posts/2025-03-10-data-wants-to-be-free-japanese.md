@@ -55,7 +55,7 @@ limitations under the License.
 
 _この記事はデータベースとクエリーエンジン間のデータ交換フォーマットとしてなぜArrowが使われているのかという謎を解くシリーズの2記事目です。_
 
-{% include arrow_result_transfer_series_japanese.md %}
+{% include arrow-result-transfer-series-japanese.md %}
 
 データ技術者として、データが「人質に取られている」とよく感じます。
 データをもらってもすぐに使うことはできません。使えるようになるまでに時間がかかります。
