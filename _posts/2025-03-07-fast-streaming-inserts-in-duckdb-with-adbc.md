@@ -120,7 +120,7 @@ I first ran these in series to determine how fast each could run:
 2025/01/23 23:39:41 <span class="a-length">deserialize []byte to proto, convert to arrow records with 32 goroutines start</span>
 2025/01/23 23:40:04 <span class="a-length">deserialize to arrow done - 15728642 records in 22.283532 secs @</span><span class="a-padding"> 705841.509812 messages/sec</span>
 2025/01/23 23:40:04 <span class="a-data">ADBC IngestCreateAppend start with 32 connections</span> 
-2025/01/23 23:40:25 <span class="a-data">duck ADBC insert 15728642 records in 21.145649535 secs @</span><class="a-padding"> 743824.007783 rows/sec</span></code></pre></div></div>
+2025/01/23 23:40:25 <span class="a-data">duck ADBC insert 15728642 records in 21.145649535 secs @</span><span class="a-padding"> 743824.007783 rows/sec</span></code></pre></div></div>
 <img src="{{ site.baseurl }}/img/adbc-duckdb/holdmybeer.png" width="100%" class="img-responsive" alt="20k rows/sec? Hold my beer" aria-hidden="true">  
 
 With this architecture decided, I then started running the workers concurrently, instrumenting the system, profiling my code to identify performance issues and tweaking the settings to maximize throughput. It seemed to me that there was enough performance headroom to allow for in-flight aggregations.
