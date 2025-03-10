@@ -2,7 +2,7 @@
 layout: post
 title: "Fast Streaming Inserts in DuckDB with ADBC"
 description: "ADBC enables high throughput insertion into DuckDB"
-date: "2025-03-07 00:00:00"
+date: "2025-03-10 00:00:00"
 author: loicalleyne
 categories: [application]
 image:
