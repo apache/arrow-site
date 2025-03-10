@@ -1,6 +1,7 @@
 ---
 layout: post
-title: "Data Wants to Be Free: Fast Data Exchange with Apache Arrow"
+lang: ja-JP
+title: "データは自由になりたい：Apache Arrowで高速データ交換"
 description: ""
 date: "2025-02-28 00:00:00"
 author: David Li, Ian Cook, Matt Topol
@@ -10,8 +11,8 @@ image:
   height: 1200
   width: 705
 translations:
-  - language: 日本語
-    post_id: 2025-03-10-data-wants-to-be-free-japanese
+  - language: 原文（English）
+    post_id: 2025-02-28-data-wants-to-be-free
 ---
 
 <!--
@@ -52,34 +53,30 @@ limitations under the License.
 }
 </style>
 
-_This is the second in a series of posts that aims to demystify the use of
-Arrow as a data interchange format for databases and query engines._
+_この記事はデータベースとクエリーエンジン間のデータ交換フォーマットとしてなぜArrowが使われているのかという謎を解くシリーズの2記事目です。_
 
-{% include arrow_result_transfer_series.md %}
+{% include arrow-result-transfer-series-japanese.md %}
 
-As data practitioners, we often find our data “held hostage”. Instead of being
-able to use data as soon as we get it, we have to spend time—time to parse and
-clean up inefficient and messy CSV files, time to wait for an outdated query
-engine to struggle with a few gigabytes of data, and time to wait for the data
-to make it across a socket. It’s that last point we’ll focus on today. In an
-age of multi-gigabit networks, why is it even a problem in the first place?
-And make no mistake, it is a problem—research by Mark Raasveldt and Hannes
-Mühleisen in their [2017 paper](https://doi.org/10.14778/3115404.3115408)[^freepdf]
-found that some systems take over **ten minutes** to transfer a dataset that
-should only take ten *seconds*[^ten].
+データ技術者として、データが「人質に取られている」とよく感じます。
+データをもらってもすぐに使うことはできません。使えるようになるまでに時間がかかります。
+非効率的でやっかいなCSVファイルを整理する時間だったり、
+型落ちのクエリエンジンが数GBのデータに苦労するのを待つ時間だったり、
+データがソケットを介して受信するのを待つ時間をだったり。
+今回はこの三番目の問題を注目します。
+マルチギガビットネットワークの時代に、そもそもこの問題がまだ起こっているのはどうしてでしょうか？
+間違いなく、この問題はまだ起こっています。
+[Mark RaasveldtとHannes Mühleisenの2017年の論文](https://doi.org/10.14778/3115404.3115408)[^freepdf]では、いくつかシステムは10秒しかかからないはずのデータセットの送受信に**10分**以上かかっていると指摘しています[^ten]。
 
-[^freepdf]: The paper is freely available from [VLDB](https://www.vldb.org/pvldb/vol10/p1022-muehleisen.pdf).
-[^ten]: Figure 1 in the paper shows Hive and MongoDB taking over 600 seconds vs the baseline of 10 seconds for netcat to transfer the CSV file.  Of course, that means the comparison is not entirely fair since the CSV file is not being parsed, but it gives an idea of the magnitudes involved.
+[^freepdf]: [VLDB](https://www.vldb.org/pvldb/vol10/p1022-muehleisen.pdf)から論文を無料でダウンロードできます。
+[^ten]: 論文のFigure 1では、ベースラインのnetcatは10秒でCSVファイルを送信し、HiveとMongoDBは600秒以上かかっていること示しています。もちろん、CSVは解析されていないので、この比較は完全に平等ではありません。しかし、問題の規模を把握できます。
 
-Why are we waiting 60 times as long as we need to? [As we've argued before,
-serialization overheads plague our
-tools](https://arrow.apache.org/blog/2025/01/10/arrow-result-transfer/)—and
-Arrow can help us here. So let’s make that more concrete: we’ll compare how
-PostgreSQL and Arrow encode the same data to illustrate the impact of the data
-serialization format. Then we’ll tour various ways to build protocols with
-Arrow, like Arrow HTTP and Arrow Flight, and how you might use each of them.
+どうして必要な時間より60倍以上も長い時間がかかるのでしょうか？
+[この前に論じていた通り、ツールはデータシリアライズのオーバーヘッドに悩まされています。]({% link _posts/2025-01-10-arrow-result-transfer.md %})
+しかし、この問題はArrowで解消できます。
+それではもっと具体的な話をしましょう。データシリアライズフォーマットの影響を示すために、PostgreSQLとArrowが同じデータをどうやってエンコードするのかを比較しましょう。
+その後、Arrow HTTPやArrow FlightなどのArrowベースのプロトコルを作る色々な方法を説明し、各方法の使い方も説明します。
 
-## PostgreSQL vs Arrow: Data Serialization
+## PostgreSQL対Arrow：データシリアライズ
 
 Let’s compare the [PostgreSQL binary
 format](https://www.postgresql.org/docs/current/sql-copy.html#id-1.9.3.55.9.4)
@@ -213,7 +210,7 @@ So to summarize:
 
 ![A flowchart of the decision points.]({{ site.baseurl }}/assets/data_wants_to_be_free/flowchart.png){:class="img-responsive" width="100%"}
 
-## Conclusion
+## まとめ
 
 Existing client protocols can be wasteful. Arrow offers better efficiency and avoids design pitfalls from the past. And Arrow makes it easy to build and consume data APIs with a variety of standards like Arrow IPC, Arrow HTTP, and ADBC. By using Arrow serialization in protocols, everyone benefits from easier, faster, and simpler data access, and we can avoid accidentally holding data captive behind slow and inefficient interfaces.
 
