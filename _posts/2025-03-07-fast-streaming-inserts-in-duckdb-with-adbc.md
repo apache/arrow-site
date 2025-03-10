@@ -48,8 +48,6 @@ limitations under the License.
 }
 </style>
 
-# Fast Streaming Inserts in DuckDB with ADBC
-
 <img src="{{ site.baseurl }}/img/adbc-duckdb/adbc-duckdb.png" width="100%" class="img-responsive" alt="" aria-hidden="true"> 
 # TL;DR
 
