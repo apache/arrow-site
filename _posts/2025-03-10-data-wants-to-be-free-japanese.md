@@ -79,12 +79,12 @@ _この記事はデータベースとクエリーエンジン間のデータ交�
 ## PostgreSQL対Arrow：データシリアライズ
 
 [PostgreSQLのバイナリーフォーマット](https://www.postgresql.jp/document/current/html/sql-copy.html#id-1.9.3.55.9.4)と[Arrow IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc)を同じデータセットに比較します。
-この比較によって、Arrowは（後知恵で）前任者より良いトレードオフを行うのを示します。
+この比較で、Arrowは（後知恵のおかげで）前任者より適切のトレードオフを行うのを証明します。
 
-PostgreSQLでクエリを実行すると、クライアント（すなわちドライバ）はPostgreSQLの転送プロトコルでクエリを送り、結果を受けます。
+PostgreSQLでクエリを実行すると、クライアント（すなわちドライバ）はPostgreSQLの通信プロトコルでクエリを送り、結果を受けます。
 そのプロトコルの内に、結果セットはPostgreSQLのバイナリーフォーマットでエンコードされています[^textbinary]。
 
-[^textbinary]: テキストフォーマットもあります。その方はクライアントのほとんどによく使われているデフォルトです。この記事でテキストフォーマットを論じません。
+[^textbinary]: テキストフォーマットもあります。クライアントはそのフォーマットをほとんど使っています。この記事でテキストフォーマットを論じません。
 
 まず、テーブルを定義し、テーブルにデータを入力します。
 
@@ -95,19 +95,19 @@ postgres=# INSERT INTO demo VALUES (1, 'foo', 64), (2, 'a longer string', 128), 
 INSERT 0 3
 ```
 
-それでCOPYコマンドによってPostgreSQLから生バイナリーデータをファイルにダンプします。
+それでCOPYコマンドでPostgreSQLから生バイナリーデータをファイルにダンプします。
 
 ```
 postgres=# COPY demo TO '/tmp/demo.bin' WITH BINARY;
 COPY 3
 ```
 
-そして[文書](https://www.postgresql.jp/document/current/html/sql-copy.html#id-1.9.3.55.9.4)によってデータの実際のバイトに注釈を付けます。
+そして[文書](https://www.postgresql.jp/document/current/html/sql-copy.html#id-1.9.3.55.9.4)の通り、データの実際のバイトに注釈を付けます。
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-header">50 47 43 4f 50 59 0a ff  PGCOPY..</span>  <span class="a-header">COPYの署名、フラグフィールド、</span>
 00000008: <span class="a-header">0d 0a 00 00 00 00 00 00  ........</span>  <span class="a-header">ヘッダ拡張領域長</span>
 00000010: <span class="a-header">00 00 00</span> <span class="a-padding">00 03</span> <span class="a-length">00 00 00</span>  <span class="a-header">...</span><span class="a-padding">..</span><span class="a-length">...</span>  <span class="a-padding">次の行の値の数</span>
-00000018: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>  <span class="a-length">次の値の長さ</span>
+00000018: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>  <span class="a-length">次の値長</span>
 00000020: <span class="a-data">01</span> <span class="a-length">00 00 00 03</span> <span class="a-data">66 6f 6f</span>  <span class="a-data">.</span><span class="a-length">....</span><span class="a-data">foo</span>  <span class="a-data">値</span>
 00000028: <span class="a-length">00 00 00 08</span> <span class="a-data">00 00 00 00</span>  <span class="a-length">....</span><span class="a-data">....</span>
 00000030: <span class="a-data">00 00 00 40</span> <span class="a-padding">00 03</span> <span class="a-length">00 00</span>  <span class="a-data">...@</span><span class="a-padding">..</span><span class="a-length">..</span>
@@ -126,12 +126,12 @@ COPY 3
 
 正直なところ、PostgreSQLのバイナリーフォーマットは一見すると結構わかりやすくてコンパクトです。
 このフォーマットは連続したフィールドだけです。
-各フィールドの前に、値の長さが置かれています。
+各フィールドの前に、値長が置かれています。
 しかし、もっとよく見てみると、問題が明らかになります。
 **PostgreSQLのバイナリーフォーマットはオーバーヘッドが行と列の数に比例します。**
 
-* 各行の前に2バイトの行の値の数が置かれています。*しかし、データは表形式ですから、値の数はもうわかっています。それに、値の数は変わりません！*
-* 各行に、各値の前に4バイトのフィールドの長さが置かれています。（NULLの場合、−1です。）*しかし、データ型はもうわかっています。それに、データ型は変わらず、データ型のほとんどは値が固定長です！*
+* 各行の前に、行内の値の数（2バイト）が置かれています。*しかし、データは表形式ですから、値の数はもうわかっています。それに、値の数は変わりません！*
+* 各行内の値の前に、フィールド長（4バイト）が置かれています。（NULLの場合、−1です。）*しかし、ほとんどのデータ型では値が固定長だし、データ型をわかっているし、データ型は変わらないし、フィールド長は大概もうわかっています！*
 * すべての値はビッグエンディアンです。*しかし、現代の機器はほとんどリトルエンディアンですから、エンディアン交換が必要です。*
 
 例えば、一つのint32の列の場合に、各行に4バイトのデータと6バイトのオーバーヘッドがあります。
@@ -139,14 +139,14 @@ COPY 3
 列が増えれば増えるほど、オーバーヘッドの比率が減ります。
 （しかし、行が増えればオーバーヘッドが変わりません。）
 極限において、50％オーバーヘッドに近づきます。
-それから、エンディアン交換は高価な操作ではありませんが、それでも必要です。
-PostgreSQLは称賛に値するところもあります。
+エンディアン交換は高価な操作ではありませんが、それでも必要です。
+もちろん、PostgreSQLは称賛に値するところもあります。
 バイナリーフォーマットは安価で解析しやすいです。
 [他のフォーマット](https://protobuf.dev/programming-guides/encoding/)は「varint」エンコードなどの技術を使っています。
 こういう技術は結構高価です。
 
 Arrowはどうでしょうか？
-[ADBC](https://arrow.apache.org/adbc/current/driver/postgresql.html)によってPostgreSQLテーブルを読み込み、そして前の通りにデータに注釈を付けます。
+[ADBC](https://arrow.apache.org/adbc/current/driver/postgresql.html)でPostgreSQLテーブルを読み込み、そして前の通りにデータに注釈を付けます。
 
 ```console
 >>> import adbc_driver_postgresql.dbapi
@@ -160,10 +160,10 @@ Arrowはどうでしょうか？
 >>> writer.close()
 ```
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-length">ff ff ff ff d8 00 00 00  ........  IPCメッセージの長さ</span>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-length">ff ff ff ff d8 00 00 00  ........  IPCメッセージ長</span>
 00000008: <span class="a-header">10 00 00 00 00 00 0a 00  ........  IPCスキーマ</span>
 &vellip;         <span class="a-header">(208バイト)</span>
-000000e0: <span class="a-length">ff ff ff ff f8 00 00 00  ........  IPCメッセージの長さ</span>
+000000e0: <span class="a-length">ff ff ff ff f8 00 00 00  ........  IPCメッセージ長</span>
 000000e8: <span class="a-header">14 00 00 00 00 00 00 00  ........  IPCレコードバッチ</span>
 &vellip;         <span class="a-header">(240バイト)</span>
 000001e0: <span class="a-data">01 00 00 00 00 00 00 00  ........  1つ目の列のデータ</span>
@@ -182,10 +182,10 @@ Arrowはどうでしょうか？
 00000248: <span class="a-padding">ff ff ff ff 00 00 00 00  ........  IPCストリームの終わり</span></code></pre></div></div>
 
 一見すると、Arrowは結構わかりにくいです。
-データセットに全然関係なさそうなヘッダーもあり、
-まるで領域を占有するためにだけそうで謎のパッディングもあります。
-でも大事なのは、**オーバーヘッドが固定です**。
-1行でも1奥行でも、オーバーヘッドが変わりません。
+データセットに全然関係なさそうなヘッダーもあるし、
+まるで領域を占有するためにだけそうで謎のパッディングもあるし。
+しかし大事なのは、**オーバーヘッドが固定です**。
+1行でも1億行でも、オーバーヘッドが変わりません。
 それに、PostgreSQLと違って**値ごとの解析は必要ありません**。
 
 Instead of putting lengths of values everywhere, Arrow groups values of the same column (and hence same type) together, so it just needs the length of the buffer[^header].  Overhead isn't added where it isn't otherwise needed.  Strings still have a length per value.  Nullability is instead stored in a bitmap, which is omitted if there aren’t any NULL values (as it is here). Because of that, more rows of data doesn’t increase the overhead; instead, the more data you have, the less you pay.
