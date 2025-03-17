@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>Filesystem Interface &#8212; Apache Arrow v20.0.0.dev181</title>
+    <title>Filesystem Interface &#8212; Apache Arrow v20.0.0.dev183</title>
   
   
   
@@ -65,7 +65,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="20.0.0.dev181" />
+  <meta name="docsearch:version" content="20.0.0.dev183" />
 
   <!-- Matomo -->
   <script>
@@ -150,8 +150,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v20.0.0.dev181 - Home"/>
-    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v20.0.0.dev181 - Home"/>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v20.0.0.dev183 - Home"/>
+    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v20.0.0.dev183 - Home"/>
   
   
 </a></div>
@@ -1629,6 +1629,7 @@ and modification time, is made available.</p>
 <li><p><a class="reference internal" href="#filesystem-s3"><span class="std std-ref">S3</span></a> (<a class="reference internal" href="generated/pyarrow.fs.S3FileSystem.html#pyarrow.fs.S3FileSystem" title="pyarrow.fs.S3FileSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">S3FileSystem</span></code></a>)</p></li>
 <li><p><a class="reference internal" href="#filesystem-gcs"><span class="std std-ref">Google Cloud Storage File System</span></a> (<a class="reference internal" href="generated/pyarrow.fs.GcsFileSystem.html#pyarrow.fs.GcsFileSystem" title="pyarrow.fs.GcsFileSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">GcsFileSystem</span></code></a>)</p></li>
 <li><p><a class="reference internal" href="#filesystem-hdfs"><span class="std std-ref">Hadoop Distributed File System (HDFS)</span></a> (<a class="reference internal" href="generated/pyarrow.fs.HadoopFileSystem.html#pyarrow.fs.HadoopFileSystem" title="pyarrow.fs.HadoopFileSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">HadoopFileSystem</span></code></a>)</p></li>
+<li><p><a class="reference internal" href="#filesystem-azurefs"><span class="std std-ref">Azure Storage File System</span></a> (<code class="xref py py-class docutils literal notranslate"><span class="pre">AzureFileSystem</span></code>)</p></li>
 </ul>
 <p>It is also possible to use your own fsspec-compliant filesystem with pyarrow functionalities as described in the section <a class="reference internal" href="#filesystem-fsspec"><span class="std std-ref">Using fsspec-compatible filesystems with Arrow</span></a>.</p>
 <section id="usage">
@@ -1846,6 +1847,40 @@ installed somewhere other than <code class="docutils literal notranslate"><span 
 </li>
 </ul>
 </section>
+<section id="azure-storage-file-system">
+<span id="filesystem-azurefs"></span><h2>Azure Storage File System<a class="headerlink" href="#azure-storage-file-system" title="Permalink to this heading">#</a></h2>
+<p>PyArrow implements natively an Azure filesystem for Azure Blob Storage with or
+without heirarchical namespace enabled.</p>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">AzureFileSystem</span></code> constructor has several options to configure the
+Azure Blob Storage connection (e.g. account name, account key, SAS token, etc.).</p>
+<p>If neither <code class="docutils literal notranslate"><span class="pre">account_key</span></code> or <code class="docutils literal notranslate"><span class="pre">sas_token</span></code> is specified a <a class="reference external" href="https://github.com/Azure/azure-sdk-for-cpp/blob/main/sdk/identity/azure-identity/README.md#defaultazurecredential">DefaultAzureCredential</a>
+is used for authentication. This means it will try several types of authentication
+and go with the first one that works. If any authentication parameters are provided when
+initialising the FileSystem, they will be used instead of the default credential.</p>
+<p>Example showing how you can read contents from an Azure Blob Storage account:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">fs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">azure_fs</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">AzureFileSystem</span><span class="p">(</span><span class="n">account_name</span><span class="o">=</span><span class="s1">&#39;myaccount&#39;</span><span class="p">)</span>
+
+<span class="go"># List all contents in a container, recursively</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">azure_fs</span><span class="o">.</span><span class="n">get_file_info</span><span class="p">(</span><span class="n">fs</span><span class="o">.</span><span class="n">FileSelector</span><span class="p">(</span><span class="s1">&#39;my-container&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="go">[&lt;FileInfo for &#39;my-container/File1&#39;: type=FileType.File, size=10&gt;,</span>
+<span class="go"> &lt;FileInfo for &#39;my-container/File2&#39;: type=FileType.File, size=20&gt;,</span>
+<span class="go"> &lt;FileInfo for &#39;my-container/Dir1&#39;: type=FileType.Directory&gt;,</span>
+<span class="go"> &lt;FileInfo for &#39;my-container/Dir1/File3&#39;: type=FileType.File, size=30&gt;]</span>
+
+<span class="go"># Open a file for reading and download its contents</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="n">azure_fs</span><span class="o">.</span><span class="n">open_input_stream</span><span class="p">(</span><span class="s1">&#39;my-container/File1&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="o">.</span><span class="n">readall</span><span class="p">()</span>
+<span class="go">b&#39;some data&#39;</span>
+</pre></div>
+</div>
+<p>For more details on the parameters and usage, refer to the <code class="xref py py-class docutils literal notranslate"><span class="pre">AzureFileSystem</span></code> class documentation.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>See the <a class="reference external" href="https://github.com/Azure/azure-sdk-for-cpp">Azure SDK for C++ documentation</a>
+for more information on authentication and configuration options.</p>
+</div>
+</section>
 <section id="using-fsspec-compatible-filesystems-with-arrow">
 <span id="filesystem-fsspec"></span><h2>Using fsspec-compatible filesystems with Arrow<a class="headerlink" href="#using-fsspec-compatible-filesystems-with-arrow" title="Permalink to this heading">#</a></h2>
 <p>The filesystems mentioned above are natively supported by Arrow C++ / PyArrow.
@@ -1983,6 +2018,7 @@ Example usage to create a directory and file, and list the content:</p>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#google-cloud-storage-file-system">Google Cloud Storage File System</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hadoop-distributed-file-system-hdfs">Hadoop Distributed File System (HDFS)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#azure-storage-file-system">Azure Storage File System</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-fsspec-compatible-filesystems-with-arrow">Using fsspec-compatible filesystems with Arrow</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-arrow-filesystems-with-fsspec">Using Arrow filesystems with fsspec</a></li>
 </ul>
