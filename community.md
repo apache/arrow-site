@@ -88,6 +88,19 @@ activity is captured in email form for archival purposes.
   <li> <code>github@</code> for all activity on the GitHub repositories {% include mailing_list_links.html list="github" %} </li>
 </ul>
 
+### GitHub Issues
+
+We use [GitHub Issues](https://github.com/apache/arrow/issues) as a way to ask questions and engage with the Arrow developer
+community and for maintaining a queue of development work and as the public
+record of work on the project. We use the mailing lists for development discussions,
+where a lengthy discussions is required.
+
+### GitHub Discussions
+
+We've enabled [GitHub Discussions](https://github.com/apache/arrow/discussions)
+for usage questions and all posts are mirrored to the <user@arrow.apache.org>
+mailing list. Users are welcome to ask usage questions in either location.
+
 ### Stack Overflow
 
 For questions on how to use Arrow libraries, you may want to use the Stack
@@ -96,13 +109,6 @@ Overflow tag
 addition to the programming language. Some languages and subprojects may have
 their own tags (for example,
 [pyarrow](https://stackoverflow.com/questions/tagged/pyarrow)).
-
-### GitHub issues
-
-We use GitHub issues as a way to ask questions and engage with the Arrow developer
-community and for maintaining a queue of development work and as the public
-record of work on the project. We use the mailing lists for development discussions,
-where a lengthy discussions is required.
 
 ### Meetings
 
