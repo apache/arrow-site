@@ -100,7 +100,7 @@ usage Issues into Discussions.
 
 We've enabled [GitHub Discussions](https://github.com/apache/arrow/discussions)
 for usage questions and all posts are mirrored to the <user@arrow.apache.org>
-mailing list. Users are welcome to ask usage questions in either location.
+mailing list {% include mailing_list_links.html list="user" %}. Users are welcome to ask usage questions in either location.
 
 ### Stack Overflow
 
