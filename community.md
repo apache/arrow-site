@@ -92,8 +92,7 @@ activity is captured in email form for archival purposes.
 
 We use [GitHub Issues](https://github.com/apache/arrow/issues) to track the
 queue of development work. Bugs and feature requests are welcome. For usage type
-questions we have [GitHub
-Discussions](#github-discussions) and might convert
+questions we have [GitHub Discussions](#github-discussions) and might convert
 usage Issues into Discussions.
 
 ### GitHub Discussions
