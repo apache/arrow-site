@@ -88,18 +88,31 @@ activity is captured in email form for archival purposes.
   <li> <code>github@</code> for all activity on the GitHub repositories {% include mailing_list_links.html list="github" %} </li>
 </ul>
 
-### GitHub Issues
+### GitHub
 
-We use [GitHub Issues](https://github.com/apache/arrow/issues) to track the
-queue of development work. Bugs and feature requests are welcome. For usage type
-questions we have [GitHub Discussions](#github-discussions) and might convert
-usage Issues into Discussions.
+We use GitHub Issues as a place to report bugs, request new features, and to
+track the queue of development work. For usage questions, some of our
+repositories use Discussions as an alternative to the <user@arrow.apache.org>
+mailing list {% include mailing_list_links.html list="user" %}. For those
+repositories, Discussions are mirrored to the <user@arrow.apache.org> mailing
+list {% include mailing_list_links.html list="user" %} and users are welcome to
+ask usage questions in either location. Maintainers may convert usage type
+Issues to Discussions as appropriate.
 
-### GitHub Discussions
+Please create Issues or start Discussions on the appropriate repository:
 
-We've enabled [GitHub Discussions](https://github.com/apache/arrow/discussions)
-for usage questions and all posts are mirrored to the <user@arrow.apache.org>
-mailing list {% include mailing_list_links.html list="user" %}. Users are welcome to ask usage questions in either location.
+Implementations:
+
+- Go: [apache/arrow-go](http://github.com/apache/arrow-go) ([Issues](http://github.com/apache/arrow-go/issues))
+- Java: [apache/arrow-java](http://github.com/apache/arrow-java) ([Issues](http://github.com/apache/arrow-java/issues))
+- nanoarrow: [apache/arrow-nanoarrow](https://github.com/apache/arrow-nanoarrow) ([Issues](https://github.com/apache/arrow-nanoarrow/issues), [Discussions](https://github.com/apache/arrow-nanoarrow/discussions))
+- Rust: [apache/arrow-rs](http://github.com/apache/arrow-rs) ([Issues](http://github.com/apache/arrow-rs/issues), [Discussions](http://github.com/apache/arrow-rs/discussions))
+- .NET: [apache/arrow-dotnet](https://github.com/apache/arrow-dotnet) ([Issues](https://github.com/apache/arrow-dotnet/issues), [Discussions](https://github.com/apache/arrow-dotnet/discussions))
+- All Others: [apache/arrow](http://github.com/apache/arrow) ([Issues](http://github.com/apache/arrow/issues), [Discussions](http://github.com/apache/arrow/discussions)).
+
+Standards:
+
+- ADBC: [apache/arrow-adbc](https://github.com/apache/arrow-adbc) ([Issues](https://github.com/apache/arrow-adbc/issues), [Discussions](https://github.com/apache/arrow-adbc/discussions))
 
 ### Stack Overflow
 
