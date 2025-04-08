@@ -90,10 +90,11 @@ activity is captured in email form for archival purposes.
 
 ### GitHub Issues
 
-We use [GitHub Issues](https://github.com/apache/arrow/issues) as a way to ask questions and engage with the Arrow developer
-community and for maintaining a queue of development work and as the public
-record of work on the project. We use the mailing lists for development discussions,
-where a lengthy discussions is required.
+We use [GitHub Issues](https://github.com/apache/arrow/issues) to track the
+queue of development work. Bugs and feature requests are welcome. For usage type
+questions we have [GitHub
+Discussions](#github-discussions) and might convert
+usage Issues into Discussions.
 
 ### GitHub Discussions
 
