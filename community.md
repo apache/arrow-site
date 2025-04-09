@@ -90,7 +90,7 @@ activity is captured in email form for archival purposes.
 
 ### GitHub
 
-We use GitHub Issues as a place to report bugs, request new features, and to
+We use GitHub Issues as a place to report bugs, request new features, and
 track the queue of development work. For usage questions, some of our
 repositories use Discussions as an alternative to the <user@arrow.apache.org>
 mailing list {% include mailing_list_links.html list="user" %}. For those
