@@ -106,6 +106,7 @@ Implementations:
 Standards:
 
 - ADBC: [apache/arrow-adbc](https://github.com/apache/arrow-adbc) ([Issues](https://github.com/apache/arrow-adbc/issues), [Discussions](https://github.com/apache/arrow-adbc/discussions))
+- All Others: [apache/arrow](http://github.com/apache/arrow) ([Issues](http://github.com/apache/arrow/issues), [Discussions](http://github.com/apache/arrow/discussions))
 
 ### Stack Overflow
 
