@@ -90,14 +90,7 @@ activity is captured in email form for archival purposes.
 
 ### GitHub
 
-We use GitHub Issues as a place to report bugs, request new features, and
-track the queue of development work. For usage questions, some of our
-repositories use Discussions as an alternative to the <user@arrow.apache.org>
-mailing list {% include mailing_list_links.html list="user" %}. For those
-repositories, Discussions are mirrored to the <user@arrow.apache.org> mailing
-list {% include mailing_list_links.html list="user" %} and users are welcome to
-ask usage questions in either location. Maintainers may convert usage type
-Issues to Discussions as appropriate.
+<p>We use GitHub Issues as a place to report bugs, request new features, and track the queue of development work. For usage questions, some of our repositories use GitHub Discussions as an alternative to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %}. For those repositories, Discussions are mirrored to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %} and users are welcome to ask usage questions in either location. Maintainers may convert usage type Issues to Discussions as appropriate.</p>
 
 Please create Issues or start Discussions on the appropriate repository:
 
