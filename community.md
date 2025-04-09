@@ -108,7 +108,7 @@ Implementations:
 - nanoarrow: [apache/arrow-nanoarrow](https://github.com/apache/arrow-nanoarrow) ([Issues](https://github.com/apache/arrow-nanoarrow/issues), [Discussions](https://github.com/apache/arrow-nanoarrow/discussions))
 - Rust: [apache/arrow-rs](http://github.com/apache/arrow-rs) ([Issues](http://github.com/apache/arrow-rs/issues), [Discussions](http://github.com/apache/arrow-rs/discussions))
 - .NET: [apache/arrow-dotnet](https://github.com/apache/arrow-dotnet) ([Issues](https://github.com/apache/arrow-dotnet/issues), [Discussions](https://github.com/apache/arrow-dotnet/discussions))
-- All Others: [apache/arrow](http://github.com/apache/arrow) ([Issues](http://github.com/apache/arrow/issues), [Discussions](http://github.com/apache/arrow/discussions)).
+- All Others: [apache/arrow](http://github.com/apache/arrow) ([Issues](http://github.com/apache/arrow/issues), [Discussions](http://github.com/apache/arrow/discussions))
 
 Standards:
 
