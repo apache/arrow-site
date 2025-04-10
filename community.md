@@ -88,6 +88,26 @@ activity is captured in email form for archival purposes.
   <li> <code>github@</code> for all activity on the GitHub repositories {% include mailing_list_links.html list="github" %} </li>
 </ul>
 
+### GitHub
+
+<p>We use GitHub Issues as a place to report bugs, request new features, and track the queue of development work. For usage questions, some of our repositories use GitHub Discussions as an alternative to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %}. For those repositories, Discussions are mirrored to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %} and users are welcome to ask usage questions in either location. Maintainers may convert usage type Issues to Discussions as appropriate.</p>
+
+Please create Issues or start Discussions on the appropriate repository:
+
+Implementations:
+
+- Go: [apache/arrow-go](http://github.com/apache/arrow-go) ([Issues](http://github.com/apache/arrow-go/issues))
+- Java: [apache/arrow-java](http://github.com/apache/arrow-java) ([Issues](http://github.com/apache/arrow-java/issues))
+- nanoarrow: [apache/arrow-nanoarrow](https://github.com/apache/arrow-nanoarrow) ([Issues](https://github.com/apache/arrow-nanoarrow/issues), [Discussions](https://github.com/apache/arrow-nanoarrow/discussions))
+- Rust: [apache/arrow-rs](http://github.com/apache/arrow-rs) ([Issues](http://github.com/apache/arrow-rs/issues), [Discussions](http://github.com/apache/arrow-rs/discussions))
+- .NET: [apache/arrow-dotnet](https://github.com/apache/arrow-dotnet) ([Issues](https://github.com/apache/arrow-dotnet/issues), [Discussions](https://github.com/apache/arrow-dotnet/discussions))
+- All Others: [apache/arrow](http://github.com/apache/arrow) ([Issues](http://github.com/apache/arrow/issues), [Discussions](http://github.com/apache/arrow/discussions))
+
+Standards:
+
+- ADBC: [apache/arrow-adbc](https://github.com/apache/arrow-adbc) ([Issues](https://github.com/apache/arrow-adbc/issues), [Discussions](https://github.com/apache/arrow-adbc/discussions))
+- All Others: [apache/arrow](http://github.com/apache/arrow) ([Issues](http://github.com/apache/arrow/issues), [Discussions](http://github.com/apache/arrow/discussions))
+
 ### Stack Overflow
 
 For questions on how to use Arrow libraries, you may want to use the Stack
@@ -96,13 +116,6 @@ Overflow tag
 addition to the programming language. Some languages and subprojects may have
 their own tags (for example,
 [pyarrow](https://stackoverflow.com/questions/tagged/pyarrow)).
-
-### GitHub issues
-
-We use GitHub issues as a way to ask questions and engage with the Arrow developer
-community and for maintaining a queue of development work and as the public
-record of work on the project. We use the mailing lists for development discussions,
-where a lengthy discussions is required.
 
 ### Meetings
 
