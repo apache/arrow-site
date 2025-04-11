@@ -82,7 +82,7 @@ Debian GNU/Linux and Ubuntu:
 ```shell
 sudo apt update
 sudo apt install -y -V ca-certificates lsb-release wget
-wget https://repo1.maven.org/maven2/org/apache/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+wget https://packages.apache.org/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
 sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
 sudo apt update
 sudo apt install -y -V libarrow-dev # For C++
@@ -104,7 +104,7 @@ AlmaLinux 8/9, Oracle Linux 8/9, Red Hat Enterprise Linux 8/9 and CentOS Stream 
 
 ```shell
 sudo dnf install -y epel-release || sudo dnf install -y oracle-epel-release-el$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1) || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
-sudo dnf install -y https://repo1.maven.org/maven2/org/apache/arrow/almalinux/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo dnf install -y https://packages.apache.org/artifactory/arrow/almalinux/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo dnf config-manager --set-enabled epel || :
 sudo dnf config-manager --set-enabled powertools || :
 sudo dnf config-manager --set-enabled crb || :
@@ -130,7 +130,7 @@ CentOS 7 and Red Hat Enterprise Linux 7:
 
 ```shell
 sudo yum install -y epel-release || sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
-sudo yum install -y https://repo1.maven.org/maven2/org/apache/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
+sudo yum install -y https://packages.apache.org/artifactory/arrow/centos/$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1)/apache-arrow-release-latest.rpm
 sudo yum install -y --enablerepo=epel arrow-devel # For C++
 sudo yum install -y --enablerepo=epel arrow-glib-devel # For GLib (C)
 sudo yum install -y --enablerepo=epel arrow-dataset-devel # For Apache Arrow Dataset C++
@@ -143,7 +143,7 @@ sudo yum install -y --enablerepo=epel parquet-glib-devel # For Apache Parquet GL
 Amazon Linux 2023:
 
 ```shell
-sudo dnf install -y https://repo1.maven.org/maven2/org/apache/arrow/amazon-linux/$(cut -d: -f6 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
+sudo dnf install -y https://packages.apache.org/artifactory/arrow/amazon-linux/$(cut -d: -f6 /etc/system-release-cpe)/apache-arrow-release-latest.rpm
 sudo dnf install -y arrow-devel # For C++
 sudo dnf install -y arrow-glib-devel # For GLib (C)
 sudo dnf install -y arrow-acero-devel # For Apache Arrow Acero
