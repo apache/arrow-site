@@ -90,14 +90,15 @@ activity is captured in email form for archival purposes.
 
 ### GitHub
 
-<p>We use GitHub Issues as a place to report bugs, request new features, and track the queue of development work. For usage questions, some of our repositories use GitHub Discussions as an alternative to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %}. For those repositories, Discussions are mirrored to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %} and users are welcome to ask usage questions in either location. Maintainers may convert usage type Issues to Discussions as appropriate.</p>
+<p>We use GitHub Issues as a place to report bugs, request new features, and track the queue of development work. For usage questions, our repositories use GitHub Discussions as an alternative to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %}. Discussions are mirrored to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %} and users are welcome to ask usage questions in either location. Maintainers may convert usage type Issues to Discussions as appropriate.</p>
 
 Please create Issues or start Discussions on the appropriate repository:
 
 Implementations:
 
-- Go: [apache/arrow-go](http://github.com/apache/arrow-go) ([Issues](http://github.com/apache/arrow-go/issues))
-- Java: [apache/arrow-java](http://github.com/apache/arrow-java) ([Issues](http://github.com/apache/arrow-java/issues))
+- Go: [apache/arrow-go](http://github.com/apache/arrow-go) ([Issues](http://github.com/apache/arrow-go/issues), [Discussions](https://github.com/apache/arrow-go/discussions))
+- Java: [apache/arrow-java](http://github.com/apache/arrow-java) ([Issues](http://github.com/apache/arrow-java/issues), [Discussions](https://github.com/apache/arrow-java/discussions))
+- Julia: [apache/arrow-julia](http://github.com/apache/arrow-julia) ([Issues](http://github.com/apache/arrow-julia/issues), [Discussions](https://github.com/apache/arrow-julia/discussions))
 - nanoarrow: [apache/arrow-nanoarrow](https://github.com/apache/arrow-nanoarrow) ([Issues](https://github.com/apache/arrow-nanoarrow/issues), [Discussions](https://github.com/apache/arrow-nanoarrow/discussions))
 - Rust: [apache/arrow-rs](http://github.com/apache/arrow-rs) ([Issues](http://github.com/apache/arrow-rs/issues), [Discussions](http://github.com/apache/arrow-rs/discussions))
 - .NET: [apache/arrow-dotnet](https://github.com/apache/arrow-dotnet) ([Issues](https://github.com/apache/arrow-dotnet/issues), [Discussions](https://github.com/apache/arrow-dotnet/discussions))
