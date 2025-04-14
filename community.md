@@ -98,7 +98,7 @@ Implementations:
 
 - Go: [apache/arrow-go](http://github.com/apache/arrow-go) ([Issues](http://github.com/apache/arrow-go/issues), [Discussions](https://github.com/apache/arrow-go/discussions))
 - Java: [apache/arrow-java](http://github.com/apache/arrow-java) ([Issues](http://github.com/apache/arrow-java/issues), [Discussions](https://github.com/apache/arrow-java/discussions))
-- Julia: [apache/arrow-julia](http://github.com/apache/arrow-go) ([Issues](http://github.com/apache/arrow-julia/issues), [Discussions](https://github.com/apache/arrow-julia/discussions))
+- Julia: [apache/arrow-julia](http://github.com/apache/arrow-julia) ([Issues](http://github.com/apache/arrow-julia/issues), [Discussions](https://github.com/apache/arrow-julia/discussions))
 - nanoarrow: [apache/arrow-nanoarrow](https://github.com/apache/arrow-nanoarrow) ([Issues](https://github.com/apache/arrow-nanoarrow/issues), [Discussions](https://github.com/apache/arrow-nanoarrow/discussions))
 - Rust: [apache/arrow-rs](http://github.com/apache/arrow-rs) ([Issues](http://github.com/apache/arrow-rs/issues), [Discussions](http://github.com/apache/arrow-rs/discussions))
 - .NET: [apache/arrow-dotnet](https://github.com/apache/arrow-dotnet) ([Issues](https://github.com/apache/arrow-dotnet/issues), [Discussions](https://github.com/apache/arrow-dotnet/discussions))
