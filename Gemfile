@@ -18,6 +18,8 @@
 source "https://rubygems.org"
 ruby RUBY_VERSION
 
+gem "base64"
+gem "csv"
 gem "jekyll", "4.3.3"
 gem "rake"
 gem "tzinfo-data", platforms: [:mingw, :mswin, :x64_mingw, :jruby]
