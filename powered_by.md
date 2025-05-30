@@ -109,6 +109,8 @@ short description of your use case.
   format. From a set of Arrow Schemas, Fletcher generates highly optimized
   hardware structures that allow accelerator kernels to read and write
   RecordBatches at system bandwidth through easy-to-use interfaces.
+* **[FlexPro][58]:** A tool for measurement data analysis and presentation.
+  FlexPro uses Apache Arrow to support reading and writing Parquet files.
 * **[GeoMesa][8]:** A suite of tools that enables large-scale geospatial query
   and analytics on distributed computing systems. GeoMesa supports query
   results in the Arrow IPC format, which can then be used for in-browser
@@ -286,3 +288,4 @@ short description of your use case.
 [55]: https://github.com/tradewelltech/protarrow
 [56]: https://github.com/spiceai/spiceai
 [57]: https://squey.org
+[58]: https://www.weisang.com/
