@@ -46,7 +46,7 @@ been made: we refer you to the [complete changelog][3].
 
 ## Release Highlights
 
-- Apache, Databricks: these drivers has received a plethora of improvements,
+- Apache Hive/Impala/Spark, Databricks: these drivers have received a plethora of improvements,
   optimizations, and bug fixes.
 - DataFusion: the arrow crate version requirement is now independent from that
   of the `adbc_core` crate, to make it easier to use older versions of the
