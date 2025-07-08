@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Apache Arrow ADBC 19 (Libraries) Release"
-date: "2025-07-09 00:00:00"
+date: "2025-07-08 00:00:00"
 author: pmc
 categories: [release]
 ---
