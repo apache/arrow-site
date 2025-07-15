@@ -68,7 +68,7 @@ The aforementioned row table stores fixed-length data in tightly packed buffers.
 ```cpp
 const uint8_t* row_ptr = row_ptr_base + row_length * row_id;
 ```
-When both row_length and row_id are large 32-bit integers, their product can overflow.
+When both `row_length` and `row_id` are large 32-bit integers, their product can overflow.
 
 Similarly, accessing null masks involves [null-bit indexing arithmetic](https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L150):
 ```cpp
