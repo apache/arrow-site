@@ -33,7 +33,7 @@ limitations under the License.
 
 Hash join is a fundamental operation in analytical processing engines. In the C++ implementation of Apache Arrow, the hash join is implemented in the C++ engine Acero, which powers query execution in bindings like PyArrow and the R Arrow package. Even if you haven't used Acero directly, your code may already be benefiting from it under the hood.
 
-For example, this simple PyArrow is using Acero:
+For example, this simple PyArrow example uses Acero:
 ```python
 import pandas as pd
 import pyarrow as pa
