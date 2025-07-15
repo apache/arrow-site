@@ -35,15 +35,14 @@ Hash join is a fundamental operation in analytical processing engines. In the C+
 
 For example, this simple PyArrow example uses Acero:
 ```python
-import pandas as pd
 import pyarrow as pa
-df1 = pd.DataFrame({'id': [1, 2, 3],
-                    'year': [2020, 2022, 2019]})
-df2 = pd.DataFrame({'id': [3, 4],
-                    'n_legs': [5, 100],
-                    'animal': ["Brittle stars", "Centipede"]})
-t1 = pa.Table.from_pandas(df1)
-t2 = pa.Table.from_pandas(df2)
+
+t1 = pa.table({'id': [1, 2, 3],
+               'year': [2020, 2022, 2019]})
+t2 = pa.table({'id': [3, 4],
+               'n_legs': [5, 100],
+               'animal': ["Brittle stars", "Centipede"]})
+
 t1.join(t2, 'id').combine_chunks().sort_by('year')
 ```
 
