@@ -46,7 +46,7 @@ t2 = pa.table({'id': [3, 4],
 t1.join(t2, 'id').combine_chunks().sort_by('year')
 ```
 
-Acero was originally created in 2019 to demonstrate that the ever-growing library of compute kernels in Arrow C++ could be linked together into realistic workflows and also to take advantage of the emerging Datasets API to give these workflows access to data. While it was never intended to be an alternative to more popular tools of the time nor has it tried to compete with tools that have emerged since (such as DuckDB), Acero has certainly proved its original purpose and continued to evolve to meet user needs.
+Acero was originally created in 2019 to demonstrate that the ever-growing library of compute kernels in Arrow C++ could be linked together into realistic workflows and also to take advantage of the emerging Datasets API to give these workflows access to data. Rather than aiming to compete with full query engines like DuckDB, Acero focuses on enabling flexible, composable, and embeddable query execution — serving as a building block for tools and systems that need fast, modular analytics capabilities — including those built atop Arrow C++, or integrating via bindings like PyArrow, Substrait, or ADBC.
 
 Across several recent Arrow C++ releases, we've made substantial improvements to the hash join implementation to address common user pain points. These changes improve stability, memory efficiency, and parallel performance, with a focus on making joins more usable and scalable out of the box. If you've had trouble using Arrow’s hash join in the past, now is a great time to try again.
 
