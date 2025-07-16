@@ -2,7 +2,7 @@
 layout: post
 title: "Recent Improvements to Hash Join in Arrow C++"
 description: "A deep dive into recent improvements to Apache Arrow’s hash join implementation — enhancing stability, memory efficiency, and parallel performance for modern analytic workloads."
-date: "2025-07-07 00:00:00"
+date: "2025-07-18 00:00:00"
 author: zanmato
 categories: [application]
 ---
