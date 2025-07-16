@@ -25,8 +25,6 @@ limitations under the License.
 {% endcomment %}
 -->
 
-*Edited by Apache Arrow PMC.*
-
 *Editor’s Note: Apache Arrow is an expansive project, ranging from the Arrow columnar format itself, to its numerous specifications, and a long list of implementations. Arrow is also an expansive project in terms of its community of contributors. In this blog post, we’d like to highlight recent work by Apache Arrow Committer Rossi Sun on improving the performance and stability of Arrow’s embeddable query execution engine: Acero.*
 
 # Introduction
