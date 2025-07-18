@@ -1,4 +1,127 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2025-07-13T15:27:49-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow ADBC 19 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/07/08/adbc-19-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 19 (Libraries) Release" /><published>2025-07-08T00:00:00-04:00</published><updated>2025-07-08T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/07/08/adbc-19-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/07/08/adbc-19-release/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2025-07-18T04:23:15-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Recent Improvements to Hash Join in Arrow C++</title><link href="https://arrow.apache.org/blog/2025/07/18/recent-improvements-to-hash-join/" rel="alternate" type="text/html" title="Recent Improvements to Hash Join in Arrow C++" /><published>2025-07-18T00:00:00-04:00</published><updated>2025-07-18T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/07/18/recent-improvements-to-hash-join</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/07/18/recent-improvements-to-hash-join/"><![CDATA[<!--
+
+-->
+
+<p><em>Editor’s Note: Apache Arrow is an expansive project, ranging from the Arrow columnar format itself, to its numerous specifications, and a long list of implementations. Arrow is also an expansive project in terms of its community of contributors. In this blog post, we’d like to highlight recent work by Apache Arrow Committer Rossi Sun on improving the performance and stability of Arrow’s embeddable query execution engine: Acero.</em></p>
+
+<h1 id="introduction">Introduction</h1>
+
+<p>Hash join is a fundamental operation in analytical processing engines — it matches rows from two tables based on key values using a hash table for fast lookup. In the C++ implementation of Apache Arrow, the hash join is implemented in the C++ engine Acero, which powers query execution in bindings like PyArrow and the R Arrow package. Even if you haven’t used Acero directly, your code may already be benefiting from it under the hood.</p>
+
+<p>For example, this simple PyArrow example uses Acero:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
+
+<span class="n">t1</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="nf">table</span><span class="p">({</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+               <span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">2022</span><span class="p">,</span> <span class="mi">2019</span><span class="p">]})</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="nf">table</span><span class="p">({</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span>
+               <span class="sh">'</span><span class="s">n_legs</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
+               <span class="sh">'</span><span class="s">animal</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">Brittle stars</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">Centipede</span><span class="sh">"</span><span class="p">]})</span>
+
+<span class="n">t1</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">).</span><span class="nf">combine_chunks</span><span class="p">().</span><span class="nf">sort_by</span><span class="p">(</span><span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Acero was originally created in 2019 to demonstrate that the ever-growing library of compute kernels in Arrow C++ could be linked together into realistic workflows and also to take advantage of the emerging Datasets API to give these workflows access to data. Rather than aiming to compete with full query engines like DuckDB, Acero focuses on enabling flexible, composable, and embeddable query execution — serving as a building block for tools and systems that need fast, modular analytics capabilities — including those built atop Arrow C++, or integrating via bindings like PyArrow, Substrait, or ADBC.</p>
+
+<p>Across several recent Arrow C++ releases, we’ve made substantial improvements to the hash join implementation to address common user pain points. These changes improve stability, memory efficiency, and parallel performance, with a focus on making joins more usable and scalable out of the box. If you’ve had trouble using Arrow’s hash join in the past, now is a great time to try again.</p>
+
+<h1 id="scaling-safely-improvements-to-stability">Scaling Safely: Improvements to Stability</h1>
+
+<p>In earlier versions of Arrow C++, the hash join implementation used internal data structures that weren’t designed for very large datasets and lacked safeguards in some of the underlying memory operations. These limitations rarely surfaced in small to medium workloads but became problematic at scale, manifesting as crashes or subtle correctness issues.</p>
+
+<p>At the core of Arrow’s join implementation is a compact, row-oriented structure known as the “row table”. While Arrow’s data model is columnar, its hash join implementation operates in a row-wise fashion — similar to modern engines like DuckDB and Meta’s Velox. This layout minimizes CPU cache misses during hash table lookups by collocating keys, payloads, and null bits in memory so they can be accessed together.</p>
+
+<p>In previous versions, the row table used 32-bit offsets to reference packed rows. This capped each table’s size to 4GB and introduced risks of overflow when working with large datasets or wide rows. Several reported issues — <a href="https://github.com/apache/arrow/issues/34474">GH-34474</a>, <a href="https://github.com/apache/arrow/issues/41813">GH-41813</a>, and <a href="https://github.com/apache/arrow/issues/43202">GH-43202</a> — highlighted the limitations of this design. In response, PR <a href="https://github.com/apache/arrow/pull/43389">GH-43389</a> widened the internal offset type to 64-bit, reworking key parts of the row table infrastructure to support larger data sizes more safely and scalably.</p>
+
+<p>Besides the offset limitation, earlier versions of Arrow C++ also included overflow-prone logic in the buffer indexing paths used throughout the hash join implementation. Many internal calculations assumed that 32-bit integers were sufficient for addressing memory — a fragile assumption when working with large datasets or wide rows. These issues appeared not only in conventional C++ indexing code but also in Arrow’s SIMD-accelerated paths — Arrow includes heavy SIMD specializations, used to speed up operations like hash table probing and row comparison. Together, these assumptions led to subtle overflows and incorrect behavior, as documented in issues like <a href="https://github.com/apache/arrow/issues/44513">GH-44513</a>, <a href="https://github.com/apache/arrow/issues/45334">GH-45334</a>, and <a href="https://github.com/apache/arrow/issues/45506">GH-45506</a>.</p>
+
+<p>Two representative examples:</p>
+
+<ul>
+  <li>Row-wise buffer access in C++</li>
+</ul>
+
+<p>The aforementioned row table stores fixed-length data in tightly packed buffers. Accessing a particular row (and optionally a column within it) typically involves <a href="https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L120">pointer arithmetic</a>:</p>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">const</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">row_ptr</span> <span class="o">=</span> <span class="n">row_ptr_base</span> <span class="o">+</span> <span class="n">row_length</span> <span class="o">*</span> <span class="n">row_id</span><span class="p">;</span>
+</code></pre></div></div>
+<p>When both <code class="language-plaintext highlighter-rouge">row_length</code> and <code class="language-plaintext highlighter-rouge">row_id</code> are large 32-bit integers, their product can overflow.</p>
+
+<p>Similarly, accessing null masks involves <a href="https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L150">null-bit indexing arithmetic</a>:</p>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int64_t</span> <span class="n">bit_id</span> <span class="o">=</span> <span class="n">row_id</span> <span class="o">*</span> <span class="n">null_mask_num_bytes</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">+</span> <span class="n">pos_after_encoding</span><span class="p">;</span>
+</code></pre></div></div>
+<p>The intermediate multiplication is performed using 32-bit arithmetic and can overflow even though the final result is stored in a 64-bit variable.</p>
+
+<ul>
+  <li>SIMD gathers with 32-bit offsets</li>
+</ul>
+
+<p>One essential SIMD instruction is the AVX2 intrinsic <code class="language-plaintext highlighter-rouge">__m256i _mm256_i32gather_epi32(int const * base, __m256i vindex, const int scale);</code>, which performs a parallel memory gather of eight 32-bit integers based on eight 32-bit signed offsets. It was extensively used in Arrow for hash table operations, for example, <a href="https://github.com/apache/arrow/blob/0a00e25f2f6fb927fb555b69038d0be9b9d9f265/cpp/src/arrow/compute/key_map_internal_avx2.cc#L404">fetching 8 group IDs</a> (hash table slots) in parallel during hash table probing:</p>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__m256i</span> <span class="n">group_id</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+</code></pre></div></div>
+<p>and <a href="https://github.com/apache/arrow/blob/69e8a78c018da88b60f9eb2b3b45703f81f3c93d/cpp/src/arrow/compute/row/compare_internal_avx2.cc#L284">loading 8 corresponding key values</a> from the right-side input in parallel for comparison:</p>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__m256i</span> <span class="n">right</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">((</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">right_base</span><span class="p">,</span> <span class="n">offset_right</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+</code></pre></div></div>
+<p>If any of the computed offsets exceed <code class="language-plaintext highlighter-rouge">2^31 - 1</code>, they wrap into the negative range, which can lead to invalid memory access (i.e., a crash) or, more subtly, fetch data from a valid but incorrect location — producing silently wrong results (trust me, you don’t want to debug that).</p>
+
+<p>To mitigate these risks, PR <a href="https://github.com/apache/arrow/pull/45108">GH-45108</a>, <a href="https://github.com/apache/arrow/pull/45336">GH-45336</a>, and <a href="https://github.com/apache/arrow/pull/45515">GH-45515</a> promoted critical arithmetic to 64-bit and reworked SIMD logic to use safer indexing. Buffer access logic was also encapsulated in safer abstractions to avoid repeated manual casting or unchecked offset math. These examples are not unique to Arrow — they reflect common pitfalls in building data-intensive systems, where unchecked assumptions about integer sizes can silently compromise correctness.</p>
+
+<p>Together, these changes make Arrow’s hash join implementation significantly more robust and better equipped for modern data workloads. These foundations not only resolve known issues but also reduce the risk of similar bugs in future development.</p>
+
+<h1 id="leaner-memory-usage">Leaner Memory Usage</h1>
+
+<p>While refining overflow-prone parts of the hash join implementation, I ended up examining most of the code path for potential pitfalls. When doing this kind of work, one sits down quietly and interrogates every line — asking not just whether an intermediate value might overflow, but whether it even needs to exist at all. And during that process, I came across something unrelated to overflow — but even more impactful.</p>
+
+<p>In a textbook hash join algorithm, once the right-side table (the build-side) is fully accumulated, a hash table is constructed to support probing the left-side table (the probe-side) for matches. To parallelize this build step, Arrow C++’s implementation partitions the build-side into <code class="language-plaintext highlighter-rouge">N</code> partitions — typically matching the number of available CPU cores — and builds a separate hash table for each partition in parallel. These are then merged into a final, unified hash table used during the probe phase.</p>
+
+<p>The issue? The memory footprint. The total size of the partitioned hash tables is roughly equal to that of the final hash table, but they were being held in memory even after merging. Once the final hash table was built, these temporary structures had no further use — yet they persisted through the entire join operation. There were no crashes, no warnings, no visible red flags — just silent overhead.</p>
+
+<p>Once spotted, the fix was straightforward: restructure the join process to release these buffers immediately after the merge. The change was implemented in PR <a href="https://github.com/apache/arrow/issues/45552">GH-45552</a>. The memory profiles below illustrate its impact.</p>
+
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/recent-improvements-to-hash-join/memory-profile-baseline.png" width="50%" class="img-responsive" alt="Memory profile before" aria-hidden="true" />
+  <img src="/img/recent-improvements-to-hash-join/memory-profile-opt.png" width="50%" class="img-responsive" alt="Memory profile after" aria-hidden="true" />
+</div>
+
+<p>At <code class="language-plaintext highlighter-rouge">A</code>, memory usage rises steadily as the join builds partitioned hash tables in parallel. <code class="language-plaintext highlighter-rouge">B</code> marks the merge point, where these partitions are combined into a final, unified hash table. <code class="language-plaintext highlighter-rouge">C</code> represents the start of the probe phase, where the left-side table is scanned and matched against the final hash table. Memory begins to rise again as join results are materialized. <code class="language-plaintext highlighter-rouge">D</code> is the peak of the join operation, just before memory begins to drop as processing completes. The “leap of faith” occurs at the star on the right profile, where the partitioned hash tables are released immediately after merging. This early release frees up substantial memory and makes room for downstream processing — reducing the overall peak memory observed at <code class="language-plaintext highlighter-rouge">D</code>.</p>
+
+<p>This improvement already benefits real-world scenarios — for example, the <a href="https://duckdblabs.github.io/db-benchmark/">DuckDB Labs DB Benchmark</a>. Some benchmark queries that previously failed with out-of-memory (OOM) errors can now complete successfully — as shown in the comparison below.</p>
+
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-oom-baseline.png" width="50%" class="img-responsive" alt="DuckDB benchmark OOM before" aria-hidden="true" />
+  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-oom-opt.png" width="50%" class="img-responsive" alt="DuckDB benchmark OOM after" aria-hidden="true" />
+</div>
+
+<p>As one reviewer noted in the PR, this was a “low-hanging fruit.” And sometimes, meaningful performance gains don’t come from tuning hot loops or digging through flame graphs — they come from noticing something that doesn’t feel right and asking: why are we still keeping this around?</p>
+
+<h1 id="faster-execution-through-better-parallelism">Faster Execution Through Better Parallelism</h1>
+
+<p>Not every improvement comes from poring over flame graphs — but some definitely do. Performance is, after all, the most talked-about aspect of any query engine. So, how about a nice cup of flame graph?</p>
+
+<p><img src="/img/recent-improvements-to-hash-join/a-nice-cup-of-flame-graph.png" width="100%" class="img-responsive" alt="A nice cup of flame graph" aria-hidden="true" /></p>
+
+<p>It’s hard not to notice the long, flat bar dominating the middle — especially with the rather alarming word “Lock” in it. That’s our red flag.</p>
+
+<p>We’ve mentioned that in the build phase, we build partitioned hash tables in parallel. In earlier versions of Arrow C++, this parallelism was implemented on a batch basis — each thread processed a build-side batch concurrently. Since each batch contained arbitrary data that could fall into any partition, threads had to synchronize when accessing shared partitions. This was managed through <a href="https://github.com/apache/arrow/blob/196cde38c112d32a944afe978b6da9c7ce935ef7/cpp/src/arrow/acero/partition_util.h#L93">locks on partitions</a>. Although we introduced some randomness in the locking order to reduce contention, it remained high — clearly visible in the flame graph.</p>
+
+<p>To mitigate this contention, we restructured the build phase in PR <a href="https://github.com/apache/arrow/issues/45612">GH-45612</a>. Instead of having all threads partition and insert at once — each thread touching every hash table — we split the work into two distinct stages. In the first partition stage, <code class="language-plaintext highlighter-rouge">M</code> threads take their assigned batches and only partition them, recording which rows belong to which partition. No insertion happens yet — just classification. Then comes the second, newly separated build stage. Here, <code class="language-plaintext highlighter-rouge">N</code> threads take over, and each thread is responsible for building just one of the <code class="language-plaintext highlighter-rouge">N</code> partitioned hash tables. Every thread scans all the relevant partitions across all batches but inserts only the rows belonging to its assigned partition. This restructuring eliminates the need for locking between threads during insertion — each thread now has exclusive access to its partitioned hash table. By decoupling the work this way, we turned a highly contentious operation into a clean, embarrassingly parallel one. As a result, we saw performance improve by up to 10x in dedicated build benchmarks. The <a href="https://github.com/apache/arrow/blob/196cde38c112d32a944afe978b6da9c7ce935ef7/cpp/src/arrow/acero/hash_join_benchmark.cc#L302">example</a> below is from a more typical, general-purpose workload — not especially build-heavy — but it still shows a solid 2x speedup. In the chart, the leap of faith — marked by the purple icons 🟣⬇️ — represents results with this improvement applied, while the gray and black ones show earlier runs before the change.</p>
+
+<p><img src="/img/recent-improvements-to-hash-join/internal-benchmark.png" width="100%" class="img-responsive" alt="Internal benchmark" aria-hidden="true" /></p>
+
+<p>Also in real-world scenarios like the <a href="https://duckdblabs.github.io/db-benchmark/">DuckDB Labs DB Benchmark</a>, we’ve observed similar gains. The comparison below shows around a 2x improvement in query performance after this change was applied.</p>
+
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-perf-baseline.png" width="50%" class="img-responsive" alt="DuckDB benchmark perf before" aria-hidden="true" />
+  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-perf-opt.png" width="50%" class="img-responsive" alt="DuckDB benchmark perf after" aria-hidden="true" />
+</div>
+
+<p>Additional improvements include <a href="https://github.com/apache/arrow/pull/43832">GH-43832</a>, which extends AVX2 acceleration to more probing code paths, and <a href="https://github.com/apache/arrow/pull/45918">GH-45918</a>, which introduces parallelism to a previously sequential task phase. These target more specialized scenarios and edge cases.</p>
+
+<h2 id="closing">Closing</h2>
+
+<p>These improvements reflect ongoing investment in Arrow C++’s execution engine and a commitment to delivering fast, robust building blocks for analytic workloads. They are available in recent Arrow C++ releases and exposed through higher-level bindings like PyArrow and the Arrow R package — starting from version 18.0.0, with the most significant improvements landing in 20.0.0. If joins were a blocker for you before — due to memory, scale, or correctness — recent changes may offer a very different experience.</p>
+
+<p>The Arrow C++ engine is not just alive — it’s improving in meaningful, user-visible ways. We’re also actively monitoring for further issues and open to expanding the design based on user feedback and real-world needs. If you’ve tried joins in the past and run into performance or stability issues, we encourage you to give them another try and file an <a href="https://github.com/apache/arrow/issues">issue on GitHub</a> if you run into any issues.</p>
+
+<p>If you have any questions about this blog post, please feel free to contact the author, <a href="mailto:zanmato1984@gmail.com">Rossi Sun</a>.</p>]]></content><author><name>zanmato</name></author><category term="application" /><summary type="html"><![CDATA[A deep dive into recent improvements to Apache Arrow’s hash join implementation — enhancing stability, memory efficiency, and parallel performance for modern analytic workloads.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow ADBC 19 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/07/08/adbc-19-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 19 (Libraries) Release" /><published>2025-07-08T00:00:00-04:00</published><updated>2025-07-08T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/07/08/adbc-19-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/07/08/adbc-19-release/"><![CDATA[<!--
 
 -->
 
@@ -1020,224 +1143,4 @@ been made: we refer you to the <a href="https://github.com/apache/arrow-adbc/blo
 
 <p>We welcome questions and contributions from all interested.  Issues
 can be filed on <a href="https://github.com/apache/arrow-adbc/issues">GitHub</a>, and questions can be directed to GitHub
-or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the version 17 release of the Apache Arrow ADBC libraries. This release includes 18 resolved issues from 13 distinct contributors. This is a release of the libraries, which are at version 17. The API specification is versioned separately and is at version 1.1.0. The subcomponents are versioned independently: C/C++/GLib/Go/Python/Ruby: 1.5.0 C#: 0.17.0 Java: 0.17.0 R: 0.17.0 Rust: 0.17.0 The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights The CMake config can now build against system dependencies instead of forcing vendored dependencies (#2546). Also, CMake files are now installed even for the drivers written in Go (#2506). Packages for Ubuntu 24.04 LTS are now available (#2482). The performance of AdbcDataReader and ValueAt has been improved in C# (#2534). The C# BigQuery driver will now use a default project ID if one is not specified (#2471). The Flight SQL and Snowflake drivers allow passing low-level options in Go (gRPC dial options in #2563 and gosnowflake options in #2558). The Flight SQL driver should now provide column-level metadata (#2481). The Snowflake driver now no longer requires setting the current schema to get metadata (#2517). Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-arrow-adbc-16..apache-arrow-adbc-17 15 David Li 6 Matthijs Brobbel 2 Hélder Gregório 2 Matt Topol 2 Matthias Kuhn 2 Sutou Kouhei 2 davidhcoe 1 Curt Hagenlocher 1 Felipe Oliveira Carvalho 1 Felipe Vianna 1 Marius van Niekerk 1 Shuoze Li 1 amangoyal Roadmap There is some discussion on a potential second revision of ADBC to include more missing functionality and asynchronous API support. For more, see the milestone. We would welcome suggestions on APIs that could be added or extended. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Data Wants to Be Free: Fast Data Exchange with Apache Arrow</title><link href="https://arrow.apache.org/blog/2025/02/28/data-wants-to-be-free/" rel="alternate" type="text/html" title="Data Wants to Be Free: Fast Data Exchange with Apache Arrow" /><published>2025-02-28T00:00:00-05:00</published><updated>2025-02-28T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2025/02/28/data-wants-to-be-free</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/02/28/data-wants-to-be-free/"><![CDATA[<!--
-
--->
-
-<style>
-.a-header {
-  color: #984EA3;
-  font-weight: bold;
-}
-.a-data {
-  color: #377EB8;
-  font-weight: bold;
-}
-.a-length {
-  color: #FF7F00;
-  font-weight: bold;
-}
-.a-padding {
-  color: #E41A1C;
-  font-weight: bold;
-}
-</style>
-
-<p><em>This is the second in a series of posts that aims to demystify the use of
-Arrow as a data interchange format for databases and query engines.</em></p>
-
-<!--
-
--->
-
-<p>Posts in this series:</p>
-
-<ol>
-  <li><a href="/blog/2025/01/10/arrow-result-transfer/">How the Apache Arrow Format Accelerates Query Result Transfer</a></li>
-  <li><a href="/blog/2025/02/28/data-wants-to-be-free/">Data Wants to Be Free: Fast Data Exchange with Apache Arrow</a></li>
-</ol>
-
-<p>As data practitioners, we often find our data “held hostage”. Instead of being
-able to use data as soon as we get it, we have to spend time—time to parse and
-clean up inefficient and messy CSV files, time to wait for an outdated query
-engine to struggle with a few gigabytes of data, and time to wait for the data
-to make it across a socket. It’s that last point we’ll focus on today. In an
-age of multi-gigabit networks, why is it even a problem in the first place?
-And make no mistake, it is a problem—research by Mark Raasveldt and Hannes
-Mühleisen in their <a href="https://doi.org/10.14778/3115404.3115408">2017 paper</a><sup id="fnref:freepdf"><a href="#fn:freepdf" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>
-found that some systems take over <strong>ten minutes</strong> to transfer a dataset that
-should only take ten <em>seconds</em><sup id="fnref:ten"><a href="#fn:ten" class="footnote" rel="footnote" role="doc-noteref">2</a></sup>.</p>
-
-<p>Why are we waiting 60 times as long as we need to? <a href="https://arrow.apache.org/blog/2025/01/10/arrow-result-transfer/">As we’ve argued before,
-serialization overheads plague our
-tools</a>—and
-Arrow can help us here. So let’s make that more concrete: we’ll compare how
-PostgreSQL and Arrow encode the same data to illustrate the impact of the data
-serialization format. Then we’ll tour various ways to build protocols with
-Arrow, like Arrow HTTP and Arrow Flight, and how you might use each of them.</p>
-
-<h2 id="postgresql-vs-arrow-data-serialization">PostgreSQL vs Arrow: Data Serialization</h2>
-
-<p>Let’s compare the <a href="https://www.postgresql.org/docs/current/sql-copy.html#id-1.9.3.55.9.4">PostgreSQL binary
-format</a>
-and <a href="https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc">Arrow
-IPC</a>
-on the same dataset, and show how Arrow (with all the benefit of hindsight)
-makes better trade-offs than its predecessors.</p>
-
-<p>When you execute a query with PostgreSQL, the client/driver uses the
-PostgreSQL wire protocol to send the query and get back the result.  Inside
-that protocol, the result set is encoded with the PostgreSQL binary format<sup id="fnref:textbinary"><a href="#fn:textbinary" class="footnote" rel="footnote" role="doc-noteref">3</a></sup>.</p>
-
-<p>First, we’ll create a table and fill it with data:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>postgres=# CREATE TABLE demo (id BIGINT, val TEXT, val2 BIGINT);
-CREATE TABLE
-postgres=# INSERT INTO demo VALUES (1, 'foo', 64), (2, 'a longer string', 128), (3, 'yet another string', 10);
-INSERT 0 3
-</code></pre></div></div>
-
-<p>We can then use the COPY command to dump the raw binary data from PostgreSQL into a file:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>postgres=# COPY demo TO '/tmp/demo.bin' WITH BINARY;
-COPY 3
-</code></pre></div></div>
-
-<p>Then we can annotate the actual bytes of the data based on the <a href="https://www.postgresql.org/docs/current/sql-copy.html#id-1.9.3.55.9.4">documentation</a>:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-header">50 47 43 4f 50 59 0a ff  PGCOPY..</span>  <span class="a-header">COPY signature, flags,</span>
-00000008: <span class="a-header">0d 0a 00 00 00 00 00 00  ........</span>  <span class="a-header">and extension</span>
-00000010: <span class="a-header">00 00 00</span> <span class="a-padding">00 03</span> <span class="a-length">00 00 00</span>  <span class="a-header">...</span><span class="a-padding">..</span><span class="a-length">...</span>  <span class="a-padding">Values in row</span>
-00000018: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>  <span class="a-length">Length of value</span>
-00000020: <span class="a-data">01</span> <span class="a-length">00 00 00 03</span> <span class="a-data">66 6f 6f</span>  <span class="a-data">.</span><span class="a-length">....</span><span class="a-data">foo</span>  <span class="a-data">Data</span>
-00000028: <span class="a-length">00 00 00 08</span> <span class="a-data">00 00 00 00</span>  <span class="a-length">....</span><span class="a-data">....</span>
-00000030: <span class="a-data">00 00 00 40</span> <span class="a-padding">00 03</span> <span class="a-length">00 00</span>  <span class="a-data">...@</span><span class="a-padding">..</span><span class="a-length">..</span>
-00000038: <span class="a-length">00 08</span> <span class="a-data">00 00 00 00 00 00</span>  <span class="a-length">..</span><span class="a-data">......</span>
-00000040: <span class="a-data">00 02</span> <span class="a-length">00 00 00 0f</span> <span class="a-data">61 20</span>  <span class="a-data">..</span><span class="a-length">....</span><span class="a-data">a </span>
-00000048: <span class="a-data">6c 6f 6e 67 65 72 20 73  longer s</span>
-00000050: <span class="a-data">74 72 69 6e 67</span> <span class="a-length">00 00 00</span>  <span class="a-data">tring</span><span class="a-length">...</span>
-00000058: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>
-00000060: <span class="a-data">80</span> <span class="a-padding">00 03</span> <span class="a-length">00 00 00 08</span> <span class="a-data">00</span>  <span class="a-data">.</span><span class="a-padding">..</span><span class="a-length">....</span><span class="a-data">.</span>
-00000068: <span class="a-data">00 00 00 00 00 00 03</span> <span class="a-length">00</span>  <span class="a-data">.......</span><span class="a-length">.</span>
-00000070: <span class="a-length">00 00 12</span> <span class="a-data">79 65 74 20 61</span>  <span class="a-length">...</span><span class="a-data">yet a</span>
-00000078: <span class="a-data">6e 6f 74 68 65 72 20 73  nother s</span>
-00000080: <span class="a-data">74 72 69 6e 67</span> <span class="a-length">00 00 00</span>  <span class="a-data">tring</span><span class="a-length">...</span>
-00000088: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>
-00000090: <span class="a-data">0a</span> <span class="a-padding">ff ff</span>                 <span class="a-data">.</span><span class="a-padding">..</span>       <span class="a-padding">End of stream</span></code></pre></div></div>
-
-<p>Honestly, PostgreSQL’s binary format is quite understandable, and compact at first glance. It’s just a series of length-prefixed fields. But a closer look isn’t so favorable. <strong>PostgreSQL has overheads proportional to the number of rows and columns</strong>:</p>
-
-<ul>
-  <li>Every row has a 2 byte prefix for the number of values in the row. <em>But the data is tabular—we already know this info, and it doesn’t change!</em></li>
-  <li>Every value of every row has a 4 byte prefix for the length of the following data, or -1 if the value is NULL. <em>But we know the data types, and those don’t change—plus, values of most types have a fixed, known length!</em></li>
-  <li>All values are big-endian. <em>But most of our devices are little-endian, so the data has to be converted.</em></li>
-</ul>
-
-<p>For example, a single column of int32 values would have 4 bytes of data and 6 bytes of overhead per row—<strong>60% is “wasted!”</strong><sup id="fnref:1"><a href="#fn:1" class="footnote" rel="footnote" role="doc-noteref">4</a></sup> The ratio gets a little better with more columns (but not with more rows); in the limit we approach “only” 50% overhead.  And then each of the values has to be converted (even if endian-swapping is trivial).  To PostgreSQL’s credit, its format is at least cheap and easy to parse—<a href="https://protobuf.dev/programming-guides/encoding/">other formats</a> get fancy with tricks like “varint” encoding which are quite expensive.</p>
-
-<p>How does Arrow compare? We can use <a href="https://arrow.apache.org/adbc/current/driver/postgresql.html">ADBC</a> to pull the PostgreSQL table into an Arrow table, then annotate it like before:</p>
-
-<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp">&gt;</span><span class="o">&gt;&gt;</span> import adbc_driver_postgresql.dbapi
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> import pyarrow.ipc
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> conn <span class="o">=</span> adbc_driver_postgresql.dbapi.connect<span class="o">(</span><span class="s2">"..."</span><span class="o">)</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> cur <span class="o">=</span> conn.cursor<span class="o">()</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> cur.execute<span class="o">(</span><span class="s2">"SELECT * FROM demo"</span><span class="o">)</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> data <span class="o">=</span> cur.fetchallarrow<span class="o">()</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> writer <span class="o">=</span> pyarrow.ipc.new_stream<span class="o">(</span><span class="s2">"demo.arrows"</span>, data.schema<span class="o">)</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> writer.write_table<span class="o">(</span>data<span class="o">)</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> writer.close<span class="o">()</span>
-</code></pre></div></div>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-length">ff ff ff ff d8 00 00 00  ........  IPC message length</span>
-00000008: <span class="a-header">10 00 00 00 00 00 0a 00  ........  IPC schema</span>
-&vellip;         <span class="a-header">(208 bytes)</span>
-000000e0: <span class="a-length">ff ff ff ff f8 00 00 00  ........  IPC message length</span>
-000000e8: <span class="a-header">14 00 00 00 00 00 00 00  ........  IPC record batch</span>
-&vellip;         <span class="a-header">(240 bytes)</span>
-000001e0: <span class="a-data">01 00 00 00 00 00 00 00  ........  Data for column #1</span>
-000001e8: <span class="a-data">02 00 00 00 00 00 00 00  ........</span>
-000001f0: <span class="a-data">03 00 00 00 00 00 00 00  ........</span>
-000001f8: <span class="a-length">00 00 00 00 03 00 00 00  ........  String offsets</span>
-00000200: <span class="a-length">12 00 00 00 24 00 00 00  ....$...</span>
-00000208: <span class="a-data">66 6f 6f 61 20 6c 6f 6e  fooa lon  Data for column #2</span>
-00000210: <span class="a-data">67 65 72 20 73 74 72 69  ger stri</span>
-00000218: <span class="a-data">6e 67 79 65 74 20 61 6e  ngyet an</span>
-00000220: <span class="a-data">6f 74 68 65 72 20 73 74  other st</span>
-00000228: <span class="a-data">72 69 6e 67</span> <span class="a-padding">00 00 00 00</span>  <span class="a-data">ring</span><span class="a-padding">....  Alignment padding</span>
-00000230: <span class="a-data">40 00 00 00 00 00 00 00  @.......  Data for column #3</span>
-00000238: <span class="a-data">80 00 00 00 00 00 00 00  ........</span>
-00000240: <span class="a-data">0a 00 00 00 00 00 00 00  ........</span>
-00000248: <span class="a-length">ff ff ff ff 00 00 00 00  ........  IPC end-of-stream</span></code></pre></div></div>
-
-<p>Arrow looks quite…intimidating…at first glance. There’s a giant header that don’t seem related to our dataset at all, plus mysterious padding that seems to exist solely to take up space. But the important thing is that <strong>the overhead is fixed</strong>. Whether you’re transferring one row or a billion, the overhead doesn’t change. And unlike PostgreSQL, <strong>no per-value parsing is required</strong>.</p>
-
-<p>Instead of putting lengths of values everywhere, Arrow groups values of the same column (and hence same type) together, so it just needs the length of the buffer<sup id="fnref:header"><a href="#fn:header" class="footnote" rel="footnote" role="doc-noteref">5</a></sup>.  Overhead isn’t added where it isn’t otherwise needed.  Strings still have a length per value.  Nullability is instead stored in a bitmap, which is omitted if there aren’t any NULL values (as it is here). Because of that, more rows of data doesn’t increase the overhead; instead, the more data you have, the less you pay.</p>
-
-<p>Even the header isn’t actually the disadvantage it looks like. The header contains the schema, which makes the data stream self-describing. With PostgreSQL, you need to get the schema from somewhere else. So we aren’t making an apples-to-apples comparison in the first place: PostgreSQL still has to transfer the schema, it’s just not part of the “binary format” that we’re looking at here<sup id="fnref:binaryheader"><a href="#fn:binaryheader" class="footnote" rel="footnote" role="doc-noteref">6</a></sup>.</p>
-
-<p>There’s actually another problem with PostgreSQL: alignment. The 2 byte field count at the start of every row means all the 8 byte integers after it are unaligned. And that requires extra effort to handle properly (e.g. explicit unaligned load idioms), lest you suffer <a href="https://port70.net/~nsz/c/c11/n1570.html#6.3.2.3p7">undefined behavior</a>, a performance penalty, or even a runtime error. Arrow, on the other hand, strategically adds some padding to keep data aligned, and lets you use little-endian or big-endian byte order depending on your data. And Arrow doesn’t apply expensive encodings to the data that require further parsing. So generally, <strong>you can use Arrow data as-is without having to parse every value</strong>.</p>
-
-<p>That’s the benefit of Arrow being a standardized data format. By using Arrow for serialization, data coming off the wire is already in Arrow format, and can furthermore be directly passed on to <a href="https://duckdb.org">DuckDB</a>, <a href="https://pandas.pydata.org">pandas</a>, <a href="https://pola.rs">polars</a>, <a href="https://docs.rapids.ai/api/cudf/stable/">cuDF</a>, <a href="https://datafusion.apache.org">DataFusion</a>, or any number of systems. Meanwhile, even if the PostgreSQL format addressed these problems—adding padding to align fields, using little-endian or making endianness configurable, trimming the overhead—you’d still end up having to convert the data to another format (probably Arrow) to use downstream.</p>
-
-<p>Even if you really did want to use the PostgreSQL binary format everywhere<sup id="fnref:3"><a href="#fn:3" class="footnote" rel="footnote" role="doc-noteref">7</a></sup>, the documentation rather unfortunately points you to the C source code as the documentation. Arrow, on the other hand, has a <a href="https://github.com/apache/arrow/tree/main/format">specification</a>, <a href="https://arrow.apache.org/docs/format/Columnar.html">documentation</a>, and multiple <a href="https://arrow.apache.org/docs/#implementations">implementations</a> (including third-party ones) across a dozen languages for you to pick up and use in your own applications.</p>
-
-<p>Now, we don’t mean to pick on PostgreSQL here. Obviously, PostgreSQL is a full-featured database with a storied history, a different set of goals and constraints than Arrow, and many happy users. Arrow isn’t trying to compete in that space. But their domains do intersect. PostgreSQL’s wire protocol has <a href="https://datastation.multiprocess.io/blog/2022-02-08-the-world-of-postgresql-wire-compatibility.html">become a de facto standard</a>, with even brand new products like Google’s AlloyDB using it, and so its design affects many projects<sup id="fnref:4"><a href="#fn:4" class="footnote" rel="footnote" role="doc-noteref">8</a></sup>. In fact, AlloyDB is a great example of a shiny new columnar query engine being locked behind a row-oriented client protocol from the 90s. So <a href="https://en.wikipedia.org/wiki/Amdahl's_law">Amdahl’s law</a> rears its head again—optimizing the “front” and “back” of your data pipeline doesn’t matter when the middle is what’s holding you back.</p>
-
-<h2 id="a-quiver-of-arrow-projects">A quiver of Arrow (projects)</h2>
-
-<p>So if Arrow is so great, how can we actually use it to build our own protocols? Luckily, Arrow comes with a variety of building blocks for different situations.</p>
-
-<ul>
-  <li>We just talked about <a href="https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc"><strong>Arrow IPC</strong></a> before. Where Arrow is the in-memory format defining how arrays of data are laid out, er, in memory, Arrow IPC defines how to serialize and deserialize Arrow data so it can be sent somewhere else—whether that means being written to a file, to a socket, into a shared buffer, or otherwise. Arrow IPC organizes data as a sequence of messages, making it easy to stream over your favorite transport, like WebSockets.</li>
-  <li><a href="https://github.com/apache/arrow-experiments/tree/main/http"><strong>Arrow HTTP</strong></a> is “just” streaming Arrow IPC over HTTP. The Arrow community is working on standardizing it, so that different clients agree on how exactly to do this. There’s examples of clients and servers across several languages, how to use HTTP Range requests, using multipart/mixed requests to send combined JSON and Arrow responses, and more. While not a full protocol in and of itself, it’ll fit right in when building REST APIs.</li>
-  <li><a href="https://arrow.apache.org/docs/format/DissociatedIPC.html"><strong>Disassociated IPC</strong></a> combines Arrow IPC with advanced network transports like <a href="https://openucx.org/">UCX</a> and <a href="https://ofiwg.github.io/libfabric/">libfabric</a>. For those who require the absolute best performance and have the specialized hardware to boot, this allows you to send Arrow data at full throttle, taking advantage of scatter-gather, Infiniband, and more.</li>
-  <li><a href="https://arrow.apache.org/docs/format/FlightSql.html"><strong>Arrow Flight SQL</strong></a> is a fully defined protocol for accessing relational databases. Think of it as an alternative to the full PostgreSQL wire protocol: it defines how to connect to a database, execute queries, fetch results, view the catalog, and so on. For database developers, Flight SQL provides a fully Arrow-native protocol with clients for several programming languages and drivers for ADBC, JDBC, and ODBC—all of which you don’t have to build yourself.</li>
-  <li>And finally, <a href="https://arrow.apache.org/docs/format/ADBC.html"><strong>ADBC</strong></a> actually isn’t a protocol. Instead, it’s an API abstraction layer for working with databases (like JDBC and ODBC—bet you didn’t see that coming), that’s Arrow-native and doesn’t require transposing or converting columnar data back and forth. ADBC gives you a single API to access data from multiple databases, whether they use Flight SQL or something else under the hood, and if a conversion is absolutely necessary, ADBC handles the details so that you don’t have to build out a dozen connectors on your own.</li>
-</ul>
-
-<p>So to summarize:</p>
-
-<ul>
-  <li>If you’re <em>using</em> a database or other data system, you want <a href="https://arrow.apache.org/adbc/"><strong>ADBC</strong></a>.</li>
-  <li>If you’re <em>building</em> a database, you want <a href="https://arrow.apache.org/docs/format/FlightSql.html"><strong>Arrow Flight SQL</strong></a>.</li>
-  <li>If you’re working with specialized networking hardware (you’ll know if you are—that stuff doesn’t come cheap), you want the <a href="https://arrow.apache.org/docs/format/DissociatedIPC.html"><strong>Disassociated IPC Protocol</strong></a>.</li>
-  <li>If you’re <em>designing</em> a REST-ish API, you want <a href="https://github.com/apache/arrow-experiments/tree/main/http"><strong>Arrow HTTP</strong></a>.</li>
-  <li>And otherwise, you can roll-your-own with <a href="https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc"><strong>Arrow IPC</strong></a>.</li>
-</ul>
-
-<p><img src="/assets/data_wants_to_be_free/flowchart.png" alt="A flowchart of the decision points." class="img-responsive" width="100%" /></p>
-
-<h2 id="conclusion">Conclusion</h2>
-
-<p>Existing client protocols can be wasteful. Arrow offers better efficiency and avoids design pitfalls from the past. And Arrow makes it easy to build and consume data APIs with a variety of standards like Arrow IPC, Arrow HTTP, and ADBC. By using Arrow serialization in protocols, everyone benefits from easier, faster, and simpler data access, and we can avoid accidentally holding data captive behind slow and inefficient interfaces.</p>
-
-<hr />
-
-<div class="footnotes" role="doc-endnotes">
-  <ol>
-    <li id="fn:freepdf">
-      <p>The paper is freely available from <a href="https://www.vldb.org/pvldb/vol10/p1022-muehleisen.pdf">VLDB</a>. <a href="#fnref:freepdf" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:ten">
-      <p>Figure 1 in the paper shows Hive and MongoDB taking over 600 seconds vs the baseline of 10 seconds for netcat to transfer the CSV file.  Of course, that means the comparison is not entirely fair since the CSV file is not being parsed, but it gives an idea of the magnitudes involved. <a href="#fnref:ten" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:textbinary">
-      <p>There is a text format too, and that is often the default used by many clients.  We won’t discuss it here. <a href="#fnref:textbinary" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:1">
-      <p>Of course, it’s not fully wasted, as null/not-null is data as well. But for accounting purposes, we’ll be consistent and call lengths, padding, bitmaps, etc. “overhead”. <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:header">
-      <p>That’s what’s being stored in that ginormous header (among other things)—the lengths of all the buffers. <a href="#fnref:header" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:binaryheader">
-      <p>And conversely, the PGCOPY header is specific to the COPY command we executed to get a bulk response. <a href="#fnref:binaryheader" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:3">
-      <p><a href="https://datastation.multiprocess.io/blog/2022-02-08-the-world-of-postgresql-wire-compatibility.html">And people do…</a> <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-    <li id="fn:4">
-      <p><a href="https://github.com/apache/arrow-adbc/blob/ed18b8b221af23c7b32312411da10f6532eb3488/c/driver/postgresql/copy/reader.h">We have some experience with the PostgreSQL wire protocol, too.</a> <a href="#fnref:4" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
-    </li>
-  </ol>
-</div>]]></content><author><name>David Li, Ian Cook, Matt Topol</name></author><category term="application" /><summary type="html"><![CDATA[This is the second in a series of posts that aims to demystify the use of Arrow as a data interchange format for databases and query engines. Posts in this series: How the Apache Arrow Format Accelerates Query Result Transfer Data Wants to Be Free: Fast Data Exchange with Apache Arrow As data practitioners, we often find our data “held hostage”. Instead of being able to use data as soon as we get it, we have to spend time—time to parse and clean up inefficient and messy CSV files, time to wait for an outdated query engine to struggle with a few gigabytes of data, and time to wait for the data to make it across a socket. It’s that last point we’ll focus on today. In an age of multi-gigabit networks, why is it even a problem in the first place? And make no mistake, it is a problem—research by Mark Raasveldt and Hannes Mühleisen in their 2017 paper1 found that some systems take over ten minutes to transfer a dataset that should only take ten seconds2. Why are we waiting 60 times as long as we need to? As we’ve argued before, serialization overheads plague our tools—and Arrow can help us here. So let’s make that more concrete: we’ll compare how PostgreSQL and Arrow encode the same data to illustrate the impact of the data serialization format. Then we’ll tour various ways to build protocols with Arrow, like Arrow HTTP and Arrow Flight, and how you might use each of them. PostgreSQL vs Arrow: Data Serialization Let’s compare the PostgreSQL binary format and Arrow IPC on the same dataset, and show how Arrow (with all the benefit of hindsight) makes better trade-offs than its predecessors. When you execute a query with PostgreSQL, the client/driver uses the PostgreSQL wire protocol to send the query and get back the result. Inside that protocol, the result set is encoded with the PostgreSQL binary format3. First, we’ll create a table and fill it with data: postgres=# CREATE TABLE demo (id BIGINT, val TEXT, val2 BIGINT); CREATE TABLE postgres=# INSERT INTO demo VALUES (1, 'foo', 64), (2, 'a longer string', 128), (3, 'yet another string', 10); INSERT 0 3 We can then use the COPY command to dump the raw binary data from PostgreSQL into a file: postgres=# COPY demo TO '/tmp/demo.bin' WITH BINARY; COPY 3 Then we can annotate the actual bytes of the data based on the documentation: 00000000: 50 47 43 4f 50 59 0a ff PGCOPY.. COPY signature, flags, 00000008: 0d 0a 00 00 00 00 00 00 ........ and extension 00000010: 00 00 00 00 03 00 00 00 ........ Values in row 00000018: 08 00 00 00 00 00 00 00 ........ Length of value 00000020: 01 00 00 00 03 66 6f 6f .....foo Data 00000028: 00 00 00 08 00 00 00 00 ........ 00000030: 00 00 00 40 00 03 00 00 ...@.... 00000038: 00 08 00 00 00 00 00 00 ........ 00000040: 00 02 00 00 00 0f 61 20 ......a 00000048: 6c 6f 6e 67 65 72 20 73 longer s 00000050: 74 72 69 6e 67 00 00 00 tring... 00000058: 08 00 00 00 00 00 00 00 ........ 00000060: 80 00 03 00 00 00 08 00 ........ 00000068: 00 00 00 00 00 00 03 00 ........ 00000070: 00 00 12 79 65 74 20 61 ...yet a 00000078: 6e 6f 74 68 65 72 20 73 nother s 00000080: 74 72 69 6e 67 00 00 00 tring... 00000088: 08 00 00 00 00 00 00 00 ........ 00000090: 0a ff ff ... End of stream Honestly, PostgreSQL’s binary format is quite understandable, and compact at first glance. It’s just a series of length-prefixed fields. But a closer look isn’t so favorable. PostgreSQL has overheads proportional to the number of rows and columns: Every row has a 2 byte prefix for the number of values in the row. But the data is tabular—we already know this info, and it doesn’t change! Every value of every row has a 4 byte prefix for the length of the following data, or -1 if the value is NULL. But we know the data types, and those don’t change—plus, values of most types have a fixed, known length! All values are big-endian. But most of our devices are little-endian, so the data has to be converted. For example, a single column of int32 values would have 4 bytes of data and 6 bytes of overhead per row—60% is “wasted!”4 The ratio gets a little better with more columns (but not with more rows); in the limit we approach “only” 50% overhead. And then each of the values has to be converted (even if endian-swapping is trivial). To PostgreSQL’s credit, its format is at least cheap and easy to parse—other formats get fancy with tricks like “varint” encoding which are quite expensive. How does Arrow compare? We can use ADBC to pull the PostgreSQL table into an Arrow table, then annotate it like before: &gt;&gt;&gt; import adbc_driver_postgresql.dbapi &gt;&gt;&gt; import pyarrow.ipc &gt;&gt;&gt; conn = adbc_driver_postgresql.dbapi.connect("...") &gt;&gt;&gt; cur = conn.cursor() &gt;&gt;&gt; cur.execute("SELECT * FROM demo") &gt;&gt;&gt; data = cur.fetchallarrow() &gt;&gt;&gt; writer = pyarrow.ipc.new_stream("demo.arrows", data.schema) &gt;&gt;&gt; writer.write_table(data) &gt;&gt;&gt; writer.close() 00000000: ff ff ff ff d8 00 00 00 ........ IPC message length 00000008: 10 00 00 00 00 00 0a 00 ........ IPC schema &vellip; (208 bytes) 000000e0: ff ff ff ff f8 00 00 00 ........ IPC message length 000000e8: 14 00 00 00 00 00 00 00 ........ IPC record batch &vellip; (240 bytes) 000001e0: 01 00 00 00 00 00 00 00 ........ Data for column #1 000001e8: 02 00 00 00 00 00 00 00 ........ 000001f0: 03 00 00 00 00 00 00 00 ........ 000001f8: 00 00 00 00 03 00 00 00 ........ String offsets 00000200: 12 00 00 00 24 00 00 00 ....$... 00000208: 66 6f 6f 61 20 6c 6f 6e fooa lon Data for column #2 00000210: 67 65 72 20 73 74 72 69 ger stri 00000218: 6e 67 79 65 74 20 61 6e ngyet an 00000220: 6f 74 68 65 72 20 73 74 other st 00000228: 72 69 6e 67 00 00 00 00 ring.... Alignment padding 00000230: 40 00 00 00 00 00 00 00 @....... Data for column #3 00000238: 80 00 00 00 00 00 00 00 ........ 00000240: 0a 00 00 00 00 00 00 00 ........ 00000248: ff ff ff ff 00 00 00 00 ........ IPC end-of-stream Arrow looks quite…intimidating…at first glance. There’s a giant header that don’t seem related to our dataset at all, plus mysterious padding that seems to exist solely to take up space. But the important thing is that the overhead is fixed. Whether you’re transferring one row or a billion, the overhead doesn’t change. And unlike PostgreSQL, no per-value parsing is required. Instead of putting lengths of values everywhere, Arrow groups values of the same column (and hence same type) together, so it just needs the length of the buffer5. Overhead isn’t added where it isn’t otherwise needed. Strings still have a length per value. Nullability is instead stored in a bitmap, which is omitted if there aren’t any NULL values (as it is here). Because of that, more rows of data doesn’t increase the overhead; instead, the more data you have, the less you pay. Even the header isn’t actually the disadvantage it looks like. The header contains the schema, which makes the data stream self-describing. With PostgreSQL, you need to get the schema from somewhere else. So we aren’t making an apples-to-apples comparison in the first place: PostgreSQL still has to transfer the schema, it’s just not part of the “binary format” that we’re looking at here6. There’s actually another problem with PostgreSQL: alignment. The 2 byte field count at the start of every row means all the 8 byte integers after it are unaligned. And that requires extra effort to handle properly (e.g. explicit unaligned load idioms), lest you suffer undefined behavior, a performance penalty, or even a runtime error. Arrow, on the other hand, strategically adds some padding to keep data aligned, and lets you use little-endian or big-endian byte order depending on your data. And Arrow doesn’t apply expensive encodings to the data that require further parsing. So generally, you can use Arrow data as-is without having to parse every value. That’s the benefit of Arrow being a standardized data format. By using Arrow for serialization, data coming off the wire is already in Arrow format, and can furthermore be directly passed on to DuckDB, pandas, polars, cuDF, DataFusion, or any number of systems. Meanwhile, even if the PostgreSQL format addressed these problems—adding padding to align fields, using little-endian or making endianness configurable, trimming the overhead—you’d still end up having to convert the data to another format (probably Arrow) to use downstream. Even if you really did want to use the PostgreSQL binary format everywhere7, the documentation rather unfortunately points you to the C source code as the documentation. Arrow, on the other hand, has a specification, documentation, and multiple implementations (including third-party ones) across a dozen languages for you to pick up and use in your own applications. Now, we don’t mean to pick on PostgreSQL here. Obviously, PostgreSQL is a full-featured database with a storied history, a different set of goals and constraints than Arrow, and many happy users. Arrow isn’t trying to compete in that space. But their domains do intersect. PostgreSQL’s wire protocol has become a de facto standard, with even brand new products like Google’s AlloyDB using it, and so its design affects many projects8. In fact, AlloyDB is a great example of a shiny new columnar query engine being locked behind a row-oriented client protocol from the 90s. So Amdahl’s law rears its head again—optimizing the “front” and “back” of your data pipeline doesn’t matter when the middle is what’s holding you back. A quiver of Arrow (projects) So if Arrow is so great, how can we actually use it to build our own protocols? Luckily, Arrow comes with a variety of building blocks for different situations. We just talked about Arrow IPC before. Where Arrow is the in-memory format defining how arrays of data are laid out, er, in memory, Arrow IPC defines how to serialize and deserialize Arrow data so it can be sent somewhere else—whether that means being written to a file, to a socket, into a shared buffer, or otherwise. Arrow IPC organizes data as a sequence of messages, making it easy to stream over your favorite transport, like WebSockets. Arrow HTTP is “just” streaming Arrow IPC over HTTP. The Arrow community is working on standardizing it, so that different clients agree on how exactly to do this. There’s examples of clients and servers across several languages, how to use HTTP Range requests, using multipart/mixed requests to send combined JSON and Arrow responses, and more. While not a full protocol in and of itself, it’ll fit right in when building REST APIs. Disassociated IPC combines Arrow IPC with advanced network transports like UCX and libfabric. For those who require the absolute best performance and have the specialized hardware to boot, this allows you to send Arrow data at full throttle, taking advantage of scatter-gather, Infiniband, and more. Arrow Flight SQL is a fully defined protocol for accessing relational databases. Think of it as an alternative to the full PostgreSQL wire protocol: it defines how to connect to a database, execute queries, fetch results, view the catalog, and so on. For database developers, Flight SQL provides a fully Arrow-native protocol with clients for several programming languages and drivers for ADBC, JDBC, and ODBC—all of which you don’t have to build yourself. And finally, ADBC actually isn’t a protocol. Instead, it’s an API abstraction layer for working with databases (like JDBC and ODBC—bet you didn’t see that coming), that’s Arrow-native and doesn’t require transposing or converting columnar data back and forth. ADBC gives you a single API to access data from multiple databases, whether they use Flight SQL or something else under the hood, and if a conversion is absolutely necessary, ADBC handles the details so that you don’t have to build out a dozen connectors on your own. So to summarize: If you’re using a database or other data system, you want ADBC. If you’re building a database, you want Arrow Flight SQL. If you’re working with specialized networking hardware (you’ll know if you are—that stuff doesn’t come cheap), you want the Disassociated IPC Protocol. If you’re designing a REST-ish API, you want Arrow HTTP. And otherwise, you can roll-your-own with Arrow IPC. Conclusion Existing client protocols can be wasteful. Arrow offers better efficiency and avoids design pitfalls from the past. And Arrow makes it easy to build and consume data APIs with a variety of standards like Arrow IPC, Arrow HTTP, and ADBC. By using Arrow serialization in protocols, everyone benefits from easier, faster, and simpler data access, and we can avoid accidentally holding data captive behind slow and inefficient interfaces. The paper is freely available from VLDB. &#8617; Figure 1 in the paper shows Hive and MongoDB taking over 600 seconds vs the baseline of 10 seconds for netcat to transfer the CSV file. Of course, that means the comparison is not entirely fair since the CSV file is not being parsed, but it gives an idea of the magnitudes involved. &#8617; There is a text format too, and that is often the default used by many clients. We won’t discuss it here. &#8617; Of course, it’s not fully wasted, as null/not-null is data as well. But for accounting purposes, we’ll be consistent and call lengths, padding, bitmaps, etc. “overhead”. &#8617; That’s what’s being stored in that ginormous header (among other things)—the lengths of all the buffers. &#8617; And conversely, the PGCOPY header is specific to the COPY command we executed to get a bulk response. &#8617; And people do… &#8617; We have some experience with the PostgreSQL wire protocol, too. &#8617;]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-result-transfer/part-1-share-image.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the version 17 release of the Apache Arrow ADBC libraries. This release includes 18 resolved issues from 13 distinct contributors. This is a release of the libraries, which are at version 17. The API specification is versioned separately and is at version 1.1.0. The subcomponents are versioned independently: C/C++/GLib/Go/Python/Ruby: 1.5.0 C#: 0.17.0 Java: 0.17.0 R: 0.17.0 Rust: 0.17.0 The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights The CMake config can now build against system dependencies instead of forcing vendored dependencies (#2546). Also, CMake files are now installed even for the drivers written in Go (#2506). Packages for Ubuntu 24.04 LTS are now available (#2482). The performance of AdbcDataReader and ValueAt has been improved in C# (#2534). The C# BigQuery driver will now use a default project ID if one is not specified (#2471). The Flight SQL and Snowflake drivers allow passing low-level options in Go (gRPC dial options in #2563 and gosnowflake options in #2558). The Flight SQL driver should now provide column-level metadata (#2481). The Snowflake driver now no longer requires setting the current schema to get metadata (#2517). Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-arrow-adbc-16..apache-arrow-adbc-17 15 David Li 6 Matthijs Brobbel 2 Hélder Gregório 2 Matt Topol 2 Matthias Kuhn 2 Sutou Kouhei 2 davidhcoe 1 Curt Hagenlocher 1 Felipe Oliveira Carvalho 1 Felipe Vianna 1 Marius van Niekerk 1 Shuoze Li 1 amangoyal Roadmap There is some discussion on a potential second revision of ADBC to include more missing functionality and asynchronous API support. For more, see the milestone. We would welcome suggestions on APIs that could be added or extended. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
