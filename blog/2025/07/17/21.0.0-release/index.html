@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Apache Arrow 21.0.0 Release | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.3.3" />
+<meta property="og:title" content="Apache Arrow 21.0.0 Release" />
+<meta name="author" content="pmc" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="The Apache Arrow team is pleased to announce the 21.0.0 release. This release covers over 2 months of development work and includes 339 resolved issues on 400 distinct commits from 82 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 20.0.0 release, Alenka Frim has been invited to join the Project Management Committee (PMC). Thanks for your contributions and participation in the project! The Call for Speakers for the Apache Arrow Summit 2025 is now open! The Summit will take place on October 2nd, 2025 in Paris, France as part of PyData Paris. The call will be open until July 26, 2025. Please see the Call for Speakers link to submit a talk or the developer mailing list for more information. Arrow Flight RPC Notes In C++ and Python, a new IPC reader option was added to force data buffers to be aligned based on the data type, making it easier to work with systems that expected alignment (GH-32276). While this is not a Flight-specific option, it tended to occur with Flight due to implementation details. Also, C++ and Python are now consistent with other Flight implementations in allowing the schema of a FlightInfo to be omitted (GH-37677). We have accepted a donation of an ODBC driver for Flight SQL from Dremio (GH-46522). Note that the driver is not usable in its current state and contributors are working on implementing the rest of the driver. C++ Notes Compute The Cast function is now able to reorder fields when casting from one struct type to another; the fields are matched by name, not by index (GH-45028). Many compute kernels have been moved into a separate, optional, shared library (GH-25025). This improves modularity for dependency management in the application and reduces the Arrow C++ distribution size when the compute functionality is not being used. Note that some compute functions, such as the Cast function, will still be built for internal use in various Arrow components. Better half-float support has been added to some compute functions: is_nan, is_inf, is_finite, negate, negate_checked, sign (GH-45083); if_else, case_when, coalesce, choose, replace_with_mask, fill_null_forward, fill_null_backward (GH-37027); run_end_encode, run_end_decode (GH-46285). Better decimal32 and decimal64 support has been added to some compute functions: run_end_encode, run_end_decode (GH-46285). A new function utf8_zero_fill acts like Python’s str.zfill method by providing a left-padding function that preserves the optional leading plus/minus sign (GH-46683). Decimal sum aggregation now produces a decimal result with an increased precision in order to reduce the risk of overflowing the result type (GH-35166). CSV Reading Duration columns is now supported (GH-40278). Dataset It is now possible to preserve order when writing a dataset multi-threaded. The feature is disabled by default (GH-26818). Filesystems The S3 filesystem can optionally be built into a separate DLL (GH-40343). Parquet Encryption A new SecureString class must now be used to communicate sensitive data (such as secret keys) with Parquet encryption APIs. This class automatically wipes its contents from memory when destroyed, unlike regular std::string (GH-31603). Type support The new VARIANT logical type is supported at a low level, and an extension type parquet.variant is added to reflect such columns when reading them to Arrow (GH-45937). The UUID logical type is automatically converted to/from the arrow.uuid canonical extension type when reading or writing Parquet data, respectively. The GEOMETRY and GEOGRAPHY logical types are supported (GH-45522). They are automatically converted to/from the corresponding GeoArrow extension type, if it has been registered by GeoArrow. Geospatial column statistics are also supported. It is now possible to read BYTE_ARRAY columns directly as LargeBinary or BinaryView, without any intermediate conversion from Binary. Similarly, those types can be written directly to Parquet (GH-43041). This allows bypassing the 2 GiB data per chunk limitation of the Binary type, and can also improve performance. This also applies to String types when a Parquet column has the STRING logical type. Similarly, LIST columns can now be read directly as LargeList rather than List. This allows bypassing the 2^31 values per chunk limitation of regular List types (GH-46676). Other Parquet improvements A new feature named Content-Defined Chunking improves deduplication of Parquet files with mostly identical contents, by choosing data page boundaries based on actual contents rather than a number of values. For that, it uses a rolling hash function, and the min and max chunk size can be chosen. The feature is disabled by default and can be enabled on a per-file basis in the Parquet WriterProperties (GH-45750). The EncodedStatistics of a column chunk are publicly exposed in ColumnChunkMetaData and can be read faster than if decoded as Statistics (GH-46462). SIMD optimizations for the BYTE_STREAM_SPLIT have been improved (GH-46788). Reading FIXED_LEN_BYTE_ARRAY data has been made significantly faster (up to 3x faster on some benchmarks). This benefits logical types such as FLOAT16 (GH-43891). Miscellaneous C++ changes The ARROW_USE_PRECOMPILED_HEADERS build option was removed, as CMAKE_UNITY_BUILD usually provides more benefits while requiring less maintenance. New data creation helpers ArrayFromJSONString, ChunkedArrayFromJSONString, DictArrayFromJSONString, ScalarFromJSONString and DictScalarFromJSONString are now exposed publicly. While not as high-performing as BufferBuilder and the concrete ArrayBuilder subclasses, they allow easy creation of test or example data, for example: ARROW_ASSIGN_OR_RAISE( auto string_array, arrow::ArrayFromJSONString(arrow::utf8(), R&quot;([&quot;Hello&quot;, &quot;World&quot;, null])&quot;)); ARROW_ASSIGN_OR_RAISE( auto list_array, arrow::ArrayFromJSONString(arrow::list(arrow::int32()), &quot;[[1, null, 2], [], [3]]&quot;)); Some APIs were changed to accept std::string_view instead of const std::string&amp;. Most uses of those APIs should not be affected (GH-46551). A new pretty-print option allows limiting element size when printing string or binary data (GH-46403). It is now possible to export Tensor data using DLPack (GH-39294). Half-float arrays can be properly diff’ed and pretty-printed (GH-36753). Some header files in arrow/util that were not supposed to be exposed are now made internal (GH-46459). C# Notes The C# Arrow implementation is being extracted from the Arrow monorepo into a standalone repository to allow it to have its own release cadence. See the mailing list for more information. This is the final release of the Arrow monorepo that will include the the C# implementation. Java, JavaScript, Go, and Rust Notes The Java, JavaScript, Go, and Rust Go projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Java implementation, see the latest Arrow Java changelog. For notes on the latest release of the JavaScript implementation, see the latest Arrow JavaScript changelog. For notes on the latest release of the Rust implementation see the latest Arrow Rust changelog. For notes on the latest release of the Go implementation, see the latest Arrow Go changelog. Linux Packaging Notes We added support for AlmaLinux 10. You can use AlmaLinux 10 packages on Red Hat Enterprise Linux 10 like distributions too. We dropped support for CentOS Stream 8 because it reached EOL on 2024-05-31. MATLAB Notes New Features Added support for creating an arrow.tabular.Table from a list of arrow.tabular.RecordBatch instances (GH-46877) Packaging The MLTBX available in apache/arrow’s GitHub Releases area was built against MATLAB R2025a. Python Notes Compatibility notes: Deprecated PyExtensionType has been removed (GH-46198). Deprecated use_legacy_formathas been removed in favour of setting IpcWriteOptions (GH-46130). Due to SciPy 1.15’s stricter sparse code changes are made to pa.SparseCXXMatrix constructors and pa.SparseCXXMatrix.to_scipy methods with migrating from scipy.spmatrix to scipy.sparray (GH-45229). New features: PyArrow does not require NumPy anymore to generate float16 scalars and arrays (GH-46611). pc.utf8_zero_fill is now available in the compute module imitating Python’s str.zfill` (GH-46683). pa.arange utility function is now available which creates an array of evenly spaced values within a given interval (GH-46771). Scalar subclasses are now implementing Python protocols (GH-45653). It is possible now to specify footer metadata when opening IPC file for writing using metadata keyword in pa.ipc.new_file() (GH-46222). DLPack is now implemented (export) on the Tensor class in C++ and available in Python (GH-39294). Other improvements: Couple of improvements have been included in the Filesystems module: Filesystem operations are more convenient to users by supporting explicit fsspec+{protocol} and hf:// filesystem URIs (GH-44900), ConfigureManagedIdentityCredential and ConfigureClientSecretCredential have been exposed to AzureFileSystem (GH-46833), allow_delayed_open (GH-45957) and tls_ca_file_path (GH-40754) have been exposed to S3FileSystem. Parquet module improvements include: mapping of logical types to Arrow extension types by default (GH-44500), UUID extension type conversion support when writing or reading to/from Parquet (GH-43807) and support for uniform encryption when writing parquet files by exposing EncryptionConfiguration.uniform_encryption (GH-38914). filter_expression is exposed in Table.join and Dataset.join to support filtering rows when performing hash joins with Acero (GH-46572). dim_names argument can now be passed to from_numpy_ndarray constructor (GH-45531). Relevant bug fixes: pyarrow.Table.to_struct_array failure when the table is empty has been fixed (GH-46355). Filtering all rows with RecordBatch.filter using an expression now returns empty table with same schema instead of erroring (GH-44366). Ruby and C GLib Notes A number of changes were made in the 21.0.0 release which affect both Ruby and C GLib: Added support for fixed shape tensor extension data type. Added support for UUID extension data type. Added support for fixed size list data type. Added support for the Arrow C data interface for chunked array. Added support for distinct count in array statistics. Ruby There were no update only for Ruby. C GLib You must call garrow_compute_initialize() explicitly before you use computation related features." />
+<meta property="og:description" content="The Apache Arrow team is pleased to announce the 21.0.0 release. This release covers over 2 months of development work and includes 339 resolved issues on 400 distinct commits from 82 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 20.0.0 release, Alenka Frim has been invited to join the Project Management Committee (PMC). Thanks for your contributions and participation in the project! The Call for Speakers for the Apache Arrow Summit 2025 is now open! The Summit will take place on October 2nd, 2025 in Paris, France as part of PyData Paris. The call will be open until July 26, 2025. Please see the Call for Speakers link to submit a talk or the developer mailing list for more information. Arrow Flight RPC Notes In C++ and Python, a new IPC reader option was added to force data buffers to be aligned based on the data type, making it easier to work with systems that expected alignment (GH-32276). While this is not a Flight-specific option, it tended to occur with Flight due to implementation details. Also, C++ and Python are now consistent with other Flight implementations in allowing the schema of a FlightInfo to be omitted (GH-37677). We have accepted a donation of an ODBC driver for Flight SQL from Dremio (GH-46522). Note that the driver is not usable in its current state and contributors are working on implementing the rest of the driver. C++ Notes Compute The Cast function is now able to reorder fields when casting from one struct type to another; the fields are matched by name, not by index (GH-45028). Many compute kernels have been moved into a separate, optional, shared library (GH-25025). This improves modularity for dependency management in the application and reduces the Arrow C++ distribution size when the compute functionality is not being used. Note that some compute functions, such as the Cast function, will still be built for internal use in various Arrow components. Better half-float support has been added to some compute functions: is_nan, is_inf, is_finite, negate, negate_checked, sign (GH-45083); if_else, case_when, coalesce, choose, replace_with_mask, fill_null_forward, fill_null_backward (GH-37027); run_end_encode, run_end_decode (GH-46285). Better decimal32 and decimal64 support has been added to some compute functions: run_end_encode, run_end_decode (GH-46285). A new function utf8_zero_fill acts like Python’s str.zfill method by providing a left-padding function that preserves the optional leading plus/minus sign (GH-46683). Decimal sum aggregation now produces a decimal result with an increased precision in order to reduce the risk of overflowing the result type (GH-35166). CSV Reading Duration columns is now supported (GH-40278). Dataset It is now possible to preserve order when writing a dataset multi-threaded. The feature is disabled by default (GH-26818). Filesystems The S3 filesystem can optionally be built into a separate DLL (GH-40343). Parquet Encryption A new SecureString class must now be used to communicate sensitive data (such as secret keys) with Parquet encryption APIs. This class automatically wipes its contents from memory when destroyed, unlike regular std::string (GH-31603). Type support The new VARIANT logical type is supported at a low level, and an extension type parquet.variant is added to reflect such columns when reading them to Arrow (GH-45937). The UUID logical type is automatically converted to/from the arrow.uuid canonical extension type when reading or writing Parquet data, respectively. The GEOMETRY and GEOGRAPHY logical types are supported (GH-45522). They are automatically converted to/from the corresponding GeoArrow extension type, if it has been registered by GeoArrow. Geospatial column statistics are also supported. It is now possible to read BYTE_ARRAY columns directly as LargeBinary or BinaryView, without any intermediate conversion from Binary. Similarly, those types can be written directly to Parquet (GH-43041). This allows bypassing the 2 GiB data per chunk limitation of the Binary type, and can also improve performance. This also applies to String types when a Parquet column has the STRING logical type. Similarly, LIST columns can now be read directly as LargeList rather than List. This allows bypassing the 2^31 values per chunk limitation of regular List types (GH-46676). Other Parquet improvements A new feature named Content-Defined Chunking improves deduplication of Parquet files with mostly identical contents, by choosing data page boundaries based on actual contents rather than a number of values. For that, it uses a rolling hash function, and the min and max chunk size can be chosen. The feature is disabled by default and can be enabled on a per-file basis in the Parquet WriterProperties (GH-45750). The EncodedStatistics of a column chunk are publicly exposed in ColumnChunkMetaData and can be read faster than if decoded as Statistics (GH-46462). SIMD optimizations for the BYTE_STREAM_SPLIT have been improved (GH-46788). Reading FIXED_LEN_BYTE_ARRAY data has been made significantly faster (up to 3x faster on some benchmarks). This benefits logical types such as FLOAT16 (GH-43891). Miscellaneous C++ changes The ARROW_USE_PRECOMPILED_HEADERS build option was removed, as CMAKE_UNITY_BUILD usually provides more benefits while requiring less maintenance. New data creation helpers ArrayFromJSONString, ChunkedArrayFromJSONString, DictArrayFromJSONString, ScalarFromJSONString and DictScalarFromJSONString are now exposed publicly. While not as high-performing as BufferBuilder and the concrete ArrayBuilder subclasses, they allow easy creation of test or example data, for example: ARROW_ASSIGN_OR_RAISE( auto string_array, arrow::ArrayFromJSONString(arrow::utf8(), R&quot;([&quot;Hello&quot;, &quot;World&quot;, null])&quot;)); ARROW_ASSIGN_OR_RAISE( auto list_array, arrow::ArrayFromJSONString(arrow::list(arrow::int32()), &quot;[[1, null, 2], [], [3]]&quot;)); Some APIs were changed to accept std::string_view instead of const std::string&amp;. Most uses of those APIs should not be affected (GH-46551). A new pretty-print option allows limiting element size when printing string or binary data (GH-46403). It is now possible to export Tensor data using DLPack (GH-39294). Half-float arrays can be properly diff’ed and pretty-printed (GH-36753). Some header files in arrow/util that were not supposed to be exposed are now made internal (GH-46459). C# Notes The C# Arrow implementation is being extracted from the Arrow monorepo into a standalone repository to allow it to have its own release cadence. See the mailing list for more information. This is the final release of the Arrow monorepo that will include the the C# implementation. Java, JavaScript, Go, and Rust Notes The Java, JavaScript, Go, and Rust Go projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Java implementation, see the latest Arrow Java changelog. For notes on the latest release of the JavaScript implementation, see the latest Arrow JavaScript changelog. For notes on the latest release of the Rust implementation see the latest Arrow Rust changelog. For notes on the latest release of the Go implementation, see the latest Arrow Go changelog. Linux Packaging Notes We added support for AlmaLinux 10. You can use AlmaLinux 10 packages on Red Hat Enterprise Linux 10 like distributions too. We dropped support for CentOS Stream 8 because it reached EOL on 2024-05-31. MATLAB Notes New Features Added support for creating an arrow.tabular.Table from a list of arrow.tabular.RecordBatch instances (GH-46877) Packaging The MLTBX available in apache/arrow’s GitHub Releases area was built against MATLAB R2025a. Python Notes Compatibility notes: Deprecated PyExtensionType has been removed (GH-46198). Deprecated use_legacy_formathas been removed in favour of setting IpcWriteOptions (GH-46130). Due to SciPy 1.15’s stricter sparse code changes are made to pa.SparseCXXMatrix constructors and pa.SparseCXXMatrix.to_scipy methods with migrating from scipy.spmatrix to scipy.sparray (GH-45229). New features: PyArrow does not require NumPy anymore to generate float16 scalars and arrays (GH-46611). pc.utf8_zero_fill is now available in the compute module imitating Python’s str.zfill` (GH-46683). pa.arange utility function is now available which creates an array of evenly spaced values within a given interval (GH-46771). Scalar subclasses are now implementing Python protocols (GH-45653). It is possible now to specify footer metadata when opening IPC file for writing using metadata keyword in pa.ipc.new_file() (GH-46222). DLPack is now implemented (export) on the Tensor class in C++ and available in Python (GH-39294). Other improvements: Couple of improvements have been included in the Filesystems module: Filesystem operations are more convenient to users by supporting explicit fsspec+{protocol} and hf:// filesystem URIs (GH-44900), ConfigureManagedIdentityCredential and ConfigureClientSecretCredential have been exposed to AzureFileSystem (GH-46833), allow_delayed_open (GH-45957) and tls_ca_file_path (GH-40754) have been exposed to S3FileSystem. Parquet module improvements include: mapping of logical types to Arrow extension types by default (GH-44500), UUID extension type conversion support when writing or reading to/from Parquet (GH-43807) and support for uniform encryption when writing parquet files by exposing EncryptionConfiguration.uniform_encryption (GH-38914). filter_expression is exposed in Table.join and Dataset.join to support filtering rows when performing hash joins with Acero (GH-46572). dim_names argument can now be passed to from_numpy_ndarray constructor (GH-45531). Relevant bug fixes: pyarrow.Table.to_struct_array failure when the table is empty has been fixed (GH-46355). Filtering all rows with RecordBatch.filter using an expression now returns empty table with same schema instead of erroring (GH-44366). Ruby and C GLib Notes A number of changes were made in the 21.0.0 release which affect both Ruby and C GLib: Added support for fixed shape tensor extension data type. Added support for UUID extension data type. Added support for fixed size list data type. Added support for the Arrow C data interface for chunked array. Added support for distinct count in array statistics. Ruby There were no update only for Ruby. C GLib You must call garrow_compute_initialize() explicitly before you use computation related features." />
+<link rel="canonical" href="https://arrow.apache.org/blog/2025/07/17/21.0.0-release/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2025/07/17/21.0.0-release/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-07-17T00:00:00-04:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="Apache Arrow 21.0.0 Release" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"pmc"},"dateModified":"2025-07-17T00:00:00-04:00","datePublished":"2025-07-17T00:00:00-04:00","description":"The Apache Arrow team is pleased to announce the 21.0.0 release. This release covers over 2 months of development work and includes 339 resolved issues on 400 distinct commits from 82 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 20.0.0 release, Alenka Frim has been invited to join the Project Management Committee (PMC). Thanks for your contributions and participation in the project! The Call for Speakers for the Apache Arrow Summit 2025 is now open! The Summit will take place on October 2nd, 2025 in Paris, France as part of PyData Paris. The call will be open until July 26, 2025. Please see the Call for Speakers link to submit a talk or the developer mailing list for more information. Arrow Flight RPC Notes In C++ and Python, a new IPC reader option was added to force data buffers to be aligned based on the data type, making it easier to work with systems that expected alignment (GH-32276). While this is not a Flight-specific option, it tended to occur with Flight due to implementation details. Also, C++ and Python are now consistent with other Flight implementations in allowing the schema of a FlightInfo to be omitted (GH-37677). We have accepted a donation of an ODBC driver for Flight SQL from Dremio (GH-46522). Note that the driver is not usable in its current state and contributors are working on implementing the rest of the driver. C++ Notes Compute The Cast function is now able to reorder fields when casting from one struct type to another; the fields are matched by name, not by index (GH-45028). Many compute kernels have been moved into a separate, optional, shared library (GH-25025). This improves modularity for dependency management in the application and reduces the Arrow C++ distribution size when the compute functionality is not being used. Note that some compute functions, such as the Cast function, will still be built for internal use in various Arrow components. Better half-float support has been added to some compute functions: is_nan, is_inf, is_finite, negate, negate_checked, sign (GH-45083); if_else, case_when, coalesce, choose, replace_with_mask, fill_null_forward, fill_null_backward (GH-37027); run_end_encode, run_end_decode (GH-46285). Better decimal32 and decimal64 support has been added to some compute functions: run_end_encode, run_end_decode (GH-46285). A new function utf8_zero_fill acts like Python’s str.zfill method by providing a left-padding function that preserves the optional leading plus/minus sign (GH-46683). Decimal sum aggregation now produces a decimal result with an increased precision in order to reduce the risk of overflowing the result type (GH-35166). CSV Reading Duration columns is now supported (GH-40278). Dataset It is now possible to preserve order when writing a dataset multi-threaded. The feature is disabled by default (GH-26818). Filesystems The S3 filesystem can optionally be built into a separate DLL (GH-40343). Parquet Encryption A new SecureString class must now be used to communicate sensitive data (such as secret keys) with Parquet encryption APIs. This class automatically wipes its contents from memory when destroyed, unlike regular std::string (GH-31603). Type support The new VARIANT logical type is supported at a low level, and an extension type parquet.variant is added to reflect such columns when reading them to Arrow (GH-45937). The UUID logical type is automatically converted to/from the arrow.uuid canonical extension type when reading or writing Parquet data, respectively. The GEOMETRY and GEOGRAPHY logical types are supported (GH-45522). They are automatically converted to/from the corresponding GeoArrow extension type, if it has been registered by GeoArrow. Geospatial column statistics are also supported. It is now possible to read BYTE_ARRAY columns directly as LargeBinary or BinaryView, without any intermediate conversion from Binary. Similarly, those types can be written directly to Parquet (GH-43041). This allows bypassing the 2 GiB data per chunk limitation of the Binary type, and can also improve performance. This also applies to String types when a Parquet column has the STRING logical type. Similarly, LIST columns can now be read directly as LargeList rather than List. This allows bypassing the 2^31 values per chunk limitation of regular List types (GH-46676). Other Parquet improvements A new feature named Content-Defined Chunking improves deduplication of Parquet files with mostly identical contents, by choosing data page boundaries based on actual contents rather than a number of values. For that, it uses a rolling hash function, and the min and max chunk size can be chosen. The feature is disabled by default and can be enabled on a per-file basis in the Parquet WriterProperties (GH-45750). The EncodedStatistics of a column chunk are publicly exposed in ColumnChunkMetaData and can be read faster than if decoded as Statistics (GH-46462). SIMD optimizations for the BYTE_STREAM_SPLIT have been improved (GH-46788). Reading FIXED_LEN_BYTE_ARRAY data has been made significantly faster (up to 3x faster on some benchmarks). This benefits logical types such as FLOAT16 (GH-43891). Miscellaneous C++ changes The ARROW_USE_PRECOMPILED_HEADERS build option was removed, as CMAKE_UNITY_BUILD usually provides more benefits while requiring less maintenance. New data creation helpers ArrayFromJSONString, ChunkedArrayFromJSONString, DictArrayFromJSONString, ScalarFromJSONString and DictScalarFromJSONString are now exposed publicly. While not as high-performing as BufferBuilder and the concrete ArrayBuilder subclasses, they allow easy creation of test or example data, for example: ARROW_ASSIGN_OR_RAISE( auto string_array, arrow::ArrayFromJSONString(arrow::utf8(), R&quot;([&quot;Hello&quot;, &quot;World&quot;, null])&quot;)); ARROW_ASSIGN_OR_RAISE( auto list_array, arrow::ArrayFromJSONString(arrow::list(arrow::int32()), &quot;[[1, null, 2], [], [3]]&quot;)); Some APIs were changed to accept std::string_view instead of const std::string&amp;. Most uses of those APIs should not be affected (GH-46551). A new pretty-print option allows limiting element size when printing string or binary data (GH-46403). It is now possible to export Tensor data using DLPack (GH-39294). Half-float arrays can be properly diff’ed and pretty-printed (GH-36753). Some header files in arrow/util that were not supposed to be exposed are now made internal (GH-46459). C# Notes The C# Arrow implementation is being extracted from the Arrow monorepo into a standalone repository to allow it to have its own release cadence. See the mailing list for more information. This is the final release of the Arrow monorepo that will include the the C# implementation. Java, JavaScript, Go, and Rust Notes The Java, JavaScript, Go, and Rust Go projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Java implementation, see the latest Arrow Java changelog. For notes on the latest release of the JavaScript implementation, see the latest Arrow JavaScript changelog. For notes on the latest release of the Rust implementation see the latest Arrow Rust changelog. For notes on the latest release of the Go implementation, see the latest Arrow Go changelog. Linux Packaging Notes We added support for AlmaLinux 10. You can use AlmaLinux 10 packages on Red Hat Enterprise Linux 10 like distributions too. We dropped support for CentOS Stream 8 because it reached EOL on 2024-05-31. MATLAB Notes New Features Added support for creating an arrow.tabular.Table from a list of arrow.tabular.RecordBatch instances (GH-46877) Packaging The MLTBX available in apache/arrow’s GitHub Releases area was built against MATLAB R2025a. Python Notes Compatibility notes: Deprecated PyExtensionType has been removed (GH-46198). Deprecated use_legacy_formathas been removed in favour of setting IpcWriteOptions (GH-46130). Due to SciPy 1.15’s stricter sparse code changes are made to pa.SparseCXXMatrix constructors and pa.SparseCXXMatrix.to_scipy methods with migrating from scipy.spmatrix to scipy.sparray (GH-45229). New features: PyArrow does not require NumPy anymore to generate float16 scalars and arrays (GH-46611). pc.utf8_zero_fill is now available in the compute module imitating Python’s str.zfill` (GH-46683). pa.arange utility function is now available which creates an array of evenly spaced values within a given interval (GH-46771). Scalar subclasses are now implementing Python protocols (GH-45653). It is possible now to specify footer metadata when opening IPC file for writing using metadata keyword in pa.ipc.new_file() (GH-46222). DLPack is now implemented (export) on the Tensor class in C++ and available in Python (GH-39294). Other improvements: Couple of improvements have been included in the Filesystems module: Filesystem operations are more convenient to users by supporting explicit fsspec+{protocol} and hf:// filesystem URIs (GH-44900), ConfigureManagedIdentityCredential and ConfigureClientSecretCredential have been exposed to AzureFileSystem (GH-46833), allow_delayed_open (GH-45957) and tls_ca_file_path (GH-40754) have been exposed to S3FileSystem. Parquet module improvements include: mapping of logical types to Arrow extension types by default (GH-44500), UUID extension type conversion support when writing or reading to/from Parquet (GH-43807) and support for uniform encryption when writing parquet files by exposing EncryptionConfiguration.uniform_encryption (GH-38914). filter_expression is exposed in Table.join and Dataset.join to support filtering rows when performing hash joins with Acero (GH-46572). dim_names argument can now be passed to from_numpy_ndarray constructor (GH-45531). Relevant bug fixes: pyarrow.Table.to_struct_array failure when the table is empty has been fixed (GH-46355). Filtering all rows with RecordBatch.filter using an expression now returns empty table with same schema instead of erroring (GH-44366). Ruby and C GLib Notes A number of changes were made in the 21.0.0 release which affect both Ruby and C GLib: Added support for fixed shape tensor extension data type. Added support for UUID extension data type. Added support for fixed size list data type. Added support for the Arrow C data interface for chunked array. Added support for distinct count in array statistics. Ruby There were no update only for Ruby. C GLib You must call garrow_compute_initialize() explicitly before you use computation related features.","headline":"Apache Arrow 21.0.0 Release","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2025/07/17/21.0.0-release/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"pmc"},"url":"https://arrow.apache.org/blog/2025/07/17/21.0.0-release/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+    <link type="application/atom+xml" rel="alternate" href="https://arrow.apache.org/feed.xml" title="Apache Arrow" />
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"/></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownGetArrow" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownDocumentation" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Docs
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr/>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/csharp/README.md">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="/julia/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/matlab/README.md">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/ruby/README.md">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/arrow/latest">Rust</a>
+            <a class="dropdown-item" href="/swift">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSource" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Source
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSource">
+            <a class="dropdown-item" href="https://github.com/apache/arrow">Main Repo</a>
+            <hr/>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/c_glib">C GLib</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/csharp">C#</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-go">Go</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-java">Java</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-js">JavaScript</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-julia">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/matlab">MATLAB</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/python">Python</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/ruby">Ruby</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-rs">Rust</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-swift">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownSubprojects" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/adbc">ADBC</a>
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="https://datafusion.apache.org">DataFusion</a>
+            <a class="dropdown-item" href="/nanoarrow">nanoarrow</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownCommunity" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/index.html">Contributing</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/issues">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#"
+             id="navbarDropdownASF" role="button" data-toggle="dropdown"
+             aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Apache Arrow 21.0.0 Release
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    17 Jul 2025
+  </span>
+  <br />
+  <span class="badge badge-secondary">By</span>
+  
+    <a class="mr-3" href="https://arrow.apache.org">The Apache Arrow PMC (pmc) </a>
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+
+<p>The Apache Arrow team is pleased to announce the 21.0.0 release. This release
+covers over 2 months of development work and includes <a href="https://github.com/apache/arrow/milestone/69?closed=1"><strong>339 resolved
+issues</strong></a> on <a href="/release/21.0.0.html#contributors"><strong>400 distinct commits</strong></a> from <a href="/release/21.0.0.html#contributors"><strong>82 distinct
+contributors</strong></a>. See the <a href="https://arrow.apache.org/install/">Install Page</a> to
+learn how to get the libraries for your platform.</p>
+
+<p>The release notes below are not exhaustive and only expose selected highlights
+of the release. Many other bugfixes and improvements have been made: we refer
+you to the <a href="/release/21.0.0.html#changelog">complete changelog</a>.</p>
+
+<h2 id="community">Community</h2>
+
+<p>Since the 20.0.0 release, Alenka Frim has been invited to join the Project
+Management Committee (PMC).</p>
+
+<p>Thanks for your contributions and participation in the project!</p>
+
+<p>The <a href="https://sessionize.com/arrow-summit-2025/">Call for Speakers</a> for the
+Apache Arrow Summit 2025 is now open! The Summit will take place on October 2nd,
+2025 in Paris, France as part of <a href="https://pydata.org/paris2025">PyData Paris</a>.
+The call will be open until July 26, 2025. Please see the <a href="https://sessionize.com/arrow-summit-2025/">Call for
+Speakers</a> link to submit a talk or
+the <a href="https://lists.apache.org/thread/f0vcbtpzg6rntzbvmjstyd27bd9qfhl0">developer mailing
+list</a> for more
+information.</p>
+
+<h2 id="arrow-flight-rpc-notes">Arrow Flight RPC Notes</h2>
+
+<p>In C++ and Python, a new IPC reader option was added to force data buffers to be
+aligned based on the data type, making it easier to work with systems that
+expected alignment (<a href="https://github.com/apache/arrow/issues/32276">GH-32276</a>).
+While this is not a Flight-specific option, it tended to occur with Flight due
+to implementation details. Also, C++ and Python are now consistent with other
+Flight implementations in allowing the schema of a <code class="language-plaintext highlighter-rouge">FlightInfo</code> to be omitted
+(<a href="https://github.com/apache/arrow/issues/37677">GH-37677</a>).</p>
+
+<p>We have accepted a donation of an ODBC driver for Flight SQL from Dremio
+(<a href="https://github.com/apache/arrow/issues/46522">GH-46522</a>). Note that the driver
+is not usable in its current state and contributors are working on implementing
+the rest of the driver.</p>
+
+<h2 id="c-notes">C++ Notes</h2>
+
+<h3 id="compute">Compute</h3>
+
+<p>The Cast function is now able to reorder fields when casting from one struct
+type to another; the fields are matched by name, not by index
+(<a href="https://github.com/apache/arrow/issues/45028">GH-45028</a>).</p>
+
+<p>Many compute kernels have been moved into a separate, optional, shared library
+(<a href="https://github.com/apache/arrow/issues/25025">GH-25025</a>). This improves
+modularity for dependency management in the application and reduces the Arrow
+C++ distribution size when the compute functionality is not being used. Note
+that some compute functions, such as the Cast function, will still be built for
+internal use in various Arrow components.</p>
+
+<p>Better half-float support has been added to some compute functions: <code class="language-plaintext highlighter-rouge">is_nan</code>,
+<code class="language-plaintext highlighter-rouge">is_inf</code>, <code class="language-plaintext highlighter-rouge">is_finite</code>, <code class="language-plaintext highlighter-rouge">negate</code>, <code class="language-plaintext highlighter-rouge">negate_checked</code>, <code class="language-plaintext highlighter-rouge">sign</code>
+(<a href="https://github.com/apache/arrow/issues/45083">GH-45083</a>); <code class="language-plaintext highlighter-rouge">if_else</code>,
+<code class="language-plaintext highlighter-rouge">case_when</code>, <code class="language-plaintext highlighter-rouge">coalesce</code>, <code class="language-plaintext highlighter-rouge">choose</code>, <code class="language-plaintext highlighter-rouge">replace_with_mask</code>, <code class="language-plaintext highlighter-rouge">fill_null_forward</code>,
+<code class="language-plaintext highlighter-rouge">fill_null_backward</code> (<a href="https://github.com/apache/arrow/issues/37027">GH-37027</a>);
+<code class="language-plaintext highlighter-rouge">run_end_encode</code>, <code class="language-plaintext highlighter-rouge">run_end_decode</code>
+(<a href="https://github.com/apache/arrow/issues/46285">GH-46285</a>).</p>
+
+<p>Better decimal32 and decimal64 support has been added to some compute functions:
+<code class="language-plaintext highlighter-rouge">run_end_encode</code>, <code class="language-plaintext highlighter-rouge">run_end_decode</code>
+(<a href="https://github.com/apache/arrow/issues/46285">GH-46285</a>).</p>
+
+<p>A new function <code class="language-plaintext highlighter-rouge">utf8_zero_fill</code> acts like Python’s <code class="language-plaintext highlighter-rouge">str.zfill</code> method by
+providing a left-padding function that preserves the optional leading plus/minus
+sign (<a href="https://github.com/apache/arrow/issues/46683">GH-46683</a>).</p>
+
+<p>Decimal sum aggregation now produces a decimal result with an increased
+precision in order to reduce the risk of overflowing the result type
+(<a href="https://github.com/apache/arrow/issues/35166">GH-35166</a>).</p>
+
+<h3 id="csv">CSV</h3>
+
+<p>Reading Duration columns is now supported
+(<a href="https://github.com/apache/arrow/issues/40278">GH-40278</a>).</p>
+
+<h3 id="dataset">Dataset</h3>
+
+<p>It is now possible to preserve order when writing a dataset multi-threaded. The
+feature is disabled by default
+(<a href="https://github.com/apache/arrow/issues/26818">GH-26818</a>).</p>
+
+<h3 id="filesystems">Filesystems</h3>
+
+<p>The S3 filesystem can optionally be built into a separate DLL
+(<a href="https://github.com/apache/arrow/issues/40343">GH-40343</a>).</p>
+
+<h3 id="parquet">Parquet</h3>
+
+<h4 id="encryption">Encryption</h4>
+
+<p>A new <code class="language-plaintext highlighter-rouge">SecureString</code> class must now be used to communicate sensitive data (such
+as secret keys) with Parquet encryption APIs. This class automatically wipes its
+contents from memory when destroyed, unlike regular <code class="language-plaintext highlighter-rouge">std::string</code>
+(<a href="https://github.com/apache/arrow/issues/31603">GH-31603</a>).</p>
+
+<h4 id="type-support">Type support</h4>
+
+<p>The new VARIANT logical type is supported at a low level, and an extension type
+<code class="language-plaintext highlighter-rouge">parquet.variant</code> is added to reflect such columns when reading them to Arrow
+(<a href="https://github.com/apache/arrow/issues/45937">GH-45937</a>).</p>
+
+<p>The UUID logical type is automatically converted to/from the <code class="language-plaintext highlighter-rouge">arrow.uuid</code>
+canonical extension type when reading or writing Parquet data, respectively.</p>
+
+<p>The GEOMETRY and GEOGRAPHY logical types are supported
+(<a href="https://github.com/apache/arrow/issues/45522">GH-45522</a>). They are
+automatically converted to/from the corresponding GeoArrow extension type, if it
+has been registered by GeoArrow. Geospatial column statistics are also
+supported.</p>
+
+<p>It is now possible to read BYTE_ARRAY columns directly as LargeBinary or
+BinaryView, without any intermediate conversion from Binary. Similarly, those
+types can be written directly to Parquet
+(<a href="https://github.com/apache/arrow/issues/43041">GH-43041</a>). This allows
+bypassing the 2 GiB data per chunk limitation of the Binary type, and can also
+improve performance. This also applies to String types when a Parquet column has
+the STRING logical type.</p>
+
+<p>Similarly, LIST columns can now be read directly as LargeList rather than List.
+This allows bypassing the 2^31 values per chunk limitation of regular List types
+(<a href="https://github.com/apache/arrow/issues/46676">GH-46676</a>).</p>
+
+<h4 id="other-parquet-improvements">Other Parquet improvements</h4>
+
+<p>A new feature named Content-Defined Chunking improves deduplication of Parquet
+files with mostly identical contents, by choosing data page boundaries based on
+actual contents rather than a number of values. For that, it uses a rolling hash
+function, and the min and max chunk size can be chosen. The feature is disabled
+by default and can be enabled on a per-file basis in the Parquet
+<code class="language-plaintext highlighter-rouge">WriterProperties</code> (<a href="https://github.com/apache/arrow/issues/45750">GH-45750</a>).</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">EncodedStatistics</code> of a column chunk are publicly exposed in
+<code class="language-plaintext highlighter-rouge">ColumnChunkMetaData</code> and can be read faster than if decoded as <code class="language-plaintext highlighter-rouge">Statistics</code>
+(<a href="https://github.com/apache/arrow/issues/46462">GH-46462</a>).</p>
+
+<p>SIMD optimizations for the BYTE_STREAM_SPLIT have been improved
+(<a href="https://github.com/apache/arrow/issues/46788">GH-46788</a>).</p>
+
+<p>Reading FIXED_LEN_BYTE_ARRAY data has been made significantly faster (up to 3x
+faster on some benchmarks). This benefits logical types such as FLOAT16
+(<a href="https://github.com/apache/arrow/issues/43891">GH-43891</a>).</p>
+
+<h3 id="miscellaneous-c-changes">Miscellaneous C++ changes</h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">ARROW_USE_PRECOMPILED_HEADERS</code> build option was removed, as
+<code class="language-plaintext highlighter-rouge">CMAKE_UNITY_BUILD</code> usually provides more benefits while requiring less
+maintenance.</p>
+
+<p>New data creation helpers <code class="language-plaintext highlighter-rouge">ArrayFromJSONString</code>, <code class="language-plaintext highlighter-rouge">ChunkedArrayFromJSONString</code>,
+<code class="language-plaintext highlighter-rouge">DictArrayFromJSONString</code>, <code class="language-plaintext highlighter-rouge">ScalarFromJSONString</code> and <code class="language-plaintext highlighter-rouge">DictScalarFromJSONString</code>
+are now exposed publicly. While not as high-performing as <code class="language-plaintext highlighter-rouge">BufferBuilder</code> and
+the concrete <code class="language-plaintext highlighter-rouge">ArrayBuilder</code> subclasses, they allow easy creation of test or
+example data, for example:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span>
+      <span class="k">auto</span> <span class="n">string_array</span><span class="p">,</span>
+      <span class="n">arrow</span><span class="o">::</span><span class="n">ArrayFromJSONString</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">utf8</span><span class="p">(),</span> <span class="s">R"(["Hello", "World", null])"</span><span class="p">));</span>
+  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span>
+      <span class="k">auto</span> <span class="n">list_array</span><span class="p">,</span>
+      <span class="n">arrow</span><span class="o">::</span><span class="n">ArrayFromJSONString</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">list</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">()),</span>
+                                 <span class="s">"[[1, null, 2], [], [3]]"</span><span class="p">));</span>
+</code></pre></div></div>
+
+<p>Some APIs were changed to accept <code class="language-plaintext highlighter-rouge">std::string_view</code> instead of <code class="language-plaintext highlighter-rouge">const
+std::string&amp;</code>. Most uses of those APIs should not be affected
+(<a href="https://github.com/apache/arrow/issues/46551">GH-46551</a>).</p>
+
+<p>A new pretty-print option allows limiting element size when printing string or
+binary data (<a href="https://github.com/apache/arrow/issues/46403">GH-46403</a>).</p>
+
+<p>It is now possible to export <code class="language-plaintext highlighter-rouge">Tensor</code> data using
+<a href="https://dmlc.github.io/dlpack/latest/">DLPack</a>
+(<a href="https://github.com/apache/arrow/issues/39294">GH-39294</a>).</p>
+
+<p>Half-float arrays can be properly diff’ed and pretty-printed
+(<a href="https://github.com/apache/arrow/issues/36753">GH-36753</a>).</p>
+
+<p>Some header files in <code class="language-plaintext highlighter-rouge">arrow/util</code> that were not supposed to be exposed are
+now made internal (<a href="https://github.com/apache/arrow/issues/46459">GH-46459</a>).</p>
+
+<h2 id="c-notes-1">C# Notes</h2>
+
+<p>The C# Arrow implementation is being extracted from the <a href="https://github.com/apache/arrow">Arrow
+monorepo</a> into a standalone repository to allow
+it to have its own release cadence. See <a href="https://lists.apache.org/thread/0vj7hlzbzrv0lcrm92tgtfdh9gsj4dqb">the mailing
+list</a> for more
+information. This is the final release of the Arrow monorepo that will include
+the the C# implementation.</p>
+
+<h2 id="java-javascript-go-and-rust-notes">Java, JavaScript, Go, and Rust Notes</h2>
+
+<p>The Java, JavaScript, Go, and Rust Go projects have moved to separate
+repositories outside the main Arrow <a href="https://github.com/apache/arrow">monorepo</a>.</p>
+
+<ul>
+  <li>For notes on the latest release of the <a href="https://github.com/apache/arrow-java">Java
+implementation</a>, see the latest <a href="https://github.com/apache/arrow-java/releases">Arrow
+Java changelog</a>.</li>
+  <li>For notes on the latest release of the <a href="https://github.com/apache/arrow-js">JavaScript
+implementation</a>, see the latest <a href="https://github.com/apache/arrow-js/releases">Arrow
+JavaScript changelog</a>.</li>
+  <li>For notes on the latest release of the <a href="https://github.com/apache/arrow-rs">Rust
+implementation</a> see the latest <a href="https://github.com/apache/arrow-rs/blob/main/CHANGELOG.md">Arrow Rust
+changelog</a>.</li>
+  <li>For notes on the latest release of the <a href="https://github.com/apache/arrow-go">Go
+implementation</a>, see the latest <a href="https://github.com/apache/arrow-go/releases">Arrow Go
+changelog</a>.</li>
+</ul>
+
+<h2 id="linux-packaging-notes">Linux Packaging Notes</h2>
+
+<p>We added support for AlmaLinux 10. You can use AlmaLinux 10 packages on Red Hat
+Enterprise Linux 10 like distributions too.</p>
+
+<p>We dropped support for CentOS Stream 8 because it reached EOL on 2024-05-31.</p>
+
+<h2 id="matlab-notes">MATLAB Notes</h2>
+
+<h3 id="new-features">New Features</h3>
+
+<p>Added support for creating an <code class="language-plaintext highlighter-rouge">arrow.tabular.Table</code> from a list of
+<code class="language-plaintext highlighter-rouge">arrow.tabular.RecordBatch</code> instances
+(<a href="https://github.com/apache/arrow/issues/46877">GH-46877</a>)</p>
+
+<h3 id="packaging">Packaging</h3>
+
+<p>The MLTBX available in apache/arrow’s GitHub Releases area was built against
+MATLAB R2025a.</p>
+
+<h2 id="python-notes">Python Notes</h2>
+
+<p>Compatibility notes:</p>
+
+<ul>
+  <li>Deprecated <code class="language-plaintext highlighter-rouge">PyExtensionType</code> has been removed
+(<a href="https://github.com/apache/arrow/issues/46198">GH-46198</a>).</li>
+  <li>Deprecated <code class="language-plaintext highlighter-rouge">use_legacy_format</code>has been removed in favour of setting
+<code class="language-plaintext highlighter-rouge">IpcWriteOptions</code> (<a href="https://github.com/apache/arrow/issues/46130">GH-46130</a>).</li>
+  <li>Due to SciPy 1.15’s stricter sparse code changes are made to
+<code class="language-plaintext highlighter-rouge">pa.SparseCXXMatrix</code> constructors and <code class="language-plaintext highlighter-rouge">pa.SparseCXXMatrix.to_scipy</code> methods
+with migrating from <code class="language-plaintext highlighter-rouge">scipy.spmatrix</code> to <code class="language-plaintext highlighter-rouge">scipy.sparray</code>
+(<a href="https://github.com/apache/arrow/issues/45229">GH-45229</a>).</li>
+</ul>
+
+<p>New features:</p>
+
+<ul>
+  <li>PyArrow does not require NumPy anymore to generate <code class="language-plaintext highlighter-rouge">float16</code> scalars and
+arrays (<a href="https://github.com/apache/arrow/issues/46611">GH-46611</a>).</li>
+  <li><code class="language-plaintext highlighter-rouge">pc.utf8_zero_fill</code> is now available in the compute module imitating
+Python’s <code class="language-plaintext highlighter-rouge">str.zfill</code>` (<a href="https://github.com/apache/arrow/issues/46683">GH-46683</a>).</li>
+  <li><code class="language-plaintext highlighter-rouge">pa.arange</code> utility function is now available which creates an array of
+evenly spaced values within a given interval
+(<a href="https://github.com/apache/arrow/issues/46771">GH-46771</a>).</li>
+  <li>Scalar subclasses are now implementing Python protocols
+(<a href="https://github.com/apache/arrow/issues/45653">GH-45653</a>).</li>
+  <li>It is possible now to specify footer metadata when opening IPC file for
+writing using metadata keyword in <code class="language-plaintext highlighter-rouge">pa.ipc.new_file()</code>
+(<a href="https://github.com/apache/arrow/issues/46222">GH-46222</a>).</li>
+  <li>DLPack is now implemented (export) on the Tensor class in C++ and available in
+Python (<a href="https://github.com/apache/arrow/issues/39294">GH-39294</a>).</li>
+</ul>
+
+<p>Other improvements:</p>
+
+<ul>
+  <li>Couple of improvements have been included in the Filesystems module:
+Filesystem operations are more convenient to users by supporting explicit
+<code class="language-plaintext highlighter-rouge">fsspec+{protocol}</code> and <code class="language-plaintext highlighter-rouge">hf://</code> filesystem URIs
+(<a href="https://github.com/apache/arrow/issues/44900">GH-44900</a>),
+<code class="language-plaintext highlighter-rouge">ConfigureManagedIdentityCredential</code> and <code class="language-plaintext highlighter-rouge">ConfigureClientSecretCredential</code>
+have been exposed to <code class="language-plaintext highlighter-rouge">AzureFileSystem</code>
+(<a href="https://github.com/apache/arrow/issues/46833">GH-46833</a>), <code class="language-plaintext highlighter-rouge">allow_delayed_open</code>
+(<a href="https://github.com/apache/arrow/issues/45957">GH-45957</a>) and
+<code class="language-plaintext highlighter-rouge">tls_ca_file_path</code> (<a href="https://github.com/apache/arrow/issues/40754">GH-40754</a>)
+have been exposed to <code class="language-plaintext highlighter-rouge">S3FileSystem</code>.</li>
+  <li>Parquet module improvements include: mapping of logical types to Arrow
+extension types by default
+(<a href="https://github.com/apache/arrow/issues/44500">GH-44500</a>), UUID extension type
+conversion support when writing or reading to/from Parquet
+(<a href="https://github.com/apache/arrow/issues/43807">GH-43807</a>) and support for uniform
+encryption when writing parquet files by exposing
+<code class="language-plaintext highlighter-rouge">EncryptionConfiguration.uniform_encryption</code>
+(<a href="https://github.com/apache/arrow/issues/38914">GH-38914</a>).</li>
+  <li><code class="language-plaintext highlighter-rouge">filter_expression</code> is exposed in <code class="language-plaintext highlighter-rouge">Table.join</code> and <code class="language-plaintext highlighter-rouge">Dataset.join</code> to
+support filtering rows when performing hash joins with Acero
+(<a href="https://github.com/apache/arrow/issues/46572">GH-46572</a>).</li>
+  <li><code class="language-plaintext highlighter-rouge">dim_names</code> argument can now be passed to <code class="language-plaintext highlighter-rouge">from_numpy_ndarray</code> constructor
+(<a href="https://github.com/apache/arrow/issues/45531">GH-45531</a>).</li>
+</ul>
+
+<p>Relevant bug fixes:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">pyarrow.Table.to_struct_array</code> failure when the table is empty has been
+fixed (<a href="https://github.com/apache/arrow/issues/46355">GH-46355</a>).</li>
+  <li>Filtering all rows with <code class="language-plaintext highlighter-rouge">RecordBatch.filter</code> using an expression now returns
+empty table with same schema instead of erroring
+(<a href="https://github.com/apache/arrow/issues/44366">GH-44366</a>).</li>
+</ul>
+
+<h2 id="ruby-and-c-glib-notes">Ruby and C GLib Notes</h2>
+
+<p>A number of changes were made in the 21.0.0 release which affect both Ruby and C GLib:</p>
+
+<ul>
+  <li>Added support for fixed shape tensor extension data type.</li>
+  <li>Added support for UUID extension data type.</li>
+  <li>Added support for fixed size list data type.</li>
+  <li>Added support for <a href="https://arrow.apache.org/docs/format/CDataInterface.html">the Arrow C data
+interface</a> for
+chunked array.</li>
+  <li>Added support for distinct count in array statistics.</li>
+</ul>
+
+<h3 id="ruby">Ruby</h3>
+
+<p>There were no update only for Ruby.</p>
+
+<h3 id="c-glib">C GLib</h3>
+
+<p>You must call <code class="language-plaintext highlighter-rouge">garrow_compute_initialize()</code> explicitly before you use
+computation related features.</p>
+
+
+      </main>
+    </div>
+
+    <hr/>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>&copy; 2016-2025 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html">
+        <img src="https://www.apache.org/events/current-event-234x60.png"/>
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
