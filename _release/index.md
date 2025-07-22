@@ -30,7 +30,7 @@ Navigate to the release page for downloads and the changelog.
 * [20.0.0 (27 April 2025)][2]
 * [19.0.1 (16 February 2025)][3]
 * [19.0.0 (16 January 2025)][4]
-* [18.1.0 (24 November 2024)[5]
+* [18.1.0 (24 November 2024)][5]
 * [18.0.0 (28 October 2024)][6]
 * [17.0.0 (16 July 2024)][7]
 * [16.1.0 (14 May 2024)][8]
