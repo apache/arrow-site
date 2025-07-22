@@ -10,7 +10,7 @@
     
 
     <!-- Begin Jekyll SEO tag v2.8.0 -->
-<meta name="generator" content="Jekyll v4.3.3" />
+<meta name="generator" content="Jekyll v4.4.1" />
 <meta property="og:title" content="Fast Streaming Inserts in DuckDB with ADBC" />
 <meta name="author" content="loicalleyne" />
 <meta property="og:locale" content="en_US" />
@@ -278,228 +278,99 @@
 </p>
 
 
-        <!--
-
--->
-<style>
-.a-header {
-  color: #984EA3;
-  font-weight: bold;
-}
-.a-data {
-  color: #377EB8;
-  font-weight: bold;
-}
-.a-length {
-  color: #FF7F00;
-  font-weight: bold;
-}
-.a-padding {
-  color: #E41A1C;
-  font-weight: bold;
-}
-</style>
-
-<p><img src="/img/adbc-duckdb/adbc-duckdb.png" width="100%" class="img-responsive" alt="" aria-hidden="true" /></p>
-<h1 id="tldr">TL;DR</h1>
-
-<p>DuckDB is rapidly becoming an essential part of data practitioners’ toolbox, finding use cases in data engineering, machine learning, and local analytics. In many cases DuckDB has been used to query and process data that has already been saved to storage (file-based or external database) by another process. Arrow Database Connectivity APIs enable high-throughput data processing using DuckDB as the engine.</p>
-
-<h1 id="how-it-started">How it started</h1>
-
-<p>The company I work for is the leading digital out-of-home marketing platform, including a programmatic ad tech stack. For several years, my technical operations team was making use of logs emitted by the real-time programmatic auction system in the <a href="http://avro.apache.org/">Apache Avro</a> format. Over time we’ve built an entire operations and analytics back end using this data. Avro files are row-based which is less than ideal for analytics at scale, in fact it’s downright painful. So much so that I developed and contributed an Avro reader feature to the <a href="https://github.com/apache/arrow-go">Apache Arrow  Go</a> library to be able to convert Avro files to parquet. This data pipeline is now humming along transforming hundreds of GB/day from Avro to Parquet.</p>
-
-<p>Since “any problem in computer science can be solved with another layer of indirection”, the original system has grown layers (like an onion) and started to emit other logs, this time in <a href="https://parquet.apache.org/">Apache Parquet</a> format…</p>
-<figure style="text-align: center;">
-  <img src="/img/adbc-duckdb/muchrejoicing.webp" width="80%" class="img-responsive" alt="Figure 1: And there was much rejoicing" />
-  <figcaption>Figure 1: A pseudo-medieval tapestry displaying intrepid data practitioners rejoicing due to a columnar data storage format.</figcaption>
-</figure>
-<p>As we learned in Shrek, onions are like ogres: they’re green, they have layers and they make you cry, so this rejoicing was rather short-lived, as the mechanism chosen to emit the parquet files was rather inefficient:</p>
-
+        <!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<p>DuckDB is rapidly becoming an essential part of data practitioners' toolbox, finding use cases in data engineering, machine learning, and local analytics. In many cases DuckDB has been used to query and process data that has already been saved to storage (file-based or external database) by another process. Arrow Database Connectivity APIs enable high-throughput data processing using DuckDB as the engine.</p>
+<h1>How it started</h1>
+<p>The company I work for is the leading digital out-of-home marketing platform, including a programmatic ad tech stack. For several years, my technical operations team was making use of logs emitted by the real-time programmatic auction system in the <a href="http://avro.apache.org/">Apache Avro</a> format. Over time we've built an entire operations and analytics back end using this data. Avro files are row-based which is less than ideal for analytics at scale, in fact it's downright painful. So much so that I developed and contributed an Avro reader feature to the <a href="https://github.com/apache/arrow-go">Apache Arrow  Go</a> library to be able to convert Avro files to parquet. This data pipeline is now humming along transforming hundreds of GB/day from Avro to Parquet.</p>
+<p>Since &quot;any problem in computer science can be solved with another layer of indirection&quot;, the original system has grown layers (like an onion) and started to emit other logs, this time in <a href="https://parquet.apache.org/">Apache Parquet</a> format...</p>
+<!-- raw HTML omitted -->
 <ul>
-  <li>the new onion-layer (ahem…system component) sends Protobuf encoded messages to Kafka topics</li>
-  <li>a Kafka Connect cluster with the S3 sink connector consumes topics and saves the parquet files to object storage</li>
+<li>the new onion-layer (ahem...system component) sends Protobuf encoded messages to Kafka topics</li>
+<li>a Kafka Connect cluster with the S3 sink connector consumes topics and saves the parquet files to object storage</li>
 </ul>
-
-<p>Due to the firehose of data, the cluster size over time grew to &gt; 25 nodes and was producing thousands of small Parquet files (13 MB or smaller) an hour. This led to ever-increasing query latency, in some cases breaking our tools due to query timeouts (aka <a href="https://www.dremio.com/blog/compaction-in-apache-iceberg-fine-tuning-your-iceberg-tables-data-files/#h-the-small-files-problem">the small files problem</a>). Not to mention that running aggregations on the raw data in our data warehouse wasn’t fast or cheap.</p>
-
-<h1 id="duckdb-to-the-rescue-i-think">DuckDB to the rescue… I think</h1>
-
-<p>I’d used DuckDB to process and analyse Parquet data so I knew it could do that very quickly. Then I came across this post on LinkedIn (<a href="https://www.linkedin.com/posts/shubham-dhal-349626ba_real-time-analytics-with-kafka-and-duckdb-activity-7258424841538555904-xfU6">Real-Time Analytics using Kafka and DuckDB</a>), where someone has built a system for near-realtime analytics in Go using DuckDB.</p>
-
-<p>The slides listed DuckDB’s limitations:<br />
-<img src="/img/adbc-duckdb/duckdb.png" width="100%" class="img-responsive" alt="DuckDB limitations: Single Pod, *Data should fit in memory, *Low Query Concurrency, *Low Ingest Rate - *Solvable with some efforts" aria-hidden="true" /> 
-The poster’s solution batches data at the application layer managing to scale up ingestion 100x to ~20k inserts/second, noting that they thought that using the DuckDB Appender API could possibly increase this 10x. So, potentially ~200k inserts/second. Yayyyyy…</p>
-
-<figure style="text-align: center;">
-  <img src="/img/adbc-duckdb/Yay.gif" width="40%" class="img-responsive" alt="Figure 2: Yay" />
-</figure>
-
+<p>Due to the firehose of data, the cluster size over time grew to &gt; 25 nodes and was producing thousands of small Parquet files (13 MB or smaller) an hour. This led to ever-increasing query latency, in some cases breaking our tools due to query timeouts (aka <a href="https://www.dremio.com/blog/compaction-in-apache-iceberg-fine-tuning-your-iceberg-tables-data-files/#h-the-small-files-problem">the small files problem</a>). Not to mention that running aggregations on the raw data in our data warehouse wasn't fast or cheap.</p>
+<h1>DuckDB to the rescue... I think</h1>
+<p>I'd used DuckDB to process and analyse Parquet data so I knew it could do that very quickly. Then I came across this post on LinkedIn (<a href="https://www.linkedin.com/posts/shubham-dhal-349626ba_real-time-analytics-with-kafka-and-duckdb-activity-7258424841538555904-xfU6">Real-Time Analytics using Kafka and DuckDB</a>), where someone has built a system for near-realtime analytics in Go using DuckDB.</p>
+<p>The slides listed DuckDB's limitations:<br />
+<!-- raw HTML omitted -->
+The poster's solution batches data at the application layer managing to scale up ingestion 100x to ~20k inserts/second, noting that they thought that using the DuckDB Appender API could possibly increase this 10x. So, potentially ~200k inserts/second. Yayyyyy...</p>
+<!-- raw HTML omitted -->
 <p>Then I noticed the data schema in the slides was flat and had only 4 fields (vs. <a href="https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#31---object-model-">OpenRTB</a> schema with deeply nested Lists and Structs); and then looked at our monitoring dashboards whereupon I realized that at peak our system was emitting &gt;250k events/second. [cue sad trombone]</p>
-
-<p>Undeterred (and not particularly enamored with the idea of setting up/running/maintaining a Spark cluster), I suspected that Apache Arrow’s columnar memory representation might still make DuckDB viable since it has an Arrow API; getting Parquet files would be as easy as running <code class="language-plaintext highlighter-rouge">COPY...TO (format parquet)</code>.</p>
-
+<p>Undeterred (and not particularly enamored with the idea of setting up/running/maintaining a Spark cluster), I suspected that Apache Arrow's columnar memory representation might still make DuckDB viable since it has an Arrow API; getting Parquet files would be as easy as running <code>COPY...TO (format parquet)</code>.</p>
 <p>Using a pattern found in a Github issue, I wrote a POC using <a href="http://github.com/marcboeker/go-duckdb">github.com/marcboeker/go-duckdb</a> to connect to a DB, retrieve an Arrow, create an Arrow Reader, register a view on the reader, then run an INSERT statement from the view.</p>
-
 <p>This felt a bit like a rabbit pulling itself out of a hat, but no matter, it managed between ~74k and ~110k rows/sec on my laptop.</p>
-
-<p>To make sure this was really the right solution, I also tried out DuckDB’s Appender API (at time of writing the official recommendation for fast inserts) and managed… ~63k rows/sec on my laptop. OK, but… meh.</p>
-
-<h1 id="a-new-hope">A new hope</h1>
-
-<p>In a discussion on the Gopher Slack, Matthew Topol aka <a href="https://github.com/zeroshade">zeroshade</a> suggested using <a href="http://arrow.apache.org/adbc">ADBC</a> with its much simpler API. Who is Matt Topol you ask? Just the guy who <em>literally</em> wrote the book on Apache Arrow, that’s who (<a href="https://www.packtpub.com/en-us/product/in-memory-analytics-with-apache-arrow-9781835461228"><strong><em>In-Memory Analytics with Apache Arrow: Accelerate data analytics for efficient processing of flat and hierarchical data structures 2nd Edition</em></strong></a>). It’s an excellent resource and guide for working with Arrow. <br />
-BTW, should you prefer an acronym to remember the name of the book, it’s <strong><em>IMAAA:ADAFEPOFAHDS2E</em></strong>.<br />
-<img src="/img/adbc-duckdb/imaaapfedaobfhsd2e.png" width="100%" class="img-responsive" alt="Episode IX: In-Memory Analytics with Apache Arrow: Perform fast and efficient data analytics on both flat and hierarchical structured data 2nd Edition aka IMAAA:PFEDAOBFHSD2E by Matt Topol" aria-hidden="true" /><br />
+<p>To make sure this was really the right solution, I also tried out DuckDB's Appender API (at time of writing the official recommendation for fast inserts) and managed... ~63k rows/sec on my laptop. OK, but... meh.</p>
+<h1>A new hope</h1>
+<p>In a discussion on the Gopher Slack, Matthew Topol aka <a href="https://github.com/zeroshade">zeroshade</a> suggested using <a href="http://arrow.apache.org/adbc">ADBC</a> with its much simpler API. Who is Matt Topol you ask? Just the guy who <em>literally</em> wrote the book on Apache Arrow, that's who (<a href="https://www.packtpub.com/en-us/product/in-memory-analytics-with-apache-arrow-9781835461228"><em><strong>In-Memory Analytics with Apache Arrow: Accelerate data analytics for efficient processing of flat and hierarchical data structures 2nd Edition</strong></em></a>). It's an excellent resource and guide for working with Arrow.<br />
+BTW, should you prefer an acronym to remember the name of the book, it's <em><strong>IMAAA:ADAFEPOFAHDS2E</strong></em>.<br />
+<!-- raw HTML omitted --><br />
 But I digress. Matt is also a member of the Apache Arrow PMC, a major contributor to the Go implementation of Apache Iceberg and generally a nice, helpful guy.</p>
-
-<h1 id="adbc">ADBC</h1>
+<h1>ADBC</h1>
 <p>ADBC is:</p>
 <ul>
-  <li>
-    <p>A set of <a href="https://arrow.apache.org/adbc/current/format/specification.html">abstract APIs</a> in different languages (C/C++, Go, and Java, with more on the way) for working with databases and Arrow data.</p>
-
-    <p>For example, result sets of queries in ADBC are all returned as streams of Arrow data, not row-by-row.</p>
-  </li>
-  <li>
-    <p>A set of implementations of that API in different languages (C/C++, C#/.NET, Go, Java, Python, and Ruby) that target different databases (e.g. PostgreSQL, SQLite, DuckDB, any database supporting Flight SQL).</p>
-  </li>
+<li>
+<p>A set of <a href="https://arrow.apache.org/adbc/current/format/specification.html">abstract APIs</a> in different languages (C/C++, Go, and Java, with more on the way) for working with databases and Arrow data.</p>
+<p>For example, result sets of queries in ADBC are all returned as streams of Arrow data, not row-by-row.</p>
+</li>
+<li>
+<p>A set of implementations of that API in different languages (C/C++, C#/.NET, Go, Java, Python, and Ruby) that target different databases (e.g. PostgreSQL, SQLite, DuckDB, any database supporting Flight SQL).</p>
+</li>
 </ul>
-
 <p>Going back to the drawing board, I created <a href="https://github.com/loicalleyne/quacfka">Quacfka</a>, a Go library built using ADBC and split out my system into 3 worker pools, connected by channels:</p>
-
 <ul>
-  <li>Kafka clients consuming topic messages and writing the bytes to a message channel</li>
-  <li>Processing routines using the <a href="https://github.com/loicalleyne/bufarrow">Bufarrow</a> library to deserialize Protobuf data and append it to Arrow arrays, writing Arrow Records to a record channel</li>
-  <li>DuckDB inserters binding the Arrow Records to ADBC statements and executing insertions</li>
+<li>Kafka clients consuming topic messages and writing the bytes to a message channel</li>
+<li>Processing routines using the <a href="https://github.com/loicalleyne/bufarrow">Bufarrow</a> library to deserialize Protobuf data and append it to Arrow arrays, writing Arrow Records to a record channel</li>
+<li>DuckDB inserters binding the Arrow Records to ADBC statements and executing insertions</li>
 </ul>
-
 <p>I first ran these in series to determine how fast each could run:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
-<code>2025/01/23 23:39:27 <span class="a-header">kafka read start with 8 readers</span>
-2025/01/23 23:39:41 <span class="a-header">read 15728642 kafka records in 14.385530 secs @</span><span class="a-padding">1093365.498477 messages/sec</span>
-2025/01/23 23:39:41 <span class="a-length">deserialize []byte to proto, convert to arrow records with 32 goroutines start</span>
-2025/01/23 23:40:04 <span class="a-length">deserialize to arrow done - 15728642 records in 22.283532 secs @</span><span class="a-padding"> 705841.509812 messages/sec</span>
-2025/01/23 23:40:04 <span class="a-data">ADBC IngestCreateAppend start with 32 connections</span> 
-2025/01/23 23:40:25 <span class="a-data">duck ADBC insert 15728642 records in 21.145649535 secs @</span><span class="a-padding"> 743824.007783 rows/sec</span></code></pre></div></div>
-<p><img src="/img/adbc-duckdb/holdmybeer.png" width="100%" class="img-responsive" alt="20k rows/sec? Hold my beer" aria-hidden="true" /></p>
-
+<!-- raw HTML omitted -->
 <p>With this architecture decided, I then started running the workers concurrently, instrumenting the system, profiling my code to identify performance issues and tweaking the settings to maximize throughput. It seemed to me that there was enough performance headroom to allow for in-flight aggregations.</p>
-
-<p>One issue: Despite DuckDB’s excellent <a href="https://duckdb.org/2022/10/28/lightweight-compression.html">lightweight compression</a>, inserts from this source were making the file size increase at a rate of <strong><em>~8GB/minute</em></strong>. Putting inserts on hold to export the Parquet files and release the storage would reduce the overall throughput to an unacceptable level. I decided to implement a rotation of database files based on a file size threshold.</p>
-
+<p>One issue: Despite DuckDB's excellent <a href="https://duckdb.org/2022/10/28/lightweight-compression.html">lightweight compression</a>, inserts from this source were making the file size increase at a rate of <em><strong>~8GB/minute</strong></em>. Putting inserts on hold to export the Parquet files and release the storage would reduce the overall throughput to an unacceptable level. I decided to implement a rotation of database files based on a file size threshold.</p>
 <p>DuckDB being able to query Hive partitioned parquet on disk or in object storage, the analytics part could be decoupled from the data ingestion pipeline by running a separate querying server pointing at wherever the parquet files would end up.</p>
-
 <p>Iterating, I created several APIs to try to make in-flight aggregations efficient enough to keep the overall throughput above my 250k rows/second target.</p>
-
-<p>The first two either ran into issues of data locality or weren’t optimized enough:</p>
-
+<p>The first two either ran into issues of data locality or weren't optimized enough:</p>
 <ul>
-  <li><strong>CustomArrows</strong> : functions to run on each Arrow Record to create a new Record to insert along with the original</li>
-  <li><strong>DuckRunner</strong> : run a series of queries on the database file before rotation</li>
+<li><strong>CustomArrows</strong> : functions to run on each Arrow Record to create a new Record to insert along with the original</li>
+<li><strong>DuckRunner</strong> : run a series of queries on the database file before rotation</li>
 </ul>
-
 <p>Reasoning that if unnesting deeply nested data in Arrow Record arrays was causing data locality issues:</p>
-
 <ul>
-  <li><strong>Normalizer</strong>: a Bufarrow API used in the in the deserialization function to normalize the message data and append it to another Arrow Record, inserted into a separate table</li>
+<li><strong>Normalizer</strong>: a Bufarrow API used in the in the deserialization function to normalize the message data and append it to another Arrow Record, inserted into a separate table</li>
 </ul>
-
 <p>This approach allowed throughput to go back to levels almost as high as without Normalizer - flat data is much faster to process and insert.</p>
-
-<h1 id="oh-were-halfway-therelivin-on-a-prayer">Oh, we’re halfway there…livin’ on a prayer</h1>
-
-<p>Next, I tried opening concurrent connections to multiple databases. <strong>BAM!</strong> <strong><em>Segfault</em></strong>. DuckDB concurrency model isn’t <a href="https://duckdb.org/docs/stable/connect/concurrency.html#handling-concurrency">designed</a> that way. From within a process only a single database (in-memory or file) can be opened, then other database files can be <a href="https://duckdb.org/docs/stable/sql/statements/attach.html">attached</a> to the central db’s catalog.</p>
-
-<p>Having already decided to rotate DB files, I decided to make a separate program (<a href="https://github.com/loicalleyne/quacfka-runner">Runner</a>) to process the database files as they were rotated, running aggregations on normalized data and table dumps to parquet. This meant setting up an RPC connection between the two and figuring out a backpressure mechanism to avoid <code class="language-plaintext highlighter-rouge">disk full</code> events.</p>
-
+<h1>Oh, we're halfway there...livin' on a prayer</h1>
+<p>Next, I tried opening concurrent connections to multiple databases. <strong>BAM!</strong> <em><strong>Segfault</strong></em>. DuckDB concurrency model isn't <a href="https://duckdb.org/docs/stable/connect/concurrency.html#handling-concurrency">designed</a> that way. From within a process only a single database (in-memory or file) can be opened, then other database files can be <a href="https://duckdb.org/docs/stable/sql/statements/attach.html">attached</a> to the central db's catalog.</p>
+<p>Having already decided to rotate DB files, I decided to make a separate program (<a href="https://github.com/loicalleyne/quacfka-runner">Runner</a>) to process the database files as they were rotated, running aggregations on normalized data and table dumps to parquet. This meant setting up an RPC connection between the two and figuring out a backpressure mechanism to avoid <code>disk full</code> events.</p>
 <p>However having the two running simultaneously was causing memory pressure issues, not to mention massively slowing down the throughput. Upgrading the VM to one with more vCPUs and memory only helped a little, there was clearly some resource contention going on.</p>
-
-<p>Since Go 1.5, the default <code class="language-plaintext highlighter-rouge">GOMAXPROCS</code> value is the number of CPU cores available. What if this was reduced to “sandbox” the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. <a href="https://github.com/loicalleyne/quacfka-runner">Runner</a> runs the <code class="language-plaintext highlighter-rouge">COPY...TO...parquet</code> queries, walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold in <a href="https://github.com/loicalleyne/quacfka-service">Quafka-Service</a> allows Runner to keep up and avoid a backlog of DB files on disk.</p>
-
-<h1 id="results">Results</h1>
-
-<figure style="text-align: center;">
-  <img src="/img/adbc-duckdb/btop.png" width="100%" class="img-responsive" alt="Figure 1: btop utility showing CPU and memory usage of quacfka-service and runner" />
-  <figcaption>Figure 2: btop utility showing CPU and memory usage of quacfka-service and runner.</figcaption>
-</figure>
-<p>Note: both runs with <code class="language-plaintext highlighter-rouge">GOMAXPROCS</code> set to 24 (the number of DuckDB insertion routines)</p>
-
+<p>Since Go 1.5, the default <code>GOMAXPROCS</code> value is the number of CPU cores available. What if this was reduced to &quot;sandbox&quot; the ingestion process, along with setting the DuckDB thread count in the Runner? This actually worked so well, it increased the overall throughput. <a href="https://github.com/loicalleyne/quacfka-runner">Runner</a> runs the <code>COPY...TO...parquet</code> queries, walks the parquet output folder, uploads files to object storage and deletes the uploaded files. Balancing the DuckDB file rotation size threshold in <a href="https://github.com/loicalleyne/quacfka-service">Quafka-Service</a> allows Runner to keep up and avoid a backlog of DB files on disk.</p>
+<h1>Results</h1>
+<!-- raw HTML omitted -->
 <p>Ingesting the raw data (14 fields with one deeply nested LIST.STRUCT.LIST field) + normalized data:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
-<code>
-num_cpu:                <span class="a-header">60</span>  
-runtime_os:             <span class="a-header">linux</span>  
-kafka_clients:          <span class="a-header">5</span>  
-kafka_queue_cap:        <span class="a-header">983040</span>  
-processor_routines:     <span class="a-header">32</span>  
-arrow_queue_cap:        <span class="a-header">4</span>  
-duckdb_threshold_mb:    <span class="a-header">4200</span>  
-duckdb_connections:     <span class="a-header">24</span>  
-normalizer_fields:      <span class="a-header">10</span>  
-start_time:             <span class="a-header">2025-02-24T21:06:23Z</span>  
-end_time:               <span class="a-header">2025-02-24T21:11:23Z</span>  
-records:                <span class="a-header">123_686_901.00</span>  
-norm_records:           <span class="a-header">122_212_452.00</span>  
-data_transferred:       <span class="a-header">146.53 GB</span>  
-duration:               <span class="a-header">4m59.585s</span>  
-records_per_second:     <span class="a-padding">398_271.90</span>  
-total_rows_per_second:  <span class="a-padding">806_210.41</span>  
-transfer_rate:          <span class="a-header">500.86 MB/second</span>  
-duckdb_files:           <span class="a-header">9</span>  
-duckdb_files_MB:        <span class="a-header">38429</span>
-file_avg_duration:      <span class="a-header">33.579s</span></code></pre></div></div>
-
+<!-- raw HTML omitted -->
 <p>How many rows/second could we get if we only inserted the flat, normalized data? (Note: original records are still processed, just not inserted):</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight">
-<code>
-num_cpu:                <span class="a-header">60</span>
-runtime_os:             <span class="a-header">linux</span>
-kafka_clients:          <span class="a-header">10</span>
-kafka_queue_cap:        <span class="a-header">1228800</span>  
-processor_routines:     <span class="a-header">32</span>  
-arrow_queue_cap:        <span class="a-header">4</span>  
-duckdb_threshold_mb:    <span class="a-header">4200</span>  
-duckdb_connections:     <span class="a-header">24</span>  
-normalizer_fields:      <span class="a-header">10</span>  
-start_time:             <span class="a-header">2025-02-25T19:04:33Z</span>  
-end_time:               <span class="a-header">2025-02-25T19:09:36Z</span>  
-records:                <span class="a-header">231_852_772.00</span>  
-norm_records:           <span class="a-header">363_247_327.00</span>  
-data_transferred:       <span class="a-header">285.76 GB</span>  
-duration:               <span class="a-header">5m3.059s</span>  
-records_per_second:     <span class="a-header">0.00</span>  
-total_rows_per_second:  <span class="a-padding">1_198_601.39</span> 
-transfer_rate:          <span class="a-header">965.54 MB/second</span> 
-duckdb_files:           <span class="a-header">5</span>  
-duckdb_files_MB:        <span class="a-header">20056</span>  
-file_avg_duration:      <span class="a-header">58.975s</span></code></pre></div></div>
-
-<p><img src="/img/adbc-duckdb/onemillionrows.png" width="100%" class="img-responsive" alt="One million rows/second" aria-hidden="true" /></p>
-
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
 <p>Once deployed, the number of parquet files fell from ~3000 small files per hour to &lt; 20 files per hour. Goodbye small files!</p>
-
-<p><img src="/img/adbc-duckdb/kip_yes.gif" width="25%" class="img-responsive" alt="Yesss" aria-hidden="true" /></p>
-
-<h1 id="challengeslearnings">Challenges/Learnings</h1>
-
+<!-- raw HTML omitted -->
+<h1>Challenges/Learnings</h1>
 <ul>
-  <li>DuckDB insertions are the bottleneck; network speed, Protobuf deserialization, <strong>building Arrow Records are not</strong>.</li>
-  <li>For fastest insertion into DuckDB, Arrow Record Batches should contain at least 122880 rows (to align with DuckDB storage row group size).</li>
-  <li>DuckDB won’t let you open more than one database at once within the same process (results in a segfault). DuckDB is designed to run only once in a process, with a central database’s catalog having the ability to add connections to other databases.
-    <ul>
-      <li>Workarounds:
-        <ul>
-          <li>Use separate processes for writing and reading multiple database files.</li>
-          <li>Open a single DuckDB database and use <a href="https://duckdb.org/docs/stable/sql/statements/attach.html">ATTACH</a> to attach other DB files.</li>
-        </ul>
-      </li>
-    </ul>
-  </li>
-  <li>Flat data is much, much faster to insert than nested data.</li>
+<li>DuckDB insertions are the bottleneck; network speed, Protobuf deserialization, <strong>building Arrow Records are not</strong>.</li>
+<li>For fastest insertion into DuckDB, Arrow Record Batches should contain at least 122880 rows (to align with DuckDB storage row group size).</li>
+<li>DuckDB won't let you open more than one database at once within the same process (results in a segfault). DuckDB is designed to run only once in a process, with a central database's catalog having the ability to add connections to other databases.
+<ul>
+<li>Workarounds:
+<ul>
+<li>Use separate processes for writing and reading multiple database files.</li>
+<li>Open a single DuckDB database and use <a href="https://duckdb.org/docs/stable/sql/statements/attach.html">ATTACH</a> to attach other DB files.</li>
 </ul>
-
-<p><img src="/img/adbc-duckdb/whatdoesitallmean.gif" width="100%" class="img-responsive" alt="Whoopdy doo, what does it all mean Basil?" aria-hidden="true" /></p>
-
+</li>
+</ul>
+</li>
+<li>Flat data is much, much faster to insert than nested data.</li>
+</ul>
+<!-- raw HTML omitted -->
 <p>ADBC provides DuckDB with a truly high-throughput data ingestion API, unlocking a slew of use cases for using DuckDB with streaming data, making this an ever more useful tool for data practitioners.</p>
 
       </main>

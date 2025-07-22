@@ -10,12 +10,12 @@
     
 
     <!-- Begin Jekyll SEO tag v2.8.0 -->
-<meta name="generator" content="Jekyll v4.3.3" />
+<meta name="generator" content="Jekyll v4.4.1" />
 <meta property="og:title" content="Apache Arrow nanoarrow 0.1 Release" />
 <meta name="author" content="pmc" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="The Apache Arrow team is pleased to announce the 0.1.0 release of Apache Arrow nanoarrow. This initial release covers 31 resolved issues from 6 contributors. Release Highlights This initial release includes the following: A C library bundled as two files (nanoarrow.c and nanoarrow.h). An R package providing bindings for users of the R programming language. See the Changelog for a detailed list of contributions leading up to the initial release. Why nanoarrow? The adoption of the Arrow C Data Interface and the Arrow C Stream Interface since their introduction have been impressive and enthusiastic: not only have Arrow language bindings adopted the standard to pass data among themselves, a growing number of high-profile libraries like GDAL and DuckDB use the standard to improve performance and provide an ABI-stable interface to tabular input and output. GDAL and DuckDB are fortunate to have hard-working and forward-thinking maintainers that were motivated to provide support for the Arrow C Data and Stream interfaces even though the code to do so required an intimate knowledge of both the interface and the columnar specification on which it is based. The vision of nanoarrow is that it should be trivial for a library or application to implement an Arrow-based interface: if a library consumes or produces tabular data, Arrow should be the first place developers look. Developers shouldn’t have to be familiar with the details of the columnar specification—nor should they have to take on any build-time dependencies—to get started. The Arrow Database Connectivity (ADBC) specification is a good example of such a project, and provided a strong motivator for the development of nanoarrow: at the heart of ADBC is the idea of a core “driver manager” and database-specific drivers that are distributed as independent C/C++/Python/R/Java/Go projects. At least in R and Python, embedding an existing Arrow implementation (e.g., Arrow C++) is challenging in the context of multiple packages intended to be loaded into the same process. As of this writing, ADBC includes nanoarrow-based SQLite and PostgreSQL drivers and a nanoarrow-based validation suite for drivers. Using nanoarrow in C The nanoarrow C library is distributed as two files (nanoarrow.h and nanoarrow.c) that can be copied and vendored into an existing code base. This results in a static library of about 50 KB and builds in less than a second. Some features that nanoarrow provides are: Helpers to create types, schemas, and metadata Growable buffers, including the option for custom allocators/deallocators. Bitmap (i.e., bitpacked boolean) utilities An API for building arrays from buffers An API for building arrays element-wise An API to extract elements element-wise from an existing array. For example, one can build an integer array element-wise: #include &quot;nanoarrow.h&quot; int make_simple_array(struct ArrowArray* array_out, struct ArrowSchema* schema_out) { struct ArrowError error; array_out-&gt;release = NULL; schema_out-&gt;release = NULL; NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array_out, NANOARROW_TYPE_INT32)); NANOARROW_RETURN_NOT_OK(ArrowArrayStartAppending(array_out)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 1)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 2)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 3)); NANOARROW_RETURN_NOT_OK(ArrowArrayFinishBuilding(array_out, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema_out, NANOARROW_TYPE_INT32)); return NANOARROW_OK; } Similarly, one can extract elements from an array: #include &lt;stdio.h&gt; #include &quot;nanoarrow.h&quot; int print_simple_array(struct ArrowArray* array, struct ArrowSchema* schema) { struct ArrowError error; struct ArrowArrayView array_view; NANOARROW_RETURN_NOT_OK(ArrowArrayViewInitFromSchema(&amp;array_view, schema, &amp;error)); if (array_view.storage_type != NANOARROW_TYPE_INT32) { printf(&quot;Array has storage that is not int32\n&quot;); } int result = ArrowArrayViewSetArray(&amp;array_view, array, &amp;error); if (result != NANOARROW_OK) { ArrowArrayViewReset(&amp;array_view); return result; } for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\n&quot;, (int)ArrowArrayViewGetIntUnsafe(&amp;array_view, i)); } ArrowArrayViewReset(&amp;array_view); return NANOARROW_OK; } Using nanoarrow in C++, R, and Python Recognizing that many projects for which nanoarrow may be useful will have access a higher-level runtime than C, there are experiments to provide these users with a minimal set of useful tools. For C++ projects, an experimental “nanoarrow.hpp” interface provides unique_ptr-like wrappers for nanoarrow C objects to reduce the verbosity of using the nanoarrow API. For example, the previous print_simple_array() implementation would collapse to: #include &lt;stdio.h&gt; #include &quot;nanoarrow.hpp&quot; int print_simple_array2(struct ArrowArray* array, struct ArrowSchema* schema) { struct ArrowError error; nanoarrow::UniqueArrayView array_view; NANOARROW_RETURN_NOT_OK(ArrowArrayViewInitFromSchema(array_view.get(), schema, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowArrayViewSetArray(array_view.get(), array, &amp;error)); for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\n&quot;, (int)ArrowArrayViewGetIntUnsafe(array_view.get(), i)); } return NANOARROW_OK; } For R packages, experimental R bindings provide a limited set of conversions between R vectors and Arrow arrays such that R bindings for a library with an Arrow-based interface do not need to provide this behaviour themselves. Additional features include printing and validating the content of the C structures at the heart of the C Data and C Stream interfaces to facilitate the development of bindings to Arrow-based libraries. # install.packages(&quot;remotes&quot;) remotes::install_github(&quot;apache/arrow-nanoarrow/r&quot;, build = FALSE) library(nanoarrow) as_nanoarrow_array(1:5) #&gt; &lt;nanoarrow_array int32[5]&gt; #&gt; $ length : int 5 #&gt; $ null_count: int 0 #&gt; $ offset : int 0 #&gt; $ buffers :List of 2 #&gt; ..$ :&lt;nanoarrow_buffer_validity[0 b] at 0x0&gt; #&gt; ..$ :&lt;nanoarrow_buffer_data_int32[20 b] at 0x135d13c28&gt; #&gt; $ dictionary: NULL #&gt; $ children : list() A Python package skeleton exists in the nanoarrow repository and further functionality may be added once the C library interface has stabilized. Try nanoarrow For any interested in giving nanoarrow a try, the easiest way to get started is to clone the nanoarrow repository from GitHub and build/modify the minimal CMake build example. For applied usage, one can refer to the ADBC SQLite driver and the ADBC PostgreSQL driver. Contributors This initial release consists of contributions from 6 contributors in addition to the invaluable advice and support of the Apache Arrow developer mailing list. $ git shortlog -sn 8339114637919b661c1c8fae6764ceed532c935e..apache-arrow-nanoarrow-0.1.0 | grep -v &quot;GitHub Actions&quot; 100 Dewey Dunnington 7 David Li 2 Dirk Eddelbuettel 1 Dane Pitkin 1 Jonathan Keane 1 Joris Van den Bossche" />
-<meta property="og:description" content="The Apache Arrow team is pleased to announce the 0.1.0 release of Apache Arrow nanoarrow. This initial release covers 31 resolved issues from 6 contributors. Release Highlights This initial release includes the following: A C library bundled as two files (nanoarrow.c and nanoarrow.h). An R package providing bindings for users of the R programming language. See the Changelog for a detailed list of contributions leading up to the initial release. Why nanoarrow? The adoption of the Arrow C Data Interface and the Arrow C Stream Interface since their introduction have been impressive and enthusiastic: not only have Arrow language bindings adopted the standard to pass data among themselves, a growing number of high-profile libraries like GDAL and DuckDB use the standard to improve performance and provide an ABI-stable interface to tabular input and output. GDAL and DuckDB are fortunate to have hard-working and forward-thinking maintainers that were motivated to provide support for the Arrow C Data and Stream interfaces even though the code to do so required an intimate knowledge of both the interface and the columnar specification on which it is based. The vision of nanoarrow is that it should be trivial for a library or application to implement an Arrow-based interface: if a library consumes or produces tabular data, Arrow should be the first place developers look. Developers shouldn’t have to be familiar with the details of the columnar specification—nor should they have to take on any build-time dependencies—to get started. The Arrow Database Connectivity (ADBC) specification is a good example of such a project, and provided a strong motivator for the development of nanoarrow: at the heart of ADBC is the idea of a core “driver manager” and database-specific drivers that are distributed as independent C/C++/Python/R/Java/Go projects. At least in R and Python, embedding an existing Arrow implementation (e.g., Arrow C++) is challenging in the context of multiple packages intended to be loaded into the same process. As of this writing, ADBC includes nanoarrow-based SQLite and PostgreSQL drivers and a nanoarrow-based validation suite for drivers. Using nanoarrow in C The nanoarrow C library is distributed as two files (nanoarrow.h and nanoarrow.c) that can be copied and vendored into an existing code base. This results in a static library of about 50 KB and builds in less than a second. Some features that nanoarrow provides are: Helpers to create types, schemas, and metadata Growable buffers, including the option for custom allocators/deallocators. Bitmap (i.e., bitpacked boolean) utilities An API for building arrays from buffers An API for building arrays element-wise An API to extract elements element-wise from an existing array. For example, one can build an integer array element-wise: #include &quot;nanoarrow.h&quot; int make_simple_array(struct ArrowArray* array_out, struct ArrowSchema* schema_out) { struct ArrowError error; array_out-&gt;release = NULL; schema_out-&gt;release = NULL; NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array_out, NANOARROW_TYPE_INT32)); NANOARROW_RETURN_NOT_OK(ArrowArrayStartAppending(array_out)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 1)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 2)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 3)); NANOARROW_RETURN_NOT_OK(ArrowArrayFinishBuilding(array_out, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema_out, NANOARROW_TYPE_INT32)); return NANOARROW_OK; } Similarly, one can extract elements from an array: #include &lt;stdio.h&gt; #include &quot;nanoarrow.h&quot; int print_simple_array(struct ArrowArray* array, struct ArrowSchema* schema) { struct ArrowError error; struct ArrowArrayView array_view; NANOARROW_RETURN_NOT_OK(ArrowArrayViewInitFromSchema(&amp;array_view, schema, &amp;error)); if (array_view.storage_type != NANOARROW_TYPE_INT32) { printf(&quot;Array has storage that is not int32\n&quot;); } int result = ArrowArrayViewSetArray(&amp;array_view, array, &amp;error); if (result != NANOARROW_OK) { ArrowArrayViewReset(&amp;array_view); return result; } for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\n&quot;, (int)ArrowArrayViewGetIntUnsafe(&amp;array_view, i)); } ArrowArrayViewReset(&amp;array_view); return NANOARROW_OK; } Using nanoarrow in C++, R, and Python Recognizing that many projects for which nanoarrow may be useful will have access a higher-level runtime than C, there are experiments to provide these users with a minimal set of useful tools. For C++ projects, an experimental “nanoarrow.hpp” interface provides unique_ptr-like wrappers for nanoarrow C objects to reduce the verbosity of using the nanoarrow API. For example, the previous print_simple_array() implementation would collapse to: #include &lt;stdio.h&gt; #include &quot;nanoarrow.hpp&quot; int print_simple_array2(struct ArrowArray* array, struct ArrowSchema* schema) { struct ArrowError error; nanoarrow::UniqueArrayView array_view; NANOARROW_RETURN_NOT_OK(ArrowArrayViewInitFromSchema(array_view.get(), schema, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowArrayViewSetArray(array_view.get(), array, &amp;error)); for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\n&quot;, (int)ArrowArrayViewGetIntUnsafe(array_view.get(), i)); } return NANOARROW_OK; } For R packages, experimental R bindings provide a limited set of conversions between R vectors and Arrow arrays such that R bindings for a library with an Arrow-based interface do not need to provide this behaviour themselves. Additional features include printing and validating the content of the C structures at the heart of the C Data and C Stream interfaces to facilitate the development of bindings to Arrow-based libraries. # install.packages(&quot;remotes&quot;) remotes::install_github(&quot;apache/arrow-nanoarrow/r&quot;, build = FALSE) library(nanoarrow) as_nanoarrow_array(1:5) #&gt; &lt;nanoarrow_array int32[5]&gt; #&gt; $ length : int 5 #&gt; $ null_count: int 0 #&gt; $ offset : int 0 #&gt; $ buffers :List of 2 #&gt; ..$ :&lt;nanoarrow_buffer_validity[0 b] at 0x0&gt; #&gt; ..$ :&lt;nanoarrow_buffer_data_int32[20 b] at 0x135d13c28&gt; #&gt; $ dictionary: NULL #&gt; $ children : list() A Python package skeleton exists in the nanoarrow repository and further functionality may be added once the C library interface has stabilized. Try nanoarrow For any interested in giving nanoarrow a try, the easiest way to get started is to clone the nanoarrow repository from GitHub and build/modify the minimal CMake build example. For applied usage, one can refer to the ADBC SQLite driver and the ADBC PostgreSQL driver. Contributors This initial release consists of contributions from 6 contributors in addition to the invaluable advice and support of the Apache Arrow developer mailing list. $ git shortlog -sn 8339114637919b661c1c8fae6764ceed532c935e..apache-arrow-nanoarrow-0.1.0 | grep -v &quot;GitHub Actions&quot; 100 Dewey Dunnington 7 David Li 2 Dirk Eddelbuettel 1 Dane Pitkin 1 Jonathan Keane 1 Joris Van den Bossche" />
+<meta name="description" content="NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array_out, NANOARROW_TYPE_INT32)); NANOARROW_RETURN_NOT_OK(ArrowArrayStartAppending(array_out)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 1)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 2)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 3)); NANOARROW_RETURN_NOT_OK(ArrowArrayFinishBuilding(array_out, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema_out, NANOARROW_TYPE_INT32)); return NANOARROW_OK; } if (array_view.storage_type != NANOARROW_TYPE_INT32) { printf(&quot;Array has storage that is not int32\n&quot;); } int result = ArrowArrayViewSetArray(&amp;array_view, array, &amp;error); if (result != NANOARROW_OK) { ArrowArrayViewReset(&amp;array_view); return result; } for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\n&quot;, (int)ArrowArrayViewGetIntUnsafe(&amp;array_view, i)); } ArrowArrayViewReset(&amp;array_view); return NANOARROW_OK; } as_nanoarrow_array(1:5) #&gt; &lt;nanoarrow_array int32[5]&gt; #&gt; $ length : int 5 #&gt; $ null_count: int 0 #&gt; $ offset : int 0 #&gt; $ buffers :List of 2 #&gt; ..$ :&lt;nanoarrow_buffer_validity[0 b] at 0x0&gt; #&gt; ..$ :&lt;nanoarrow_buffer_data_int32[20 b] at 0x135d13c28&gt; #&gt; $ dictionary: NULL #&gt; $ children : list()" />
+<meta property="og:description" content="NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array_out, NANOARROW_TYPE_INT32)); NANOARROW_RETURN_NOT_OK(ArrowArrayStartAppending(array_out)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 1)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 2)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 3)); NANOARROW_RETURN_NOT_OK(ArrowArrayFinishBuilding(array_out, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema_out, NANOARROW_TYPE_INT32)); return NANOARROW_OK; } if (array_view.storage_type != NANOARROW_TYPE_INT32) { printf(&quot;Array has storage that is not int32\n&quot;); } int result = ArrowArrayViewSetArray(&amp;array_view, array, &amp;error); if (result != NANOARROW_OK) { ArrowArrayViewReset(&amp;array_view); return result; } for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\n&quot;, (int)ArrowArrayViewGetIntUnsafe(&amp;array_view, i)); } ArrowArrayViewReset(&amp;array_view); return NANOARROW_OK; } as_nanoarrow_array(1:5) #&gt; &lt;nanoarrow_array int32[5]&gt; #&gt; $ length : int 5 #&gt; $ null_count: int 0 #&gt; $ offset : int 0 #&gt; $ buffers :List of 2 #&gt; ..$ :&lt;nanoarrow_buffer_validity[0 b] at 0x0&gt; #&gt; ..$ :&lt;nanoarrow_buffer_data_int32[20 b] at 0x135d13c28&gt; #&gt; $ dictionary: NULL #&gt; $ children : list()" />
 <link rel="canonical" href="https://arrow.apache.org/blog/2023/03/07/nanoarrow-0.1.0-release/" />
 <meta property="og:url" content="https://arrow.apache.org/blog/2023/03/07/nanoarrow-0.1.0-release/" />
 <meta property="og:site_name" content="Apache Arrow" />
@@ -26,7 +26,7 @@
 <meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
 <meta property="twitter:title" content="Apache Arrow nanoarrow 0.1 Release" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"pmc"},"dateModified":"2023-03-07T00:00:00-05:00","datePublished":"2023-03-07T00:00:00-05:00","description":"The Apache Arrow team is pleased to announce the 0.1.0 release of Apache Arrow nanoarrow. This initial release covers 31 resolved issues from 6 contributors. Release Highlights This initial release includes the following: A C library bundled as two files (nanoarrow.c and nanoarrow.h). An R package providing bindings for users of the R programming language. See the Changelog for a detailed list of contributions leading up to the initial release. Why nanoarrow? The adoption of the Arrow C Data Interface and the Arrow C Stream Interface since their introduction have been impressive and enthusiastic: not only have Arrow language bindings adopted the standard to pass data among themselves, a growing number of high-profile libraries like GDAL and DuckDB use the standard to improve performance and provide an ABI-stable interface to tabular input and output. GDAL and DuckDB are fortunate to have hard-working and forward-thinking maintainers that were motivated to provide support for the Arrow C Data and Stream interfaces even though the code to do so required an intimate knowledge of both the interface and the columnar specification on which it is based. The vision of nanoarrow is that it should be trivial for a library or application to implement an Arrow-based interface: if a library consumes or produces tabular data, Arrow should be the first place developers look. Developers shouldn’t have to be familiar with the details of the columnar specification—nor should they have to take on any build-time dependencies—to get started. The Arrow Database Connectivity (ADBC) specification is a good example of such a project, and provided a strong motivator for the development of nanoarrow: at the heart of ADBC is the idea of a core “driver manager” and database-specific drivers that are distributed as independent C/C++/Python/R/Java/Go projects. At least in R and Python, embedding an existing Arrow implementation (e.g., Arrow C++) is challenging in the context of multiple packages intended to be loaded into the same process. As of this writing, ADBC includes nanoarrow-based SQLite and PostgreSQL drivers and a nanoarrow-based validation suite for drivers. Using nanoarrow in C The nanoarrow C library is distributed as two files (nanoarrow.h and nanoarrow.c) that can be copied and vendored into an existing code base. This results in a static library of about 50 KB and builds in less than a second. Some features that nanoarrow provides are: Helpers to create types, schemas, and metadata Growable buffers, including the option for custom allocators/deallocators. Bitmap (i.e., bitpacked boolean) utilities An API for building arrays from buffers An API for building arrays element-wise An API to extract elements element-wise from an existing array. For example, one can build an integer array element-wise: #include &quot;nanoarrow.h&quot; int make_simple_array(struct ArrowArray* array_out, struct ArrowSchema* schema_out) { struct ArrowError error; array_out-&gt;release = NULL; schema_out-&gt;release = NULL; NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array_out, NANOARROW_TYPE_INT32)); NANOARROW_RETURN_NOT_OK(ArrowArrayStartAppending(array_out)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 1)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 2)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 3)); NANOARROW_RETURN_NOT_OK(ArrowArrayFinishBuilding(array_out, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema_out, NANOARROW_TYPE_INT32)); return NANOARROW_OK; } Similarly, one can extract elements from an array: #include &lt;stdio.h&gt; #include &quot;nanoarrow.h&quot; int print_simple_array(struct ArrowArray* array, struct ArrowSchema* schema) { struct ArrowError error; struct ArrowArrayView array_view; NANOARROW_RETURN_NOT_OK(ArrowArrayViewInitFromSchema(&amp;array_view, schema, &amp;error)); if (array_view.storage_type != NANOARROW_TYPE_INT32) { printf(&quot;Array has storage that is not int32\\n&quot;); } int result = ArrowArrayViewSetArray(&amp;array_view, array, &amp;error); if (result != NANOARROW_OK) { ArrowArrayViewReset(&amp;array_view); return result; } for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\\n&quot;, (int)ArrowArrayViewGetIntUnsafe(&amp;array_view, i)); } ArrowArrayViewReset(&amp;array_view); return NANOARROW_OK; } Using nanoarrow in C++, R, and Python Recognizing that many projects for which nanoarrow may be useful will have access a higher-level runtime than C, there are experiments to provide these users with a minimal set of useful tools. For C++ projects, an experimental “nanoarrow.hpp” interface provides unique_ptr-like wrappers for nanoarrow C objects to reduce the verbosity of using the nanoarrow API. For example, the previous print_simple_array() implementation would collapse to: #include &lt;stdio.h&gt; #include &quot;nanoarrow.hpp&quot; int print_simple_array2(struct ArrowArray* array, struct ArrowSchema* schema) { struct ArrowError error; nanoarrow::UniqueArrayView array_view; NANOARROW_RETURN_NOT_OK(ArrowArrayViewInitFromSchema(array_view.get(), schema, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowArrayViewSetArray(array_view.get(), array, &amp;error)); for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\\n&quot;, (int)ArrowArrayViewGetIntUnsafe(array_view.get(), i)); } return NANOARROW_OK; } For R packages, experimental R bindings provide a limited set of conversions between R vectors and Arrow arrays such that R bindings for a library with an Arrow-based interface do not need to provide this behaviour themselves. Additional features include printing and validating the content of the C structures at the heart of the C Data and C Stream interfaces to facilitate the development of bindings to Arrow-based libraries. # install.packages(&quot;remotes&quot;) remotes::install_github(&quot;apache/arrow-nanoarrow/r&quot;, build = FALSE) library(nanoarrow) as_nanoarrow_array(1:5) #&gt; &lt;nanoarrow_array int32[5]&gt; #&gt; $ length : int 5 #&gt; $ null_count: int 0 #&gt; $ offset : int 0 #&gt; $ buffers :List of 2 #&gt; ..$ :&lt;nanoarrow_buffer_validity[0 b] at 0x0&gt; #&gt; ..$ :&lt;nanoarrow_buffer_data_int32[20 b] at 0x135d13c28&gt; #&gt; $ dictionary: NULL #&gt; $ children : list() A Python package skeleton exists in the nanoarrow repository and further functionality may be added once the C library interface has stabilized. Try nanoarrow For any interested in giving nanoarrow a try, the easiest way to get started is to clone the nanoarrow repository from GitHub and build/modify the minimal CMake build example. For applied usage, one can refer to the ADBC SQLite driver and the ADBC PostgreSQL driver. Contributors This initial release consists of contributions from 6 contributors in addition to the invaluable advice and support of the Apache Arrow developer mailing list. $ git shortlog -sn 8339114637919b661c1c8fae6764ceed532c935e..apache-arrow-nanoarrow-0.1.0 | grep -v &quot;GitHub Actions&quot; 100 Dewey Dunnington 7 David Li 2 Dirk Eddelbuettel 1 Dane Pitkin 1 Jonathan Keane 1 Joris Van den Bossche","headline":"Apache Arrow nanoarrow 0.1 Release","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2023/03/07/nanoarrow-0.1.0-release/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"pmc"},"url":"https://arrow.apache.org/blog/2023/03/07/nanoarrow-0.1.0-release/"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"pmc"},"dateModified":"2023-03-07T00:00:00-05:00","datePublished":"2023-03-07T00:00:00-05:00","description":"NANOARROW_RETURN_NOT_OK(ArrowArrayInitFromType(array_out, NANOARROW_TYPE_INT32)); NANOARROW_RETURN_NOT_OK(ArrowArrayStartAppending(array_out)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 1)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 2)); NANOARROW_RETURN_NOT_OK(ArrowArrayAppendInt(array_out, 3)); NANOARROW_RETURN_NOT_OK(ArrowArrayFinishBuilding(array_out, &amp;error)); NANOARROW_RETURN_NOT_OK(ArrowSchemaInitFromType(schema_out, NANOARROW_TYPE_INT32)); return NANOARROW_OK; } if (array_view.storage_type != NANOARROW_TYPE_INT32) { printf(&quot;Array has storage that is not int32\\n&quot;); } int result = ArrowArrayViewSetArray(&amp;array_view, array, &amp;error); if (result != NANOARROW_OK) { ArrowArrayViewReset(&amp;array_view); return result; } for (int64_t i = 0; i &lt; array-&gt;length; i++) { printf(&quot;%d\\n&quot;, (int)ArrowArrayViewGetIntUnsafe(&amp;array_view, i)); } ArrowArrayViewReset(&amp;array_view); return NANOARROW_OK; } as_nanoarrow_array(1:5) #&gt; &lt;nanoarrow_array int32[5]&gt; #&gt; $ length : int 5 #&gt; $ null_count: int 0 #&gt; $ offset : int 0 #&gt; $ buffers :List of 2 #&gt; ..$ :&lt;nanoarrow_buffer_validity[0 b] at 0x0&gt; #&gt; ..$ :&lt;nanoarrow_buffer_data_int32[20 b] at 0x135d13c28&gt; #&gt; $ dictionary: NULL #&gt; $ children : list()","headline":"Apache Arrow nanoarrow 0.1 Release","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2023/03/07/nanoarrow-0.1.0-release/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"pmc"},"url":"https://arrow.apache.org/blog/2023/03/07/nanoarrow-0.1.0-release/"}</script>
 <!-- End Jekyll SEO tag -->
 
 
@@ -276,31 +276,22 @@
 </p>
 
 
-        <!--
-
--->
-
+        <!-- raw HTML omitted -->
 <p>The Apache Arrow team is pleased to announce the 0.1.0 release of
 Apache Arrow nanoarrow. This initial release covers 31 resolved issues from
 6 contributors.</p>
-
-<h2 id="release-highlights">Release Highlights</h2>
-
+<h2>Release Highlights</h2>
 <p>This initial release includes the following:</p>
-
 <ul>
-  <li>A <a href="#using-nanoarrow-in-c">C library</a> bundled as two files (nanoarrow.c
+<li>A <a href="#using-nanoarrow-in-c">C library</a> bundled as two files (nanoarrow.c
 and nanoarrow.h).</li>
-  <li>An <a href="#using-nanoarrow-in-c-r-and-python">R package</a> providing bindings for users
+<li>An <a href="#using-nanoarrow-in-c-r-and-python">R package</a> providing bindings for users
 of the R programming language.</li>
 </ul>
-
 <p>See the
 <a href="https://github.com/apache/arrow-nanoarrow/blob/apache-arrow-nanoarrow-0.1.0/CHANGELOG.md">Changelog</a>
 for a detailed list of contributions leading up to the initial release.</p>
-
-<h2 id="why-nanoarrow">Why nanoarrow?</h2>
-
+<h2>Why nanoarrow?</h2>
 <p>The adoption of the
 <a href="https://arrow.apache.org/docs/format/CDataInterface.html">Arrow C Data Interface</a>
 and the <a href="https://arrow.apache.org/docs/format/CStreamInterface.html">Arrow C Stream Interface</a>
@@ -312,51 +303,43 @@ high-profile libraries like
 <a href="https://gdal.org/development/rfc/rfc86_column_oriented_api.html">GDAL</a> and
 <a href="https://duckdb.org/2021/12/03/duck-arrow.html">DuckDB</a> use the standard to
 improve performance and provide an ABI-stable interface to tabular input and output.</p>
-
 <p>GDAL and DuckDB are fortunate to have hard-working and forward-thinking maintainers
 that were motivated to provide support for the Arrow C Data and Stream interfaces
 even though the code to do so required an intimate knowledge of both the interface
 and the columnar specification on which it is based.</p>
-
 <p>The vision of <a href="https://github.com/apache/arrow-nanoarrow">nanoarrow</a>
 is that it should be trivial for a library or application to implement an Arrow-based
 interface: if a library consumes or produces tabular data, Arrow should be the
-first place developers look. Developers shouldn’t have to be familiar with the
-details of the columnar specification—nor should they have to take on any
-build-time dependencies—to get started.</p>
-
+first place developers look. Developers shouldn't have to be familiar with the
+details of the columnar specification---nor should they have to take on any
+build-time dependencies---to get started.</p>
 <p>The <a href="https://arrow.apache.org/docs/format/ADBC.html">Arrow Database Connectivity (ADBC)</a>
 specification is a good example of such a project, and provided a strong
 motivator for the development of nanoarrow: at the heart of ADBC is the
-idea of a core “driver manager” and database-specific drivers that are distributed
+idea of a core &quot;driver manager&quot; and database-specific drivers that are distributed
 as independent C/C++/Python/R/Java/Go projects. At least in R and Python,
 embedding an existing Arrow implementation (e.g., Arrow C++) is challenging
 in the context of multiple packages intended to be loaded into the same process.
 As of this writing, ADBC includes nanoarrow-based SQLite and PostgreSQL drivers
 and a nanoarrow-based validation suite for drivers.</p>
-
-<h2 id="using-nanoarrow-in-c">Using nanoarrow in C</h2>
-
+<h2>Using nanoarrow in C</h2>
 <p>The nanoarrow C library is distributed as
 <a href="https://github.com/apache/arrow-nanoarrow/tree/main/dist">two files (nanoarrow.h and nanoarrow.c)</a>
 that can be copied and vendored into an existing code base. This results in
 a static library of about 50  KB and builds in less than a second. Some features
 that nanoarrow provides are:</p>
-
 <ul>
-  <li><a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-schemas">Helpers to create types, schemas, and metadata</a></li>
-  <li><a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#owning-growable-buffers">Growable buffers</a>,
+<li><a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-schemas">Helpers to create types, schemas, and metadata</a></li>
+<li><a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#owning-growable-buffers">Growable buffers</a>,
 including the option for custom allocators/deallocators.</li>
-  <li><a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#bitmap-utilities">Bitmap (i.e., bitpacked boolean) utilities</a></li>
-  <li>An <a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays">API for building arrays from buffers</a></li>
-  <li>An <a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays">API for building arrays element-wise</a></li>
-  <li>An <a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#reading-arrays">API to extract elements element-wise</a>
+<li><a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#bitmap-utilities">Bitmap (i.e., bitpacked boolean) utilities</a></li>
+<li>An <a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays">API for building arrays from buffers</a></li>
+<li>An <a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#creating-arrays">API for building arrays element-wise</a></li>
+<li>An <a href="https://apache.github.io/arrow-nanoarrow/dev/c.html#reading-arrays">API to extract elements element-wise</a>
 from an existing array.</li>
 </ul>
-
 <p>For example, one can build an integer array element-wise:</p>
-
-<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">"nanoarrow.h"</span><span class="cp">
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="c"><span class="cp">#include</span> <span class="cpf">"nanoarrow.h"</span><span class="cp">
 </span>
 <span class="kt">int</span> <span class="nf">make_simple_array</span><span class="p">(</span><span class="k">struct</span> <span class="n">ArrowArray</span><span class="o">*</span> <span class="n">array_out</span><span class="p">,</span> <span class="k">struct</span> <span class="n">ArrowSchema</span><span class="o">*</span> <span class="n">schema_out</span><span class="p">)</span> <span class="p">{</span>
   <span class="k">struct</span> <span class="n">ArrowError</span> <span class="n">error</span><span class="p">;</span>
@@ -376,10 +359,8 @@ from an existing array.</li>
   <span class="k">return</span> <span class="n">NANOARROW_OK</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div></div>
-
 <p>Similarly, one can extract elements from an array:</p>
-
-<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="c"><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
 #include</span> <span class="cpf">"nanoarrow.h"</span><span class="cp">
 </span>
 <span class="kt">int</span> <span class="nf">print_simple_array</span><span class="p">(</span><span class="k">struct</span> <span class="n">ArrowArray</span><span class="o">*</span> <span class="n">array</span><span class="p">,</span> <span class="k">struct</span> <span class="n">ArrowSchema</span><span class="o">*</span> <span class="n">schema</span><span class="p">)</span> <span class="p">{</span>
@@ -405,20 +386,16 @@ from an existing array.</li>
   <span class="k">return</span> <span class="n">NANOARROW_OK</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div></div>
-
-<h2 id="using-nanoarrow-in-c-r-and-python">Using nanoarrow in C++, R, and Python</h2>
-
+<h2>Using nanoarrow in C++, R, and Python</h2>
 <p>Recognizing that many projects for which nanoarrow may be useful will have
 access a higher-level runtime than C, there are experiments to provide
 these users with a minimal set of useful tools.</p>
-
 <p>For C++ projects, an experimental
-<a href="https://apache.github.io/arrow-nanoarrow/dev/cpp.html">“nanoarrow.hpp”</a>
-interface provides <code class="language-plaintext highlighter-rouge">unique_ptr</code>-like wrappers for nanoarrow C objects to
+<a href="https://apache.github.io/arrow-nanoarrow/dev/cpp.html">&quot;nanoarrow.hpp&quot;</a>
+interface provides <code>unique_ptr</code>-like wrappers for nanoarrow C objects to
 reduce the verbosity of using the nanoarrow API. For example, the previous
-<code class="language-plaintext highlighter-rouge">print_simple_array()</code> implementation would collapse to:</p>
-
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+<code>print_simple_array()</code> implementation would collapse to:</p>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
 #include</span> <span class="cpf">"nanoarrow.hpp"</span><span class="cp">
 </span>
 <span class="kt">int</span> <span class="nf">print_simple_array2</span><span class="p">(</span><span class="k">struct</span> <span class="nc">ArrowArray</span><span class="o">*</span> <span class="n">array</span><span class="p">,</span> <span class="k">struct</span> <span class="nc">ArrowSchema</span><span class="o">*</span> <span class="n">schema</span><span class="p">)</span> <span class="p">{</span>
@@ -432,7 +409,6 @@ reduce the verbosity of using the nanoarrow API. For example, the previous
   <span class="k">return</span> <span class="n">NANOARROW_OK</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div></div>
-
 <p>For R packages, experimental
 <a href="https://apache.github.io/arrow-nanoarrow/dev/r/index.html">R bindings</a> provide
 a limited set of conversions between R vectors and Arrow arrays such that
@@ -440,8 +416,7 @@ R bindings for a library with an Arrow-based interface do not need to provide
 this behaviour themselves. Additional features include printing and validating
 the content of the C structures at the heart of the C Data and C Stream
 interfaces to facilitate the development of bindings to Arrow-based libraries.</p>
-
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># install.packages("remotes")</span><span class="w">
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="c1"># install.packages("remotes")</span><span class="w">
 </span><span class="n">remotes</span><span class="o">::</span><span class="n">install_github</span><span class="p">(</span><span class="s2">"apache/arrow-nanoarrow/r"</span><span class="p">,</span><span class="w"> </span><span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
 </span><span class="n">library</span><span class="p">(</span><span class="n">nanoarrow</span><span class="p">)</span><span class="w">
 
@@ -456,13 +431,10 @@ interfaces to facilitate the development of bindings to Arrow-based libraries.</
 </span><span class="c1">#&gt;  $ dictionary: NULL</span><span class="w">
 </span><span class="c1">#&gt;  $ children  : list()</span><span class="w">
 </span></code></pre></div></div>
-
 <p>A <a href="https://github.com/apache/arrow-nanoarrow/tree/main/python">Python package skeleton</a>
 exists in the nanoarrow repository and further functionality may be added once
 the C library interface has stabilized.</p>
-
-<h2 id="try-nanoarrow">Try nanoarrow</h2>
-
+<h2>Try nanoarrow</h2>
 <p>For any interested in giving nanoarrow a try, the easiest way to get started is to clone the
 <a href="https://github.com/apache/arrow-nanoarrow/tree/apache-arrow-nanoarrow-0.1.0">nanoarrow repository from GitHub</a>
 and build/modify the
@@ -470,13 +442,10 @@ and build/modify the
 For applied usage, one can refer to the
 <a href="https://github.com/apache/arrow-adbc/tree/main/c/driver/sqlite">ADBC SQLite driver</a>
 and the <a href="https://github.com/apache/arrow-adbc/tree/main/c/driver/postgresql">ADBC PostgreSQL driver</a>.</p>
-
-<h2 id="contributors">Contributors</h2>
-
+<h2>Contributors</h2>
 <p>This initial release consists of contributions from 6 contributors in addition
 to the invaluable advice and support of the Apache Arrow developer mailing list.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ git shortlog -sn 8339114637919b661c1c8fae6764ceed532c935e..apache-arrow-nanoarrow-0.1.0 | grep -v "GitHub Actions"
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ git shortlog -sn 8339114637919b661c1c8fae6764ceed532c935e..apache-arrow-nanoarrow-0.1.0 | grep -v "GitHub Actions"
    100  Dewey Dunnington
      7  David Li
      2  Dirk Eddelbuettel

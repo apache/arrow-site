@@ -10,7 +10,7 @@
     
 
     <!-- Begin Jekyll SEO tag v2.8.0 -->
-<meta name="generator" content="Jekyll v4.3.3" />
+<meta name="generator" content="Jekyll v4.4.1" />
 <meta property="og:title" content="Apache Arrow Flightの紹介：高速データトランスポートフレームワーク" />
 <meta name="author" content="wesm" />
 <meta property="og:locale" content="en_US" />
@@ -282,145 +282,86 @@
 </p>
 
 
-        <!--
-
--->
-
+        <!-- raw HTML omitted -->
 <p>この1.5年、Apache Arrowコミュニティーは<strong>Flight</strong>の設計と実装を進めてきました。Flightは高速なデータトランスポートを実現するための新しいクライアント・サーバー型のフレームワークです。Flightを使うとネットワーク越しに大きなデータセットを送る処理を簡単に実現できます。Flightは特定用途向けに設計されたものではないため、幅広い用途で利用できます。</p>
-
 <p>Flightの実装は、まず、<a href="https://grpc.io/">gRPC</a>を使ったArrow列指向フォーマット（つまり「Arrowレコードバッチ」）のトランスポートの最適化に注力しました。gRPCはGoogleが開発しているHTTP/2ベースのRPCライブラリー・フレームワークで、広く利用されています。gRPCも特定用途向けではなく幅広い用途で使えるように設計されています。これまでFlightをgRPCベースで実装することに注力してきましたが、gRPCでだけ使えるようにしたいわけではありません。</p>
-
 <p>Flightと他のデータトランスポートフレームワークとの大きな違いは並列転送機能です。クライアントとサーバークラスター間で同時にデータをストリームで転送できます。この機能により、簡単にスケーラブルなデータサービスを開発できます。スケーラブルなデータサービスとはクライアント数が増えても大丈夫なサービスです。</p>
-
 <p>Apache Arrow 0.15.0でC++（Pytonバインディングあり）とJavaでFlightを使えるようになっています。 現時点ではベータユーザー向けです。ベータユーザーとはFlight内部の低レベルの改良によりAPIやプロトコルが変わっても適応できるユーザーのことです。</p>
-
-<h2 id="モチベーション">モチベーション</h2>
-
+<h2>モチベーション</h2>
 <p>多くの人がネットワーク越しに大きなデータセットにアクセスすることに関して困っています。リモートのデータサービスからデータセットを読むためのさまざまな転送プロトコルやツールがたくさんあります。たとえばODBCやJDBCです。この10年、ファイルベースでデータを保管することが多くなりました。このときにはCSVやAvroやParquetといったフォーマットがよく使われます。しかし、この方法ではデシリアライズする前に生データをローカルのホストに転送しなければいけないという問題があります。</p>
-
 <p>Apache Arrowの初期からやってきた作業によりさまざまな方法でデータトランスポートを加速できます。<a href="https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst">Arrow列指向フォーマット</a>には次の重要な機能があります。</p>
-
 <ul>
-  <li>表形式データの「転送用の」表現です。この表現はデータ受信側でデシリアライズが必要ありません。</li>
-  <li>標準で「バッチをストリーム送信」するためのモードがあります。このモードでは、大きなデータセットを複数の行ごとにまとめて転送します。（Arrowの用語では「レコードバッチ」と呼んでいます。）この記事では「データストリーム」について話します。データストリームとはApache Arrowプロジェクトのバイナリープロトコルを使った一連のArrowレコードバッチです。</li>
-  <li>このフォーマットはプログラミング言語に依存していません。このフォーマットは現在11のプログラミング言語がサポートしています。サポートしているプログラミング言語は増え続けています。</li>
+<li>表形式データの「転送用の」表現です。この表現はデータ受信側でデシリアライズが必要ありません。</li>
+<li>標準で「バッチをストリーム送信」するためのモードがあります。このモードでは、大きなデータセットを複数の行ごとにまとめて転送します。（Arrowの用語では「レコードバッチ」と呼んでいます。）この記事では「データストリーム」について話します。データストリームとはApache Arrowプロジェクトのバイナリープロトコルを使った一連のArrowレコードバッチです。</li>
+<li>このフォーマットはプログラミング言語に依存していません。このフォーマットは現在11のプログラミング言語がサポートしています。サポートしているプログラミング言語は増え続けています。</li>
 </ul>
-
 <p>ODBCのような標準的なプロトコルの各実装は、通常、それぞれ独自の転送用バイナリープロトコルを実装します。これらのプロトコルは各ライブラリーの公開インターフェイスの表現と相互に変換しなければいけません。ODBC・JDBCライブラリーのパフォーマンスは場合によって大きく異なります。</p>
-
 <p>私たちのFlightの設計で目指していることは、データサービス用の新しいプロトコルを作ることです。このプロトコルは転送用のデータ表現にも開発者向けの公開APIにもArrow列指向フォーマットを使います。こうすることで、データトランスポート関連のシリアライズコストを減らし、分散データシステム全体を効率化できます。さらに、すでに別の用途にApache Arrowを使っているシステム間では非常に効率的にデータをやりとりできます。</p>
-
-<h2 id="flightの基礎">Flightの基礎</h2>
-
+<h2>Flightの基礎</h2>
 <p>Arrow Flightライブラリーはデータストリームを送受信できるサービスを実装するための開発者向けフレームワークを提供します。Flightサーバーは次の基本的なリクエストをサポートしています。</p>
-
 <ul>
-  <li><strong>Handshake</strong>：クライアントが認証済みかを確認するシンプルなリクエスト。いくつかのケースでは、以降のリクエストのために実装定義のセッショントークンを確立します。</li>
-  <li><strong>ListFlights</strong>：利用可能なデータストリームのリストを返します。</li>
-  <li><strong>GetSchema</strong>：データストリームのスキーマを返します。</li>
-  <li><strong>GetFlightInfo</strong>：対象のデータセット用の「アクセスプラン」を返します。複数のデータストリームを消費しなければいけないかもしれません。このリクエストにはシリアライズしたカスタムコマンドを含めることができます。たとえば、アプリケーション固有のパラメーターを含めることができます。</li>
-  <li><strong>DoGet</strong>：クライアントにデータストリームを送信します。</li>
-  <li><strong>DoPut</strong>: クライアントからデータストリームを受信します。</li>
-  <li><strong>DoAction</strong>：実装依存のアクションを実行し、結果を返します。つまり、一般的な関数呼び出しです。</li>
-  <li><strong>ListActions</strong>：利用可能なアクションの種類を返します。</li>
+<li><strong>Handshake</strong>：クライアントが認証済みかを確認するシンプルなリクエスト。いくつかのケースでは、以降のリクエストのために実装定義のセッショントークンを確立します。</li>
+<li><strong>ListFlights</strong>：利用可能なデータストリームのリストを返します。</li>
+<li><strong>GetSchema</strong>：データストリームのスキーマを返します。</li>
+<li><strong>GetFlightInfo</strong>：対象のデータセット用の「アクセスプラン」を返します。複数のデータストリームを消費しなければいけないかもしれません。このリクエストにはシリアライズしたカスタムコマンドを含めることができます。たとえば、アプリケーション固有のパラメーターを含めることができます。</li>
+<li><strong>DoGet</strong>：クライアントにデータストリームを送信します。</li>
+<li><strong>DoPut</strong>: クライアントからデータストリームを受信します。</li>
+<li><strong>DoAction</strong>：実装依存のアクションを実行し、結果を返します。つまり、一般的な関数呼び出しです。</li>
+<li><strong>ListActions</strong>：利用可能なアクションの種類を返します。</li>
 </ul>
-
 <p>gRPCの「双方向の」ストリーミングサポート（<a href="https://grpc.io/docs/guides/concepts/">HTTP/2ストリーミング</a>上に実装されています）を活用して、リクエスト処理中でもデータとメタデータをクライアント・サーバー間でやりとりできます。</p>
-
-<p>単純なFlightの構成は1台のサーバーとそのサーバーに接続し<code class="language-plaintext highlighter-rouge">DoGet</code>リクエストをするクライアントという構成です。</p>
-
-<div align="center">
-<img src="/img/20191014_flight_simple.png" alt="Flight Simple Architecture" width="50%" class="img-responsive" />
-</div>
-
-<h2 id="grpcごしのデータスループットの最適化">gRPCごしのデータスループットの最適化</h2>
-
+<p>単純なFlightの構成は1台のサーバーとそのサーバーに接続し<code>DoGet</code>リクエストをするクライアントという構成です。</p>
+<!-- raw HTML omitted -->
+<h2>gRPCごしのデータスループットの最適化</h2>
 <p>gRPCのような汎用メッセージングライブラリーを使うことには多くの利点があります。汎用ライブラリーはすでに多数の問題を解決しているからです。gRPCの場合はGoogleが多数の問題を解決していました。しかし、大きなデータセットのトランスポート性能を改善するためにいくつかの処理を改善する必要がありました。多くのgRPCユーザーは比較的小さなメッセージしか扱っていないからです。</p>
-
-<p>一番よくサポートされているgRPCを使う方法はサービスを<a href="https://github.com/protocolbuffers/protobuf">Protocol Buffers</a>（「Protobuf」と呼ばれることもあります）の<code class="language-plaintext highlighter-rouge">.proto</code>ファイルで定義する方法です。gRPCのProtobufプラグインはgRPCサービスのスタブを生成します。このスタブを使ってアプリケーションを実装します。RPCコマンドとデータメッセージは<a href="https://developers.google.com/protocol-buffers/docs/encoding">Protobufワイヤーフォーマット</a>を使ってシリアライズします。Flightでは「普通のgRPCとProtocol Buffers」を使っているので、Arrow列指向フォーマットのことを知らないgRPCクライアントでもFlightサービスとやりとりできますし、Arrowデータの中身を気にせずに処理できます。</p>
-
-<p>Flightの中の主要なデータ関連のProtobufの型は<code class="language-plaintext highlighter-rouge">FlightData</code>と呼ばれています。一般的にProtobufメッセージの読み書きにはコストがかかります。そのため、C++でもJavaでもgRPCにいくつか次のような低レベルの最適化を実装しています。</p>
-
+<p>一番よくサポートされているgRPCを使う方法はサービスを<a href="https://github.com/protocolbuffers/protobuf">Protocol Buffers</a>（「Protobuf」と呼ばれることもあります）の<code>.proto</code>ファイルで定義する方法です。gRPCのProtobufプラグインはgRPCサービスのスタブを生成します。このスタブを使ってアプリケーションを実装します。RPCコマンドとデータメッセージは<a href="https://developers.google.com/protocol-buffers/docs/encoding">Protobufワイヤーフォーマット</a>を使ってシリアライズします。Flightでは「普通のgRPCとProtocol Buffers」を使っているので、Arrow列指向フォーマットのことを知らないgRPCクライアントでもFlightサービスとやりとりできますし、Arrowデータの中身を気にせずに処理できます。</p>
+<p>Flightの中の主要なデータ関連のProtobufの型は<code>FlightData</code>と呼ばれています。一般的にProtobufメッセージの読み書きにはコストがかかります。そのため、C++でもJavaでもgRPCにいくつか次のような低レベルの最適化を実装しています。</p>
 <ul>
-  <li><code class="language-plaintext highlighter-rouge">FlightData</code>用のProtobufワイヤーフォーマットを生成します。<code class="language-plaintext highlighter-rouge">FlightData</code>には送信対象のArrowレコードバッチが含まれていますが、メモリーコピー・シリアライズ処理は一切ありません。</li>
-  <li>Protobufで表現された<code class="language-plaintext highlighter-rouge">FlightData</code>からメモリーコピー・デシリアライズ処理なしでArrowレコードバッチを再構築できます。実際には、Protocol Buffersライブラリーにエンコードされたデータペイロードを触らせないようにしています。</li>
+<li><code>FlightData</code>用のProtobufワイヤーフォーマットを生成します。<code>FlightData</code>には送信対象のArrowレコードバッチが含まれていますが、メモリーコピー・シリアライズ処理は一切ありません。</li>
+<li>Protobufで表現された<code>FlightData</code>からメモリーコピー・デシリアライズ処理なしでArrowレコードバッチを再構築できます。実際には、Protocol Buffersライブラリーにエンコードされたデータペイロードを触らせないようにしています。</li>
 </ul>
-
-<p>Protobufを使うがProtobufのメッセージパースのオーバーヘッドはなくしたいという両立できない2つのことを両立させようとしているということです。Flight実装は上述の最適化をして高速化しています。素のgRPCクライアントでもFlightサービスとやりとりできますが、素のgRPCクライアントにはこのような最適化はないので、Protobufライブラリーを使って<code class="language-plaintext highlighter-rouge">FlightData</code>をデシリアライズすることになります。そのため、素のgRPCクライアントを使うといくらか性能が落ちます。</p>
-
+<p>Protobufを使うがProtobufのメッセージパースのオーバーヘッドはなくしたいという両立できない2つのことを両立させようとしているということです。Flight実装は上述の最適化をして高速化しています。素のgRPCクライアントでもFlightサービスとやりとりできますが、素のgRPCクライアントにはこのような最適化はないので、Protobufライブラリーを使って<code>FlightData</code>をデシリアライズすることになります。そのため、素のgRPCクライアントを使うといくらか性能が落ちます。</p>
 <p>FlightのC++実装でのデータスループットベンチマークの結果での絶対的な性能ですが、どちらもローカルホストで動いているサーバー・クライアント間のTCPスループットは2-3GB/sを上回っていました。ただし、TLSは無効にした状態です。このベンチマークは約4秒で12GBのデータを転送できることを示しています。</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./arrow-flight-benchmark <span class="nt">--records_per_stream</span> 100000000
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="shell"><span class="nv">$ </span>./arrow-flight-benchmark <span class="nt">--records_per_stream</span> 100000000
 Bytes <span class="nb">read</span>: 12800000000
 Nanos: 3900466413
 Speed: 3129.63 MB/s
 </code></pre></div></div>
-
 <p>この結果から次の2つのことを言えます。1つはFlightとgRPCを使うとオーバーヘッドは相対的に小さくなるということです。もう1つは多くの実際のFlightアプリケーションではネットワークの帯域がボトルネックになりそうということです。</p>
-
-<h2 id="水平方向のスケーラビリティ並列データアクセスとパーティション化したデータアクセス">水平方向のスケーラビリティ：並列データアクセスとパーティション化したデータアクセス</h2>
-
+<h2>水平方向のスケーラビリティ：並列データアクセスとパーティション化したデータアクセス</h2>
 <p>分散型のデータベースシステムの多くは「コーディネーター」を通してクライアントのリクエストを処理するアーキテクチャーパターンを使っています。クライアントへのデータセットを複数回転送するという明らかに効率に課題がある点はさておき、巨大なデータセットへのアクセスに対するスケーラビリティの問題もあります。</p>
-
-<p>Flightで次のようなシステムを作れるようにしました。それはこのようなボトルネックに取り組まずに水平方向にスケーラブルなデータサービスを作れるシステムです。<code class="language-plaintext highlighter-rouge">GetFlightInfo</code> RPCを使ったクライアントのリクエストは <strong>エンドポイント</strong> のリストを返します。返ってくる各エンドポイントにはサーバーの位置と <strong>チケット</strong> の情報が入っています。チケットはデータセットの一部を取得する<code class="language-plaintext highlighter-rouge">DoGet</code>リクエストに入れてサーバーに送ります。データセット全体にアクセスするためにはすべてのエンドポイントを処理する必要があります。どのエンドポイントのFlightのストリームから処理しなければいけないということはありません。どのエンドポイントのFlightのストリームから処理しても構いません。しかし、特定の順序で処理するための仕組みは用意しています。その仕組みとはアプリケーション固有のメタデータを使えるという仕組みです。順序の情報はメタデータで表現できます。</p>
-
+<p>Flightで次のようなシステムを作れるようにしました。それはこのようなボトルネックに取り組まずに水平方向にスケーラブルなデータサービスを作れるシステムです。<code>GetFlightInfo</code> RPCを使ったクライアントのリクエストは <strong>エンドポイント</strong> のリストを返します。返ってくる各エンドポイントにはサーバーの位置と <strong>チケット</strong> の情報が入っています。チケットはデータセットの一部を取得する<code>DoGet</code>リクエストに入れてサーバーに送ります。データセット全体にアクセスするためにはすべてのエンドポイントを処理する必要があります。どのエンドポイントのFlightのストリームから処理しなければいけないということはありません。どのエンドポイントのFlightのストリームから処理しても構いません。しかし、特定の順序で処理するための仕組みは用意しています。その仕組みとはアプリケーション固有のメタデータを使えるという仕組みです。順序の情報はメタデータで表現できます。</p>
 <p>この複数エンドポイントパターンにはたくさんの利点があります。</p>
-
 <ul>
-  <li>複数のクライアントが複数のエンドポイントから並列にデータを読み込めます。</li>
-  <li><code class="language-plaintext highlighter-rouge">GetFlightInfo</code>「プランニング」リクエストを提供するサービスは兄弟サービスに処理を移譲できます。これにより、データの局所性の利点を得られたり、単純にロードバランスしやすくなったりします。</li>
-  <li>分散クラスター中のノードは異なる役割を引き受けることができます。たとえば、クラスター内の一部のノードはクエリープランニングに責任を持つかもしれません。一方、他のノードはデータストリームリクエスト（<code class="language-plaintext highlighter-rouge">DoGet</code>または<code class="language-plaintext highlighter-rouge">DoPut</code>）だけを処理するかもしれません。</li>
+<li>複数のクライアントが複数のエンドポイントから並列にデータを読み込めます。</li>
+<li><code>GetFlightInfo</code>「プランニング」リクエストを提供するサービスは兄弟サービスに処理を移譲できます。これにより、データの局所性の利点を得られたり、単純にロードバランスしやすくなったりします。</li>
+<li>分散クラスター中のノードは異なる役割を引き受けることができます。たとえば、クラスター内の一部のノードはクエリープランニングに責任を持つかもしれません。一方、他のノードはデータストリームリクエスト（<code>DoGet</code>または<code>DoPut</code>）だけを処理するかもしれません。</li>
 </ul>
-
 <p>次の図はサービスの役割を分けた複数ノードアーキテクチャーの例です。</p>
-
-<div align="center">
-<img src="/img/20191014_flight_complex.png" alt="Flight Complex Architecture" width="60%" class="img-responsive" />
-</div>
-
-<h2 id="アクションアプリケーション固有のロジックでflightを拡張">アクション：アプリケーション固有のロジックでFlightを拡張</h2>
-
-<p><code class="language-plaintext highlighter-rouge">GetFlightInfo</code>リクエストはデータセットをリクエストするときにシリアライズしたコマンドを中身を気にせずに送ることができますが、クライアントはデータストリームの送受信以外の操作をサーバーに依頼できなければいけないかもしれません。たとえば、クライアントは特定のデータセットをメモリー上に「ピン止め」することを要求するかもしれません。ピン止めすることで他のクライアントからの後続のリクエストを高速に処理できます。</p>
-
-<p>Flightサービスは追加で「アクション」を定義できます。<code class="language-plaintext highlighter-rouge">DoAction</code> RPCでアクションを実行できます。アクションリクエストには実行したいアクションの名前と追加情報が入っています。追加情報は省略可能です。アクションの結果はgRPCストリームです。このgRPCストリーム中には任意の結果を入れられます。</p>
-
+<!-- raw HTML omitted -->
+<h2>アクション：アプリケーション固有のロジックでFlightを拡張</h2>
+<p><code>GetFlightInfo</code>リクエストはデータセットをリクエストするときにシリアライズしたコマンドを中身を気にせずに送ることができますが、クライアントはデータストリームの送受信以外の操作をサーバーに依頼できなければいけないかもしれません。たとえば、クライアントは特定のデータセットをメモリー上に「ピン止め」することを要求するかもしれません。ピン止めすることで他のクライアントからの後続のリクエストを高速に処理できます。</p>
+<p>Flightサービスは追加で「アクション」を定義できます。<code>DoAction</code> RPCでアクションを実行できます。アクションリクエストには実行したいアクションの名前と追加情報が入っています。追加情報は省略可能です。アクションの結果はgRPCストリームです。このgRPCストリーム中には任意の結果を入れられます。</p>
 <p>いくつかアクションの例を紹介します。</p>
-
 <ul>
-  <li>メタデータを見つけるアクション。組み込みの<code class="language-plaintext highlighter-rouge">ListFlights</code> RPCでも提供されている機能ですが、<code class="language-plaintext highlighter-rouge">ListFlights</code>の機能で不十分な場合はアクションで実現できます。</li>
-  <li>セッション固有のパラメーターを設定するアクション。</li>
+<li>メタデータを見つけるアクション。組み込みの<code>ListFlights</code> RPCでも提供されている機能ですが、<code>ListFlights</code>の機能で不十分な場合はアクションで実現できます。</li>
+<li>セッション固有のパラメーターを設定するアクション。</li>
 </ul>
-
 <p>サーバーはアクションを1つも実装しなくてもよいことに注意してください。また、アクションは結果を返さなくてもよいです。</p>
-
-<h2 id="暗号化と認証">暗号化と認証</h2>
-
+<h2>暗号化と認証</h2>
 <p>Flightは組み込みで暗号化をサポートしています。gRPCの組み込みのTLS/OpenSSLの機能を使っています。</p>
-
-<p>クライアント側・サーバー側ともに拡張可能な認証ハンドラーがあります。この認証ハンドラーを使えば、ユーザー名とパスワードのようなシンプルな認証スキーマも使えますし、ケルベロスのような複雑な認証も使えます。Flightプロトコルには組み込みの<code class="language-plaintext highlighter-rouge">BasicAuth</code>機能がついています。そのため、追加の開発なしでそのままユーザー名とパスワードの認証を実現できます。</p>
-
-<h2 id="ミドルウェアとトレース">ミドルウェアとトレース</h2>
-
+<p>クライアント側・サーバー側ともに拡張可能な認証ハンドラーがあります。この認証ハンドラーを使えば、ユーザー名とパスワードのようなシンプルな認証スキーマも使えますし、ケルベロスのような複雑な認証も使えます。Flightプロトコルには組み込みの<code>BasicAuth</code>機能がついています。そのため、追加の開発なしでそのままユーザー名とパスワードの認証を実現できます。</p>
+<h2>ミドルウェアとトレース</h2>
 <p>gRPCには「インターセプター」というコンセプトがあります。インターセプターを使うと開発者が定義した「ミドルウェア」を開発できます。ミドルウェアを使うと届いたリクエストと送るリクエストに介在することができます。このような処理をするフレームワークに<a href="https://opentracing.io/">OpenTracing</a>があります。</p>
-
 <p>ミドルウェアの機能は最近Flightに追加された機能です。そのため、今のところはmasterブランチでしか使えません。</p>
-
-<h2 id="grpcを使っているがgrpcだけではない">gRPCを使っているがgRPCだけではない</h2>
-
-<p><code class="language-plaintext highlighter-rouge">DoGet</code>リクエストでサーバーの位置を指定する方法にはRFC 3986準拠のURIを使っています。たとえば、TLSを使ったgRPCは<code class="language-plaintext highlighter-rouge">grpc+tls://$HOST:$PORT</code>というように指定します。</p>
-
+<h2>gRPCを使っているがgRPCだけではない</h2>
+<p><code>DoGet</code>リクエストでサーバーの位置を指定する方法にはRFC 3986準拠のURIを使っています。たとえば、TLSを使ったgRPCは<code>grpc+tls://$HOST:$PORT</code>というように指定します。</p>
 <p>Flightサーバーの「コマンド」レイヤーにgRPCを使っているのは妥当だと思っていますが、<a href="https://en.wikipedia.org/wiki/Remote_direct_memory_access">RDMA</a>のようなTCP以外のデータトランスポート層もサポートしたくなるかもしれません。設計・開発時間が必要になりますが、おそらく、TCP以外のプロトコル上でデータを転送するときでもgRPCを使えるでしょう。</p>
-
-<h2 id="はじめかたと今後の話">はじめかたと今後の話</h2>
-
+<h2>はじめかたと今後の話</h2>
 <p>Flightユーザー向けのドキュメントは作成中です。しかし、このライブラリーはベータユーザー向けには十分に使い物になります。ベータユーザーとは今後1年で発生するだろう軽微なAPI・プロトコルの変更に耐えられるユーザーです。</p>
-
 <p>Flightをためす簡単な方法はPython APIを使う方法です。なぜならカスタムサーバーもカスタムクライアントもすべてPythonだけで定義できるからです。なにもコンパイルする必要はありません。Arrowのコードにある<a href="https://github.com/apache/arrow/tree/apache-arrow-0.15.0/python/examples/flight">PythonでのFlightクライアントとサーバーの例</a>を参考にできます。</p>
-
 <p>実際に使っている例もあります。Dremioは<a href="https://github.com/dremio-hub/dremio-flight-connector">Arrow Flightベースの</a>コネクターを開発しました。このコネクターは<a href="https://www.dremio.com/is-time-to-replace-odbc-jdbc/">ODBCよりも20-50倍よい性能を発揮する</a>ことを示しました。ArrowのコントリビューターであるRyan MurrayはApache Sparkユーザー向けにFlight対応エンドポイントに接続する<a href="https://github.com/rymurr/flight-spark-source">データソース実装</a>を作りました。</p>
-
 <p>最後に今後の話をします。gRPCではない（あるいはTCPではない）データトランスポートをサポートできないか研究開発を進めるかもしれません。Flightの開発が進むとユーザーが使えるFlight対応サービスが増えていくでしょう。Flightは開発フレームワークなので、ユーザーが使うAPIは高レベルなAPIだけになるようにするつもりです。高レベルなAPIではFlightの詳細と特定のFlightアプリケーションに関連する詳細を隠します。</p>
-
 
       </main>
     </div>

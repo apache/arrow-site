@@ -10,7 +10,7 @@
     
 
     <!-- Begin Jekyll SEO tag v2.8.0 -->
-<meta name="generator" content="Jekyll v4.3.3" />
+<meta name="generator" content="Jekyll v4.4.1" />
 <meta property="og:title" content="Recent Improvements to Hash Join in Arrow C++" />
 <meta name="author" content="zanmato" />
 <meta property="og:locale" content="en_US" />
@@ -276,18 +276,12 @@
 </p>
 
 
-        <!--
-
--->
-
+        <!-- raw HTML omitted -->
 <p><em>Editor’s Note: Apache Arrow is an expansive project, ranging from the Arrow columnar format itself, to its numerous specifications, and a long list of implementations. Arrow is also an expansive project in terms of its community of contributors. In this blog post, we’d like to highlight recent work by Apache Arrow Committer Rossi Sun on improving the performance and stability of Arrow’s embeddable query execution engine: Acero.</em></p>
-
-<h1 id="introduction">Introduction</h1>
-
-<p>Hash join is a fundamental operation in analytical processing engines — it matches rows from two tables based on key values using a hash table for fast lookup. In the C++ implementation of Apache Arrow, the hash join is implemented in the C++ engine Acero, which powers query execution in bindings like PyArrow and the R Arrow package. Even if you haven’t used Acero directly, your code may already be benefiting from it under the hood.</p>
-
+<h1>Introduction</h1>
+<p>Hash join is a fundamental operation in analytical processing engines — it matches rows from two tables based on key values using a hash table for fast lookup. In the C++ implementation of Apache Arrow, the hash join is implemented in the C++ engine Acero, which powers query execution in bindings like PyArrow and the R Arrow package. Even if you haven't used Acero directly, your code may already be benefiting from it under the hood.</p>
 <p>For example, this simple PyArrow example uses Acero:</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
 
 <span class="n">t1</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="nf">table</span><span class="p">({</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
                <span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">2022</span><span class="p">,</span> <span class="mi">2019</span><span class="p">]})</span>
@@ -297,108 +291,60 @@
 
 <span class="n">t1</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">).</span><span class="nf">combine_chunks</span><span class="p">().</span><span class="nf">sort_by</span><span class="p">(</span><span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">)</span>
 </code></pre></div></div>
-
 <p>Acero was originally created in 2019 to demonstrate that the ever-growing library of compute kernels in Arrow C++ could be linked together into realistic workflows and also to take advantage of the emerging Datasets API to give these workflows access to data. Rather than aiming to compete with full query engines like DuckDB, Acero focuses on enabling flexible, composable, and embeddable query execution — serving as a building block for tools and systems that need fast, modular analytics capabilities — including those built atop Arrow C++, or integrating via bindings like PyArrow, Substrait, or ADBC.</p>
-
-<p>Across several recent Arrow C++ releases, we’ve made substantial improvements to the hash join implementation to address common user pain points. These changes improve stability, memory efficiency, and parallel performance, with a focus on making joins more usable and scalable out of the box. If you’ve had trouble using Arrow’s hash join in the past, now is a great time to try again.</p>
-
-<h1 id="scaling-safely-improvements-to-stability">Scaling Safely: Improvements to Stability</h1>
-
+<p>Across several recent Arrow C++ releases, we've made substantial improvements to the hash join implementation to address common user pain points. These changes improve stability, memory efficiency, and parallel performance, with a focus on making joins more usable and scalable out of the box. If you've had trouble using Arrow’s hash join in the past, now is a great time to try again.</p>
+<h1>Scaling Safely: Improvements to Stability</h1>
 <p>In earlier versions of Arrow C++, the hash join implementation used internal data structures that weren’t designed for very large datasets and lacked safeguards in some of the underlying memory operations. These limitations rarely surfaced in small to medium workloads but became problematic at scale, manifesting as crashes or subtle correctness issues.</p>
-
 <p>At the core of Arrow’s join implementation is a compact, row-oriented structure known as the “row table”. While Arrow’s data model is columnar, its hash join implementation operates in a row-wise fashion — similar to modern engines like DuckDB and Meta’s Velox. This layout minimizes CPU cache misses during hash table lookups by collocating keys, payloads, and null bits in memory so they can be accessed together.</p>
-
 <p>In previous versions, the row table used 32-bit offsets to reference packed rows. This capped each table’s size to 4GB and introduced risks of overflow when working with large datasets or wide rows. Several reported issues — <a href="https://github.com/apache/arrow/issues/34474">GH-34474</a>, <a href="https://github.com/apache/arrow/issues/41813">GH-41813</a>, and <a href="https://github.com/apache/arrow/issues/43202">GH-43202</a> — highlighted the limitations of this design. In response, PR <a href="https://github.com/apache/arrow/pull/43389">GH-43389</a> widened the internal offset type to 64-bit, reworking key parts of the row table infrastructure to support larger data sizes more safely and scalably.</p>
-
 <p>Besides the offset limitation, earlier versions of Arrow C++ also included overflow-prone logic in the buffer indexing paths used throughout the hash join implementation. Many internal calculations assumed that 32-bit integers were sufficient for addressing memory — a fragile assumption when working with large datasets or wide rows. These issues appeared not only in conventional C++ indexing code but also in Arrow’s SIMD-accelerated paths — Arrow includes heavy SIMD specializations, used to speed up operations like hash table probing and row comparison. Together, these assumptions led to subtle overflows and incorrect behavior, as documented in issues like <a href="https://github.com/apache/arrow/issues/44513">GH-44513</a>, <a href="https://github.com/apache/arrow/issues/45334">GH-45334</a>, and <a href="https://github.com/apache/arrow/issues/45506">GH-45506</a>.</p>
-
 <p>Two representative examples:</p>
-
 <ul>
-  <li>Row-wise buffer access in C++</li>
+<li>Row-wise buffer access in C++</li>
 </ul>
-
 <p>The aforementioned row table stores fixed-length data in tightly packed buffers. Accessing a particular row (and optionally a column within it) typically involves <a href="https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L120">pointer arithmetic</a>:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">const</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">row_ptr</span> <span class="o">=</span> <span class="n">row_ptr_base</span> <span class="o">+</span> <span class="n">row_length</span> <span class="o">*</span> <span class="n">row_id</span><span class="p">;</span>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="k">const</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">row_ptr</span> <span class="o">=</span> <span class="n">row_ptr_base</span> <span class="o">+</span> <span class="n">row_length</span> <span class="o">*</span> <span class="n">row_id</span><span class="p">;</span>
 </code></pre></div></div>
-<p>When both <code class="language-plaintext highlighter-rouge">row_length</code> and <code class="language-plaintext highlighter-rouge">row_id</code> are large 32-bit integers, their product can overflow.</p>
-
+<p>When both <code>row_length</code> and <code>row_id</code> are large 32-bit integers, their product can overflow.</p>
 <p>Similarly, accessing null masks involves <a href="https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L150">null-bit indexing arithmetic</a>:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int64_t</span> <span class="n">bit_id</span> <span class="o">=</span> <span class="n">row_id</span> <span class="o">*</span> <span class="n">null_mask_num_bytes</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">+</span> <span class="n">pos_after_encoding</span><span class="p">;</span>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="kt">int64_t</span> <span class="n">bit_id</span> <span class="o">=</span> <span class="n">row_id</span> <span class="o">*</span> <span class="n">null_mask_num_bytes</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">+</span> <span class="n">pos_after_encoding</span><span class="p">;</span>
 </code></pre></div></div>
 <p>The intermediate multiplication is performed using 32-bit arithmetic and can overflow even though the final result is stored in a 64-bit variable.</p>
-
 <ul>
-  <li>SIMD gathers with 32-bit offsets</li>
+<li>SIMD gathers with 32-bit offsets</li>
 </ul>
-
-<p>One essential SIMD instruction is the AVX2 intrinsic <code class="language-plaintext highlighter-rouge">__m256i _mm256_i32gather_epi32(int const * base, __m256i vindex, const int scale);</code>, which performs a parallel memory gather of eight 32-bit integers based on eight 32-bit signed offsets. It was extensively used in Arrow for hash table operations, for example, <a href="https://github.com/apache/arrow/blob/0a00e25f2f6fb927fb555b69038d0be9b9d9f265/cpp/src/arrow/compute/key_map_internal_avx2.cc#L404">fetching 8 group IDs</a> (hash table slots) in parallel during hash table probing:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__m256i</span> <span class="n">group_id</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<p>One essential SIMD instruction is the AVX2 intrinsic <code>__m256i _mm256_i32gather_epi32(int const * base, __m256i vindex, const int scale);</code>, which performs a parallel memory gather of eight 32-bit integers based on eight 32-bit signed offsets. It was extensively used in Arrow for hash table operations, for example, <a href="https://github.com/apache/arrow/blob/0a00e25f2f6fb927fb555b69038d0be9b9d9f265/cpp/src/arrow/compute/key_map_internal_avx2.cc#L404">fetching 8 group IDs</a> (hash table slots) in parallel during hash table probing:</p>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="n">__m256i</span> <span class="n">group_id</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div></div>
 <p>and <a href="https://github.com/apache/arrow/blob/69e8a78c018da88b60f9eb2b3b45703f81f3c93d/cpp/src/arrow/compute/row/compare_internal_avx2.cc#L284">loading 8 corresponding key values</a> from the right-side input in parallel for comparison:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__m256i</span> <span class="n">right</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">((</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">right_base</span><span class="p">,</span> <span class="n">offset_right</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="n">__m256i</span> <span class="n">right</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">((</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">right_base</span><span class="p">,</span> <span class="n">offset_right</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div></div>
-<p>If any of the computed offsets exceed <code class="language-plaintext highlighter-rouge">2^31 - 1</code>, they wrap into the negative range, which can lead to invalid memory access (i.e., a crash) or, more subtly, fetch data from a valid but incorrect location — producing silently wrong results (trust me, you don’t want to debug that).</p>
-
+<p>If any of the computed offsets exceed <code>2^31 - 1</code>, they wrap into the negative range, which can lead to invalid memory access (i.e., a crash) or, more subtly, fetch data from a valid but incorrect location — producing silently wrong results (trust me, you don’t want to debug that).</p>
 <p>To mitigate these risks, PR <a href="https://github.com/apache/arrow/pull/45108">GH-45108</a>, <a href="https://github.com/apache/arrow/pull/45336">GH-45336</a>, and <a href="https://github.com/apache/arrow/pull/45515">GH-45515</a> promoted critical arithmetic to 64-bit and reworked SIMD logic to use safer indexing. Buffer access logic was also encapsulated in safer abstractions to avoid repeated manual casting or unchecked offset math. These examples are not unique to Arrow — they reflect common pitfalls in building data-intensive systems, where unchecked assumptions about integer sizes can silently compromise correctness.</p>
-
 <p>Together, these changes make Arrow’s hash join implementation significantly more robust and better equipped for modern data workloads. These foundations not only resolve known issues but also reduce the risk of similar bugs in future development.</p>
-
-<h1 id="leaner-memory-usage">Leaner Memory Usage</h1>
-
+<h1>Leaner Memory Usage</h1>
 <p>While refining overflow-prone parts of the hash join implementation, I ended up examining most of the code path for potential pitfalls. When doing this kind of work, one sits down quietly and interrogates every line — asking not just whether an intermediate value might overflow, but whether it even needs to exist at all. And during that process, I came across something unrelated to overflow — but even more impactful.</p>
-
-<p>In a textbook hash join algorithm, once the right-side table (the build-side) is fully accumulated, a hash table is constructed to support probing the left-side table (the probe-side) for matches. To parallelize this build step, Arrow C++’s implementation partitions the build-side into <code class="language-plaintext highlighter-rouge">N</code> partitions — typically matching the number of available CPU cores — and builds a separate hash table for each partition in parallel. These are then merged into a final, unified hash table used during the probe phase.</p>
-
+<p>In a textbook hash join algorithm, once the right-side table (the build-side) is fully accumulated, a hash table is constructed to support probing the left-side table (the probe-side) for matches. To parallelize this build step, Arrow C++’s implementation partitions the build-side into <code>N</code> partitions — typically matching the number of available CPU cores — and builds a separate hash table for each partition in parallel. These are then merged into a final, unified hash table used during the probe phase.</p>
 <p>The issue? The memory footprint. The total size of the partitioned hash tables is roughly equal to that of the final hash table, but they were being held in memory even after merging. Once the final hash table was built, these temporary structures had no further use — yet they persisted through the entire join operation. There were no crashes, no warnings, no visible red flags — just silent overhead.</p>
-
 <p>Once spotted, the fix was straightforward: restructure the join process to release these buffers immediately after the merge. The change was implemented in PR <a href="https://github.com/apache/arrow/issues/45552">GH-45552</a>. The memory profiles below illustrate its impact.</p>
-
-<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
-  <img src="/img/recent-improvements-to-hash-join/memory-profile-baseline.png" width="50%" class="img-responsive" alt="Memory profile before" aria-hidden="true" />
-  <img src="/img/recent-improvements-to-hash-join/memory-profile-opt.png" width="50%" class="img-responsive" alt="Memory profile after" aria-hidden="true" />
-</div>
-
-<p>At <code class="language-plaintext highlighter-rouge">A</code>, memory usage rises steadily as the join builds partitioned hash tables in parallel. <code class="language-plaintext highlighter-rouge">B</code> marks the merge point, where these partitions are combined into a final, unified hash table. <code class="language-plaintext highlighter-rouge">C</code> represents the start of the probe phase, where the left-side table is scanned and matched against the final hash table. Memory begins to rise again as join results are materialized. <code class="language-plaintext highlighter-rouge">D</code> is the peak of the join operation, just before memory begins to drop as processing completes. The “leap of faith” occurs at the star on the right profile, where the partitioned hash tables are released immediately after merging. This early release frees up substantial memory and makes room for downstream processing — reducing the overall peak memory observed at <code class="language-plaintext highlighter-rouge">D</code>.</p>
-
+<!-- raw HTML omitted -->
+<p>At <code>A</code>, memory usage rises steadily as the join builds partitioned hash tables in parallel. <code>B</code> marks the merge point, where these partitions are combined into a final, unified hash table. <code>C</code> represents the start of the probe phase, where the left-side table is scanned and matched against the final hash table. Memory begins to rise again as join results are materialized. <code>D</code> is the peak of the join operation, just before memory begins to drop as processing completes. The “leap of faith” occurs at the star on the right profile, where the partitioned hash tables are released immediately after merging. This early release frees up substantial memory and makes room for downstream processing — reducing the overall peak memory observed at <code>D</code>.</p>
 <p>This improvement already benefits real-world scenarios — for example, the <a href="https://duckdblabs.github.io/db-benchmark/">DuckDB Labs DB Benchmark</a>. Some benchmark queries that previously failed with out-of-memory (OOM) errors can now complete successfully — as shown in the comparison below.</p>
-
-<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
-  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-oom-baseline.png" width="50%" class="img-responsive" alt="DuckDB benchmark OOM before" aria-hidden="true" />
-  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-oom-opt.png" width="50%" class="img-responsive" alt="DuckDB benchmark OOM after" aria-hidden="true" />
-</div>
-
+<!-- raw HTML omitted -->
 <p>As one reviewer noted in the PR, this was a “low-hanging fruit.” And sometimes, meaningful performance gains don’t come from tuning hot loops or digging through flame graphs — they come from noticing something that doesn’t feel right and asking: why are we still keeping this around?</p>
-
-<h1 id="faster-execution-through-better-parallelism">Faster Execution Through Better Parallelism</h1>
-
+<h1>Faster Execution Through Better Parallelism</h1>
 <p>Not every improvement comes from poring over flame graphs — but some definitely do. Performance is, after all, the most talked-about aspect of any query engine. So, how about a nice cup of flame graph?</p>
-
-<p><img src="/img/recent-improvements-to-hash-join/a-nice-cup-of-flame-graph.png" width="100%" class="img-responsive" alt="A nice cup of flame graph" aria-hidden="true" /></p>
-
+<!-- raw HTML omitted -->
 <p>It’s hard not to notice the long, flat bar dominating the middle — especially with the rather alarming word “Lock” in it. That’s our red flag.</p>
-
 <p>We’ve mentioned that in the build phase, we build partitioned hash tables in parallel. In earlier versions of Arrow C++, this parallelism was implemented on a batch basis — each thread processed a build-side batch concurrently. Since each batch contained arbitrary data that could fall into any partition, threads had to synchronize when accessing shared partitions. This was managed through <a href="https://github.com/apache/arrow/blob/196cde38c112d32a944afe978b6da9c7ce935ef7/cpp/src/arrow/acero/partition_util.h#L93">locks on partitions</a>. Although we introduced some randomness in the locking order to reduce contention, it remained high — clearly visible in the flame graph.</p>
-
-<p>To mitigate this contention, we restructured the build phase in PR <a href="https://github.com/apache/arrow/issues/45612">GH-45612</a>. Instead of having all threads partition and insert at once — each thread touching every hash table — we split the work into two distinct stages. In the first partition stage, <code class="language-plaintext highlighter-rouge">M</code> threads take their assigned batches and only partition them, recording which rows belong to which partition. No insertion happens yet — just classification. Then comes the second, newly separated build stage. Here, <code class="language-plaintext highlighter-rouge">N</code> threads take over, and each thread is responsible for building just one of the <code class="language-plaintext highlighter-rouge">N</code> partitioned hash tables. Every thread scans all the relevant partitions across all batches but inserts only the rows belonging to its assigned partition. This restructuring eliminates the need for locking between threads during insertion — each thread now has exclusive access to its partitioned hash table. By decoupling the work this way, we turned a highly contentious operation into a clean, embarrassingly parallel one. As a result, we saw performance improve by up to 10x in dedicated build benchmarks. The <a href="https://github.com/apache/arrow/blob/196cde38c112d32a944afe978b6da9c7ce935ef7/cpp/src/arrow/acero/hash_join_benchmark.cc#L302">example</a> below is from a more typical, general-purpose workload — not especially build-heavy — but it still shows a solid 2x speedup. In the chart, the leap of faith — marked by the purple icons 🟣⬇️ — represents results with this improvement applied, while the gray and black ones show earlier runs before the change.</p>
-
-<p><img src="/img/recent-improvements-to-hash-join/internal-benchmark.png" width="100%" class="img-responsive" alt="Internal benchmark" aria-hidden="true" /></p>
-
+<p>To mitigate this contention, we restructured the build phase in PR <a href="https://github.com/apache/arrow/issues/45612">GH-45612</a>. Instead of having all threads partition and insert at once — each thread touching every hash table — we split the work into two distinct stages. In the first partition stage, <code>M</code> threads take their assigned batches and only partition them, recording which rows belong to which partition. No insertion happens yet — just classification. Then comes the second, newly separated build stage. Here, <code>N</code> threads take over, and each thread is responsible for building just one of the <code>N</code> partitioned hash tables. Every thread scans all the relevant partitions across all batches but inserts only the rows belonging to its assigned partition. This restructuring eliminates the need for locking between threads during insertion — each thread now has exclusive access to its partitioned hash table. By decoupling the work this way, we turned a highly contentious operation into a clean, embarrassingly parallel one. As a result, we saw performance improve by up to 10x in dedicated build benchmarks. The <a href="https://github.com/apache/arrow/blob/196cde38c112d32a944afe978b6da9c7ce935ef7/cpp/src/arrow/acero/hash_join_benchmark.cc#L302">example</a> below is from a more typical, general-purpose workload — not especially build-heavy — but it still shows a solid 2x speedup. In the chart, the leap of faith — marked by the purple icons 🟣⬇️ — represents results with this improvement applied, while the gray and black ones show earlier runs before the change.</p>
+<!-- raw HTML omitted -->
 <p>Also in real-world scenarios like the <a href="https://duckdblabs.github.io/db-benchmark/">DuckDB Labs DB Benchmark</a>, we’ve observed similar gains. The comparison below shows around a 2x improvement in query performance after this change was applied.</p>
-
-<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
-  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-perf-baseline.png" width="50%" class="img-responsive" alt="DuckDB benchmark perf before" aria-hidden="true" />
-  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-perf-opt.png" width="50%" class="img-responsive" alt="DuckDB benchmark perf after" aria-hidden="true" />
-</div>
-
+<!-- raw HTML omitted -->
 <p>Additional improvements include <a href="https://github.com/apache/arrow/pull/43832">GH-43832</a>, which extends AVX2 acceleration to more probing code paths, and <a href="https://github.com/apache/arrow/pull/45918">GH-45918</a>, which introduces parallelism to a previously sequential task phase. These target more specialized scenarios and edge cases.</p>
-
-<h2 id="closing">Closing</h2>
-
+<h2>Closing</h2>
 <p>These improvements reflect ongoing investment in Arrow C++’s execution engine and a commitment to delivering fast, robust building blocks for analytic workloads. They are available in recent Arrow C++ releases and exposed through higher-level bindings like PyArrow and the Arrow R package — starting from version 18.0.0, with the most significant improvements landing in 20.0.0. If joins were a blocker for you before — due to memory, scale, or correctness — recent changes may offer a very different experience.</p>
-
 <p>The Arrow C++ engine is not just alive — it’s improving in meaningful, user-visible ways. We’re also actively monitoring for further issues and open to expanding the design based on user feedback and real-world needs. If you’ve tried joins in the past and run into performance or stability issues, we encourage you to give them another try and file an <a href="https://github.com/apache/arrow/issues">issue on GitHub</a> if you run into any issues.</p>
-
 <p>If you have any questions about this blog post, please feel free to contact the author, <a href="mailto:zanmato1984@gmail.com">Rossi Sun</a>.</p>
 
       </main>

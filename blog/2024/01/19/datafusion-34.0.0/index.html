@@ -10,12 +10,12 @@
     
 
     <!-- Begin Jekyll SEO tag v2.8.0 -->
-<meta name="generator" content="Jekyll v4.3.3" />
+<meta name="generator" content="Jekyll v4.4.1" />
 <meta property="og:title" content="Apache Arrow DataFusion 34.0.0 Released, Looking Forward to 2024" />
 <meta name="author" content="pmc" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="Introduction We recently released DataFusion 34.0.0. This blog highlights some of the major improvements since we released DataFusion 26.0.0 (spoiler alert there are many) and a preview of where the community plans to focus in the next 6 months. Apache Arrow DataFusion is an extensible query engine, written in Rust, that uses Apache Arrow as its in-memory format. DataFusion is used by developers to create new, fast data centric systems such as databases, dataframe libraries, machine learning and streaming applications. While DataFusion’s primary design goal is to accelerate creating other data centric systems, it has a reasonable experience directly out of the box as a dataframe library and command line SQL tool. This may also be our last update on the Apache Arrow Site. Future updates will likely be on the DataFusion website as we are working to graduate to a top level project (Apache Arrow DataFusion → Apache DataFusion!) which will help focus governance and project growth. Also exciting, our first DataFusion in person meetup is planned for March 2024. DataFusion is very much a community endeavor. Our core thesis is that as a community we can build much more advanced technology than any of us as individuals or companies could alone. In the last 6 months between 26.0.0 and 34.0.0, community growth has been strong. We accepted and reviewed over a thousand PRs from 124 different committers, created over 650 issues and closed 517 of them. You can find a list of all changes in the detailed CHANGELOG. Improved Performance 🚀 Performance is a key feature of DataFusion, DataFusion is more than 2x faster on ClickBench compared to version 25.0.0, as shown below: Figure 1: Performance improvement between 25.0.0 and 34.0.0 on ClickBench. Note that DataFusion 25.0.0, could not run several queries due to unsupported SQL (Q9, Q11, Q12, Q14) or memory requirements (Q33). Figure 2: Total query runtime for DataFusion 34.0.0 and DataFusion 25.0.0. Here are some specific enhancements we have made to improve performance: 2-3x better aggregation performance with many distinct groups Partially ordered grouping / streaming grouping Specialized operator for “TopK” ORDER BY LIMIT XXX Specialized operator for min(col) GROUP BY .. ORDER by min(col) LIMIT XXX Improved join performance Eliminate redundant sorting with sort order aware optimizers New Features ✨ DML / Insert / Creating Files DataFusion now supports writing data in parallel, to individual or multiple files, using Parquet, CSV, JSON, ARROW and user defined formats. Benchmark results show improvements up to 5x in some cases. Similarly to reading, data can now be written to any ObjectStore implementation, including AWS S3, Azure Blob Storage, GCP Cloud Storage, local files, and user defined implementations. While reading from hive style partitioned tables has long been supported, it is now possible to write to such tables as well. For example, to write to a local file: ❯ CREATE EXTERNAL TABLE awesome_table(x INT) STORED AS PARQUET LOCATION &#39;/tmp/my_awesome_table&#39;; 0 rows in set. Query took 0.003 seconds. ❯ INSERT INTO awesome_table SELECT x * 10 FROM my_source_table; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.024 seconds. You can also write to files with the COPY, similarly to DuckDB’s COPY: ❯ COPY (SELECT x + 1 FROM my_source_table) TO &#39;/tmp/output.json&#39;; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.014 seconds. $ cat /tmp/output.json {&quot;x&quot;:1} {&quot;x&quot;:2} {&quot;x&quot;:3} Improved STRUCT and ARRAY support DataFusion 34.0.0 has much improved STRUCT and ARRAY support, including a full range of struct functions and array functions. For example, you can now use [] syntax and array_length to access and inspect arrays: ❯ SELECT column1, column1[1] AS first_element, array_length(column1) AS len FROM my_table; +-----------+---------------+-----+ | column1 | first_element | len | +-----------+---------------+-----+ | [1, 2, 3] | 1 | 3 | | [2] | 2 | 1 | | [4, 5] | 4 | 2 | +-----------+---------------+-----+ ❯ SELECT column1, column1[&#39;c0&#39;] FROM my_table; +------------------+----------------------+ | column1 | my_table.column1[c0] | +------------------+----------------------+ | {c0: foo, c1: 1} | foo | | {c0: bar, c1: 2} | bar | +------------------+----------------------+ 2 rows in set. Query took 0.002 seconds. Other Features Other notable features include: Support aggregating datasets that exceed memory size, with group by spill to disk All operators now track and limit their memory consumption, including Joins Building Systems is Easier with DataFusion 🛠️ Documentation It is easier than ever to get started using DataFusion with the new Library Users Guide as well as significantly improved the API documentation. User Defined Window and Table Functions In addition to DataFusion’s User Defined Scalar Functions, and User Defined Aggregate Functions, DataFusion now supports User Defined Window Functions and User Defined Table Functions. For example, the datafusion-cli implements a DuckDB style parquet_metadata function as a user defined table function (source code here): ❯ SELECT path_in_schema, row_group_id, row_group_num_rows, stats_min, stats_max, total_compressed_size FROM parquet_metadata(&#39;hits.parquet&#39;) WHERE path_in_schema = &#39;&quot;WatchID&quot;&#39; LIMIT 3; +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | path_in_schema | row_group_id | row_group_num_rows | stats_min | stats_max | total_compressed_size | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | &quot;WatchID&quot; | 0 | 450560 | 4611687214012840539 | 9223369186199968220 | 3883759 | | &quot;WatchID&quot; | 1 | 612174 | 4611689135232456464 | 9223371478009085789 | 5176803 | | &quot;WatchID&quot; | 2 | 344064 | 4611692774829951781 | 9223363791697310021 | 3031680 | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ 3 rows in set. Query took 0.053 seconds. Growth of DataFusion 📈 DataFusion has been appearing more publically in the wild. For example New projects built using DataFusion such as lancedb, GlareDB, Arroyo, and optd. Public talks such as Apache Arrow Datafusion: Vectorized Execution Framework For Maximum Performance in CommunityOverCode Asia 2023 Blogs posts such as Apache Arrow, Arrow/DataFusion, AI-native Data Infra, Flight, DataFusion, Arrow, and Parquet: Using the FDAP Architecture to build InfluxDB 3.0, and A Guide to User-Defined Functions in Apache Arrow DataFusion We have also submitted a paper to SIGMOD 2024, one of the premiere database conferences, describing DataFusion in a technically formal style and making the case that it is possible to create a modular and extensive query engine without sacrificing performance. We hope this paper helps people evaluating DataFusion for their needs understand it better. DataFusion in 2024 🥳 Some major initiatives from contributors we know of this year are: Modularity: Make DataFusion even more modular, such as unifying built in and user functions, making it easier to customize DataFusion’s behavior. Community Growth: Graduate to our own top level Apache project, and subsequently add more committers and PMC members to keep pace with project growth. Use case white papers: Write blog posts and videos explaining how to use DataFusion for real-world use cases. Testing: Improve CI infrastructure and test coverage, more fuzz testing, and better functional and performance regression testing. Planning Time: Reduce the time taken to plan queries, both wide tables of 1000s of columns, and in general. Aggregate Performance: Improve the speed of aggregating “high cardinality” data when there are many (e.g. millions) of distinct groups. Statistics: Improved statistics handling with an eye towards more sophisticated expression analysis and cost models. How to Get Involved If you are interested in contributing to DataFusion we would love to have you join us. You can try out DataFusion on some of your own data and projects and let us know how it goes, contribute suggestions, documentation, bug reports, or a PR with documentation, tests or code. A list of open issues suitable for beginners is here. As the community grows, we are also looking to restart biweekly calls / meetings. Timezones are always a challenge for such meetings, but we hope to have two calls that can work for most attendees. If you are interested in helping, or just want to say hi, please drop us a note via one of the methods listed in our Communication Doc." />
-<meta property="og:description" content="Introduction We recently released DataFusion 34.0.0. This blog highlights some of the major improvements since we released DataFusion 26.0.0 (spoiler alert there are many) and a preview of where the community plans to focus in the next 6 months. Apache Arrow DataFusion is an extensible query engine, written in Rust, that uses Apache Arrow as its in-memory format. DataFusion is used by developers to create new, fast data centric systems such as databases, dataframe libraries, machine learning and streaming applications. While DataFusion’s primary design goal is to accelerate creating other data centric systems, it has a reasonable experience directly out of the box as a dataframe library and command line SQL tool. This may also be our last update on the Apache Arrow Site. Future updates will likely be on the DataFusion website as we are working to graduate to a top level project (Apache Arrow DataFusion → Apache DataFusion!) which will help focus governance and project growth. Also exciting, our first DataFusion in person meetup is planned for March 2024. DataFusion is very much a community endeavor. Our core thesis is that as a community we can build much more advanced technology than any of us as individuals or companies could alone. In the last 6 months between 26.0.0 and 34.0.0, community growth has been strong. We accepted and reviewed over a thousand PRs from 124 different committers, created over 650 issues and closed 517 of them. You can find a list of all changes in the detailed CHANGELOG. Improved Performance 🚀 Performance is a key feature of DataFusion, DataFusion is more than 2x faster on ClickBench compared to version 25.0.0, as shown below: Figure 1: Performance improvement between 25.0.0 and 34.0.0 on ClickBench. Note that DataFusion 25.0.0, could not run several queries due to unsupported SQL (Q9, Q11, Q12, Q14) or memory requirements (Q33). Figure 2: Total query runtime for DataFusion 34.0.0 and DataFusion 25.0.0. Here are some specific enhancements we have made to improve performance: 2-3x better aggregation performance with many distinct groups Partially ordered grouping / streaming grouping Specialized operator for “TopK” ORDER BY LIMIT XXX Specialized operator for min(col) GROUP BY .. ORDER by min(col) LIMIT XXX Improved join performance Eliminate redundant sorting with sort order aware optimizers New Features ✨ DML / Insert / Creating Files DataFusion now supports writing data in parallel, to individual or multiple files, using Parquet, CSV, JSON, ARROW and user defined formats. Benchmark results show improvements up to 5x in some cases. Similarly to reading, data can now be written to any ObjectStore implementation, including AWS S3, Azure Blob Storage, GCP Cloud Storage, local files, and user defined implementations. While reading from hive style partitioned tables has long been supported, it is now possible to write to such tables as well. For example, to write to a local file: ❯ CREATE EXTERNAL TABLE awesome_table(x INT) STORED AS PARQUET LOCATION &#39;/tmp/my_awesome_table&#39;; 0 rows in set. Query took 0.003 seconds. ❯ INSERT INTO awesome_table SELECT x * 10 FROM my_source_table; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.024 seconds. You can also write to files with the COPY, similarly to DuckDB’s COPY: ❯ COPY (SELECT x + 1 FROM my_source_table) TO &#39;/tmp/output.json&#39;; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.014 seconds. $ cat /tmp/output.json {&quot;x&quot;:1} {&quot;x&quot;:2} {&quot;x&quot;:3} Improved STRUCT and ARRAY support DataFusion 34.0.0 has much improved STRUCT and ARRAY support, including a full range of struct functions and array functions. For example, you can now use [] syntax and array_length to access and inspect arrays: ❯ SELECT column1, column1[1] AS first_element, array_length(column1) AS len FROM my_table; +-----------+---------------+-----+ | column1 | first_element | len | +-----------+---------------+-----+ | [1, 2, 3] | 1 | 3 | | [2] | 2 | 1 | | [4, 5] | 4 | 2 | +-----------+---------------+-----+ ❯ SELECT column1, column1[&#39;c0&#39;] FROM my_table; +------------------+----------------------+ | column1 | my_table.column1[c0] | +------------------+----------------------+ | {c0: foo, c1: 1} | foo | | {c0: bar, c1: 2} | bar | +------------------+----------------------+ 2 rows in set. Query took 0.002 seconds. Other Features Other notable features include: Support aggregating datasets that exceed memory size, with group by spill to disk All operators now track and limit their memory consumption, including Joins Building Systems is Easier with DataFusion 🛠️ Documentation It is easier than ever to get started using DataFusion with the new Library Users Guide as well as significantly improved the API documentation. User Defined Window and Table Functions In addition to DataFusion’s User Defined Scalar Functions, and User Defined Aggregate Functions, DataFusion now supports User Defined Window Functions and User Defined Table Functions. For example, the datafusion-cli implements a DuckDB style parquet_metadata function as a user defined table function (source code here): ❯ SELECT path_in_schema, row_group_id, row_group_num_rows, stats_min, stats_max, total_compressed_size FROM parquet_metadata(&#39;hits.parquet&#39;) WHERE path_in_schema = &#39;&quot;WatchID&quot;&#39; LIMIT 3; +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | path_in_schema | row_group_id | row_group_num_rows | stats_min | stats_max | total_compressed_size | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | &quot;WatchID&quot; | 0 | 450560 | 4611687214012840539 | 9223369186199968220 | 3883759 | | &quot;WatchID&quot; | 1 | 612174 | 4611689135232456464 | 9223371478009085789 | 5176803 | | &quot;WatchID&quot; | 2 | 344064 | 4611692774829951781 | 9223363791697310021 | 3031680 | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ 3 rows in set. Query took 0.053 seconds. Growth of DataFusion 📈 DataFusion has been appearing more publically in the wild. For example New projects built using DataFusion such as lancedb, GlareDB, Arroyo, and optd. Public talks such as Apache Arrow Datafusion: Vectorized Execution Framework For Maximum Performance in CommunityOverCode Asia 2023 Blogs posts such as Apache Arrow, Arrow/DataFusion, AI-native Data Infra, Flight, DataFusion, Arrow, and Parquet: Using the FDAP Architecture to build InfluxDB 3.0, and A Guide to User-Defined Functions in Apache Arrow DataFusion We have also submitted a paper to SIGMOD 2024, one of the premiere database conferences, describing DataFusion in a technically formal style and making the case that it is possible to create a modular and extensive query engine without sacrificing performance. We hope this paper helps people evaluating DataFusion for their needs understand it better. DataFusion in 2024 🥳 Some major initiatives from contributors we know of this year are: Modularity: Make DataFusion even more modular, such as unifying built in and user functions, making it easier to customize DataFusion’s behavior. Community Growth: Graduate to our own top level Apache project, and subsequently add more committers and PMC members to keep pace with project growth. Use case white papers: Write blog posts and videos explaining how to use DataFusion for real-world use cases. Testing: Improve CI infrastructure and test coverage, more fuzz testing, and better functional and performance regression testing. Planning Time: Reduce the time taken to plan queries, both wide tables of 1000s of columns, and in general. Aggregate Performance: Improve the speed of aggregating “high cardinality” data when there are many (e.g. millions) of distinct groups. Statistics: Improved statistics handling with an eye towards more sophisticated expression analysis and cost models. How to Get Involved If you are interested in contributing to DataFusion we would love to have you join us. You can try out DataFusion on some of your own data and projects and let us know how it goes, contribute suggestions, documentation, bug reports, or a PR with documentation, tests or code. A list of open issues suitable for beginners is here. As the community grows, we are also looking to restart biweekly calls / meetings. Timezones are always a challenge for such meetings, but we hope to have two calls that can work for most attendees. If you are interested in helping, or just want to say hi, please drop us a note via one of the methods listed in our Communication Doc." />
+<meta name="description" content="❯ INSERT INTO awesome_table SELECT x * 10 FROM my_source_table; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.024 seconds. +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | path_in_schema | row_group_id | row_group_num_rows | stats_min | stats_max | total_compressed_size | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | &quot;WatchID&quot; | 0 | 450560 | 4611687214012840539 | 9223369186199968220 | 3883759 | | &quot;WatchID&quot; | 1 | 612174 | 4611689135232456464 | 9223371478009085789 | 5176803 | | &quot;WatchID&quot; | 2 | 344064 | 4611692774829951781 | 9223363791697310021 | 3031680 | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ 3 rows in set. Query took 0.053 seconds." />
+<meta property="og:description" content="❯ INSERT INTO awesome_table SELECT x * 10 FROM my_source_table; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.024 seconds. +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | path_in_schema | row_group_id | row_group_num_rows | stats_min | stats_max | total_compressed_size | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | &quot;WatchID&quot; | 0 | 450560 | 4611687214012840539 | 9223369186199968220 | 3883759 | | &quot;WatchID&quot; | 1 | 612174 | 4611689135232456464 | 9223371478009085789 | 5176803 | | &quot;WatchID&quot; | 2 | 344064 | 4611692774829951781 | 9223363791697310021 | 3031680 | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ 3 rows in set. Query took 0.053 seconds." />
 <link rel="canonical" href="https://arrow.apache.org/blog/2024/01/19/datafusion-34.0.0/" />
 <meta property="og:url" content="https://arrow.apache.org/blog/2024/01/19/datafusion-34.0.0/" />
 <meta property="og:site_name" content="Apache Arrow" />
@@ -26,7 +26,7 @@
 <meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
 <meta property="twitter:title" content="Apache Arrow DataFusion 34.0.0 Released, Looking Forward to 2024" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"pmc"},"dateModified":"2024-01-19T00:00:00-05:00","datePublished":"2024-01-19T00:00:00-05:00","description":"Introduction We recently released DataFusion 34.0.0. This blog highlights some of the major improvements since we released DataFusion 26.0.0 (spoiler alert there are many) and a preview of where the community plans to focus in the next 6 months. Apache Arrow DataFusion is an extensible query engine, written in Rust, that uses Apache Arrow as its in-memory format. DataFusion is used by developers to create new, fast data centric systems such as databases, dataframe libraries, machine learning and streaming applications. While DataFusion’s primary design goal is to accelerate creating other data centric systems, it has a reasonable experience directly out of the box as a dataframe library and command line SQL tool. This may also be our last update on the Apache Arrow Site. Future updates will likely be on the DataFusion website as we are working to graduate to a top level project (Apache Arrow DataFusion → Apache DataFusion!) which will help focus governance and project growth. Also exciting, our first DataFusion in person meetup is planned for March 2024. DataFusion is very much a community endeavor. Our core thesis is that as a community we can build much more advanced technology than any of us as individuals or companies could alone. In the last 6 months between 26.0.0 and 34.0.0, community growth has been strong. We accepted and reviewed over a thousand PRs from 124 different committers, created over 650 issues and closed 517 of them. You can find a list of all changes in the detailed CHANGELOG. Improved Performance 🚀 Performance is a key feature of DataFusion, DataFusion is more than 2x faster on ClickBench compared to version 25.0.0, as shown below: Figure 1: Performance improvement between 25.0.0 and 34.0.0 on ClickBench. Note that DataFusion 25.0.0, could not run several queries due to unsupported SQL (Q9, Q11, Q12, Q14) or memory requirements (Q33). Figure 2: Total query runtime for DataFusion 34.0.0 and DataFusion 25.0.0. Here are some specific enhancements we have made to improve performance: 2-3x better aggregation performance with many distinct groups Partially ordered grouping / streaming grouping Specialized operator for “TopK” ORDER BY LIMIT XXX Specialized operator for min(col) GROUP BY .. ORDER by min(col) LIMIT XXX Improved join performance Eliminate redundant sorting with sort order aware optimizers New Features ✨ DML / Insert / Creating Files DataFusion now supports writing data in parallel, to individual or multiple files, using Parquet, CSV, JSON, ARROW and user defined formats. Benchmark results show improvements up to 5x in some cases. Similarly to reading, data can now be written to any ObjectStore implementation, including AWS S3, Azure Blob Storage, GCP Cloud Storage, local files, and user defined implementations. While reading from hive style partitioned tables has long been supported, it is now possible to write to such tables as well. For example, to write to a local file: ❯ CREATE EXTERNAL TABLE awesome_table(x INT) STORED AS PARQUET LOCATION &#39;/tmp/my_awesome_table&#39;; 0 rows in set. Query took 0.003 seconds. ❯ INSERT INTO awesome_table SELECT x * 10 FROM my_source_table; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.024 seconds. You can also write to files with the COPY, similarly to DuckDB’s COPY: ❯ COPY (SELECT x + 1 FROM my_source_table) TO &#39;/tmp/output.json&#39;; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.014 seconds. $ cat /tmp/output.json {&quot;x&quot;:1} {&quot;x&quot;:2} {&quot;x&quot;:3} Improved STRUCT and ARRAY support DataFusion 34.0.0 has much improved STRUCT and ARRAY support, including a full range of struct functions and array functions. For example, you can now use [] syntax and array_length to access and inspect arrays: ❯ SELECT column1, column1[1] AS first_element, array_length(column1) AS len FROM my_table; +-----------+---------------+-----+ | column1 | first_element | len | +-----------+---------------+-----+ | [1, 2, 3] | 1 | 3 | | [2] | 2 | 1 | | [4, 5] | 4 | 2 | +-----------+---------------+-----+ ❯ SELECT column1, column1[&#39;c0&#39;] FROM my_table; +------------------+----------------------+ | column1 | my_table.column1[c0] | +------------------+----------------------+ | {c0: foo, c1: 1} | foo | | {c0: bar, c1: 2} | bar | +------------------+----------------------+ 2 rows in set. Query took 0.002 seconds. Other Features Other notable features include: Support aggregating datasets that exceed memory size, with group by spill to disk All operators now track and limit their memory consumption, including Joins Building Systems is Easier with DataFusion 🛠️ Documentation It is easier than ever to get started using DataFusion with the new Library Users Guide as well as significantly improved the API documentation. User Defined Window and Table Functions In addition to DataFusion’s User Defined Scalar Functions, and User Defined Aggregate Functions, DataFusion now supports User Defined Window Functions and User Defined Table Functions. For example, the datafusion-cli implements a DuckDB style parquet_metadata function as a user defined table function (source code here): ❯ SELECT path_in_schema, row_group_id, row_group_num_rows, stats_min, stats_max, total_compressed_size FROM parquet_metadata(&#39;hits.parquet&#39;) WHERE path_in_schema = &#39;&quot;WatchID&quot;&#39; LIMIT 3; +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | path_in_schema | row_group_id | row_group_num_rows | stats_min | stats_max | total_compressed_size | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | &quot;WatchID&quot; | 0 | 450560 | 4611687214012840539 | 9223369186199968220 | 3883759 | | &quot;WatchID&quot; | 1 | 612174 | 4611689135232456464 | 9223371478009085789 | 5176803 | | &quot;WatchID&quot; | 2 | 344064 | 4611692774829951781 | 9223363791697310021 | 3031680 | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ 3 rows in set. Query took 0.053 seconds. Growth of DataFusion 📈 DataFusion has been appearing more publically in the wild. For example New projects built using DataFusion such as lancedb, GlareDB, Arroyo, and optd. Public talks such as Apache Arrow Datafusion: Vectorized Execution Framework For Maximum Performance in CommunityOverCode Asia 2023 Blogs posts such as Apache Arrow, Arrow/DataFusion, AI-native Data Infra, Flight, DataFusion, Arrow, and Parquet: Using the FDAP Architecture to build InfluxDB 3.0, and A Guide to User-Defined Functions in Apache Arrow DataFusion We have also submitted a paper to SIGMOD 2024, one of the premiere database conferences, describing DataFusion in a technically formal style and making the case that it is possible to create a modular and extensive query engine without sacrificing performance. We hope this paper helps people evaluating DataFusion for their needs understand it better. DataFusion in 2024 🥳 Some major initiatives from contributors we know of this year are: Modularity: Make DataFusion even more modular, such as unifying built in and user functions, making it easier to customize DataFusion’s behavior. Community Growth: Graduate to our own top level Apache project, and subsequently add more committers and PMC members to keep pace with project growth. Use case white papers: Write blog posts and videos explaining how to use DataFusion for real-world use cases. Testing: Improve CI infrastructure and test coverage, more fuzz testing, and better functional and performance regression testing. Planning Time: Reduce the time taken to plan queries, both wide tables of 1000s of columns, and in general. Aggregate Performance: Improve the speed of aggregating “high cardinality” data when there are many (e.g. millions) of distinct groups. Statistics: Improved statistics handling with an eye towards more sophisticated expression analysis and cost models. How to Get Involved If you are interested in contributing to DataFusion we would love to have you join us. You can try out DataFusion on some of your own data and projects and let us know how it goes, contribute suggestions, documentation, bug reports, or a PR with documentation, tests or code. A list of open issues suitable for beginners is here. As the community grows, we are also looking to restart biweekly calls / meetings. Timezones are always a challenge for such meetings, but we hope to have two calls that can work for most attendees. If you are interested in helping, or just want to say hi, please drop us a note via one of the methods listed in our Communication Doc.","headline":"Apache Arrow DataFusion 34.0.0 Released, Looking Forward to 2024","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2024/01/19/datafusion-34.0.0/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"pmc"},"url":"https://arrow.apache.org/blog/2024/01/19/datafusion-34.0.0/"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"pmc"},"dateModified":"2024-01-19T00:00:00-05:00","datePublished":"2024-01-19T00:00:00-05:00","description":"❯ INSERT INTO awesome_table SELECT x * 10 FROM my_source_table; +-------+ | count | +-------+ | 3 | +-------+ 1 row in set. Query took 0.024 seconds. +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | path_in_schema | row_group_id | row_group_num_rows | stats_min | stats_max | total_compressed_size | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ | &quot;WatchID&quot; | 0 | 450560 | 4611687214012840539 | 9223369186199968220 | 3883759 | | &quot;WatchID&quot; | 1 | 612174 | 4611689135232456464 | 9223371478009085789 | 5176803 | | &quot;WatchID&quot; | 2 | 344064 | 4611692774829951781 | 9223363791697310021 | 3031680 | +----------------+--------------+--------------------+---------------------+---------------------+-----------------------+ 3 rows in set. Query took 0.053 seconds.","headline":"Apache Arrow DataFusion 34.0.0 Released, Looking Forward to 2024","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2024/01/19/datafusion-34.0.0/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"pmc"},"url":"https://arrow.apache.org/blog/2024/01/19/datafusion-34.0.0/"}</script>
 <!-- End Jekyll SEO tag -->
 
 
@@ -276,16 +276,11 @@
 </p>
 
 
-        <!--
-
--->
-
-<h2 id="introduction">Introduction</h2>
-
+        <!-- raw HTML omitted -->
+<h2>Introduction</h2>
 <p>We recently <a href="https://crates.io/crates/datafusion/34.0.0">released DataFusion 34.0.0</a>. This blog highlights some of the major
 improvements since we <a href="https://arrow.apache.org/blog/2023/06/24/datafusion-25.0.0/.">released DataFusion 26.0.0</a> (spoiler alert there are many)
 and a preview of where the community plans to focus in the next 6 months.</p>
-
 <p><a href="https://arrow.apache.org/datafusion/">Apache Arrow DataFusion</a> is an extensible query engine, written in <a href="https://www.rust-lang.org/">Rust</a>, that
 uses <a href="https://arrow.apache.org">Apache Arrow</a> as its in-memory format. DataFusion is used by developers to
 create new, fast data centric systems such as databases, dataframe libraries,
@@ -293,99 +288,46 @@ machine learning and streaming applications. While <a href="https://arrow.apache
 goal</a> is to accelerate creating other data centric systems, it has a
 reasonable experience directly out of the box as a <a href="https://arrow.apache.org/datafusion-python/">dataframe library</a> and
 <a href="https://arrow.apache.org/datafusion/user-guide/cli.html">command line SQL tool</a>.</p>
-
 <p>This may also be our last update on the Apache Arrow Site. Future
 updates will likely be on the DataFusion website as we are working to <a href="https://github.com/apache/arrow-datafusion/discussions/6475">graduate
 to a top level project</a> (Apache Arrow DataFusion → Apache DataFusion!) which
 will help focus governance and project growth. Also exciting, our <a href="https://github.com/apache/arrow-datafusion/discussions/8522">first
 DataFusion in person meetup</a> is planned for March 2024.</p>
-
 <p>DataFusion is very much a community endeavor. Our core thesis is that as a
 community we can build much more advanced technology than any of us as
-individuals or companies could alone. In the last 6 months between <code class="language-plaintext highlighter-rouge">26.0.0</code> and
-<code class="language-plaintext highlighter-rouge">34.0.0</code>, community growth has been strong. We accepted and reviewed over a
+individuals or companies could alone. In the last 6 months between <code>26.0.0</code> and
+<code>34.0.0</code>, community growth has been strong. We accepted and reviewed over a
 thousand PRs from 124 different committers, created over 650 issues and closed 517
 of them.
 You can find a list of all changes in the detailed <a href="https://github.com/apache/arrow-datafusion/blob/main/datafusion/CHANGELOG.md">CHANGELOG</a>.</p>
-
-<!--
-$ git log --pretty=oneline 26.0.0..34.0.0 . | wc -l
-     1009
-
-$ git shortlog -sn 26.0.0..34.0.0 . | wc -l
-      124
-
-https://crates.io/crates/datafusion/26.0.0
-DataFusion 26 released June 7, 2023
-
-https://crates.io/crates/datafusion/34.0.0
-DataFusion 34 released Dec 17, 2023
-
-Issues created in this time: 214 open, 437 closed
-https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+created%3A2023-06-23..2023-12-17
-
-Issues closes: 517
-https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+closed%3A2023-06-23..2023-12-17+
-
-PRs merged in this time 908
-https://github.com/apache/arrow-datafusion/pulls?q=is%3Apr+merged%3A2023-06-23..2023-12-17
--->
-
-<h1 id="improved-performance-">Improved Performance 🚀</h1>
-
-<p>Performance is a key feature of DataFusion, DataFusion is 
-more than 2x faster on <a href="https://benchmark.clickhouse.com/">ClickBench</a> compared to version <code class="language-plaintext highlighter-rouge">25.0.0</code>, as shown below:</p>
-
-<!--
-  Scripts: https://github.com/alamb/datafusion-duckdb-benchmark/tree/datafusion-25-34
-  Spreadsheet: https://docs.google.com/spreadsheets/d/1FtI3652WIJMC5LmJbLfT3G06w0JQIxEPG4yfMafexh8/edit#gid=1879366976
-  Average runtime on 25.0.0: 7.2s (for the queries that actually ran)
-  Average runtime on 34.0.0: 3.6s (for the same queries that ran in 25.0.0)
--->
-
-<figure style="text-align: center;">
-  <img src="/img/datafusion-34.0.0/compare-new.png" width="100%" class="img-responsive" alt="Fig 1: Adaptive Arrow schema architecture overview." />
-  <figcaption>
-    <b>Figure 1</b>: Performance improvement between <code>25.0.0</code> and <code>34.0.0</code> on ClickBench. 
-    Note that DataFusion <code>25.0.0</code>, could not run several queries due to 
-    unsupported SQL (Q9, Q11, Q12, Q14) or memory requirements (Q33).
-  </figcaption>
-</figure>
-
-<figure style="text-align: center;">
-  <img src="/img/datafusion-34.0.0/compare.png" width="100%" class="img-responsive" alt="Fig 1: Adaptive Arrow schema architecture overview." />
-  <figcaption>
-    <b>Figure 2</b>: Total query runtime for DataFusion <code>34.0.0</code> and DataFusion <code>25.0.0</code>.
-  </figcaption>
-</figure>
-
+<!-- raw HTML omitted -->
+<h1>Improved Performance 🚀</h1>
+<p>Performance is a key feature of DataFusion, DataFusion is
+more than 2x faster on <a href="https://benchmark.clickhouse.com/">ClickBench</a> compared to version <code>25.0.0</code>, as shown below:</p>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
 <p>Here are some specific enhancements we have made to improve performance:</p>
 <ul>
-  <li><a href="https://arrow.apache.org/blog/2023/08/05/datafusion_fast_grouping/">2-3x better aggregation performance with many distinct groups</a></li>
-  <li>Partially ordered grouping / streaming grouping</li>
-  <li><a href="https://github.com/apache/arrow-datafusion/pull/7721">Specialized operator for “TopK” <code class="language-plaintext highlighter-rouge">ORDER BY LIMIT XXX</code></a></li>
-  <li><a href="https://github.com/apache/arrow-datafusion/pull/7192">Specialized operator for <code class="language-plaintext highlighter-rouge">min(col) GROUP BY .. ORDER by min(col) LIMIT XXX</code></a></li>
-  <li><a href="https://github.com/apache/arrow-datafusion/pull/8126">Improved join performance</a></li>
-  <li>Eliminate redundant sorting with sort order aware optimizers</li>
+<li><a href="https://arrow.apache.org/blog/2023/08/05/datafusion_fast_grouping/">2-3x better aggregation performance with many distinct groups</a></li>
+<li>Partially ordered grouping / streaming grouping</li>
+<li><a href="https://github.com/apache/arrow-datafusion/pull/7721">Specialized operator for &quot;TopK&quot; <code>ORDER BY LIMIT XXX</code></a></li>
+<li><a href="https://github.com/apache/arrow-datafusion/pull/7192">Specialized operator for <code>min(col) GROUP BY .. ORDER by min(col) LIMIT XXX</code></a></li>
+<li><a href="https://github.com/apache/arrow-datafusion/pull/8126">Improved join performance</a></li>
+<li>Eliminate redundant sorting with sort order aware optimizers</li>
 </ul>
-
-<h1 id="new-features-">New Features ✨</h1>
-
-<h2 id="dml--insert--creating-files">DML / Insert / Creating Files</h2>
-
+<h1>New Features ✨</h1>
+<h2>DML / Insert / Creating Files</h2>
 <p>DataFusion now supports writing data in parallel, to individual or multiple
-files, using <code class="language-plaintext highlighter-rouge">Parquet</code>, <code class="language-plaintext highlighter-rouge">CSV</code>, <code class="language-plaintext highlighter-rouge">JSON</code>, <code class="language-plaintext highlighter-rouge">ARROW</code> and user defined formats.
+files, using <code>Parquet</code>, <code>CSV</code>, <code>JSON</code>, <code>ARROW</code> and user defined formats.
 <a href="https://github.com/apache/arrow-datafusion/pull/7655">Benchmark results</a> show improvements up to 5x in some cases.</p>
-
-<p>Similarly to reading, data can now be written to any <a href="https://docs.rs/object_store/0.9.0/object_store/index.html"><code class="language-plaintext highlighter-rouge">ObjectStore</code></a>
+<p>Similarly to reading, data can now be written to any <a href="https://docs.rs/object_store/0.9.0/object_store/index.html"><code>ObjectStore</code></a>
 implementation, including AWS S3, Azure Blob Storage, GCP Cloud Storage, local
 files, and user defined implementations. While reading from <a href="https://docs.rs/datafusion/latest/datafusion/datasource/listing/struct.ListingTable.html#features">hive style
 partitioned tables</a> has long been supported, it is now possible to write to such
 tables as well.</p>
-
 <p>For example, to write to a local file:</p>
-
-<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">❯</span> <span class="k">CREATE</span> <span class="k">EXTERNAL</span> <span class="k">TABLE</span> <span class="n">awesome_table</span><span class="p">(</span><span class="n">x</span> <span class="nb">INT</span><span class="p">)</span> <span class="n">STORED</span> <span class="k">AS</span> <span class="n">PARQUET</span> <span class="k">LOCATION</span> <span class="s1">'/tmp/my_awesome_table'</span><span class="p">;</span>
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="sql"><span class="err">❯</span> <span class="k">CREATE</span> <span class="k">EXTERNAL</span> <span class="k">TABLE</span> <span class="n">awesome_table</span><span class="p">(</span><span class="n">x</span> <span class="nb">INT</span><span class="p">)</span> <span class="n">STORED</span> <span class="k">AS</span> <span class="n">PARQUET</span> <span class="k">LOCATION</span> <span class="s1">'/tmp/my_awesome_table'</span><span class="p">;</span>
 <span class="mi">0</span> <span class="k">rows</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Query</span> <span class="n">took</span> <span class="mi">0</span><span class="p">.</span><span class="mi">003</span> <span class="n">seconds</span><span class="p">.</span>
 
 <span class="err">❯</span> <span class="k">INSERT</span> <span class="k">INTO</span> <span class="n">awesome_table</span> <span class="k">SELECT</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">10</span> <span class="k">FROM</span> <span class="n">my_source_table</span><span class="p">;</span>
@@ -396,10 +338,8 @@ tables as well.</p>
 <span class="o">+</span><span class="c1">-------+</span>
 <span class="mi">1</span> <span class="k">row</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Query</span> <span class="n">took</span> <span class="mi">0</span><span class="p">.</span><span class="mi">024</span> <span class="n">seconds</span><span class="p">.</span>
 </code></pre></div></div>
-
-<p>You can also write to files with the <a href="https://arrow.apache.org/datafusion/user-guide/sql/dml.html#copy"><code class="language-plaintext highlighter-rouge">COPY</code></a>, similarly to <a href="https://duckdb.org/docs/sql/statements/copy.html">DuckDB’s <code class="language-plaintext highlighter-rouge">COPY</code></a>:</p>
-
-<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">❯</span> <span class="k">COPY</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">FROM</span> <span class="n">my_source_table</span><span class="p">)</span> <span class="k">TO</span> <span class="s1">'/tmp/output.json'</span><span class="p">;</span>
+<p>You can also write to files with the <a href="https://arrow.apache.org/datafusion/user-guide/sql/dml.html#copy"><code>COPY</code></a>, similarly to <a href="https://duckdb.org/docs/sql/statements/copy.html">DuckDB’s <code>COPY</code></a>:</p>
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="sql"><span class="err">❯</span> <span class="k">COPY</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">FROM</span> <span class="n">my_source_table</span><span class="p">)</span> <span class="k">TO</span> <span class="s1">'/tmp/output.json'</span><span class="p">;</span>
 <span class="o">+</span><span class="c1">-------+</span>
 <span class="o">|</span> <span class="k">count</span> <span class="o">|</span>
 <span class="o">+</span><span class="c1">-------+</span>
@@ -407,24 +347,17 @@ tables as well.</p>
 <span class="o">+</span><span class="c1">-------+</span>
 <span class="mi">1</span> <span class="k">row</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Query</span> <span class="n">took</span> <span class="mi">0</span><span class="p">.</span><span class="mi">014</span> <span class="n">seconds</span><span class="p">.</span>
 </code></pre></div></div>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat</span> /tmp/output.json
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="shell"><span class="nv">$ </span><span class="nb">cat</span> /tmp/output.json
 <span class="o">{</span><span class="s2">"x"</span>:1<span class="o">}</span>
 <span class="o">{</span><span class="s2">"x"</span>:2<span class="o">}</span>
 <span class="o">{</span><span class="s2">"x"</span>:3<span class="o">}</span>
 </code></pre></div></div>
-
-<h2 id="improved-struct-and-array-support">Improved <code class="language-plaintext highlighter-rouge">STRUCT</code> and <code class="language-plaintext highlighter-rouge">ARRAY</code> support</h2>
-
-<p>DataFusion <code class="language-plaintext highlighter-rouge">34.0.0</code> has much improved <code class="language-plaintext highlighter-rouge">STRUCT</code> and <code class="language-plaintext highlighter-rouge">ARRAY</code>
+<h2>Improved <code>STRUCT</code> and <code>ARRAY</code> support</h2>
+<p>DataFusion <code>34.0.0</code> has much improved <code>STRUCT</code> and <code>ARRAY</code>
 support, including a full range of <a href="https://arrow.apache.org/datafusion/user-guide/sql/scalar_functions.html#struct-functions">struct functions</a> and <a href="https://arrow.apache.org/datafusion/user-guide/sql/scalar_functions.html#array-functions">array functions</a>.</p>
-
-<!--
-❯ create table my_table as values ([1,2,3]), ([2]), ([4,5]);
--->
-
-<p>For example, you can now use <code class="language-plaintext highlighter-rouge">[]</code> syntax and <code class="language-plaintext highlighter-rouge">array_length</code> to access and inspect arrays:</p>
-<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">❯</span> <span class="k">SELECT</span> <span class="n">column1</span><span class="p">,</span> 
+<!-- raw HTML omitted -->
+<p>For example, you can now use <code>[]</code> syntax and <code>array_length</code> to access and inspect arrays:</p>
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="sql"><span class="err">❯</span> <span class="k">SELECT</span> <span class="n">column1</span><span class="p">,</span> 
          <span class="n">column1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">AS</span> <span class="n">first_element</span><span class="p">,</span> 
          <span class="n">array_length</span><span class="p">(</span><span class="n">column1</span><span class="p">)</span> <span class="k">AS</span> <span class="n">len</span> 
   <span class="k">FROM</span> <span class="n">my_table</span><span class="p">;</span>
@@ -436,8 +369,7 @@ support, including a full range of <a href="https://arrow.apache.org/datafusion/
 <span class="o">|</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>    <span class="o">|</span> <span class="mi">4</span>             <span class="o">|</span> <span class="mi">2</span>   <span class="o">|</span>
 <span class="o">+</span><span class="c1">-----------+---------------+-----+</span>
 </code></pre></div></div>
-
-<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">❯</span> <span class="k">SELECT</span> <span class="n">column1</span><span class="p">,</span> <span class="n">column1</span><span class="p">[</span><span class="s1">'c0'</span><span class="p">]</span> <span class="k">FROM</span>  <span class="n">my_table</span><span class="p">;</span>
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="sql"><span class="err">❯</span> <span class="k">SELECT</span> <span class="n">column1</span><span class="p">,</span> <span class="n">column1</span><span class="p">[</span><span class="s1">'c0'</span><span class="p">]</span> <span class="k">FROM</span>  <span class="n">my_table</span><span class="p">;</span>
 <span class="o">+</span><span class="c1">------------------+----------------------+</span>
 <span class="o">|</span> <span class="n">column1</span>          <span class="o">|</span> <span class="n">my_table</span><span class="p">.</span><span class="n">column1</span><span class="p">[</span><span class="n">c0</span><span class="p">]</span> <span class="o">|</span>
 <span class="o">+</span><span class="c1">------------------+----------------------+</span>
@@ -446,28 +378,22 @@ support, including a full range of <a href="https://arrow.apache.org/datafusion/
 <span class="o">+</span><span class="c1">------------------+----------------------+</span>
 <span class="mi">2</span> <span class="k">rows</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Query</span> <span class="n">took</span> <span class="mi">0</span><span class="p">.</span><span class="mi">002</span> <span class="n">seconds</span><span class="p">.</span>
 </code></pre></div></div>
-
-<h2 id="other-features">Other Features</h2>
+<h2>Other Features</h2>
 <p>Other notable features include:</p>
 <ul>
-  <li>Support aggregating datasets that exceed memory size, with <a href="https://github.com/apache/arrow-datafusion/pull/7400">group by spill to disk</a></li>
-  <li>All operators now track and limit their memory consumption, including Joins</li>
+<li>Support aggregating datasets that exceed memory size, with <a href="https://github.com/apache/arrow-datafusion/pull/7400">group by spill to disk</a></li>
+<li>All operators now track and limit their memory consumption, including Joins</li>
 </ul>
-
-<h1 id="building-systems-is-easier-with-datafusion-️">Building Systems is Easier with DataFusion 🛠️</h1>
-
-<h2 id="documentation">Documentation</h2>
+<h1>Building Systems is Easier with DataFusion 🛠️</h1>
+<h2>Documentation</h2>
 <p>It is easier than ever to get started using DataFusion with the
 new <a href="https://arrow.apache.org/datafusion/library-user-guide/index.html">Library Users Guide</a> as well as significantly improved the <a href="https://docs.rs/datafusion/latest/datafusion/index.html">API documentation</a>.</p>
-
-<h2 id="user-defined-window-and-table-functions">User Defined Window and Table Functions</h2>
-<p>In addition to DataFusion’s <a href="https://arrow.apache.org/datafusion/library-user-guide/adding-udfs.html#adding-a-scalar-udf">User Defined Scalar Functions</a>, and <a href="https://arrow.apache.org/datafusion/library-user-guide/adding-udfs.html#adding-an-aggregate-udf">User Defined Aggregate Functions</a>, DataFusion now supports <a href="https://arrow.apache.org/datafusion/library-user-guide/adding-udfs.html#adding-a-window-udf">User Defined Window Functions</a> 
- and <a href="https://arrow.apache.org/datafusion/library-user-guide/adding-udfs.html#adding-a-user-defined-table-function">User Defined Table Functions</a>.</p>
-
-<p>For example, <a href="https://arrow.apache.org/datafusion/user-guide/cli.html">the <code class="language-plaintext highlighter-rouge">datafusion-cli</code></a> implements a DuckDB style <a href="https://arrow.apache.org/datafusion/user-guide/cli.html#supported-sql"><code class="language-plaintext highlighter-rouge">parquet_metadata</code></a>
+<h2>User Defined Window and Table Functions</h2>
+<p>In addition to DataFusion's <a href="https://arrow.apache.org/datafusion/library-user-guide/adding-udfs.html#adding-a-scalar-udf">User Defined Scalar Functions</a>, and <a href="https://arrow.apache.org/datafusion/library-user-guide/adding-udfs.html#adding-an-aggregate-udf">User Defined Aggregate Functions</a>, DataFusion now supports <a href="https://arrow.apache.org/datafusion/library-user-guide/adding-udfs.html#adding-a-window-udf">User Defined Window Functions</a>
+and <a href="https://arrow.apache.org/datafusion/library-user-guide/adding-udfs.html#adding-a-user-defined-table-function">User Defined Table Functions</a>.</p>
+<p>For example, <a href="https://arrow.apache.org/datafusion/user-guide/cli.html">the <code>datafusion-cli</code></a> implements a DuckDB style <a href="https://arrow.apache.org/datafusion/user-guide/cli.html#supported-sql"><code>parquet_metadata</code></a>
 function as a user defined table function (<a href="https://github.com/apache/arrow-datafusion/blob/3f219bc929cfd418b0e3d3501f8eba1d5a2c87ae/datafusion-cli/src/functions.rs#L222-L248">source code here</a>):</p>
-
-<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">❯</span> <span class="k">SELECT</span> 
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="sql"><span class="err">❯</span> <span class="k">SELECT</span> 
       <span class="n">path_in_schema</span><span class="p">,</span> <span class="n">row_group_id</span><span class="p">,</span> <span class="n">row_group_num_rows</span><span class="p">,</span> <span class="n">stats_min</span><span class="p">,</span> <span class="n">stats_max</span><span class="p">,</span> <span class="n">total_compressed_size</span> 
 <span class="k">FROM</span> 
       <span class="n">parquet_metadata</span><span class="p">(</span><span class="s1">'hits.parquet'</span><span class="p">)</span>
@@ -483,75 +409,66 @@ function as a user defined table function (<a href="https://github.com/apache/ar
 <span class="o">+</span><span class="c1">----------------+--------------+--------------------+---------------------+---------------------+-----------------------+</span>
 <span class="mi">3</span> <span class="k">rows</span> <span class="k">in</span> <span class="k">set</span><span class="p">.</span> <span class="n">Query</span> <span class="n">took</span> <span class="mi">0</span><span class="p">.</span><span class="mi">053</span> <span class="n">seconds</span><span class="p">.</span>
 </code></pre></div></div>
-
-<h3 id="growth-of-datafusion-">Growth of DataFusion 📈</h3>
+<h3>Growth of DataFusion 📈</h3>
 <p>DataFusion has been appearing more publically in the wild. For example</p>
 <ul>
-  <li>New projects built using DataFusion such as <a href="https://lancedb.com/">lancedb</a>, <a href="https://glaredb.com/">GlareDB</a>, <a href="https://www.arroyo.dev/">Arroyo</a>, and <a href="https://github.com/cmu-db/optd">optd</a>.</li>
-  <li>Public talks such as <a href="https://www.youtube.com/watch?v=AJU9rdRNk9I">Apache Arrow Datafusion: Vectorized
+<li>New projects built using DataFusion such as <a href="https://lancedb.com/">lancedb</a>, <a href="https://glaredb.com/">GlareDB</a>, <a href="https://www.arroyo.dev/">Arroyo</a>, and <a href="https://github.com/cmu-db/optd">optd</a>.</li>
+<li>Public talks such as <a href="https://www.youtube.com/watch?v=AJU9rdRNk9I">Apache Arrow Datafusion: Vectorized
 Execution Framework For Maximum Performance</a> in <a href="https://www.bagevent.com/event/8432178">CommunityOverCode Asia 2023</a></li>
-  <li>Blogs posts such as <a href="https://www.synnada.ai/blog/apache-arrow-arrow-datafusion-ai-native-data-infra-an-interview-with-our-ceo-ozan">Apache Arrow, Arrow/DataFusion, AI-native Data Infra</a>,
-<a href="https://www.influxdata.com/blog/flight-datafusion-arrow-parquet-fdap-architecture-influxdb/">Flight, DataFusion, Arrow, and Parquet: Using the FDAP Architecture to build InfluxDB 3.0</a>, and 
+<li>Blogs posts such as <a href="https://www.synnada.ai/blog/apache-arrow-arrow-datafusion-ai-native-data-infra-an-interview-with-our-ceo-ozan">Apache Arrow, Arrow/DataFusion, AI-native Data Infra</a>,
+<a href="https://www.influxdata.com/blog/flight-datafusion-arrow-parquet-fdap-architecture-influxdb/">Flight, DataFusion, Arrow, and Parquet: Using the FDAP Architecture to build InfluxDB 3.0</a>, and
 <a href="https://www.linkedin.com/pulse/guide-user-defined-functions-apache-arrow-datafusion-dade-aderemi/">A Guide to User-Defined Functions in Apache Arrow DataFusion</a></li>
 </ul>
-
 <p>We have also <a href="https://github.com/apache/arrow-datafusion/issues/6782">submitted a paper</a> to <a href="https://2024.sigmod.org/">SIGMOD 2024</a>, one of the
 premiere database conferences, describing DataFusion in a technically formal
-style and making the case that it is possible to create a modular and extensive query engine 
-without sacrificing performance. We hope this paper helps people 
+style and making the case that it is possible to create a modular and extensive query engine
+without sacrificing performance. We hope this paper helps people
 evaluating DataFusion for their needs understand it better.</p>
-
-<h1 id="datafusion-in-2024-">DataFusion in 2024 🥳</h1>
-
+<h1>DataFusion in 2024 🥳</h1>
 <p>Some major initiatives from contributors we know of this year are:</p>
-
 <ol>
-  <li>
-    <p><em>Modularity</em>: Make DataFusion even more modular, such as <a href="https://github.com/apache/arrow-datafusion/issues/8045">unifying
-built in and user functions</a>, making it easier to customize 
-DataFusion’s behavior.</p>
-  </li>
-  <li>
-    <p><em>Community Growth</em>: Graduate to our own top level Apache project, and
+<li>
+<p><em>Modularity</em>: Make DataFusion even more modular, such as <a href="https://github.com/apache/arrow-datafusion/issues/8045">unifying
+built in and user functions</a>, making it easier to customize
+DataFusion's behavior.</p>
+</li>
+<li>
+<p><em>Community Growth</em>: Graduate to our own top level Apache project, and
 subsequently add more committers and PMC members to keep pace with project
 growth.</p>
-  </li>
-  <li>
-    <p><em>Use case white papers</em>: Write blog posts and videos explaining
+</li>
+<li>
+<p><em>Use case white papers</em>: Write blog posts and videos explaining
 how to use DataFusion for real-world use cases.</p>
-  </li>
-  <li>
-    <p><em>Testing</em>: Improve CI infrastructure and test coverage, more fuzz
+</li>
+<li>
+<p><em>Testing</em>: Improve CI infrastructure and test coverage, more fuzz
 testing, and better functional and performance regression testing.</p>
-  </li>
-  <li>
-    <p><em>Planning Time</em>: Reduce the time taken to plan queries, both <a href="https://github.com/apache/arrow-datafusion/issues/7698">wide
+</li>
+<li>
+<p><em>Planning Time</em>: Reduce the time taken to plan queries, both <a href="https://github.com/apache/arrow-datafusion/issues/7698">wide
 tables of 1000s of columns</a>, and in <a href="https://github.com/apache/arrow-datafusion/issues/5637">general</a>.</p>
-  </li>
-  <li>
-    <p><em>Aggregate Performance</em>: Improve the speed of <a href="https://github.com/apache/arrow-datafusion/issues/7000">aggregating “high cardinality”</a> data
+</li>
+<li>
+<p><em>Aggregate Performance</em>: Improve the speed of <a href="https://github.com/apache/arrow-datafusion/issues/7000">aggregating &quot;high cardinality&quot;</a> data
 when there are many (e.g. millions) of distinct groups.</p>
-  </li>
-  <li>
-    <p><em>Statistics</em>: <a href="https://github.com/apache/arrow-datafusion/issues/8227">Improved statistics handling</a> with an eye towards more
+</li>
+<li>
+<p><em>Statistics</em>: <a href="https://github.com/apache/arrow-datafusion/issues/8227">Improved statistics handling</a> with an eye towards more
 sophisticated expression analysis and cost models.</p>
-  </li>
+</li>
 </ol>
-
-<h1 id="how-to-get-involved">How to Get Involved</h1>
-
+<h1>How to Get Involved</h1>
 <p>If you are interested in contributing to DataFusion we would love to have you
 join us. You can try out DataFusion on some of your own data and projects and
 let us know how it goes, contribute suggestions, documentation, bug reports, or
 a PR with documentation, tests or code. A list of open issues
 suitable for beginners is <a href="https://github.com/apache/arrow-datafusion/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">here</a>.</p>
-
 <p>As the community grows, we are also looking to restart biweekly calls /
 meetings. Timezones are always a challenge for such meetings, but we hope to
 have two calls that can work for most attendees. If you are interested
-in helping, or just want to say hi, please drop us a note via one of 
+in helping, or just want to say hi, please drop us a note via one of
 the methods listed in our <a href="https://arrow.apache.org/datafusion/contributor-guide/communication.html">Communication Doc</a>.</p>
-
 
       </main>
     </div>

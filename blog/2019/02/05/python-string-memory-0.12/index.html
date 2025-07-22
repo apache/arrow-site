@@ -10,7 +10,7 @@
     
 
     <!-- Begin Jekyll SEO tag v2.8.0 -->
-<meta name="generator" content="Jekyll v4.3.3" />
+<meta name="generator" content="Jekyll v4.4.1" />
 <meta property="og:title" content="Reducing Python String Memory Use in Apache Arrow 0.12" />
 <meta name="author" content="wesm" />
 <meta property="og:locale" content="en_US" />
@@ -276,191 +276,143 @@
 </p>
 
 
-        <!--
-
--->
-
-<p>Python users who upgrade to recently released <code class="language-plaintext highlighter-rouge">pyarrow</code> 0.12 may find that
+        <!-- raw HTML omitted -->
+<p>Python users who upgrade to recently released <code>pyarrow</code> 0.12 may find that
 their applications use significantly less memory when converting Arrow string
-data to pandas format. This includes using <code class="language-plaintext highlighter-rouge">pyarrow.parquet.read_table</code> and
-<code class="language-plaintext highlighter-rouge">pandas.read_parquet</code>. This article details some of what is going on under the
+data to pandas format. This includes using <code>pyarrow.parquet.read_table</code> and
+<code>pandas.read_parquet</code>. This article details some of what is going on under the
 hood, and why Python applications dealing with large amounts of strings are
 prone to memory use problems.</p>
-
-<h2 id="why-python-strings-can-use-a-lot-of-memory">Why Python strings can use a lot of memory</h2>
-
-<p>Let’s start with some possibly surprising facts. I’m going to create an empty
-<code class="language-plaintext highlighter-rouge">bytes</code> object and an empty <code class="language-plaintext highlighter-rouge">str</code> (unicode) object in Python 3.7:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [1]: val = b''
+<h2>Why Python strings can use a lot of memory</h2>
+<p>Let's start with some possibly surprising facts. I'm going to create an empty
+<code>bytes</code> object and an empty <code>str</code> (unicode) object in Python 3.7:</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [1]: val = b''
 
 In [2]: unicode_val = u''
 </code></pre></div></div>
-
-<p>The <code class="language-plaintext highlighter-rouge">sys.getsizeof</code> function accurately reports the number of bytes used by
+<p>The <code>sys.getsizeof</code> function accurately reports the number of bytes used by
 built-in Python objects. You might be surprised to find that:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [4]: import sys
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [4]: import sys
 In [5]: sys.getsizeof(val)
 Out[5]: 33
 
 In [6]: sys.getsizeof(unicode_val)
 Out[6]: 49
 </code></pre></div></div>
-
 <p>Since strings in Python are nul-terminated, we can infer that a bytes object
 has 32 bytes of overhead while unicode has 48 bytes. One must also account for
-<code class="language-plaintext highlighter-rouge">PyObject*</code> pointer references to the objects, so the actual overhead is 40 and
+<code>PyObject*</code> pointer references to the objects, so the actual overhead is 40 and
 56 bytes, respectively. With large strings and text, this overhead may not
 matter much, but when you have a lot of small strings, such as those arising
 from reading a CSV or Apache Parquet file, they can take up an unexpected
-amount of memory. pandas represents strings in NumPy arrays of <code class="language-plaintext highlighter-rouge">PyObject*</code>
+amount of memory. pandas represents strings in NumPy arrays of <code>PyObject*</code>
 pointers, so the total memory used by a unique unicode string is</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>8 (PyObject*) + 48 (Python C struct) + string_length + 1
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>8 (PyObject*) + 48 (Python C struct) + string_length + 1
 </code></pre></div></div>
-
 <p>Suppose that we read a CSV file with</p>
-
 <ul>
-  <li>1 column</li>
-  <li>1 million rows</li>
-  <li>Each value in the column is a string with 10 characters</li>
+<li>1 column</li>
+<li>1 million rows</li>
+<li>Each value in the column is a string with 10 characters</li>
 </ul>
-
 <p>On disk this file would take approximately 10MB. Read into memory, however, it
 could take up over 60MB, as a 10 character string object takes up 67 bytes in a
-<code class="language-plaintext highlighter-rouge">pandas.Series</code>.</p>
-
-<h2 id="how-apache-arrow-represents-strings">How Apache Arrow represents strings</h2>
-
+<code>pandas.Series</code>.</p>
+<h2>How Apache Arrow represents strings</h2>
 <p>While a Python unicode string can have 57 bytes of overhead, a string in the
 Arrow columnar format has only 4 (32 bits) or 4.125 (33 bits) bytes of
 overhead. 32-bit integer offsets encodes the position and size of a string
 value in a contiguous chunk of memory:</p>
-
-<div align="center">
-<img src="/img/20190205-arrow-string.png" alt="Apache Arrow string memory layout" width="80%" class="img-responsive" />
-</div>
-
-<p>When you call <code class="language-plaintext highlighter-rouge">table.to_pandas()</code> or <code class="language-plaintext highlighter-rouge">array.to_pandas()</code> with <code class="language-plaintext highlighter-rouge">pyarrow</code>, we
-have to convert this compact string representation back to pandas’s
+<!-- raw HTML omitted -->
+<p>When you call <code>table.to_pandas()</code> or <code>array.to_pandas()</code> with <code>pyarrow</code>, we
+have to convert this compact string representation back to pandas's
 Python-based strings. This can use a huge amount of memory when we have a large
 number of small strings. It is a quite common occurrence when working with web
 analytics data, which compresses to a compact size when stored in the Parquet
 columnar file format.</p>
-
 <p>Note that the Arrow string memory format has other benefits beyond memory
 use. It is also much more efficient for analytics due to the guarantee of data
 locality; all strings are next to each other in memory. In the case of pandas
 and Python strings, the string data can be located anywhere in the process
 heap. Arrow PMC member Uwe Korn did some work to <a href="https://www.slideshare.net/xhochy/extending-pandas-using-apache-arrow-and-numba">extend pandas with Arrow
 string arrays</a> for improved performance and memory use.</p>
-
-<h2 id="reducing-pandas-memory-use-when-converting-from-arrow">Reducing pandas memory use when converting from Arrow</h2>
-
-<p>For many years, the <code class="language-plaintext highlighter-rouge">pandas.read_csv</code> function has relied on a trick to limit
+<h2>Reducing pandas memory use when converting from Arrow</h2>
+<p>For many years, the <code>pandas.read_csv</code> function has relied on a trick to limit
 the amount of string memory allocated. Because pandas uses arrays of
-<code class="language-plaintext highlighter-rouge">PyObject*</code> pointers to refer to objects in the Python heap, we can avoid
+<code>PyObject*</code> pointers to refer to objects in the Python heap, we can avoid
 creating multiple strings with the same value, instead reusing existing objects
 and incrementing their reference counts.</p>
-
 <p>Schematically, we have the following:</p>
-
-<div align="center">
-<img src="/img/20190205-numpy-string.png" alt="pandas string memory optimization" width="80%" class="img-responsive" />
-</div>
-
-<p>In <code class="language-plaintext highlighter-rouge">pyarrow</code> 0.12, we have implemented this when calling <code class="language-plaintext highlighter-rouge">to_pandas</code>. It
-requires using a hash table to deduplicate the Arrow string data as it’s being
+<!-- raw HTML omitted -->
+<p>In <code>pyarrow</code> 0.12, we have implemented this when calling <code>to_pandas</code>. It
+requires using a hash table to deduplicate the Arrow string data as it's being
 converted to pandas. Hashing data is not free, but counterintuitively it can be
 faster in addition to being vastly more memory efficient in the common case in
 analytics where we have table columns with many instances of the same string
 values.</p>
-
-<h2 id="memory-and-performance-benchmarks">Memory and Performance Benchmarks</h2>
-
-<p>We can use the <a href="https://pypi.org/project/memory-profiler/"><code class="language-plaintext highlighter-rouge">memory_profiler</code></a> Python package to easily get process
+<h2>Memory and Performance Benchmarks</h2>
+<p>We can use the <a href="https://pypi.org/project/memory-profiler/"><code>memory_profiler</code></a> Python package to easily get process
 memory usage within a running Python application.</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">memory_profiler</span>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">memory_profiler</span>
 <span class="k">def</span> <span class="nf">mem</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">memory_profiler</span><span class="p">.</span><span class="nf">memory_usage</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
 </code></pre></div></div>
-
 <p>In a new application I have:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [7]: mem()
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [7]: mem()
 Out[7]: 86.21875
 </code></pre></div></div>
-
 <p>I will generate approximate 1 gigabyte of string data represented as Python
-strings with length 10. The <code class="language-plaintext highlighter-rouge">pandas.util.testing</code> module has a handy <code class="language-plaintext highlighter-rouge">rands</code>
+strings with length 10. The <code>pandas.util.testing</code> module has a handy <code>rands</code>
 function for generating random strings. Here is the data generation function:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">pandas.util.testing</span> <span class="kn">import</span> <span class="n">rands</span>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">from</span> <span class="n">pandas.util.testing</span> <span class="kn">import</span> <span class="n">rands</span>
 <span class="k">def</span> <span class="nf">generate_strings</span><span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">nunique</span><span class="p">,</span> <span class="n">string_length</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
     <span class="n">unique_values</span> <span class="o">=</span> <span class="p">[</span><span class="nf">rands</span><span class="p">(</span><span class="n">string_length</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">nunique</span><span class="p">)]</span>
     <span class="n">values</span> <span class="o">=</span> <span class="n">unique_values</span> <span class="o">*</span> <span class="p">(</span><span class="n">length</span> <span class="o">//</span> <span class="n">nunique</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">values</span>
 </code></pre></div></div>
-
 <p>This generates a certain number of unique strings, then duplicates then to
-yield the desired number of total strings. So I’m going to create 100 million
+yield the desired number of total strings. So I'm going to create 100 million
 strings with only 10000 unique values:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [8]: values = generate_strings(100000000, 10000)
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [8]: values = generate_strings(100000000, 10000)
 
 In [9]: mem()
 Out[9]: 852.140625
 </code></pre></div></div>
-
-<p>100 million <code class="language-plaintext highlighter-rouge">PyObject*</code> values is only 745 MB, so this increase of a little
-over 770 MB is consistent with what we know so far. Now I’m going to convert
+<p>100 million <code>PyObject*</code> values is only 745 MB, so this increase of a little
+over 770 MB is consistent with what we know so far. Now I'm going to convert
 this to Arrow format:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [11]: arr = pa.array(values)
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [11]: arr = pa.array(values)
 
 In [12]: mem()
 Out[12]: 2276.9609375
 </code></pre></div></div>
-
-<p>Since <code class="language-plaintext highlighter-rouge">pyarrow</code> exactly accounts for all of its memory allocations, we also
+<p>Since <code>pyarrow</code> exactly accounts for all of its memory allocations, we also
 check that</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [13]: pa.total_allocated_bytes()
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [13]: pa.total_allocated_bytes()
 Out[13]: 1416777280
 </code></pre></div></div>
-
 <p>Since each string takes about 14 bytes (10 bytes plus 4 bytes of overhead),
 this is what we expect.</p>
-
-<p>Now, converting <code class="language-plaintext highlighter-rouge">arr</code> back to pandas is where things get tricky. The <em>minimum</em>
+<p>Now, converting <code>arr</code> back to pandas is where things get tricky. The <em>minimum</em>
 amount of memory that pandas can use is a little under 800 MB as above as we
-need 100 million <code class="language-plaintext highlighter-rouge">PyObject*</code> values, which are 8 bytes each.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [14]: arr_as_pandas = arr.to_pandas()
+need 100 million <code>PyObject*</code> values, which are 8 bytes each.</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [14]: arr_as_pandas = arr.to_pandas()
 
 In [15]: mem()
 Out[15]: 3041.78125
 </code></pre></div></div>
-
 <p>Doing the math, we used 765 MB which seems right. We can disable the string
-deduplication logic by passing <code class="language-plaintext highlighter-rouge">deduplicate_objects=False</code> to <code class="language-plaintext highlighter-rouge">to_pandas</code>:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [16]: arr_as_pandas_no_dedup = arr.to_pandas(deduplicate_objects=False)
+deduplication logic by passing <code>deduplicate_objects=False</code> to <code>to_pandas</code>:</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [16]: arr_as_pandas_no_dedup = arr.to_pandas(deduplicate_objects=False)
 
 In [17]: mem()
 Out[17]: 10006.95703125
 </code></pre></div></div>
-
 <p>Without object deduplication, we use 6965 megabytes, or an average of 73 bytes
 per value. This is a little bit higher than the theoretical size of 67 bytes
 computed above.</p>
-
 <p>One of the more surprising results is that the new behavior is about twice as fast:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [18]: %time arr_as_pandas_time = arr.to_pandas()
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [18]: %time arr_as_pandas_time = arr.to_pandas()
 CPU times: user 2.94 s, sys: 213 ms, total: 3.15 s
 Wall time: 3.14 s
 
@@ -468,22 +420,17 @@ In [19]: %time arr_as_pandas_no_dedup_time = arr.to_pandas(deduplicate_objects=F
 CPU times: user 4.19 s, sys: 2.04 s, total: 6.23 s
 Wall time: 6.21 s
 </code></pre></div></div>
-
 <p>The reason for this is that creating so many Python objects is more expensive
 than hashing the 10 byte values and looking them up in a hash table.</p>
-
 <p>Note that when you convert Arrow data with mostly unique values back to pandas,
-the memory use benefits here won’t have as much of an impact.</p>
-
-<h2 id="takeaways">Takeaways</h2>
-
+the memory use benefits here won't have as much of an impact.</p>
+<h2>Takeaways</h2>
 <p>In Apache Arrow, our goal is to develop computational tools to operate natively
 on the cache- and SIMD-friendly efficient Arrow columnar format. In the
 meantime, though, we recognize that users have legacy applications using the
 native memory layout of pandas or other analytics tools. We will do our best to
 provide fast and memory-efficient interoperability with pandas and other
 popular libraries.</p>
-
 
       </main>
     </div>

@@ -10,7 +10,7 @@
     
 
     <!-- Begin Jekyll SEO tag v2.8.0 -->
-<meta name="generator" content="Jekyll v4.3.3" />
+<meta name="generator" content="Jekyll v4.4.1" />
 <meta property="og:title" content="Introducing Apache Arrow Flight: A Framework for Fast Data Transport" />
 <meta name="author" content="wesm" />
 <meta property="og:locale" content="en_US" />
@@ -282,59 +282,47 @@
 </p>
 
 
-        <!--
-
--->
-
+        <!-- raw HTML omitted -->
 <p>Over the last 18 months, the Apache Arrow community has been busy designing and
 implementing <strong>Flight</strong>, a new general-purpose client-server framework to
 simplify high performance transport of large datasets over network interfaces.</p>
-
 <p>Flight initially is focused on optimized transport of the Arrow columnar format
-(i.e. “Arrow record batches”) over <a href="https://grpc.io/">gRPC</a>, Google’s popular HTTP/2-based
+(i.e. &quot;Arrow record batches&quot;) over <a href="https://grpc.io/">gRPC</a>, Google's popular HTTP/2-based
 general-purpose RPC library and framework. While we have focused on integration
 with gRPC, as a development framework Flight is not intended to be exclusive to
 gRPC.</p>
-
 <p>One of the biggest features that sets apart Flight from other data transport
 frameworks is parallel transfers, allowing data to be streamed to or from a
 cluster of servers simultaneously. This enables developers to more easily
 create scalable data services that can serve a growing client base.</p>
-
 <p>In the 0.15.0 Apache Arrow release, we have ready-to-use Flight implementations
 in C++ (with Python bindings) and Java. These libraries are suitable for beta
 users who are comfortable with API or protocol changes while we continue to
 refine some low-level details in the Flight internals.</p>
-
-<h2 id="motivation">Motivation</h2>
-
+<h2>Motivation</h2>
 <p>Many people have experienced the pain associated with accessing large datasets
 over a network. There are many different transfer protocols and tools for
 reading datasets from remote data services, such as ODBC and JDBC. Over the
 last 10 years, file-based data warehousing in formats like CSV, Avro, and
 Parquet has become popular, but this also presents challenges as raw data must
 be transferred to local hosts before being deserialized.</p>
-
 <p>The work we have done since the beginning of Apache Arrow holds exciting
 promise for accelerating data transport in a number of ways. The <a href="https://github.com/apache/arrow/blob/master/docs/source/format/Columnar.rst">Arrow
 columnar format</a> has key features that can help us:</p>
-
 <ul>
-  <li>It is an “on-the-wire” representation of tabular data that does not require
+<li>It is an &quot;on-the-wire&quot; representation of tabular data that does not require
 deserialization on receipt</li>
-  <li>Its natural mode is that of “streaming batches”, larger datasets are
-transported a batch of rows at a time (called “record batches” in Arrow
-parlance). In this post we will talk about “data streams”, these are
-sequences of Arrow record batches using the project’s binary protocol</li>
-  <li>The format is language-independent and now has library support in 11
+<li>Its natural mode is that of &quot;streaming batches&quot;, larger datasets are
+transported a batch of rows at a time (called &quot;record batches&quot; in Arrow
+parlance). In this post we will talk about &quot;data streams&quot;, these are
+sequences of Arrow record batches using the project's binary protocol</li>
+<li>The format is language-independent and now has library support in 11
 languages and counting.</li>
 </ul>
-
 <p>Implementations of standard protocols like ODBC generally implement their own
 custom on-wire binary protocols that must be marshalled to and from each
-library’s public interface. The performance of ODBC or JDBC libraries varies
+library's public interface. The performance of ODBC or JDBC libraries varies
 greatly from case to case.</p>
-
 <p>Our design goal for Flight is to create a new protocol for data services that
 uses the Arrow columnar format as both the over-the-wire data representation as
 well as the public API presented to developers. In doing so, we reduce or
@@ -342,208 +330,161 @@ remove the serialization costs associated with data transport and increase the
 overall efficiency of distributed data systems. Additionally, two systems that
 are already using Apache Arrow for other purposes can communicate data to each
 other with extreme efficiency.</p>
-
-<h2 id="flight-basics">Flight Basics</h2>
-
+<h2>Flight Basics</h2>
 <p>The Arrow Flight libraries provide a development framework for implementing a
 service that can send and receive data streams. A Flight server supports
 several basic kinds of requests:</p>
-
 <ul>
-  <li><strong>Handshake</strong>: a simple request to determine whether the client is authorized
+<li><strong>Handshake</strong>: a simple request to determine whether the client is authorized
 and, in some cases, to establish an implementation-defined session token to
 use for future requests</li>
-  <li><strong>ListFlights</strong>: return a list of available data streams</li>
-  <li><strong>GetSchema</strong>: return the schema for a data stream</li>
-  <li><strong>GetFlightInfo</strong>: return an “access plan” for a dataset of interest,
+<li><strong>ListFlights</strong>: return a list of available data streams</li>
+<li><strong>GetSchema</strong>: return the schema for a data stream</li>
+<li><strong>GetFlightInfo</strong>: return an &quot;access plan&quot; for a dataset of interest,
 possibly requiring consuming multiple data streams. This request can accept
 custom serialized commands containing, for example, your specific application
 parameters.</li>
-  <li><strong>DoGet</strong>: send a data stream to a client</li>
-  <li><strong>DoPut</strong>: receive a data stream from a client</li>
-  <li><strong>DoAction</strong>: perform an implementation-specific action and return any
+<li><strong>DoGet</strong>: send a data stream to a client</li>
+<li><strong>DoPut</strong>: receive a data stream from a client</li>
+<li><strong>DoAction</strong>: perform an implementation-specific action and return any
 results, i.e. a generalized function call</li>
-  <li><strong>ListActions</strong>: return a list of available action types</li>
+<li><strong>ListActions</strong>: return a list of available action types</li>
 </ul>
-
-<p>We take advantage of gRPC’s elegant “bidirectional” streaming support (built on
+<p>We take advantage of gRPC's elegant &quot;bidirectional&quot; streaming support (built on
 top of <a href="https://grpc.io/docs/guides/concepts/">HTTP/2 streaming</a>) to allow clients and servers to send data and metadata
 to each other simultaneously while requests are being served.</p>
-
 <p>A simple Flight setup might consist of a single server to which clients connect
-and make <code class="language-plaintext highlighter-rouge">DoGet</code> requests.</p>
-
-<div align="center">
-<img src="/img/20191014_flight_simple.png" alt="Flight Simple Architecture" width="50%" class="img-responsive" />
-</div>
-
-<h2 id="optimizing-data-throughput-over-grpc">Optimizing Data Throughput over gRPC</h2>
-
+and make <code>DoGet</code> requests.</p>
+<!-- raw HTML omitted -->
+<h2>Optimizing Data Throughput over gRPC</h2>
 <p>While using a general-purpose messaging library like gRPC has numerous specific
 benefits beyond the obvious ones (taking advantage of all the engineering that
 Google has done on the problem), some work was needed to improve the
 performance of transporting large datasets. Many kinds of gRPC users only deal
 with relatively small messages, for example.</p>
-
 <p>The best-supported way to use gRPC is to define services in a <a href="https://github.com/protocolbuffers/protobuf">Protocol
-Buffers</a> (aka “Protobuf”) <code class="language-plaintext highlighter-rouge">.proto</code> file. A Protobuf plugin for gRPC
+Buffers</a> (aka &quot;Protobuf&quot;) <code>.proto</code> file. A Protobuf plugin for gRPC
 generates gRPC service stubs that you can use to implement your
 applications. RPC commands and data messages are serialized using the <a href="https://developers.google.com/protocol-buffers/docs/encoding">Protobuf
-wire format</a>. Because we use “vanilla gRPC and Protocol Buffers”, gRPC
+wire format</a>. Because we use &quot;vanilla gRPC and Protocol Buffers&quot;, gRPC
 clients that are ignorant of the Arrow columnar format can still interact with
 Flight services and handle the Arrow data opaquely.</p>
-
-<p>The main data-related Protobuf type in Flight is called <code class="language-plaintext highlighter-rouge">FlightData</code>. Reading
+<p>The main data-related Protobuf type in Flight is called <code>FlightData</code>. Reading
 and writing Protobuf messages in general is not free, so we implemented some
 low-level optimizations in gRPC in both C++ and Java to do the following:</p>
-
 <ul>
-  <li>Generate the Protobuf wire format for <code class="language-plaintext highlighter-rouge">FlightData</code> including the Arrow record
+<li>Generate the Protobuf wire format for <code>FlightData</code> including the Arrow record
 batch being sent without going through any intermediate memory copying or
 serialization steps.</li>
-  <li>Reconstruct a Arrow record batch from the Protobuf representation of
-<code class="language-plaintext highlighter-rouge">FlightData</code> without any memory copying or deserialization. In fact, we
+<li>Reconstruct a Arrow record batch from the Protobuf representation of
+<code>FlightData</code> without any memory copying or deserialization. In fact, we
 intercept the encoded data payloads without allowing the Protocol Buffers
 library to touch them.</li>
 </ul>
-
-<p>In a sense we are “having our cake and eating it, too”. Flight implementations
+<p>In a sense we are &quot;having our cake and eating it, too&quot;. Flight implementations
 having these optimizations will have better performance, while naive gRPC
 clients can still talk to the Flight service and use a Protobuf library to
-deserialize <code class="language-plaintext highlighter-rouge">FlightData</code> (albeit with some performance penalty).</p>
-
+deserialize <code>FlightData</code> (albeit with some performance penalty).</p>
 <p>As far as absolute speed, in our C++ data throughput benchmarks, we are seeing
 end-to-end TCP throughput in excess of 2-3GB/s on localhost without TLS
 enabled. This benchmark shows a transfer of ~12 gigabytes of data in about 4
 seconds:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./arrow-flight-benchmark <span class="nt">--records_per_stream</span> 100000000
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="shell"><span class="nv">$ </span>./arrow-flight-benchmark <span class="nt">--records_per_stream</span> 100000000
 Bytes <span class="nb">read</span>: 12800000000
 Nanos: 3900466413
 Speed: 3129.63 MB/s
 </code></pre></div></div>
-
 <p>From this we can conclude that the machinery of Flight and gRPC adds relatively
 little overhead, and it suggests that many real-world applications of Flight
 will be bottlenecked on network bandwidth.</p>
-
-<h2 id="horizontal-scalability-parallel-and-partitioned-data-access">Horizontal Scalability: Parallel and Partitioned Data Access</h2>
-
+<h2>Horizontal Scalability: Parallel and Partitioned Data Access</h2>
 <p>Many distributed database-type systems make use of an architectural pattern
-where the results of client requests are routed through a “coordinator” and
+where the results of client requests are routed through a &quot;coordinator&quot; and
 sent to the client. Aside from the obvious efficiency issues of transporting a
 dataset multiple times on its way to a client, it also presents a scalability
 problem for getting access to very large datasets.</p>
-
 <p>We wanted Flight to enable systems to create horizontally scalable data
 services without having to deal with such bottlenecks. A client request to a
-dataset using the <code class="language-plaintext highlighter-rouge">GetFlightInfo</code> RPC returns a list of <strong>endpoints</strong>, each of
+dataset using the <code>GetFlightInfo</code> RPC returns a list of <strong>endpoints</strong>, each of
 which contains a server location and a <strong>ticket</strong> to send that server in a
-<code class="language-plaintext highlighter-rouge">DoGet</code> request to obtain a part of the full dataset. To get access to the
+<code>DoGet</code> request to obtain a part of the full dataset. To get access to the
 entire dataset, all of the endpoints must be consumed. While Flight streams are
 not necessarily ordered, we provide for application-defined metadata which can
 be used to serialize ordering information.</p>
-
 <p>This multiple-endpoint pattern has a number of benefits:</p>
-
 <ul>
-  <li>Endpoints can be read by clients in parallel.</li>
-  <li>The service that serves the <code class="language-plaintext highlighter-rouge">GetFlightInfo</code> “planning” request can delegate
+<li>Endpoints can be read by clients in parallel.</li>
+<li>The service that serves the <code>GetFlightInfo</code> &quot;planning&quot; request can delegate
 work to sibling services to take advantage of data locality or simply to help
 with load balancing.</li>
-  <li>Nodes in a distributed cluster can take on different roles. For example, a
+<li>Nodes in a distributed cluster can take on different roles. For example, a
 subset of nodes might be responsible for planning queries while other nodes
-exclusively fulfill data stream (<code class="language-plaintext highlighter-rouge">DoGet</code> or <code class="language-plaintext highlighter-rouge">DoPut</code>) requests.</li>
+exclusively fulfill data stream (<code>DoGet</code> or <code>DoPut</code>) requests.</li>
 </ul>
-
 <p>Here is an example diagram of a multi-node architecture with split service
 roles:</p>
-
-<div align="center">
-<img src="/img/20191014_flight_complex.png" alt="Flight Complex Architecture" width="60%" class="img-responsive" />
-</div>
-
-<h2 id="actions-extending-flight-with-application-business-logic">Actions: Extending Flight with application business logic</h2>
-
-<p>While the <code class="language-plaintext highlighter-rouge">GetFlightInfo</code> request supports sending opaque serialized commands
+<!-- raw HTML omitted -->
+<h2>Actions: Extending Flight with application business logic</h2>
+<p>While the <code>GetFlightInfo</code> request supports sending opaque serialized commands
 when requesting a dataset, a client may need to be able to ask a server to
 perform other kinds of operations. For example, a client may request for a
-particular dataset to be “pinned” in memory so that subsequent requests from
+particular dataset to be &quot;pinned&quot; in memory so that subsequent requests from
 other clients are served faster.</p>
-
-<p>A Flight service can thus optionally define “actions” which are carried out by
-the <code class="language-plaintext highlighter-rouge">DoAction</code> RPC. An action request contains the name of the action being
+<p>A Flight service can thus optionally define &quot;actions&quot; which are carried out by
+the <code>DoAction</code> RPC. An action request contains the name of the action being
 performed and optional serialized data containing further needed
 information. The result of an action is a gRPC stream of opaque binary results.</p>
-
 <p>Some example actions:</p>
-
 <ul>
-  <li>Metadata discovery, beyond the capabilities provided by the built-in
-<code class="language-plaintext highlighter-rouge">ListFlights</code> RPC</li>
-  <li>Setting session-specific parameters and settings</li>
+<li>Metadata discovery, beyond the capabilities provided by the built-in
+<code>ListFlights</code> RPC</li>
+<li>Setting session-specific parameters and settings</li>
 </ul>
-
 <p>Note that it is not required for a server to implement any actions, and actions
 need not return results.</p>
-
-<h2 id="encryption-and-authentication">Encryption and Authentication</h2>
-
-<p>Flight supports encryption out of the box using gRPC’s built in TLS / OpenSSL
+<h2>Encryption and Authentication</h2>
+<p>Flight supports encryption out of the box using gRPC's built in TLS / OpenSSL
 capabilities.</p>
-
 <p>For authentication, there are extensible authentication handlers for the client
 and server that permit simple authentication schemes (like user and password)
 as well as more involved authentication such as Kerberos. The Flight protocol
-comes with a built-in <code class="language-plaintext highlighter-rouge">BasicAuth</code> so that user/password authentication can be
+comes with a built-in <code>BasicAuth</code> so that user/password authentication can be
 implemented out of the box without custom development.</p>
-
-<h2 id="middleware-and-tracing">Middleware and Tracing</h2>
-
-<p>gRPC has the concept of “interceptors” which have allowed us to develop
-developer-defined “middleware” that can provide instrumentation of or telemetry
+<h2>Middleware and Tracing</h2>
+<p>gRPC has the concept of &quot;interceptors&quot; which have allowed us to develop
+developer-defined &quot;middleware&quot; that can provide instrumentation of or telemetry
 for incoming and outgoing requests. One such framework for such instrumentation
 is <a href="https://opentracing.io/">OpenTracing</a>.</p>
-
 <p>Note that middleware functionality is one of the newest areas of the project
-and is only currently available in the project’s master branch.</p>
-
-<h2 id="grpc-but-not-only-grpc">gRPC, but not only gRPC</h2>
-
-<p>We specify server locations for <code class="language-plaintext highlighter-rouge">DoGet</code> requests using RFC 3986 compliant
+and is only currently available in the project's master branch.</p>
+<h2>gRPC, but not only gRPC</h2>
+<p>We specify server locations for <code>DoGet</code> requests using RFC 3986 compliant
 URIs. For example, TLS-secured gRPC may be specified like
-<code class="language-plaintext highlighter-rouge">grpc+tls://$HOST:$PORT</code>.</p>
-
-<p>While we think that using gRPC for the “command” layer of Flight servers makes
+<code>grpc+tls://$HOST:$PORT</code>.</p>
+<p>While we think that using gRPC for the &quot;command&quot; layer of Flight servers makes
 sense, we may wish to support data transport layers other than TCP such as
 <a href="https://en.wikipedia.org/wiki/Remote_direct_memory_access">RDMA</a>. While some design and development work is required to make this
 possible, the idea is that gRPC could be used to coordinate get and put
 transfers which may be carried out on protocols other than TCP.</p>
-
-<h2 id="getting-started-and-whats-next">Getting Started and What’s Next</h2>
-
+<h2>Getting Started and What's Next</h2>
 <p>Documentation for Flight users is a work in progress, but the libraries
 themselves are mature enough for beta users that are tolerant of some minor API
 or protocol changes over the coming year.</p>
-
 <p>One of the easiest ways to experiment with Flight is using the Python API,
 since custom servers and clients can be defined entirely in Python without any
 compilation required. You can see an <a href="https://github.com/apache/arrow/tree/apache-arrow-0.15.0/python/examples/flight">example Flight client and server in
 Python</a> in the Arrow codebase.</p>
-
 <p>In real-world use, Dremio has developed an <a href="https://github.com/dremio-hub/dremio-flight-connector">Arrow Flight-based</a> connector
 which has been shown to <a href="https://www.dremio.com/is-time-to-replace-odbc-jdbc/">deliver 20-50x better performance over ODBC</a>. For
 Apache Spark users, Arrow contributor Ryan Murray has created a <a href="https://github.com/rymurr/flight-spark-source">data source
 implementation</a> to connect to Flight-enabled endpoints.</p>
-
-<p>As far as “what’s next” in Flight, support for non-gRPC (or non-TCP) data
+<p>As far as &quot;what's next&quot; in Flight, support for non-gRPC (or non-TCP) data
 transport may be an interesting direction of research and development work. A
 lot of the Flight work from here will be creating user-facing Flight-enabled
 services. Since Flight is a development framework, we expect that user-facing
 APIs will utilize a layer of API veneer that hides many general Flight details
 and details related to a particular application of Flight in a custom data
 service.</p>
-
 
       </main>
     </div>
