@@ -20,13 +20,14 @@ ruby RUBY_VERSION
 
 gem "base64"
 gem "csv"
-gem "jekyll", "4.3.3"
+gem "jekyll", "4.4.1"
 gem "rake"
 gem "tzinfo-data", platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 gem "webrick"
 
 group :jekyll_plugins do
-  gem "jekyll-feed", "~> 0.6"
+  gem "jekyll-commonmark"
+  gem "jekyll-feed"
   gem "jekyll-jupyter-notebook"
   gem "jekyll-seo-tag"
 end
