@@ -1,0 +1,1809 @@
+
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Reading and writing Parquet files &#8212; Apache Arrow v20.0.0</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.4cbf315f70debaebd550c87a6162cf0f.min.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script src="../_static/design-tabs.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'cpp/parquet';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.16.1';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = '/docs/_static/versions.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '20.0';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner = true;
+        </script>
+    <link rel="canonical" href="https://arrow.apache.org/docs/cpp/parquet.html" />
+    <link rel="icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Reading and Writing CSV files" href="csv.html" />
+    <link rel="prev" title="Reading and Writing ORC files" href="orc.html" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="20.0.0" />
+
+  <!-- Matomo -->
+  <script>
+    var _paq = window._paq = window._paq || [];
+    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+    /* We explicitly disable cookie tracking to avoid privacy issues */
+    _paq.push(['disableCookies']);
+    _paq.push(['trackPageView']);
+    _paq.push(['enableLinkTracking']);
+    (function() {
+      var u="https://analytics.apache.org/";
+      _paq.push(['setTrackerUrl', u+'matomo.php']);
+      _paq.push(['setSiteId', '20']);
+      var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+      g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+    })();
+  </script>
+  <!-- End Matomo Code -->
+
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v20.0.0 - Home"/>
+    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v20.0.0 - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../format/index.html">
+    Specifications
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developers/index.html">
+    Development
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    Implementations
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../c_glib/index.html">
+    C/GLib
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="index.html">
+    C++
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://github.com/apache/arrow/blob/main/csharp/README.md">
+    C#
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/go/">
+    Go
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../java/index.html">
+    Java
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../js/index.html">
+    JavaScript
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/julia/">
+    Julia
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://github.com/apache/arrow/blob/main/matlab/README.md">
+    MATLAB
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/nanoarrow/">
+    nanoarrow
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../python/index.html">
+    Python
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../r/index.html">
+    R
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://github.com/apache/arrow/blob/main/ruby/README.md">
+    Ruby
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://docs.rs/crate/arrow/">
+    Rust
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../status.html">
+    Implementation Status
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/cookbook/cpp/">
+    C++ cookbook
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/cookbook/java/">
+    Java cookbook
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/cookbook/py/">
+    Python cookbook
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://arrow.apache.org/cookbook/r/">
+    R cookbook
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item"><div class="kapa-ai-bot">
+    <script
+        async
+        src="https://widget.kapa.ai/kapa-widget.bundle.js"
+        data-website-id="9db461d5-ac77-4b3f-a5c5-75efa78339d2"
+        data-project-name="Apache Arrow"
+        data-project-color="#000000"
+        data-project-logo="https://arrow.apache.org/img/arrow-logo_chevrons_white-txt_black-bg.png"
+        data-modal-disclaimer="This is a custom LLM with access to all [Arrow documentation](https://arrow.apache.org/docs/)."
+        data-consent-required="true" 
+        data-user-analytics-cookie-enabled="false"
+        data-consent-screen-disclaimer="By clicking &quot;I agree, let's chat&quot;, you consent to the use of the AI assistant in accordance with kapa.ai's [Privacy Policy](https://www.kapa.ai/content/privacy-policy). This service uses reCAPTCHA, which requires your consent to Google's [Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://policies.google.com/terms). By proceeding, you explicitly agree to both kapa.ai's and Google's privacy policies."
+    ></script>
+   
+</div>
+
+</div>
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/apache/arrow" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://www.linkedin.com/company/apache-arrow/" title="LinkedIn" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-linkedin fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">LinkedIn</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/ApacheArrow" title="X" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-x-twitter fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">X</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../format/index.html">
+    Specifications
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developers/index.html">
+    Development
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../c_glib/index.html">
+    C/GLib
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    C++
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://github.com/apache/arrow/blob/main/csharp/README.md">
+    C#
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://arrow.apache.org/go/">
+    Go
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../java/index.html">
+    Java
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../js/index.html">
+    JavaScript
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://arrow.apache.org/julia/">
+    Julia
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://github.com/apache/arrow/blob/main/matlab/README.md">
+    MATLAB
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://arrow.apache.org/nanoarrow/">
+    nanoarrow
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../python/index.html">
+    Python
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../r/index.html">
+    R
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://github.com/apache/arrow/blob/main/ruby/README.md">
+    Ruby
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://docs.rs/crate/arrow/">
+    Rust
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../status.html">
+    Implementation Status
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://arrow.apache.org/cookbook/cpp/">
+    C++ cookbook
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://arrow.apache.org/cookbook/java/">
+    Java cookbook
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://arrow.apache.org/cookbook/py/">
+    Python cookbook
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://arrow.apache.org/cookbook/r/">
+    R cookbook
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item"><div class="kapa-ai-bot">
+    <script
+        async
+        src="https://widget.kapa.ai/kapa-widget.bundle.js"
+        data-website-id="9db461d5-ac77-4b3f-a5c5-75efa78339d2"
+        data-project-name="Apache Arrow"
+        data-project-color="#000000"
+        data-project-logo="https://arrow.apache.org/img/arrow-logo_chevrons_white-txt_black-bg.png"
+        data-modal-disclaimer="This is a custom LLM with access to all [Arrow documentation](https://arrow.apache.org/docs/)."
+        data-consent-required="true" 
+        data-user-analytics-cookie-enabled="false"
+        data-consent-screen-disclaimer="By clicking &quot;I agree, let's chat&quot;, you consent to the use of the AI assistant in accordance with kapa.ai's [Privacy Policy](https://www.kapa.ai/content/privacy-policy). This service uses reCAPTCHA, which requires your consent to Google's [Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://policies.google.com/terms). By proceeding, you explicitly agree to both kapa.ai's and Google's privacy policies."
+    ></script>
+   
+</div>
+
+</div>
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/apache/arrow" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://www.linkedin.com/company/apache-arrow/" title="LinkedIn" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-linkedin fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">LinkedIn</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/ApacheArrow" title="X" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-x-twitter fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">X</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="getting_started.html">Getting Started</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="build_system.html">Using Arrow C++ in your own project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conventions.html">Conventions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/basic_arrow.html">Basic Arrow Data Structures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/io_tutorial.html">Arrow File I/O</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/compute_tutorial.html">Arrow Compute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/datasets_tutorial.html">Arrow Datasets</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="user_guide.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="overview.html">High-Level Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="memory.html">Memory Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="arrays.html">Arrays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datatypes.html">Data Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tables.html">Tabular Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="compute.html">Compute Functions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="gandiva.html">The Gandiva Expression Compiler</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="gandiva/expr_projector_filter.html">Gandiva Expression, Projector, and Filter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gandiva/external_func.html">Gandiva External Functions Development Guide</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="streaming_execution.html">Acero: A C++ streaming execution engine</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="acero/overview.html">Acero Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="acero/user_guide.html">Acero User’s Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="acero/substrait.html">Using Acero with Substrait</a></li>
+<li class="toctree-l3"><a class="reference internal" href="acero/developer_guide.html">Developer’s Guide</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="io.html">Input / output and filesystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipc.html">Reading and writing the Arrow IPC format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="orc.html">Reading and Writing ORC files</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Reading and writing Parquet files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="csv.html">Reading and Writing CSV files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="json.html">Reading JSON files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataset.html">Tabular Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flight.html">Arrow Flight RPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gdb.html">Debugging code using Arrow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="threading.html">Thread Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="opentelemetry.html">OpenTelemetry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="env_vars.html">Environment Variables</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/cmake_minimal_build.html">Minimal build using CMake</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/compute_and_write_example.html">Compute and Write CSV Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/dataset_documentation_example.html">Arrow Datasets example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/dataset_skyhook_scan_example.html">Arrow Skyhook example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/parquet_column_encryption.html">Parquet column encryption</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/row_columnar_conversion.html">Row to columnar conversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/tuple_range_conversion.html">std::tuple-like ranges to Arrow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/converting_recordbatch_to_tensor.html">Converting RecordBatch to Tensor</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/support.html">Programming Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/memory.html">Memory (management)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/thread.html">Thread (management)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/datatype.html">Data Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/array.html">Arrays</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/scalar.html">Scalars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/builder.html">Array Builders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/table.html">Two-dimensional Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/c_abi.html">C Interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/compute.html">Compute Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/acero.html">Streaming Execution (Acero)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/gandiva.html">Gandiva Expression Compiler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/tensor.html">Tensors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/utilities.html">Utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/async.html">Asynchronous programming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/io.html">Input / output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/ipc.html">Arrow IPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/formats.html">File Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/cuda.html">CUDA support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/flight.html">Arrow Flight RPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/flightsql.html">Arrow Flight SQL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/filesystem.html">Filesystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/dataset.html">Dataset</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://arrow.apache.org/cookbook/cpp/">C++ cookbook</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">C++ Implementation</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="user_guide.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Reading and writing Parquet files</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="reading-and-writing-parquet-files">
+<h1>Reading and writing Parquet files<a class="headerlink" href="#reading-and-writing-parquet-files" title="Permalink to this heading">#</a></h1>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="api/formats.html#cpp-api-parquet"><span class="std std-ref">Parquet reader and writer API reference</span></a>.</p>
+</div>
+<p>The <a class="reference external" href="https://parquet.apache.org/docs/">Parquet format</a>
+is a space-efficient columnar storage format for complex data.  The Parquet
+C++ implementation is part of the Apache Arrow project and benefits
+from tight integration with the Arrow C++ classes and facilities.</p>
+<section id="reading-parquet-files">
+<h2>Reading Parquet files<a class="headerlink" href="#reading-parquet-files" title="Permalink to this heading">#</a></h2>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReaderE" title="parquet::arrow::FileReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReader</span></code></a> class reads data into Arrow Tables and Record
+Batches.</p>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> class allows for data to be read using a C++ input
+stream approach to read fields column by column and row by row.  This approach
+is offered for ease of use and type-safety.  It is of course also useful when
+data must be streamed as files are read and written incrementally.</p>
+<p>Please note that the performance of the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> will not
+be as good due to the type checking and the fact that column values
+are processed one at a time.</p>
+<section id="filereader">
+<h3>FileReader<a class="headerlink" href="#filereader" title="Permalink to this heading">#</a></h3>
+<p>To read Parquet data into Arrow structures, use <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReaderE" title="parquet::arrow::FileReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReader</span></code></a>.
+To construct, it requires a <a class="reference internal" href="api/io.html#_CPPv4N5arrow2io16RandomAccessFileE" title="arrow::io::RandomAccessFile"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::io::RandomAccessFile</span></code></a> instance
+representing the input file. To read the whole file at once,
+use <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReader9ReadTableEPNSt10shared_ptrIN5arrow5TableEEE" title="parquet::arrow::FileReader::ReadTable"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::FileReader::ReadTable()</span></code></a>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// #include &quot;arrow/io/api.h&quot;</span>
+<span class="c1">// #include &quot;parquet/arrow/reader.h&quot;</span>
+
+<span class="n">arrow</span><span class="o">::</span><span class="n">MemoryPool</span><span class="o">*</span><span class="w"> </span><span class="n">pool</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">();</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">RandomAccessFile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">input</span><span class="p">;</span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">ReadableFile</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">path_to_file</span><span class="p">));</span>
+
+<span class="c1">// Open Parquet file reader</span>
+<span class="hll"><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_reader</span><span class="p">;</span>
+</span><span class="hll"><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">arrow_reader</span><span class="p">,</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">OpenFile</span><span class="p">(</span><span class="n">input</span><span class="p">,</span><span class="w"> </span><span class="n">pool</span><span class="p">));</span>
+</span>
+<span class="c1">// Read entire file as a single Arrow table</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span><span class="w"> </span><span class="n">table</span><span class="p">;</span>
+<span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">arrow_reader</span><span class="o">-&gt;</span><span class="n">ReadTable</span><span class="p">(</span><span class="o">&amp;</span><span class="n">table</span><span class="p">));</span>
+</span></pre></div>
+</div>
+<p>Finer-grained options are available through the
+<a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow17FileReaderBuilderE" title="parquet::arrow::FileReaderBuilder"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileReaderBuilder</span></code></a> helper class, which accepts the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet16ReaderPropertiesE" title="parquet::ReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ReaderProperties</span></code></a>
+and <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ArrowReaderProperties</span></code></a> classes.</p>
+<p>For reading as a stream of batches, use the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReader20GetRecordBatchReaderEPNSt10unique_ptrIN5arrow17RecordBatchReaderEEE" title="parquet::arrow::FileReader::GetRecordBatchReader"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::FileReader::GetRecordBatchReader()</span></code></a>
+method to retrieve a <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::RecordBatchReader</span></code>. It will use the batch
+size set in <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ArrowReaderProperties</span></code></a>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// #include &quot;arrow/io/api.h&quot;</span>
+<span class="c1">// #include &quot;parquet/arrow/reader.h&quot;</span>
+
+<span class="n">arrow</span><span class="o">::</span><span class="n">MemoryPool</span><span class="o">*</span><span class="w"> </span><span class="n">pool</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">();</span>
+
+<span class="c1">// Configure general Parquet reader settings</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">reader_properties</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ReaderProperties</span><span class="p">(</span><span class="n">pool</span><span class="p">);</span>
+<span class="n">reader_properties</span><span class="p">.</span><span class="n">set_buffer_size</span><span class="p">(</span><span class="mi">4096</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span>
+<span class="n">reader_properties</span><span class="p">.</span><span class="n">enable_buffered_stream</span><span class="p">();</span>
+
+<span class="c1">// Configure Arrow-specific Parquet reader settings</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">arrow_reader_props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowReaderProperties</span><span class="p">();</span>
+<span class="n">arrow_reader_props</span><span class="p">.</span><span class="n">set_batch_size</span><span class="p">(</span><span class="mi">128</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span><span class="w">  </span><span class="c1">// default 64 * 1024</span>
+
+<span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileReaderBuilder</span><span class="w"> </span><span class="n">reader_builder</span><span class="p">;</span>
+<span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span>
+<span class="w">    </span><span class="n">reader_builder</span><span class="p">.</span><span class="n">OpenFile</span><span class="p">(</span><span class="n">path_to_file</span><span class="p">,</span><span class="w"> </span><span class="cm">/*memory_map=*/</span><span class="nb">false</span><span class="p">,</span><span class="w"> </span><span class="n">reader_properties</span><span class="p">));</span>
+<span class="n">reader_builder</span><span class="p">.</span><span class="n">memory_pool</span><span class="p">(</span><span class="n">pool</span><span class="p">);</span>
+<span class="n">reader_builder</span><span class="p">.</span><span class="n">properties</span><span class="p">(</span><span class="n">arrow_reader_props</span><span class="p">);</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_reader</span><span class="p">;</span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">arrow_reader</span><span class="p">,</span><span class="w"> </span><span class="n">reader_builder</span><span class="p">.</span><span class="n">Build</span><span class="p">());</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;::</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatchReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">rb_reader</span><span class="p">;</span>
+<span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">arrow_reader</span><span class="o">-&gt;</span><span class="n">GetRecordBatchReader</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rb_reader</span><span class="p">));</span>
+</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Result</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatch</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">maybe_batch</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">rb_reader</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// Operate on each batch...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>For reading multi-file datasets or pushing down filters to prune row groups,
+see <a class="reference internal" href="dataset.html#cpp-dataset"><span class="std std-ref">Tabular Datasets</span></a>.</p>
+</div>
+<section id="performance-and-memory-efficiency">
+<h4>Performance and Memory Efficiency<a class="headerlink" href="#performance-and-memory-efficiency" title="Permalink to this heading">#</a></h4>
+<p>For remote filesystems, use read coalescing (pre-buffering) to reduce number of API calls:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">arrow_reader_props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowReaderProperties</span><span class="p">();</span>
+<span class="n">reader_properties</span><span class="p">.</span><span class="n">set_prebuffer</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The defaults are generally tuned towards good performance, but parallel column
+decoding is off by default. Enable it in the constructor of <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ArrowReaderProperties</span></code></a>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">arrow_reader_props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowReaderProperties</span><span class="p">(</span><span class="cm">/*use_threads=*/</span><span class="nb">true</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>If memory efficiency is more important than performance, then:</p>
+<ol class="arabic simple">
+<li><p>Do <em>not</em> turn on read coalescing (pre-buffering) in <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">parquet::ArrowReaderProperties</span></code></a>.</p></li>
+<li><p>Read data in batches using <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileReader20GetRecordBatchReaderEPNSt10unique_ptrIN5arrow17RecordBatchReaderEEE" title="parquet::arrow::FileReader::GetRecordBatchReader"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::FileReader::GetRecordBatchReader()</span></code></a>.</p></li>
+<li><p>Turn on <code class="docutils literal notranslate"><span class="pre">enable_buffered_stream</span></code> in <a class="reference internal" href="api/formats.html#_CPPv4N7parquet16ReaderPropertiesE" title="parquet::ReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">parquet::ReaderProperties</span></code></a>.</p></li>
+</ol>
+<p>In addition, if you know certain columns contain many repeated values, you can
+read them as <a class="reference internal" href="../format/Glossary.html#term-dictionary-encoding"><span class="xref std std-term">dictionary encoded</span></a> columns. This is
+enabled with the <code class="docutils literal notranslate"><span class="pre">set_read_dictionary</span></code> setting on <a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowReaderPropertiesE" title="parquet::ArrowReaderProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ArrowReaderProperties</span></code></a>.
+If the files were written with Arrow C++ and the <code class="docutils literal notranslate"><span class="pre">store_schema</span></code> was activated,
+then the original Arrow schema will be automatically read and will override this
+setting.</p>
+</section>
+</section>
+<section id="streamreader">
+<h3>StreamReader<a class="headerlink" href="#streamreader" title="Permalink to this heading">#</a></h3>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a> allows for Parquet files to be read using
+standard C++ input operators which ensures type-safety.</p>
+<p>Please note that types must match the schema exactly i.e. if the
+schema field is an unsigned 16-bit integer then you must supply a
+<code class="docutils literal notranslate"><span class="pre">uint16_t</span></code> type.</p>
+<p>Exceptions are used to signal errors.  A <a class="reference internal" href="api/support.html#_CPPv4N7parquet16ParquetExceptionE" title="parquet::ParquetException"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParquetException</span></code></a> is
+thrown in the following circumstances:</p>
+<ul class="simple">
+<li><p>Attempt to read field by supplying the incorrect type.</p></li>
+<li><p>Attempt to read beyond end of row.</p></li>
+<li><p>Attempt to read beyond end of file.</p></li>
+</ul>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/io/file.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/stream_reader.h&quot;</span>
+
+<span class="p">{</span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">ReadableFile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">infile</span><span class="p">;</span>
+
+<span class="w">   </span><span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span>
+<span class="w">      </span><span class="n">infile</span><span class="p">,</span>
+<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">ReadableFile</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span>
+
+<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">StreamReader</span><span class="w"> </span><span class="n">stream</span><span class="p">{</span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetFileReader</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">infile</span><span class="p">)};</span>
+
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">article</span><span class="p">;</span>
+<span class="w">   </span><span class="kt">float</span><span class="w"> </span><span class="n">price</span><span class="p">;</span>
+<span class="w">   </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">quantity</span><span class="p">;</span>
+
+<span class="w">   </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="o">!</span><span class="n">stream</span><span class="p">.</span><span class="n">eof</span><span class="p">()</span><span class="w"> </span><span class="p">)</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="n">stream</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">article</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">quantity</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">EndRow</span><span class="p">;</span>
+<span class="w">      </span><span class="c1">// ...</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="writing-parquet-files">
+<h2>Writing Parquet files<a class="headerlink" href="#writing-parquet-files" title="Permalink to this heading">#</a></h2>
+<section id="writetable">
+<h3>WriteTable<a class="headerlink" href="#writetable" title="Permalink to this heading">#</a></h3>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10WriteTableERKN5arrow5TableEP10MemoryPoolNSt10shared_ptrIN5arrow2io12OutputStreamEEE7int64_tNSt10shared_ptrI16WriterPropertiesEENSt10shared_ptrI21ArrowWriterPropertiesEE" title="parquet::arrow::WriteTable"><code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">arrow::WriteTable()</span></code></a> function writes an entire
+<a class="reference internal" href="api/table.html#_CPPv4N5arrow5TableE" title="arrow::Table"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Table</span></code></a> to an output file.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// #include &quot;parquet/arrow/writer.h&quot;</span>
+<span class="c1">// #include &quot;arrow/util/type_fwd.h&quot;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowWriterProperties</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="p">;</span>
+
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span><span class="w"> </span><span class="n">table</span><span class="p">,</span><span class="w"> </span><span class="n">GetTable</span><span class="p">());</span>
+
+<span class="c1">// Choose compression</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">WriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">props</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">().</span><span class="n">compression</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Compression</span><span class="o">::</span><span class="n">SNAPPY</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span>
+
+<span class="c1">// Opt to store Arrow schema for easier reads back into Arrow</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">ArrowWriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_props</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">ArrowWriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">().</span><span class="n">store_schema</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outfile</span><span class="p">;</span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">path_to_file</span><span class="p">));</span>
+
+<span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">WriteTable</span><span class="p">(</span><span class="o">*</span><span class="n">table</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span>
+</span><span class="hll"><span class="w">                                               </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">(),</span><span class="w"> </span><span class="n">outfile</span><span class="p">,</span>
+</span><span class="hll"><span class="w">                                               </span><span class="cm">/*chunk_size=*/</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="n">arrow_props</span><span class="p">));</span>
+</span></pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Column compression is off by default in C++. See <a class="reference internal" href="#parquet-writer-properties"><span class="std std-ref">below</span></a>
+for how to choose a compression codec in the writer properties.</p>
+</div>
+<p>To write out data batch-by-batch, use <a class="reference internal" href="api/formats.html#_CPPv4N7parquet5arrow10FileWriterE" title="parquet::arrow::FileWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">arrow::FileWriter</span></code></a>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// #include &quot;parquet/arrow/writer.h&quot;</span>
+<span class="c1">// #include &quot;arrow/util/type_fwd.h&quot;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowWriterProperties</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="p">;</span>
+
+<span class="c1">// Data is in RBR</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatchReader</span><span class="o">&gt;</span><span class="w"> </span><span class="n">batch_stream</span><span class="p">;</span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">batch_stream</span><span class="p">,</span><span class="w"> </span><span class="n">GetRBR</span><span class="p">());</span>
+
+<span class="c1">// Choose compression</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">WriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">props</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">().</span><span class="n">compression</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Compression</span><span class="o">::</span><span class="n">SNAPPY</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span>
+
+<span class="c1">// Opt to store Arrow schema for easier reads back into Arrow</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">ArrowWriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_props</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">ArrowWriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">().</span><span class="n">store_schema</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span>
+
+<span class="c1">// Create a writer</span>
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outfile</span><span class="p">;</span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">path_to_file</span><span class="p">));</span>
+<span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileWriter</span><span class="o">&gt;</span><span class="w"> </span><span class="n">writer</span><span class="p">;</span>
+<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span>
+<span class="hll"><span class="w">    </span><span class="n">writer</span><span class="p">,</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">arrow</span><span class="o">::</span><span class="n">FileWriter</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="o">*</span><span class="n">batch_stream</span><span class="o">-&gt;</span><span class="n">schema</span><span class="p">().</span><span class="n">get</span><span class="p">(),</span>
+</span><span class="hll"><span class="w">                                             </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">(),</span><span class="w"> </span><span class="n">outfile</span><span class="p">,</span>
+</span><span class="hll"><span class="w">                                             </span><span class="n">props</span><span class="p">,</span><span class="w"> </span><span class="n">arrow_props</span><span class="p">));</span>
+</span>
+<span class="c1">// Write each batch as a row_group</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">Result</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">RecordBatch</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">maybe_batch</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="o">*</span><span class="n">batch_stream</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">batch</span><span class="p">,</span><span class="w"> </span><span class="n">maybe_batch</span><span class="p">);</span>
+<span class="w">  </span><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">table</span><span class="p">,</span>
+<span class="w">                        </span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">::</span><span class="n">FromRecordBatches</span><span class="p">(</span><span class="n">batch</span><span class="o">-&gt;</span><span class="n">schema</span><span class="p">(),</span><span class="w"> </span><span class="p">{</span><span class="n">batch</span><span class="p">}));</span>
+<span class="hll"><span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">writer</span><span class="o">-&gt;</span><span class="n">WriteTable</span><span class="p">(</span><span class="o">*</span><span class="n">table</span><span class="p">.</span><span class="n">get</span><span class="p">(),</span><span class="w"> </span><span class="n">batch</span><span class="o">-&gt;</span><span class="n">num_rows</span><span class="p">()));</span>
+</span><span class="p">}</span>
+
+<span class="c1">// Write file footer and close</span>
+<span class="hll"><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">writer</span><span class="o">-&gt;</span><span class="n">Close</span><span class="p">());</span>
+</span></pre></div>
+</div>
+</section>
+<section id="streamwriter">
+<h3>StreamWriter<a class="headerlink" href="#streamwriter" title="Permalink to this heading">#</a></h3>
+<p>The <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamWriterE" title="parquet::StreamWriter"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamWriter</span></code></a> allows for Parquet files to be written using
+standard C++ output operators, similar to reading with the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet12StreamReaderE" title="parquet::StreamReader"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StreamReader</span></code></a>
+class. This type-safe approach also ensures that rows are written without
+omitting fields and allows for new row groups to be created automatically
+(after certain volume of data) or explicitly by using the <code class="xref cpp cpp-type docutils literal notranslate"><span class="pre">EndRowGroup</span></code>
+stream modifier.</p>
+<p>Exceptions are used to signal errors.  A <a class="reference internal" href="api/support.html#_CPPv4N7parquet16ParquetExceptionE" title="parquet::ParquetException"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ParquetException</span></code></a> is
+thrown in the following circumstances:</p>
+<ul class="simple">
+<li><p>Attempt to write a field using an incorrect type.</p></li>
+<li><p>Attempt to write too many fields in a row.</p></li>
+<li><p>Attempt to skip a required field.</p></li>
+</ul>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/io/file.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/stream_writer.h&quot;</span>
+
+<span class="p">{</span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outfile</span><span class="p">;</span>
+
+<span class="w">   </span><span class="n">PARQUET_ASSIGN_OR_THROW</span><span class="p">(</span>
+<span class="w">      </span><span class="n">outfile</span><span class="p">,</span>
+<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">io</span><span class="o">::</span><span class="n">FileOutputStream</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="s">&quot;test.parquet&quot;</span><span class="p">));</span>
+
+<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="w"> </span><span class="n">builder</span><span class="p">;</span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">schema</span><span class="o">::</span><span class="n">GroupNode</span><span class="o">&gt;</span><span class="w"> </span><span class="n">schema</span><span class="p">;</span>
+
+<span class="w">   </span><span class="c1">// Set up builder with required compression type etc.</span>
+<span class="w">   </span><span class="c1">// Define schema.</span>
+<span class="w">   </span><span class="c1">// ...</span>
+
+<span class="w">   </span><span class="n">parquet</span><span class="o">::</span><span class="n">StreamWriter</span><span class="w"> </span><span class="n">os</span><span class="p">{</span>
+<span class="w">      </span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetFileWriter</span><span class="o">::</span><span class="n">Open</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="w"> </span><span class="n">schema</span><span class="p">,</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="n">build</span><span class="p">())};</span>
+
+<span class="w">   </span><span class="c1">// Loop over some data structure which provides the required</span>
+<span class="w">   </span><span class="c1">// fields to be written and write each row.</span>
+<span class="w">   </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">getArticles</span><span class="p">())</span>
+<span class="w">   </span><span class="p">{</span>
+<span class="w">      </span><span class="n">os</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">name</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">price</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">quantity</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">EndRow</span><span class="p">;</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="writer-properties">
+<span id="parquet-writer-properties"></span><h3>Writer properties<a class="headerlink" href="#writer-properties" title="Permalink to this heading">#</a></h3>
+<p>To configure how Parquet files are written, use the <a class="reference internal" href="api/formats.html#_CPPv4N7parquet16WriterProperties7BuilderE" title="parquet::WriterProperties::Builder"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">WriterProperties::Builder</span></code></a>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/arrow/writer.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/util/type_fwd.h&quot;</span>
+
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetVersion</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ParquetDataPageVersion</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">Compression</span><span class="p">;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">WriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">()</span>
+<span class="w">   </span><span class="p">.</span><span class="n">max_row_group_length</span><span class="p">(</span><span class="mi">64</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span>
+<span class="w">   </span><span class="p">.</span><span class="n">created_by</span><span class="p">(</span><span class="s">&quot;My Application&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="p">.</span><span class="n">version</span><span class="p">(</span><span class="n">ParquetVersion</span><span class="o">::</span><span class="n">PARQUET_2_6</span><span class="p">)</span>
+<span class="w">   </span><span class="p">.</span><span class="n">data_page_version</span><span class="p">(</span><span class="n">ParquetDataPageVersion</span><span class="o">::</span><span class="n">V2</span><span class="p">)</span>
+<span class="w">   </span><span class="p">.</span><span class="n">compression</span><span class="p">(</span><span class="n">Compression</span><span class="o">::</span><span class="n">SNAPPY</span><span class="p">)</span>
+<span class="w">   </span><span class="p">.</span><span class="n">build</span><span class="p">();</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">max_row_group_length</span></code> sets an upper bound on the number of rows per row
+group that takes precedent over the <code class="docutils literal notranslate"><span class="pre">chunk_size</span></code> passed in the write methods.</p>
+<p>You can set the version of Parquet to write with <code class="docutils literal notranslate"><span class="pre">version</span></code>, which determines
+which logical types are available. In addition, you can set the data page version
+with <code class="docutils literal notranslate"><span class="pre">data_page_version</span></code>. It’s V1 by default; setting to V2 will allow more
+optimal compression (skipping compressing pages where there isn’t a space
+benefit), but not all readers support this data page version.</p>
+<p>Compression is off by default, but to get the most out of Parquet, you should
+also choose a compression codec. You can choose one for the whole file or
+choose one for individual columns. If you choose a mix, the file-level option
+will apply to columns that don’t have a specific compression codec. See
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">::arrow::Compression</span></code> for options.</p>
+<p>Column data encodings can likewise be applied at the file-level or at the
+column level. By default, the writer will attempt to dictionary encode all
+supported columns, unless the dictionary grows too large. This behavior can
+be changed at file-level or at the column level with <code class="docutils literal notranslate"><span class="pre">disable_dictionary()</span></code>.
+When not using dictionary encoding, it will fallback to the encoding set for
+the column or the overall file; by default <code class="docutils literal notranslate"><span class="pre">Encoding::PLAIN</span></code>, but this can
+be changed with <code class="docutils literal notranslate"><span class="pre">encoding()</span></code>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/arrow/writer.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/util/type_fwd.h&quot;</span>
+
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">WriterProperties</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">Compression</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">Encoding</span><span class="p">;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">WriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">()</span>
+<span class="w">  </span><span class="p">.</span><span class="n">compression</span><span class="p">(</span><span class="n">Compression</span><span class="o">::</span><span class="n">SNAPPY</span><span class="p">)</span><span class="w">        </span><span class="c1">// Fallback</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">compression</span><span class="p">(</span><span class="s">&quot;colA&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Compression</span><span class="o">::</span><span class="n">ZSTD</span><span class="p">)</span><span class="w"> </span><span class="c1">// Only applies to column &quot;colA&quot;</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">encoding</span><span class="p">(</span><span class="n">Encoding</span><span class="o">::</span><span class="n">BIT_PACKED</span><span class="p">)</span><span class="w">         </span><span class="c1">// Fallback</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">encoding</span><span class="p">(</span><span class="s">&quot;colB&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Encoding</span><span class="o">::</span><span class="n">RLE</span><span class="p">)</span><span class="w">        </span><span class="c1">// Only applies to column &quot;colB&quot;</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">disable_dictionary</span><span class="p">(</span><span class="s">&quot;colB&quot;</span><span class="p">)</span><span class="w">             </span><span class="c1">// Never dictionary-encode column &quot;colB&quot;</span>
+<span class="w">  </span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span>
+</pre></div>
+</div>
+<p>Statistics are enabled by default for all columns. You can disable statistics for
+all columns or specific columns using <code class="docutils literal notranslate"><span class="pre">disable_statistics</span></code> on the builder.
+There is a <code class="docutils literal notranslate"><span class="pre">max_statistics_size</span></code> which limits the maximum number of bytes that
+may be used for min and max values, useful for types like strings or binary blobs.
+If a column has enabled page index using <code class="docutils literal notranslate"><span class="pre">enable_write_page_index</span></code>, then it does
+not write statistics to the page header because it is duplicated in the ColumnIndex.</p>
+<p>There are also Arrow-specific settings that can be configured with
+<a class="reference internal" href="api/formats.html#_CPPv4N7parquet21ArrowWriterPropertiesE" title="parquet::ArrowWriterProperties"><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">parquet::ArrowWriterProperties</span></code></a>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/arrow/writer.h&quot;</span>
+
+<span class="k">using</span><span class="w"> </span><span class="n">parquet</span><span class="o">::</span><span class="n">ArrowWriterProperties</span><span class="p">;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">ArrowWriterProperties</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arrow_props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ArrowWriterProperties</span><span class="o">::</span><span class="n">Builder</span><span class="p">()</span>
+<span class="w">   </span><span class="p">.</span><span class="n">enable_deprecated_int96_timestamps</span><span class="p">()</span><span class="w"> </span><span class="c1">// default False</span>
+<span class="w">   </span><span class="o">-&gt;</span><span class="n">store_schema</span><span class="p">()</span><span class="w"> </span><span class="c1">// default False</span>
+<span class="w">   </span><span class="o">-&gt;</span><span class="n">build</span><span class="p">();</span>
+</pre></div>
+</div>
+<p>These options mostly dictate how Arrow types are converted to Parquet types.
+Turning on <code class="docutils literal notranslate"><span class="pre">store_schema</span></code> will cause the writer to store the serialized Arrow
+schema within the file metadata. Since there is no bijection between Parquet
+schemas and Arrow schemas, storing the Arrow schema allows the Arrow reader
+to more faithfully recreate the original data. This mapping from Parquet types
+back to original Arrow types includes:</p>
+<ul class="simple">
+<li><p>Reading timestamps with original timezone information (Parquet does not
+support time zones);</p></li>
+<li><p>Reading Arrow types from their storage types (such as Duration from int64
+columns);</p></li>
+<li><p>Reading string and binary columns back into large variants with 64-bit offsets;</p></li>
+<li><p>Reading back columns as dictionary encoded (whether an Arrow column and
+the serialized Parquet version are dictionary encoded are independent).</p></li>
+</ul>
+</section>
+</section>
+<section id="supported-parquet-features">
+<h2>Supported Parquet features<a class="headerlink" href="#supported-parquet-features" title="Permalink to this heading">#</a></h2>
+<p>The Parquet format has many features, and Parquet C++ supports a subset of them.</p>
+<section id="page-types">
+<h3>Page types<a class="headerlink" href="#page-types" title="Permalink to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Page type</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>DATA_PAGE</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>DATA_PAGE_V2</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>DICTIONARY_PAGE</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><em>Unsupported page type:</em> INDEX_PAGE. When reading a Parquet file, pages of
+this type are ignored.</p>
+</section>
+<section id="compression">
+<h3>Compression<a class="headerlink" href="#compression" title="Permalink to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Compression codec</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>SNAPPY</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>GZIP</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>BROTLI</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>LZ4</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>ZSTD</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p>(1) On the read side, Parquet C++ is able to decompress both the regular
+LZ4 block format and the ad-hoc Hadoop LZ4 format used by the
+<a class="reference external" href="https://github.com/apache/parquet-mr">reference Parquet implementation</a>.
+On the write side, Parquet C++ always generates the ad-hoc Hadoop LZ4 format.</p></li>
+</ul>
+<p><em>Unsupported compression codec:</em> LZO.</p>
+</section>
+<section id="encodings">
+<h3>Encodings<a class="headerlink" href="#encodings" title="Permalink to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Encoding</p></th>
+<th class="head"><p>Reading</p></th>
+<th class="head"><p>Writing</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>PLAIN</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>PLAIN_DICTIONARY</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>BIT_PACKED</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-odd"><td><p>RLE</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>RLE_DICTIONARY</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-odd"><td><p>BYTE_STREAM_SPLIT</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>DELTA_BINARY_PACKED</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>DELTA_BYTE_ARRAY</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>DELTA_LENGTH_BYTE_ARRAY</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p>(1) Only supported for encoding definition and repetition levels,
+and boolean values.</p></li>
+<li><p>(2) On the write path, RLE_DICTIONARY is only enabled if Parquet format version
+2.4 or greater is selected in <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">WriterProperties::version()</span></code>.</p></li>
+</ul>
+</section>
+<section id="types">
+<h3>Types<a class="headerlink" href="#types" title="Permalink to this heading">#</a></h3>
+<section id="physical-types">
+<h4>Physical types<a class="headerlink" href="#physical-types" title="Permalink to this heading">#</a></h4>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Physical type</p></th>
+<th class="head"><p>Mapped Arrow type</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>BOOLEAN</p></td>
+<td><p>Boolean</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>INT32</p></td>
+<td><p>Int32 / other</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>INT64</p></td>
+<td><p>Int64 / other</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-odd"><td><p>INT96</p></td>
+<td><p>Timestamp (nanoseconds)</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-even"><td><p>FLOAT</p></td>
+<td><p>Float32</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>DOUBLE</p></td>
+<td><p>Float64</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>BYTE_ARRAY</p></td>
+<td><p>Binary / other</p></td>
+<td><p>(1) (3)</p></td>
+</tr>
+<tr class="row-odd"><td><p>FIXED_LENGTH_BYTE_ARRAY</p></td>
+<td><p>FixedSizeBinary / other</p></td>
+<td><p>(1)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p>(1) Can be mapped to other Arrow types, depending on the logical type
+(see below).</p></li>
+<li><p>(2) On the write side, <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">ArrowWriterProperties::support_deprecated_int96_timestamps()</span></code>
+must be enabled.</p></li>
+<li><p>(3) On the write side, an Arrow LargeBinary can also mapped to BYTE_ARRAY.</p></li>
+</ul>
+</section>
+<section id="logical-types">
+<h4>Logical types<a class="headerlink" href="#logical-types" title="Permalink to this heading">#</a></h4>
+<p>Specific logical types can override the default Arrow type mapping for a given
+physical type.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Logical type</p></th>
+<th class="head"><p>Physical type</p></th>
+<th class="head"><p>Mapped Arrow type</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>NULL</p></td>
+<td><p>Any</p></td>
+<td><p>Null</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-odd"><td><p>INT</p></td>
+<td><p>INT32</p></td>
+<td><p>Int8 / UInt8 / Int16 /
+UInt16 / Int32 / UInt32</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>INT</p></td>
+<td><p>INT64</p></td>
+<td><p>Int64 / UInt64</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>DECIMAL</p></td>
+<td><p>INT32 / INT64 / BYTE_ARRAY
+/ FIXED_LENGTH_BYTE_ARRAY</p></td>
+<td><p>Decimal128 / Decimal256</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-even"><td><p>DATE</p></td>
+<td><p>INT32</p></td>
+<td><p>Date32</p></td>
+<td><p>(3)</p></td>
+</tr>
+<tr class="row-odd"><td><p>TIME</p></td>
+<td><p>INT32</p></td>
+<td><p>Time32 (milliseconds)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>TIME</p></td>
+<td><p>INT64</p></td>
+<td><p>Time64 (micro- or
+nanoseconds)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>TIMESTAMP</p></td>
+<td><p>INT64</p></td>
+<td><p>Timestamp (milli-, micro-
+or nanoseconds)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>STRING</p></td>
+<td><p>BYTE_ARRAY</p></td>
+<td><p>Utf8</p></td>
+<td><p>(4)</p></td>
+</tr>
+<tr class="row-odd"><td><p>LIST</p></td>
+<td><p>Any</p></td>
+<td><p>List</p></td>
+<td><p>(5)</p></td>
+</tr>
+<tr class="row-even"><td><p>MAP</p></td>
+<td><p>Any</p></td>
+<td><p>Map</p></td>
+<td><p>(6)</p></td>
+</tr>
+<tr class="row-odd"><td><p>FLOAT16</p></td>
+<td><p>FIXED_LENGTH_BYTE_ARRAY</p></td>
+<td><p>HalfFloat</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p>(1) On the write side, the Parquet physical type INT32 is generated.</p></li>
+<li><p>(2) On the write side, a FIXED_LENGTH_BYTE_ARRAY is always emitted.</p></li>
+<li><p>(3) On the write side, an Arrow Date64 is also mapped to a Parquet DATE INT32.</p></li>
+<li><p>(4) On the write side, an Arrow LargeUtf8 is also mapped to a Parquet STRING.</p></li>
+<li><p>(5) On the write side, an Arrow LargeList or FixedSizedList is also mapped to
+a Parquet LIST.</p></li>
+<li><p>(6) On the read side, a key with multiple values does not get deduplicated,
+in contradiction with the
+<a class="reference external" href="https://github.com/apache/parquet-format/blob/master/LogicalTypes.md#maps">Parquet specification</a>.</p></li>
+</ul>
+<p><em>Unsupported logical types:</em> JSON, BSON, UUID.  If such a type is encountered
+when reading a Parquet file, the default physical type mapping is used (for
+example, a Parquet JSON column may be read as Arrow Binary or FixedSizeBinary).</p>
+</section>
+<section id="converted-types">
+<h4>Converted types<a class="headerlink" href="#converted-types" title="Permalink to this heading">#</a></h4>
+<p>While converted types are deprecated in the Parquet format (they are superceded
+by logical types), they are recognized and emitted by the Parquet C++
+implementation so as to maximize compatibility with other Parquet
+implementations.</p>
+</section>
+<section id="special-cases">
+<h4>Special cases<a class="headerlink" href="#special-cases" title="Permalink to this heading">#</a></h4>
+<p>An Arrow Extension type is written out as its storage type.  It can still
+be recreated at read time using Parquet metadata (see “Roundtripping Arrow
+types” below).</p>
+<p>An Arrow Dictionary type is written out as its value type.  It can still
+be recreated at read time using Parquet metadata (see “Roundtripping Arrow
+types” below).</p>
+</section>
+<section id="roundtripping-arrow-types-and-schema">
+<h4>Roundtripping Arrow types and schema<a class="headerlink" href="#roundtripping-arrow-types-and-schema" title="Permalink to this heading">#</a></h4>
+<p>While there is no bijection between Arrow types and Parquet types, it is
+possible to serialize the Arrow schema as part of the Parquet file metadata.
+This is enabled using <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">ArrowWriterProperties::store_schema()</span></code>.</p>
+<p>On the read path, the serialized schema will be automatically recognized
+and will recreate the original Arrow data, converting the Parquet data as
+required.</p>
+<p>As an example, when serializing an Arrow LargeList to Parquet:</p>
+<ul class="simple">
+<li><p>The data is written out as a Parquet LIST</p></li>
+<li><p>When read back, the Parquet LIST data is decoded as an Arrow LargeList if
+<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">ArrowWriterProperties::store_schema()</span></code> was enabled when writing the file;
+otherwise, it is decoded as an Arrow List.</p></li>
+</ul>
+<section id="parquet-field-id">
+<h5>Parquet field id<a class="headerlink" href="#parquet-field-id" title="Permalink to this heading">#</a></h5>
+<p>The Parquet format supports an optional integer <em>field id</em> which can be assigned
+to a given field. This is used for example in the
+<a class="reference external" href="https://github.com/apache/iceberg/blob/main/format/spec.md#column-projection">Apache Iceberg specification</a>.</p>
+<p>On the writer side, if <code class="docutils literal notranslate"><span class="pre">PARQUET:field_id</span></code> is present as a metadata key on an
+Arrow field, then its value is parsed as a non-negative integer and is used as
+the field id for the corresponding Parquet field.</p>
+<p>On the reader side, Arrow will convert such a field id to a metadata key named
+<code class="docutils literal notranslate"><span class="pre">PARQUET:field_id</span></code> on the corresponding Arrow field.</p>
+</section>
+<section id="serialization-details">
+<h5>Serialization details<a class="headerlink" href="#serialization-details" title="Permalink to this heading">#</a></h5>
+<p>The Arrow schema is serialized as a <a class="reference internal" href="../format/Columnar.html#format-ipc"><span class="std std-ref">Arrow IPC</span></a> schema message,
+then base64-encoded and stored under the <code class="docutils literal notranslate"><span class="pre">ARROW:schema</span></code> metadata key in
+the Parquet file metadata.</p>
+</section>
+</section>
+<section id="limitations">
+<h4>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">#</a></h4>
+<p>Writing or reading back FixedSizedList data with null entries is not supported.</p>
+</section>
+</section>
+<section id="encryption">
+<h3>Encryption<a class="headerlink" href="#encryption" title="Permalink to this heading">#</a></h3>
+<p>Parquet C++ implements all features specified in the
+<a class="reference external" href="https://github.com/apache/parquet-format/blob/master/Encryption.md">encryption specification</a>,
+except for encryption of column index and bloom filter modules.</p>
+<p>More specifically, Parquet C++ supports:</p>
+<ul class="simple">
+<li><p>AES_GCM_V1 and AES_GCM_CTR_V1 encryption algorithms.</p></li>
+<li><p>AAD suffix for Footer, ColumnMetaData, Data Page, Dictionary Page,
+Data PageHeader, Dictionary PageHeader module types. Other module types
+(ColumnIndex, OffsetIndex, BloomFilter Header, BloomFilter Bitset) are not
+supported.</p></li>
+<li><p>EncryptionWithFooterKey and EncryptionWithColumnKey modes.</p></li>
+<li><p>Encrypted Footer and Plaintext Footer modes.</p></li>
+</ul>
+<section id="configuration">
+<h4>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading">#</a></h4>
+<p>Parquet encryption uses a <code class="docutils literal notranslate"><span class="pre">parquet::encryption::CryptoFactory</span></code> that has access to a
+Key Management System (KMS), which stores actual encryption keys, referenced by key ids.
+The Parquet encryption configuration only uses key ids, no actual keys.</p>
+<p>Parquet metadata encryption is configured via <code class="docutils literal notranslate"><span class="pre">parquet::encryption::EncryptionConfiguration</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Set write options with encryption configuration.</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">encryption_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">encryption</span><span class="o">::</span><span class="n">EncryptionConfiguration</span><span class="o">&gt;</span><span class="p">(</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="s">&quot;footerKeyId&quot;</span><span class="p">));</span>
+</pre></div>
+</div>
+<p>If <code class="docutils literal notranslate"><span class="pre">encryption_config-&gt;uniform_encryption</span></code> is set to <code class="docutils literal notranslate"><span class="pre">true</span></code>, then all columns are
+encrypted with the same key as the Parquet metadata. Otherwise, individual
+columns are encrypted with individual keys as configured via
+<code class="docutils literal notranslate"><span class="pre">encryption_config-&gt;column_keys</span></code>. This field expects a string of the format
+<code class="docutils literal notranslate"><span class="pre">&quot;columnKeyID1:colName1,colName2;columnKeyID3:colName3...&quot;</span></code>.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Set write options with encryption configuration.</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">encryption_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">encryption</span><span class="o">::</span><span class="n">EncryptionConfiguration</span><span class="o">&gt;</span><span class="p">(</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="s">&quot;footerKeyId&quot;</span><span class="p">));</span>
+<span class="hll"><span class="n">encryption_config</span><span class="o">-&gt;</span><span class="n">column_keys</span><span class="w"> </span><span class="o">=</span>
+</span><span class="hll"><span class="w">    </span><span class="s">&quot;columnKeyId: i, s.a, s.b, m.key_value.key, m.key_value.value, l.list.element&quot;</span><span class="p">;</span>
+</span></pre></div>
+</div>
+<p>See the full <a class="reference external" href="examples/parquet_column_encryption.html">Parquet column encryption example</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Encrypting columns that have nested fields (struct, map or list data types)
+requires column keys for the inner fields, not the outer column itself.
+Configuring a column key for the outer column causes
+this error (here the column name is <code class="docutils literal notranslate"><span class="pre">col</span></code>):</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="nl">OSError</span><span class="p">:</span><span class="w"> </span><span class="n">Encrypted</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="n">col</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="n">in</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="n">schema</span>
+</pre></div>
+</div>
+<p>Conventionally, the key and value fields of a map column <code class="docutils literal notranslate"><span class="pre">m</span></code> have the names
+<code class="docutils literal notranslate"><span class="pre">m.key_value.key</span></code> and  <code class="docutils literal notranslate"><span class="pre">m.key_value.value</span></code>, respectively. The inner field of a
+list column <code class="docutils literal notranslate"><span class="pre">l</span></code> has the name <code class="docutils literal notranslate"><span class="pre">l.list.element</span></code>. An inner field <code class="docutils literal notranslate"><span class="pre">f</span></code> of a struct column <code class="docutils literal notranslate"><span class="pre">s</span></code> has
+the name <code class="docutils literal notranslate"><span class="pre">s.f</span></code>.</p>
+</div>
+</section>
+</section>
+<section id="miscellaneous">
+<h3>Miscellaneous<a class="headerlink" href="#miscellaneous" title="Permalink to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>Reading</p></th>
+<th class="head"><p>Writing</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Column Index</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Offset Index</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td><p>(1)</p></td>
+</tr>
+<tr class="row-even"><td><p>Bloom Filter</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td><p>(2)</p></td>
+</tr>
+<tr class="row-odd"><td><p>CRC checksums</p></td>
+<td><p>✓</p></td>
+<td><p>✓</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul class="simple">
+<li><p>(1) Access to the Column and Offset Index structures is provided, but
+data read APIs do not currently make any use of them.</p></li>
+<li><p>(2) APIs are provided for creating, serializing and deserializing Bloom
+Filters, but they are not integrated into data read APIs.</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="orc.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Reading and Writing ORC files</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="csv.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Reading and Writing CSV files</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-parquet-files">Reading Parquet files</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#filereader">FileReader</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#performance-and-memory-efficiency">Performance and Memory Efficiency</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#streamreader">StreamReader</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-parquet-files">Writing Parquet files</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#writetable">WriteTable</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#streamwriter">StreamWriter</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#writer-properties">Writer properties</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supported-parquet-features">Supported Parquet features</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#page-types">Page types</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#compression">Compression</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#encodings">Encodings</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#types">Types</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#physical-types">Physical types</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#logical-types">Logical types</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#converted-types">Converted types</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#special-cases">Special cases</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#roundtripping-arrow-types-and-schema">Roundtripping Arrow types and schema</a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#parquet-field-id">Parquet field id</a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#serialization-details">Serialization details</a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#limitations">Limitations</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#encryption">Encryption</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration">Configuration</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#miscellaneous">Miscellaneous</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/apache/arrow/edit/main/docs/source/cpp/parquet.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2016-2025 Apache Software Foundation.
+Apache Arrow, Arrow, Apache, the Apache feather logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.2.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
