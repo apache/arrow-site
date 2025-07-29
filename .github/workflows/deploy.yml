@@ -16,17 +16,20 @@
 # under the License.
 
 name: Deploy
+
 on:
   push:
     branches:
-      - main
+      - "**"
+      - "!dependabot/**"
   pull_request:
-    branches:
-      - "*"
+
 jobs:
-  deploy:
-    name: Deploy
+  build:
+    name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout git repository
         uses: actions/checkout@v4
@@ -40,101 +43,110 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "npm"
       - name: Configure for production
+        if: |
+          github.repository == 'apache/arrow-site'
         run: |
           echo "JEKYLL_BASE_URL=" >> ${GITHUB_ENV}
           echo "ORIGIN=${{ github.repository }}" >> ${GITHUB_ENV}
-          echo "TARGET_BRANCH=asf-site" >> ${GITHUB_ENV}
           echo >> _extra_config.yml
+      - name: Configure for fork
         if: |
-          github.event_name == 'push' &&
-            github.repository == 'apache/arrow-site'
-      - name: Configure for GitHub Pages on push to main branch
+          github.repository != 'apache/arrow-site'
         run: |
           owner=$(jq --raw-output .repository.owner.login ${GITHUB_EVENT_PATH})
           repository=$(jq --raw-output .repository.name ${GITHUB_EVENT_PATH})
           echo "JEKYLL_BASE_URL=/${repository}" >> ${GITHUB_ENV}
           echo "ORIGIN=${owner}/${repository}" >> ${GITHUB_ENV}
-          echo "TARGET_BRANCH=gh-pages" >> ${GITHUB_ENV}
           # "url:" is for the opengraph tags, and it can't be relative
           echo "url: https://${owner}.github.io/${repository}" >> _extra_config.yml
-        if: |
-          github.event_name == 'push' &&
-            github.repository != 'apache/arrow-site'
-      - name: Configure for GitHub Pages on pull request
-        run: |
-          owner=$(jq --raw-output .pull_request.head.user.login ${GITHUB_EVENT_PATH})
-          repository=$(jq --raw-output .pull_request.head.repo.name ${GITHUB_EVENT_PATH})
-          echo "JEKYLL_BASE_URL=/${repository}" >> ${GITHUB_ENV}
-          echo "ORIGIN=${owner}/${repository}" >> ${GITHUB_ENV}
-          echo "TARGET_BRANCH=gh-pages" >> ${GITHUB_ENV}
-          # "url:" is for the opengraph tags, and it can't be relative
-          echo "url: https://${owner}.github.io/${repository}" >> _extra_config.yml
-        if: |
-          github.event_name == 'pull_request'
       - name: Build
         run: |
           export JEKYLL_DESTINATION=../build
           export JEKYLL_ENV=production
           export JEKYLL_EXTRA_CONFIG=_extra_config.yml
           bundle exec rake generate
-      - name: Deploy
+      - name: Checkout asf-site
+        uses: actions/checkout@v4
+        with:
+          path: asf-site
+          repository: apache/arrow-site
+          ref: asf-site
+      - name: Prepare archive
         run: |
-          git config user.name "$(git log -1 --pretty=format:%an)"
-          git config user.email "$(git log -1 --pretty=format:%ae)"
-          git remote add deploy \
-            https://x-access-token:${GITHUB_TOKEN}@github.com/${ORIGIN}.git
-          git fetch deploy
-          if ! git checkout --track deploy/${TARGET_BRANCH}; then
-            git checkout -b ${TARGET_BRANCH} remotes/origin/asf-site
-          fi
-          if [ "$ORIGIN" != "apache/arrow-site" ]; then
-            # Pull latest asf-site (for docs etc.) if we're not already on it
-            git remote add apache https://github.com/apache/arrow-site.git
-            git fetch apache
-            git reset --hard apache/asf-site
-            PUSH_ARGS="-f"
-          fi
+          pushd asf-site
           rsync \
             -a \
             --delete \
-            --exclude '/.git/' \
-            --exclude '/ballista/' \
             --exclude '/docs/' \
-            ../build/ \
+            ../../build/ \
             ./
-          touch .nojekyll
+          popd
+          tar czf asf-site.tar.gz asf-site
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: asf-site
+          path: |
+            asf-site.tar.gz
+      - name: Upload pages
+        if: |
+          github.repository != 'apache/arrow-site'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: asf-site/
+
+  deploy-production:
+    name: Deploy on production
+    if: >-
+      github.event_name == 'push' &&
+      github.repository == 'apache/arrow-site' &&
+      github.ref_name == 'main'
+    needs: build
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout asf-site
+        uses: actions/checkout@v4
+        with:
+          path: asf-site
+          ref: asf-site
+      - name: Download
+        uses: actions/download-artifact@v4
+        with:
+          name: asf-site
+      - name: Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mv asf-site/.git ./
+          rm -rf asf-site
+          tar xf asf-site.tar.gz
+          mv .git asf-site/
+          cd asf-site
           if [ "$(git status --porcelain)" != "" ]; then
             # There are changes to the built site
             git add --all
-            git commit -m "Updating built site (build ${GITHUB_SHA})"
-            git push ${PUSH_ARGS} deploy ${TARGET_BRANCH}
+            git commit -m "Updating built site"
+            git push
           else
             echo "No changes to the built site"
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: |
-          github.event_name == 'push' ||
-            (github.event_name == 'pull_request' &&
-              github.repository == github.event.pull_request.head.repo.full_name)
-      - name: Comment GitHub Pages URL
-        uses: actions/github-script@v7.0.1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const payload = context.payload;
-            const base_repo = payload.pull_request.base.repo;
-            const head = payload.pull_request.head;
-            const head_repo = head.repo;
-            const github_pages_url =
-              `https://${head_repo.owner.login}.github.io/${head_repo.name}/`;
-            const body = `${github_pages_url}\n${head.sha}`;
-            github.rest.issues.createComment({
-              "owner": base_repo.owner.login,
-              "repo": base_repo.name,
-              "issue_number": payload.number,
-              "body": body
-            });
-        if: |
-          github.event_name == 'pull_request' &&
-            github.repository == github.event.pull_request.head.repo.full_name
+
+  deploy-fork:
+    name: Deploy on fork
+    if: >-
+      github.event_name == 'push' &&
+      github.repository != 'apache/arrow-site'
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

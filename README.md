@@ -76,22 +76,24 @@ Actions.
 When implementing changes to the website on a fork, the GitHub Actions
 workflow behaves differently.
 
-On a commit to the `main` branch, the rendered static site will be
-published to a branch named `gh-pages` (rather than `asf-site`). If it doesn't
-already exist, a `gh-pages` branch will be automatically created by the
-GitHub Actions workflow when it succeeds.
+On a commit to all branches, the rendered static site will be
+published to GitHub Pages using GitHub Actions. The latest commit is
+only visible because all publications use the same output location:
+https://${YOUR_GITHUB_ACCOUNT}.github.io/arrow-site/
 
-The **gh**-**p**ages branch is intended to be used with **G**it**H**ub **P**ages.
-Deploying changes on the `gh-pages` branch to GitHub Pages is a useful way to
-preview changes to the website. It can also be a helpful way to share changes
-that are still in progress with others, since they can easily view them
-by navigating to the GitHub Pages URL in their web browser.
+You need to configure your fork repository to use this feature:
 
-For the changes on the `gh-pages` branch to be deployed to GitHub Pages,
-the *Source* branch for GitHub Pages deployment must be set to `gh-pages`
-in the repository Settings of your fork (by default, the Source branch
-should be set to `asf-site`). Instructions on how to configure
-the Source branch can be found in the [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-from-a-branch).
+1. Enable GitHub Pages on your fork:
+   1. Open https://github.com/${YOUR_GITHUB_ACCOUNT}/arrow-site/settings/pages
+   2. Select "GitHub Actions" as "Source"
+2. Accept publishing GitHub Pages from all branches on your fork:
+   1. Open https://github.com/${YOUR_GITHUB_ACCOUNT}/arrow-site/settings/environments
+   2. Select the "github-pages" environment
+   3. Change the default "Deployment branches and tags" rule:
+      1. Press the "Edit" button
+      2. Change the "Name pattern" to `*` from `main` or `gh-pages`
+
+See also the [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-with-a-custom-github-actions-workflow).
 
 FYI: We can also generate the site for https://arrow.apache.org/
 to `_site/` locally by the following command line:
