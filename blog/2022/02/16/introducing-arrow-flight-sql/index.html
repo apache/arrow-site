@@ -265,14 +265,33 @@
 </p>
 
 
-        <!-- raw HTML omitted -->
+        <!--
+
+-->
 <p>We would like to introduce Flight SQL, a new client-server protocol developed by the Apache Arrow community for interacting with SQL databases that makes use of the Arrow in-memory columnar format and the Flight RPC framework.</p>
 <p>Flight SQL aims to provide broadly similar functionality to existing APIs like JDBC and ODBC, including executing queries; creating prepared statements; and fetching metadata about the supported SQL dialect, available types, defined tables, and so on.
 By building on Apache Arrow, however, Flight SQL makes it easy for clients to talk to Arrow-native databases without converting data.
 And by using <a href="/blog/2019/10/13/introducing-arrow-flight/">Flight</a>, it provides an efficient implementation of a wire format that supports features like encryption and authentication out of the box, while allowing for further optimizations like parallel data access.</p>
 <p>While it can be directly used for database access, it is not a direct replacement for JDBC/ODBC. Instead, Flight SQL serves as a concrete wire protocol/driver implementation that can support a JDBC/ODBC driver and reduces implementation burden on databases.</p>
-<!-- raw HTML omitted -->
-<!-- raw HTML omitted -->
+<!-- mermaidjs:
+
+graph LR
+    JDBC[JDBC]
+    ODBC
+    FlightSQL[Flight SQL<br>libraries]
+    ANA[Arrow-native app]
+    DB[(Database with<br>Flight SQL endpoint)]
+
+    JDBC --&gt; FlightSQL
+    ODBC --&gt; FlightSQL
+    ANA --&gt; FlightSQL
+
+    FlightSQL --&gt;|Flight RPC| DB
+
+-->
+<div align="center">
+<img src="/img/20220216-flight-sql-jdbc-odbc.svg" alt="Illustration of where Flight SQL sits in the stack. JDBC and ODBC drivers can wrap Flight SQL, or an Arrow-native application can directly use the Flight SQL libraries. Flight SQL in turn talks over Arrow Flight to a database exposing a Flight SQL endpoint." width="90%" class="img-responsive">
+</div>
 <h2>Motivation</h2>
 <p>While standards like <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jdbc/" target="_blank" rel="noopener">JDBC</a> and <a href="https://docs.microsoft.com/en-us/sql/odbc/reference/odbc-overview?view=sql-server-ver15" target="_blank" rel="noopener">ODBC</a> have served users well for decades, they fall short for databases and clients which wish to use Apache Arrow or columnar data in general.
 Row-based APIs like JDBC or <a href="https://www.python.org/dev/peps/pep-0249/" target="_blank" rel="noopener">PEP 249</a> require transposing data in this case, and for a database which is itself columnar, this means that data has to be transposed twice—once to present it in rows for the API, and once to get it back into columns for the consumer.
@@ -321,14 +340,45 @@ The full <a href="https://github.com/apache/arrow/blob/release-7.0.0/format/Flig
 <li>CommandPreparedStatementUpdate: execute a prepared statement that updates data.</li>
 </ul>
 <p>For example, to list all tables:</p>
-<!-- raw HTML omitted -->
-<!-- raw HTML omitted -->
+<!-- mermaidjs:
+
+sequenceDiagram
+    Client->>Server: GetFlightInfo(CommandGetTables)
+    Server->>Client: FlightInfo{..., Ticket, ...}
+    Client->>Server: DoGet(Ticket)
+    Server->>Client: list of tables as Arrow data
+
+-->
+<div align="center">
+<img src="/img/20220216-flight-sql-gettables.svg" alt="Sequence diagram showing how to use CommandGetTables. First, the client calls the GetFlightInfo RPC method with a serialized CommandGetTables message as the argument. The server returns a FlightInfo message containing a Ticket message. The client then calls the DoGet RPC method with the Ticket as the argument, and gets back a stream of Arrow record batches containing the tables in the database." height="363" class="img-responsive">
+</div>
 <p>To execute a query:</p>
-<!-- raw HTML omitted -->
-<!-- raw HTML omitted -->
+<!-- mermaidjs:
+
+sequenceDiagram
+    Client->>Server: GetFlightInfo(CommandStatementQuery)
+    Server->>Client: FlightInfo{..., Ticket, ...}
+    Client->>Server: DoGet(Ticket)
+    Server->>Client: query results as Arrow data
+
+-->
+<div align="center">
+<img src="/img/20220216-flight-sql-query.svg" alt="Sequence diagram showing how to use CommandStatementQuery. First, the client calls the GetFlightInfo RPC method with a serialized CommandStatementQuery message as the argument. This message contains the SQL query. The server returns a FlightInfo message containing a Ticket message. The client then calls the DoGet RPC method with the Ticket as the argument, and gets back a stream of Arrow record batches containing the query results." height="363" class="img-responsive">
+</div>
 <p>To create and execute a prepared statement to insert rows:</p>
-<!-- raw HTML omitted -->
-<!-- raw HTML omitted -->
+<!-- mermaidjs:
+
+sequenceDiagram
+    Client->>Server: DoAction(ActionCreatePreparedStatementRequest)
+    Server->>Client: ActionCreatePreparedStatementResult
+    Client->>Server: DoPut(CommandPreparedStatementUpdate)
+    Client--&gt;>Server: Arrow data representing parameter values
+    Server->>Client: DoPutUpdateResult
+    Client->>Server: DoAction(ActionClosePreparedStatementRequest)
+-->
+<div align="center">
+<img src="/img/20220216-flight-sql-prepared.svg" alt="Sequence diagram showing how to use ActionCreatePreparedStatementResult. First, the client calls the DoAction RPC method with a serialized ActionCreatePreparedStatementResult message as the argument. This message contains the SQL query. The server returns a serialized ActionCreatePreparedStatementResult message containing an opaque handle for the prepared statement. The client then calls the DoPut RPC method with a CommandPreparedStatementUpdate message, containing the opaque handle, as the argument, and uploads a stream of Arrow record batches containing query parameters. The server responds with a serialized DoPutUpdateResult message containing the number of affected rows. Finally, the client calls DoAction again with ActionClosePreparedStatementRequest to clean up the prepared statement." height="459" class="img-responsive">
+</div>
 <h2>Getting Started</h2>
 <p>Note that while Flight SQL is shipping as part of Apache Arrow 7.0.0, it is still under development, and detailed documentation is forthcoming.
 However, implementations are already available in C++ and Java, which provide a low-level client that can be used as well as a server skeleton that can be implemented.</p>

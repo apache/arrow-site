@@ -273,15 +273,19 @@
 </p>
 
 
-        <!-- raw HTML omitted -->
+        <!--
+
+-->
 <p><em>This is the first in a series of posts that aims to demystify the use of Arrow as a data interchange format for databases and query engines.</em></p>
-<!-- raw HTML omitted -->
+<!--
+
+-->
 <p>Posts in this series:</p>
 <ol>
 <li><a href="/blog/2025/01/10/arrow-result-transfer/">How the Apache Arrow Format Accelerates Query Result Transfer</a></li>
 <li><a href="/blog/2025/02/28/data-wants-to-be-free/">Data Wants to Be Free: Fast Data Exchange with Apache Arrow</a></li>
 </ol>
-<!-- raw HTML omitted -->
+<img src="/img/arrow-result-transfer/part-1-banner.png" width="100%" class="img-responsive" alt="" aria-hidden="true">
 <p>“Why is this taking so long?”</p>
 <p>This is a question that data practitioners often ponder while waiting for query results. It’s a question with many possible answers. Maybe your data source is poorly partitioned. Maybe your SaaS data warehouse is undersized. Maybe the query optimizer failed to translate your SQL statement into an efficient execution plan.</p>
 <p>But surprisingly often, the answer is that you are using an inefficient protocol to transfer query results to the client. In a <a href="https://www.vldb.org/pvldb/vol10/p1022-muehleisen.pdf" target="_blank" rel="noopener">2017 paper</a>, Mark Raasveldt and Hannes Mühleisen observed that query result transfer time often dominates query execution time, especially for larger results. However, the bottleneck is not where you might expect.</p>
@@ -298,7 +302,10 @@
 <p>The Apache Arrow open source project defines a <a href="https://arrow.apache.org/docs/format/Columnar.html">data format</a> that is designed to speed up—and in many cases eliminate—ser/de in query result transfer. Since its creation in 2016, the Arrow format and the multi-language toolbox built around it have gained widespread use, but the technical details of how Arrow is able to slash ser/de overheads remain poorly understood. To help address this, we outline five key attributes of the Arrow format that make this possible.</p>
 <h3>1. The Arrow format is columnar.</h3>
 <p>Columnar (column-oriented) data formats hold the values for each column in contiguous blocks of memory. This is in contrast to row-oriented data formats, which hold the values for each row in contiguous blocks of memory.</p>
-<!-- raw HTML omitted -->
+<figure style="text-align: center;">
+  <img src="/img/arrow-result-transfer/part-1-figure-1-row-vs-column-layout.png" width="100%" class="img-responsive" alt="Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three columns and five rows.">
+  <figcaption>Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three columns and five rows.</figcaption>
+</figure>
 <p>High-performance analytic databases, data warehouses, query engines, and storage systems have converged on columnar architecture because it speeds up the most common types of analytic queries. Examples of modern columnar query systems include Amazon Redshift, Apache DataFusion, ClickHouse, Databricks Photon Engine, DuckDB, Google BigQuery, Microsoft Azure Synapse Analytics, OpenText Analytics Database (Vertica), Snowflake, and Voltron Data Theseus.</p>
 <p>Likewise, many destinations for analytic query results (such as business intelligence tools, data application platforms, dataframe libraries, and machine learning platforms) use columnar architecture. Examples of columnar business intelligence tools include Amazon QuickSight, Domo, GoodData, Power BI, Qlik Sense, Spotfire, and Tableau. Examples of columnar dataframe libraries include cuDF, pandas, and Polars.</p>
 <p>So it is increasingly common for both the source format and the target format of a query result to be columnar formats. The most efficient way to transfer data between a columnar source and a columnar target is to use a columnar transfer format. This eliminates the need for a time-consuming transpose of the data from columns to rows at the source during the serialization step and another time-consuming transpose of the data from rows to columns at the destination during the deserialization step.</p>
@@ -318,7 +325,10 @@
 <p>A streamable data format is one that can be processed sequentially, one chunk at a time, without waiting for the full dataset. When data is being transmitted in a streamable format, the receiving system can begin processing it as soon as the first chunk arrives. This can speed up data transfer in several ways: transfer time can overlap with processing time; the receiving system can use memory more efficiently; and multiple streams can be transferred in parallel, speeding up transmission, deserialization, and processing.</p>
 <p>CSV is an example of a streamable data format, because the column names (if included) are in a header at the top of the file, and the lines in the file can be processed sequentially. Parquet and ORC are examples of data formats that do not enable streaming, because the schema and other metadata, which are required to process the data, are held in a footer at the bottom of the file, making it necessary to download the entire file (or seek to the end of the file and download the footer separately) before any processing can begin.<sup class="footnote-ref"><a href="#fn4" id="fnref4">4</a></sup></p>
 <p>Arrow is a streamable data format. A dataset can be represented in Arrow as a sequence of record batches that all have the same schema. Arrow defines a <a href="https://arrow.apache.org/docs/format/Columnar.html#ipc-streaming-format">streaming format</a> consisting of the schema followed by one or more record batches. A system receiving an Arrow stream can process the record batches sequentially as they arrive.</p>
-<!-- raw HTML omitted -->
+<figure style="text-align: center;">
+  <img src="/img/arrow-result-transfer/part-1-figure-2-arrow-stream.png" width="100%" class="img-responsive" alt="Figure 2: An illustration of an Arrow stream transmitting data from a table with three columns. The first record batch contains the values for the first three rows, the second record batch contains the values for the next three rows, and so on. Actual Arrow record batches might contain thousands to millions of rows.">
+  <figcaption>Figure 2: An illustration of an Arrow stream transmitting data from a table with three columns. The first record batch contains the values for the first three rows, the second record batch contains the values for the next three rows, and so on. Actual Arrow record batches might contain thousands to millions of rows.</figcaption>
+</figure>
 <h3>5. The Arrow format is universal.</h3>
 <p>Arrow has emerged as a de facto standard format for working with tabular data in memory. The Arrow format is a language-independent open standard. Libraries are available for working with Arrow data in languages including C, C++, C#, Go, Java, JavaScript, Julia, MATLAB, Python, R, Ruby, Rust, and Swift. Applications developed in virtually any mainstream language can add support for sending or receiving data in Arrow format. Data does not need to pass through a specific language runtime, like it must with some database connectivity APIs, including JDBC.</p>
 <p>Arrow’s universality allows it to address a fundamental problem in speeding up real-world data systems: Performance improvements are inherently constrained by a system’s bottlenecks. This problem is known as <a href="https://www.geeksforgeeks.org/computer-organization-amdahls-law-and-its-proof/" target="_blank" rel="noopener">Amdahl’s law</a>. In real-world data pipelines, query results often flow through multiple stages, incurring ser/de overheads at each stage. If, for example, your data pipeline has five stages and you eliminate ser/de overheads in four of them, your system might be no faster than before because ser/de in the one remaining stage will bottleneck the full pipeline.</p>
