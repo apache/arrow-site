@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Releases
+date: "2025-07-17"
 permalink: /release/index.html
 ---
 <!--
