@@ -1,17 +1,18 @@
 ---
 layout: post
-title: "Data Wants to Be Free: Fast Data Exchange with Apache Arrow"
+lang: ja-JP
+title: "データは自由になりたい：Apache Arrowで高速データ交換"
 description: ""
 date: "2025-02-28 00:00:00"
-author: David Li, Ian Cook, Matt Topol
+author: David Li, Ian Cook, Matt Topol, Sutou Kouhei [訳], David Li [訳]
 categories: [application]
 image:
   path: /img/arrow-result-transfer/part-1-share-image.png
   height: 1200
   width: 705
 translations:
-  - language: 日本語
-    post_id: 2025-03-10-data-wants-to-be-free-japanese
+  - language: 原文（English）
+    post_id: 2025-02-28-data-wants-to-be-free
 ---
 
 <!--
@@ -52,49 +53,40 @@ limitations under the License.
 }
 </style>
 
-_This is the second in a series of posts that aims to demystify the use of
-Arrow as a data interchange format for databases and query engines._
+_この記事はデータベースとクエリーエンジン間のデータ交換フォーマットとしてなぜArrowが使われているのかという謎を解くシリーズの2記事目です。_
 
-{% include arrow_result_transfer_series.md %}
+{% include arrow-result-transfer-series-japanese.md %}
 
-As data practitioners, we often find our data “held hostage”. Instead of being
-able to use data as soon as we get it, we have to spend time—time to parse and
-clean up inefficient and messy CSV files, time to wait for an outdated query
-engine to struggle with a few gigabytes of data, and time to wait for the data
-to make it across a socket. It’s that last point we’ll focus on today. In an
-age of multi-gigabit networks, why is it even a problem in the first place?
-And make no mistake, it is a problem—research by Mark Raasveldt and Hannes
-Mühleisen in their [2017 paper](https://doi.org/10.14778/3115404.3115408)[^freepdf]
-found that some systems take over **ten minutes** to transfer a dataset that
-should only take ten *seconds*[^ten].
+データ技術者として、データが「人質に取られている」とよく感じます。
+データをもらってもすぐに使うことはできません。使えるようになるまでに時間がかかります。
+非効率的でやっかいなCSVファイルを整理する時間だったり、
+型落ちのクエリエンジンが数GBのデータに苦労するのを待つ時間だったり、
+データがソケットを介して受信するのを待つ時間をだったり。
+今回はこの三番目の問題に注目します。
+マルチギガビットネットワークの時代に、そもそもこの問題がまだ起こっているのはどうしてでしょうか？
+間違いなく、この問題はまだ起こっています。
+[Mark RaasveldtとHannes Mühleisenの2017年の論文](https://doi.org/10.14778/3115404.3115408)[^freepdf]では、いくつかシステムは10秒しかかからないはずのデータセットの送受信に**10分**以上かかっていると指摘しています[^ten]。
 
-[^freepdf]: The paper is freely available from [VLDB](https://www.vldb.org/pvldb/vol10/p1022-muehleisen.pdf).
-[^ten]: Figure 1 in the paper shows Hive and MongoDB taking over 600 seconds vs the baseline of 10 seconds for netcat to transfer the CSV file.  Of course, that means the comparison is not entirely fair since the CSV file is not being parsed, but it gives an idea of the magnitudes involved.
+[^freepdf]: [VLDB](https://www.vldb.org/pvldb/vol10/p1022-muehleisen.pdf)から論文を無料でダウンロードできます。
+[^ten]: 論文のFigure 1では、ベースラインのnetcatは10秒でCSVファイルを送信し、HiveとMongoDBは600秒以上かかっていること示しています。もちろん、CSVは解析されていないので、この比較は完全に平等ではありません。しかし、問題の規模を把握できます。
 
-Why are we waiting 60 times as long as we need to? [As we've argued before,
-serialization overheads plague our
-tools](https://arrow.apache.org/blog/2025/01/10/arrow-result-transfer/)—and
-Arrow can help us here. So let’s make that more concrete: we’ll compare how
-PostgreSQL and Arrow encode the same data to illustrate the impact of the data
-serialization format. Then we’ll tour various ways to build protocols with
-Arrow, like Arrow HTTP and Arrow Flight, and how you might use each of them.
+どうして必要な時間より60倍以上も長い時間がかかるのでしょうか？
+[この前に論じていた通り、ツールはデータシリアライズのオーバーヘッドに悩まされています。]({% link _posts/2025-01-10-arrow-result-transfer.md %})
+しかし、この問題はArrowで解消できます。
+それではもっと具体的な話をしましょう。データシリアライズフォーマットの影響を示すために、PostgreSQLとArrowが同じデータをどうやってエンコードするのかを比較しましょう。
+その後、Arrow HTTPやArrow FlightなどのArrowベースのプロトコルを作る色々な方法を説明し、各方法の使い方も説明します。
 
-## PostgreSQL vs Arrow: Data Serialization
+## PostgreSQL対Arrow：データシリアライズ
 
-Let’s compare the [PostgreSQL binary
-format](https://www.postgresql.org/docs/current/sql-copy.html#id-1.9.3.55.9.4)
-and [Arrow
-IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc)
-on the same dataset, and show how Arrow (with all the benefit of hindsight)
-makes better trade-offs than its predecessors.
+[PostgreSQLのバイナリーフォーマット](https://www.postgresql.jp/document/current/html/sql-copy.html#id-1.9.3.55.9.4)と[Arrow IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc)を同じデータセットに比較します。
+この比較で、Arrowは（後知恵のおかげで）前任者より適切のトレードオフを行うのを証明します。
 
-When you execute a query with PostgreSQL, the client/driver uses the
-PostgreSQL wire protocol to send the query and get back the result.  Inside
-that protocol, the result set is encoded with the PostgreSQL binary format[^textbinary].
+PostgreSQLでクエリを実行すると、クライアント（すなわちドライバ）はPostgreSQLの通信プロトコルでクエリを送り、結果を受けます。
+そのプロトコルの内に、結果セットはPostgreSQLのバイナリーフォーマットでエンコードされています[^textbinary]。
 
-[^textbinary]: There is a text format too, and that is often the default used by many clients.  We won't discuss it here.
+[^textbinary]: テキストフォーマットもあります。クライアントはそのフォーマットをほとんど使っています。この記事でテキストフォーマットを論じません。
 
-First, we’ll create a table and fill it with data:
+まず、テーブルを定義し、テーブルにデータを入力します。
 
 ```
 postgres=# CREATE TABLE demo (id BIGINT, val TEXT, val2 BIGINT);
@@ -103,20 +95,20 @@ postgres=# INSERT INTO demo VALUES (1, 'foo', 64), (2, 'a longer string', 128), 
 INSERT 0 3
 ```
 
-We can then use the COPY command to dump the raw binary data from PostgreSQL into a file:
+それでCOPYコマンドでPostgreSQLから生バイナリーデータをファイルにダンプします。
 
 ```
 postgres=# COPY demo TO '/tmp/demo.bin' WITH BINARY;
 COPY 3
 ```
 
-Then we can annotate the actual bytes of the data based on the [documentation](https://www.postgresql.org/docs/current/sql-copy.html#id-1.9.3.55.9.4):
+そして[文書](https://www.postgresql.jp/document/current/html/sql-copy.html#id-1.9.3.55.9.4)の通り、データの実際のバイトに注釈を付けます。
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-header">50 47 43 4f 50 59 0a ff  PGCOPY..</span>  <span class="a-header">COPY signature, flags,</span>
-00000008: <span class="a-header">0d 0a 00 00 00 00 00 00  ........</span>  <span class="a-header">and extension</span>
-00000010: <span class="a-header">00 00 00</span> <span class="a-padding">00 03</span> <span class="a-length">00 00 00</span>  <span class="a-header">...</span><span class="a-padding">..</span><span class="a-length">...</span>  <span class="a-padding">Values in row</span>
-00000018: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>  <span class="a-length">Length of value</span>
-00000020: <span class="a-data">01</span> <span class="a-length">00 00 00 03</span> <span class="a-data">66 6f 6f</span>  <span class="a-data">.</span><span class="a-length">....</span><span class="a-data">foo</span>  <span class="a-data">Data</span>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-header">50 47 43 4f 50 59 0a ff  PGCOPY..</span>  <span class="a-header">COPYの署名、フラグフィールド、</span>
+00000008: <span class="a-header">0d 0a 00 00 00 00 00 00  ........</span>  <span class="a-header">ヘッダ拡張領域長</span>
+00000010: <span class="a-header">00 00 00</span> <span class="a-padding">00 03</span> <span class="a-length">00 00 00</span>  <span class="a-header">...</span><span class="a-padding">..</span><span class="a-length">...</span>  <span class="a-padding">次の行の値の数</span>
+00000018: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>  <span class="a-length">次の値長</span>
+00000020: <span class="a-data">01</span> <span class="a-length">00 00 00 03</span> <span class="a-data">66 6f 6f</span>  <span class="a-data">.</span><span class="a-length">....</span><span class="a-data">foo</span>  <span class="a-data">値</span>
 00000028: <span class="a-length">00 00 00 08</span> <span class="a-data">00 00 00 00</span>  <span class="a-length">....</span><span class="a-data">....</span>
 00000030: <span class="a-data">00 00 00 40</span> <span class="a-padding">00 03</span> <span class="a-length">00 00</span>  <span class="a-data">...@</span><span class="a-padding">..</span><span class="a-length">..</span>
 00000038: <span class="a-length">00 08</span> <span class="a-data">00 00 00 00 00 00</span>  <span class="a-length">..</span><span class="a-data">......</span>
@@ -130,17 +122,31 @@ Then we can annotate the actual bytes of the data based on the [documentation](h
 00000078: <span class="a-data">6e 6f 74 68 65 72 20 73  nother s</span>
 00000080: <span class="a-data">74 72 69 6e 67</span> <span class="a-length">00 00 00</span>  <span class="a-data">tring</span><span class="a-length">...</span>
 00000088: <span class="a-length">08</span> <span class="a-data">00 00 00 00 00 00 00</span>  <span class="a-length">.</span><span class="a-data">.......</span>
-00000090: <span class="a-data">0a</span> <span class="a-padding">ff ff</span>                 <span class="a-data">.</span><span class="a-padding">..</span>       <span class="a-padding">End of stream</span></code></pre></div></div>
+00000090: <span class="a-data">0a</span> <span class="a-padding">ff ff</span>                 <span class="a-data">.</span><span class="a-padding">..</span>       <span class="a-padding">ストリームの終わり</span></code></pre></div></div>
 
-Honestly, PostgreSQL’s binary format is quite understandable, and compact at first glance. It's just a series of length-prefixed fields. But a closer look isn’t so favorable. **PostgreSQL has overheads proportional to the number of rows and columns**:
+正直なところ、PostgreSQLのバイナリーフォーマットは一見すると結構わかりやすくてコンパクトです。
+このフォーマットは連続したフィールドだけです。
+各フィールドの前に、値長が置かれています。
+しかし、もっとよく見てみると、問題が明らかになります。
+**PostgreSQLのバイナリーフォーマットはオーバーヘッドが行と列の数に比例します。**
 
-* Every row has a 2 byte prefix for the number of values in the row. *But the data is tabular—we already know this info, and it doesn’t change\!*
-* Every value of every row has a 4 byte prefix for the length of the following data, or \-1 if the value is NULL. *But we know the data types, and those don’t change—plus, values of most types have a fixed, known length\!*
-* All values are big-endian. *But most of our devices are little-endian, so the data has to be converted.*
+* 各行の前に、行内の値の数（2バイト）が置かれています。*しかし、データは表形式ですから、値の数はもうわかっています。それに、値の数は変わりません！*
+* 各行内の値の前に、フィールド長（4バイト）が置かれています。（NULLの場合、−1です。）*しかし、ほとんどのデータ型では値が固定長だし、データ型をわかっているし、データ型は変わらないし、フィールド長は大概もうわかっています！*
+* すべての値はビッグエンディアンです。*しかし、現代の機器はほとんどリトルエンディアンですから、エンディアン交換が必要です。*
 
-For example, a single column of int32 values would have 4 bytes of data and 6 bytes of overhead per row—**60% is “wasted\!”**[^1] The ratio gets a little better with more columns (but not with more rows); in the limit we approach “only” 50% overhead.  And then each of the values has to be converted (even if endian-swapping is trivial).  To PostgreSQL’s credit, its format is at least cheap and easy to parse—[other formats](https://protobuf.dev/programming-guides/encoding/) get fancy with tricks like “varint” encoding which are quite expensive.
+例えば、一つのint32の列の場合に、各行に4バイトのデータと6バイトのオーバーヘッドがあります。
+つまり、**60%は無駄にされています！**[^1]
+列が増えれば増えるほど、オーバーヘッドの比率が減ります。
+（しかし、行が増えればオーバーヘッドが変わりません。）
+極限において、50％オーバーヘッドに近づきます。
+エンディアン交換は高価な操作ではありませんが、それでも必要です。
+もちろん、PostgreSQLは称賛に値するところもあります。
+バイナリーフォーマットは安価で解析しやすいです。
+[他のフォーマット](https://protobuf.dev/programming-guides/encoding/)は「varint」エンコードなどの技術を使っています。
+こういう技術は結構高価です。
 
-How does Arrow compare? We can use [ADBC](https://arrow.apache.org/adbc/current/driver/postgresql.html) to pull the PostgreSQL table into an Arrow table, then annotate it like before:
+Arrowはどうでしょうか？
+[ADBC](https://arrow.apache.org/adbc/current/driver/postgresql.html)でPostgreSQLテーブルを読み込み、そして前の通りにデータに注釈を付けます。
 
 ```console
 >>> import adbc_driver_postgresql.dbapi
@@ -154,28 +160,33 @@ How does Arrow compare? We can use [ADBC](https://arrow.apache.org/adbc/current/
 >>> writer.close()
 ```
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-length">ff ff ff ff d8 00 00 00  ........  IPC message length</span>
-00000008: <span class="a-header">10 00 00 00 00 00 0a 00  ........  IPC schema</span>
-&vellip;         <span class="a-header">(208 bytes)</span>
-000000e0: <span class="a-length">ff ff ff ff f8 00 00 00  ........  IPC message length</span>
-000000e8: <span class="a-header">14 00 00 00 00 00 00 00  ........  IPC record batch</span>
-&vellip;         <span class="a-header">(240 bytes)</span>
-000001e0: <span class="a-data">01 00 00 00 00 00 00 00  ........  Data for column #1</span>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-length">ff ff ff ff d8 00 00 00  ........  IPCメッセージ長</span>
+00000008: <span class="a-header">10 00 00 00 00 00 0a 00  ........  IPCスキーマ</span>
+&vellip;         <span class="a-header">(208バイト)</span>
+000000e0: <span class="a-length">ff ff ff ff f8 00 00 00  ........  IPCメッセージ長</span>
+000000e8: <span class="a-header">14 00 00 00 00 00 00 00  ........  IPCレコードバッチ</span>
+&vellip;         <span class="a-header">(240バイト)</span>
+000001e0: <span class="a-data">01 00 00 00 00 00 00 00  ........  1つ目の列のデータ</span>
 000001e8: <span class="a-data">02 00 00 00 00 00 00 00  ........</span>
 000001f0: <span class="a-data">03 00 00 00 00 00 00 00  ........</span>
-000001f8: <span class="a-length">00 00 00 00 03 00 00 00  ........  String offsets</span>
+000001f8: <span class="a-length">00 00 00 00 03 00 00 00  ........  文字列のオフセット</span>
 00000200: <span class="a-length">12 00 00 00 24 00 00 00  ....$...</span>
-00000208: <span class="a-data">66 6f 6f 61 20 6c 6f 6e  fooa lon  Data for column #2</span>
+00000208: <span class="a-data">66 6f 6f 61 20 6c 6f 6e  fooa lon  2つ目の列のデータ</span>
 00000210: <span class="a-data">67 65 72 20 73 74 72 69  ger stri</span>
 00000218: <span class="a-data">6e 67 79 65 74 20 61 6e  ngyet an</span>
 00000220: <span class="a-data">6f 74 68 65 72 20 73 74  other st</span>
-00000228: <span class="a-data">72 69 6e 67</span> <span class="a-padding">00 00 00 00</span>  <span class="a-data">ring</span><span class="a-padding">....  Alignment padding</span>
-00000230: <span class="a-data">40 00 00 00 00 00 00 00  @.......  Data for column #3</span>
+00000228: <span class="a-data">72 69 6e 67</span> <span class="a-padding">00 00 00 00</span>  <span class="a-data">ring</span><span class="a-padding">....  アラインメントのためのパッディング</span>
+00000230: <span class="a-data">40 00 00 00 00 00 00 00  @.......  3つ目の列のデータ</span>
 00000238: <span class="a-data">80 00 00 00 00 00 00 00  ........</span>
 00000240: <span class="a-data">0a 00 00 00 00 00 00 00  ........</span>
-00000248: <span class="a-length">ff ff ff ff 00 00 00 00  ........  IPC end-of-stream</span></code></pre></div></div>
+00000248: <span class="a-padding">ff ff ff ff 00 00 00 00  ........  IPCストリームの終わり</span></code></pre></div></div>
 
-Arrow looks quite…intimidating…at first glance. There’s a giant header that don’t seem related to our dataset at all, plus mysterious padding that seems to exist solely to take up space. But the important thing is that **the overhead is fixed**. Whether you’re transferring one row or a billion, the overhead doesn’t change. And unlike PostgreSQL, **no per-value parsing is required**.
+一見すると、Arrowは結構わかりにくいです。
+データセットに全然関係なさそうなヘッダーもあるし、
+まるで領域を占有するためにだけそうで謎のパッディングもあるし。
+しかし大事なのは、**オーバーヘッドが固定です**。
+1行でも1億行でも、オーバーヘッドが変わりません。
+それに、PostgreSQLと違って**値ごとの解析は必要ありません**。
 
 Instead of putting lengths of values everywhere, Arrow groups values of the same column (and hence same type) together, so it just needs the length of the buffer[^header].  Overhead isn't added where it isn't otherwise needed.  Strings still have a length per value.  Nullability is instead stored in a bitmap, which is omitted if there aren’t any NULL values (as it is here). Because of that, more rows of data doesn’t increase the overhead; instead, the more data you have, the less you pay.
 
@@ -193,7 +204,7 @@ Even if you really did want to use the PostgreSQL binary format everywhere[^3], 
 
 Now, we don’t mean to pick on PostgreSQL here. Obviously, PostgreSQL is a full-featured database with a storied history, a different set of goals and constraints than Arrow, and many happy users. Arrow isn’t trying to compete in that space. But their domains do intersect. PostgreSQL’s wire protocol has [become a de facto standard](https://datastation.multiprocess.io/blog/2022-02-08-the-world-of-postgresql-wire-compatibility.html), with even brand new products like Google’s AlloyDB using it, and so its design affects many projects[^4]. In fact, AlloyDB is a great example of a shiny new columnar query engine being locked behind a row-oriented client protocol from the 90s. So [Amdahl’s law](https://en.wikipedia.org/wiki/Amdahl's_law) rears its head again—optimizing the “front” and “back” of your data pipeline doesn’t matter when the middle is what's holding you back.
 
-## A quiver of Arrow (projects)
+## <ruby>矢筒<rt>Arrowプロジェクトたち</rt></ruby>
 
 So if Arrow is so great, how can we actually use it to build our own protocols? Luckily, Arrow comes with a variety of building blocks for different situations.
 
@@ -203,7 +214,7 @@ So if Arrow is so great, how can we actually use it to build our own protocols? 
 * [**Arrow Flight SQL**](https://arrow.apache.org/docs/format/FlightSql.html) is a fully defined protocol for accessing relational databases. Think of it as an alternative to the full PostgreSQL wire protocol: it defines how to connect to a database, execute queries, fetch results, view the catalog, and so on. For database developers, Flight SQL provides a fully Arrow-native protocol with clients for several programming languages and drivers for ADBC, JDBC, and ODBC—all of which you don’t have to build yourself.
 * And finally, [**ADBC**](https://arrow.apache.org/docs/format/ADBC.html) actually isn’t a protocol. Instead, it’s an API abstraction layer for working with databases (like JDBC and ODBC—bet you didn’t see that coming), that’s Arrow-native and doesn’t require transposing or converting columnar data back and forth. ADBC gives you a single API to access data from multiple databases, whether they use Flight SQL or something else under the hood, and if a conversion is absolutely necessary, ADBC handles the details so that you don’t have to build out a dozen connectors on your own.
 
-So to summarize:
+要するに、
 
 * If you’re *using* a database or other data system, you want [**ADBC**](https://arrow.apache.org/adbc/).
 * If you’re *building* a database, you want [**Arrow Flight SQL**](https://arrow.apache.org/docs/format/FlightSql.html).
@@ -213,16 +224,21 @@ So to summarize:
 
 ![A flowchart of the decision points.]({{ site.baseurl }}/assets/data_wants_to_be_free/flowchart.png){:class="img-responsive" width="100%"}
 
-## Conclusion
+## まとめ
 
-Existing client protocols can be wasteful. Arrow offers better efficiency and avoids design pitfalls from the past. And Arrow makes it easy to build and consume data APIs with a variety of standards like Arrow IPC, Arrow HTTP, and ADBC. By using Arrow serialization in protocols, everyone benefits from easier, faster, and simpler data access, and we can avoid accidentally holding data captive behind slow and inefficient interfaces.
+既存のクライアントプロトコルは効率が悪いです。
+Arrowの方はより良い効率が可能になり、昔のデザイン上の落とし穴も回避できます。
+それにArrowには色々な標準を使えば、データAPIを簡単に作れます。
+例えば、Arrow IPC、Arrow HTTP、ADBCなどを使えます。
+プロトコルの内にArrowを使えば、皆にデータやりとりをもっと高速で簡単になるメリットがあります。
+そしてデータを低速の悪くて低速のインタフェースに人質に取られないようになります。
 
 ---
 
-[^1]: Of course, it’s not fully wasted, as null/not-null is data as well. But for accounting purposes, we’ll be consistent and call lengths, padding, bitmaps, etc. “overhead”.
+[^1]: もちろん、完全に無駄にされていません。NULLかでないかもデータとされています。しかし一貫しているために長、パッディング、ビットマップなどをオーバーヘッドとして数えます。
 
-[^2]: And if your data really benefits from heavy compression, you can always use something like Apache Parquet, which implements lots of fancy encodings to save space and can still be decoded to Arrow data reasonably quickly.
+[^2]: それに、データAnd if your data really benefits from heavy compression, you can always use something like Apache Parquet, which implements lots of fancy encodings to save space and can still be decoded to Arrow data reasonably quickly.
 
-[^3]: [And people do…](https://datastation.multiprocess.io/blog/2022-02-08-the-world-of-postgresql-wire-compatibility.html)
+[^3]: [そういう人実際にいます…](https://datastation.multiprocess.io/blog/2022-02-08-the-world-of-postgresql-wire-compatibility.html)
 
 [^4]: [We have some experience with the PostgreSQL wire protocol, too.](https://github.com/apache/arrow-adbc/blob/ed18b8b221af23c7b32312411da10f6532eb3488/c/driver/postgresql/copy/reader.h)
