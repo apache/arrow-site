@@ -32,7 +32,7 @@ As a community project, the visual identity guidelines for Apache Arrow attempt 
 - [Usage guidelines](#using-the-logo)
 - [List of logo files](#files)
 
-<a name="design">
+<a name="design"></a>
 
 ## Design of the logo
 
@@ -58,7 +58,7 @@ A good example of when the vertical layout is more appropriate is in the context
 
 <div class="col-8 offset-2 py-1"><img src="{{ site.baseurl }}/img/logo-spacing-hex.png" width="100%"></div>
 
-<a name="variations">
+<a name="variations"></a>
 
 ## Variations of the logo
 
@@ -108,7 +108,7 @@ and the "Apache Arrow" logotype on its own:
 </div>
 </div>
 
-<a name="using-the-logo">
+<a name="using-the-logo"></a>
 
 ## Using the Apache Arrow logos
 
@@ -142,7 +142,7 @@ The image on the right adds extra orange colored chevrons to the dark themed hex
 
 Many other context-appropriate informal variations can be imagined. For example, if Apache Arrow were being used to power a generative art system, the background fill to the logo might not be a solid color, it could be the art itself. Again, the overriding principle is that the visual integrity of the Apache Arrow logo remains intact and the modifications are appropriate to the context in which it is used.
 
-<a name="files">
+<a name="files"></a>
 
 ## List of provided logo files
 
