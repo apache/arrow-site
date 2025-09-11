@@ -32,9 +32,7 @@ questions, and get involved.
 All participation in the Apache Arrow project is governed by the Apache
 Software Foundation's [code of conduct](https://www.apache.org/foundation/policies/conduct.html).
 
-## Questions?
-
-### Mailing lists
+## Mailing Lists
 
 These arrow.apache.org mailing lists are for project discussion:
 
@@ -43,7 +41,7 @@ These arrow.apache.org mailing lists are for project discussion:
   <li> <code>dev@</code> is for discussions about contributing to the project development {% include mailing_list_links.html list="dev" %} </li>
 </ul>
 
-#### Tags
+### Tags
 
 The mailing lists follow the convention of prefixing subjects with one or more
 tags in order to clarify the scope and purpose of messages. For example:
@@ -61,7 +59,7 @@ tags. Depending the topic of your email, tags may include one or more:
 You may also prefix your subject line with `[DISCUSS]` if your email is intended
 to prompt a discussion rather than get an answer to a specific question.
 
-#### Voting
+### Voting
 
 Votes are held periodically on the dev@ mailing list and are indicated by the
 `[VOTE]` prefix. These votes are part of the formal [Apache Software Foundation
@@ -88,7 +86,7 @@ activity is captured in email form for archival purposes.
   <li> <code>github@</code> for all activity on the GitHub repositories {% include mailing_list_links.html list="github" %} </li>
 </ul>
 
-### GitHub
+## GitHub
 
 <p>We use GitHub Issues as a place to report bugs, request new features, and track the queue of development work. For usage questions, our repositories use GitHub Discussions as an alternative to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %}. Discussions are mirrored to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %} and users are welcome to ask usage questions in either location. Maintainers may convert usage type Issues to Discussions as appropriate.</p>
 
@@ -109,7 +107,7 @@ Standards:
 - ADBC: [apache/arrow-adbc](https://github.com/apache/arrow-adbc) ([Issues](https://github.com/apache/arrow-adbc/issues), [Discussions](https://github.com/apache/arrow-adbc/discussions))
 - All Others: [apache/arrow](http://github.com/apache/arrow) ([Issues](http://github.com/apache/arrow/issues), [Discussions](http://github.com/apache/arrow/discussions))
 
-### Stack Overflow
+## Stack Overflow
 
 For questions on how to use Arrow libraries, you may want to use the Stack
 Overflow tag
@@ -118,7 +116,7 @@ addition to the programming language. Some languages and subprojects may have
 their own tags (for example,
 [pyarrow](https://stackoverflow.com/questions/tagged/pyarrow)).
 
-### Meetings
+## Meetings
 
 We host online meetings to provide spaces for synchronous discussions about the Arrow project. These discussions usually focus on topics of interest to developers who are contributing to Arrow, but we welcome users of Arrow to join. Currently there are three series of regularly held meetings:
 
