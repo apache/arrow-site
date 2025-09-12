@@ -151,6 +151,12 @@ We host online meetings to provide spaces for synchronous discussions about the 
 
 For information about how to attend these meetings, see the meeting notes and subscribe to the <code>dev@</code> mailing list as described above. The hosts of some of these meetings send reminder emails to the mailing list prior to each meeting with information about how to join.
 
+## Chat
+
+For synchronous communication, we maintain a [Zulip](https://zulip.com) instance at [arrow-dev.zulipchat.com](https://arrow-dev.zulipchat.com). Some channels can be viewed without an account but you will need to create an account to chat. If you don't see a channel for the topic you'd like to chat about, please post in `#dev`.
+
+If you're not familiar with Zulip, it works a bit different from other chat tools. Zulip has a [Getting started](https://zulip.com/help/getting-started-with-zulip) guide which might be helpful to get you oriented.
+
 ## Contributing
 
 As mentioned above, we use [GitHub](https://github.com/apache/arrow) for our issue
