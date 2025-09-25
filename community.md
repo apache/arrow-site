@@ -118,7 +118,7 @@ their own tags (for example,
 
 ## Meetings
 
-We host online meetings to provide spaces for synchronous discussions about the Arrow project. These discussions usually focus on topics of interest to developers who are contributing to Arrow, but we welcome users of Arrow to join. Currently there are three series of regularly held meetings:
+We host online meetings to provide spaces for synchronous discussions about the Arrow project. These discussions usually focus on topics of interest to developers who are contributing to Arrow, but we welcome users of Arrow to join.
 
 <table class="table table-striped"><thead>
 <tr>
@@ -129,23 +129,23 @@ We host online meetings to provide spaces for synchronous discussions about the 
 </thead><tbody>
   <tr>
     <td>Arrow community meeting</td>
-    <td>Biweekly</td>
+    <td>Every 2 weeks</td>
     <td><a href="https://docs.google.com/document/d/1xrji8fc6_24TVmKiHJB4ECX1Zy2sy2eRbBjpVJMnPmk/">Google Doc</a></td>
-  </tr>
-  <tr>
-    <td>Arrow R package development meeting</td>
-    <td>Biweekly</td>
-    <td><a href="https://docs.google.com/document/d/1nSIfJw8mfqtvScqvSVqmktpWff80pFmkqiZT7nTtiDo/">Google Doc</a></td>
-  </tr>
-  <tr>
-    <td>Arrow Rust sync meeting</td>
-    <td>Varies</td>
-    <td><a href="https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/">Google Doc</a></td>
   </tr>
   <tr>
     <td>PyArrow development meeting</td>
     <td>Every 4 weeks</td>
     <td><a href="https://docs.google.com/document/d/1ioiJdEYf5mJwQ-rOjzjPYCeHTjOhAPo5ppUHy6iBrxU/">Google Doc</a></td>
+  </tr>
+  <tr>
+    <td>Arrow R package development meeting</td>
+    <td>Irregular</td>
+    <td><a href="https://docs.google.com/document/d/1nSIfJw8mfqtvScqvSVqmktpWff80pFmkqiZT7nTtiDo/">Google Doc</a></td>
+  </tr>
+  <tr>
+    <td>Arrow Rust sync meeting</td>
+    <td>Irregular</td>
+    <td><a href="https://docs.google.com/document/d/1atCVnoff5SR4eM4Lwf2M1BBJTY6g3_HUNR6qswYJW_U/">Google Doc</a></td>
   </tr>
 </tbody></table>
 
