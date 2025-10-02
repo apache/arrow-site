@@ -26,7 +26,7 @@ limitations under the License.
 
 ## Summary
 
-(todo chaart here)
+(todo chart here)
 Figure 1: Speedup in reading parquet metadata in apache arrow rust implementation
 See https://github.com/alamb/parquet_footer_parsing for more details
 
@@ -41,7 +41,15 @@ and thus is often a bottleneck.
 
 Many people over the years have pointed out that reading parquet metadata is slow (todo find citations) 
 
-The reason typically cited is because
+The speed of parsing metadata has grown in importance as parquet has been used
+in more and more real time applications, where the latency of reading many
+parquet files is important, such as in observability (TODO find citations) and
+interactive analytics, and most recently single point lookups for Results
+Augmented Generation (RAG) applications to feed LLMs (TODO find citations),
+which the latency of reading data from parquet files can be a significant part
+of the overall latency.
+
+The reason for the slowness typically cited is that
 the metadata is stored in the Apache Thrift format (todo link), whose variable length encoding
 makes it space efficient, but relatively slow to parse.
 This has lead to various proposals to replace parquet's metadata format with something
@@ -52,6 +60,16 @@ used to justify an entirely new file format such as F3, Nimble or The FastLanes 
 However, as Xiangpeng Hao explores in a previous blog post "how good is parquet
 for wide tables really" (TODO link) there is clear evidence that the existing
 implementations of thrift encoding can be made much faster. 
+
+## Background: Apache Thrift
+(TODO background here and enough to undertand why it must be scanned
+
+Thus, to parse the parquet metadata, the entire metadata must be scanned to locate
+where the various fields are located, and then each field must be parsed individually.
+However, CPUs are quite fast at scanning data, and a substantial amount of the 
+time spend parsing generated code is parsing the values in individual fields and copying them into in-memory structures, especially
+into indivdually allocated structures (such as a Rust String, or a C++ std::string (todo refeerences)))
+
 
 ## Traditional Parsing Approach using thrift compiler
 The Apache Arrow Rust implementation, as is done with other open source implementations
