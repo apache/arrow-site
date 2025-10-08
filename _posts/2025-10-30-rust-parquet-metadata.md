@@ -27,6 +27,7 @@ limitations under the License.
 ## Summary
 
 (todo chart here)
+
 Figure 1: Speedup in reading parquet metadata in apache arrow rust implementation
 See https://github.com/alamb/parquet_footer_parsing for more details
 
