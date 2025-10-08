@@ -18,6 +18,12 @@
 name: Upload dev docs
 
 on:
+  push:
+    paths:
+      - ".github/workflows/devdocs.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/devdocs.yml"
   workflow_dispatch:
   schedule:
     - cron:  '0 0 * * *'
@@ -28,7 +34,6 @@ permissions:
 jobs:
   devdocs:
     name: Fetch and upload dev docs
-    if: github.repository == 'apache/arrow-site'
     runs-on: ubuntu-latest
     steps:
 
@@ -48,7 +53,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.9'
+          python-version: 3
           cache: 'pip'
 
       - name: Install archery
@@ -57,19 +62,24 @@ jobs:
 
       - name: Identify latest doc build
         run: |
-          echo "::set-output name=LATEST::$(archery crossbow latest-prefix --no-fetch nightly-tests)"
-        id: build
+          echo "LATEST=$(archery crossbow latest-prefix --no-fetch nightly-tests)" >> "${GITHUB_ENV}"
 
       - name: Download the crossbow docs artifact
         run: |
-          archery crossbow --queue-path ./crossbow download-artifacts --no-fetch --task-filter "*docs" --target-dir downloads ${{ steps.build.outputs.LATEST }}
+          archery crossbow \
+            --queue-path ./crossbow \
+            download-artifacts \
+            --no-fetch \
+            --task-filter "*docs" \
+            --target-dir downloads \
+            ${LATEST}
 
       - uses: actions/checkout@v5
         with:
           ref: asf-site
           path: asf-site
 
-      - name: Add docs
+      - name: Prepare docs
         run: |
           cd asf-site
           echo "$(git log -1)"
@@ -77,8 +87,20 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           rm -rf docs/dev
           mkdir -p docs/dev
-          tar -xvzf ../downloads/${{ steps.build.outputs.LATEST }}/test-debian-*-docs/docs.tar.gz -C docs/dev --strip-components=1
+          tar \
+            -xvzf ../downloads/${LATEST}/test-debian-*-docs/docs.tar.gz \
+            -C docs/dev \
+            --strip-components=1
           cp docs/c_glib/index.html docs/dev/c_glib/index.html
+          git status --porcelain
+
+      - name: Publish docs
+        if: >-
+          github.repository == 'apache/arrow-site' &&
+          (github.event_name == 'workflow_dispatch' ||
+           github.event_name == 'schedule')
+        run: |
+          cd asf-site
           if [ "$(git status --porcelain)" != "" ]; then
             # There are changes to the dev docs
             git add docs/dev
