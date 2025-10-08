@@ -38,6 +38,8 @@ such as files with large column counts that do not require all statistics.
 
 <!-- AAL: TODO: update the benchmark and charts with results from 57.0.0 -->
 
+
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
   <img src="{{ site.baseurl }}/img/rust-parquet-metadata/results.png" width="100%" class="img-responsive" alt="" aria-hidden="true">
 </div>
@@ -56,6 +58,7 @@ See the [benchmark page] for more details.
 
 [benchmark page]: https://github.com/alamb/parquet_footer_parsing
 
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
   <img src="{{ site.baseurl }}/img/rust-parquet-metadata/scaling.png" width="100%" class="img-responsive" alt="Scaling behavior of custom thrift parser" aria-hidden="true">
 </div>
@@ -134,13 +137,30 @@ decoder implementation.
 
 
 ## Background: Apache Thrift
-(TODO background here and enough to understand why it must be scanned
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="{{ site.baseurl }}/img/rust-parquet-metadata/thrift-compact-encoding.png" width="100%" class="img-responsive" alt="Original Parquet Parsing Pipeline" aria-hidden="true">
+</div>
+
+Figure: the [Thrift compact binary encoding format], used by Parquet for metadata serialization is space 
+efficient, but its variable length nature requires either scanning or parsing all previous fields to locate a particular field.
+
+[Thrift compact binary encoding format]: https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md#list-and-set
+
 
 Thus, to parse the parquet metadata, the entire metadata must be scanned to locate
 where the various fields are located, and then each field must be parsed individually.
 However, CPUs are quite fast at scanning data, and a substantial amount of the 
 time spend parsing generated code is parsing the values in individual fields and copying them into in-memory structures, especially
 into indivdually allocated structures (such as a Rust String, or a C++ std::string (todo refeerences)))
+
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="{{ site.baseurl }}/img/rust-parquet-metadata/thrift-parsing-allocations.png" width="100%" class="img-responsive" alt="Original Parquet Parsing Pipeline" aria-hidden="true">
+</div>
+
+Figure: Generated thrift parsers typically parse into heap allocated structures requiring
+in many small heap allocations, which are expensive.
 
 
 ## Traditional Parsing Approach using a thrift compiler
