@@ -125,7 +125,7 @@ advantages. However, changing the Parquet format is a significant undertaking,
 and requires buy-in from the community and ecosystem and can take years to be
 adopted.
 
-Despite the very real disadvantage of thrift, we have previously theorized in
+Despite the very real disadvantage of tThrift, we have previously theorized in
 [How Good is Parquet for Wide Tables (Machine Learning Workloads) Really?] that
 there is still room for significant performance improvements in Parquet footer
 parsing in Rust using the existing thrift format but improving the thrift
