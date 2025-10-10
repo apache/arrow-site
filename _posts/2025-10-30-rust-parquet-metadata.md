@@ -24,7 +24,7 @@ limitations under the License.
 {% endcomment %}
 -->
 
-*Editors Note: While the [Apache Arrow] and [Apache Parquet] are separate
+*Editors Note: While [Apache Arrow] and [Apache Parquet] are separate
 projects, this post is part of the arrow site because the Arrow [arrow-rs]
 repository hosts the development of the [parquet] Rust crate, a widely used and
 high performance implementation of the Parquet format. *
@@ -139,7 +139,7 @@ decoder implementation.
 ## Background: Apache Thrift
 
 [Apache Thrift] is a framework for defining network data types and service
-interfaces and includes a data definition language similar [Protocol Buffers].
+interfaces and includes a data definition language similar to [Protocol Buffers].
 Thrift [Definition Files] describe data types in a language-neutral way, and
 then code generators exist to create code for a variety of programming languages
 to read and write those data types.
@@ -238,7 +238,7 @@ unnecessary data can speed up overall metadata parsing significantly.
 </div>
 
 *Figure XX*: Generated thrift parsers typically parse into heap allocated structures requiring
-in many small heap allocations, which are expensive.
+many small heap allocations, which are expensive.
 
 
 
