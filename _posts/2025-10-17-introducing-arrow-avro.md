@@ -90,7 +90,7 @@ use arrow_avro::schema::{
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Register writer schema under Confluent id=1.
-    let mut store = SchemaStore::new_with_type(FingerprintAlgorithm::None);
+    let mut store = SchemaStore::new_with_type(FingerprintAlgorithm::Id);
     store.set(
         Fingerprint::Id(1),
         AvroSchema::new(r#"{"type":"record","name":"T","fields":[{"name":"x","type":"long"}]}"#.into()),
