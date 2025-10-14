@@ -153,7 +153,7 @@ The example above configures an Avro Object Container File writer. It constructs
 
 ## Alternatives & Benchmarks
 
-There's fundamentally two different approaches for bringing Avro into Arrow:
+There are fundamentally two different approaches for bringing Avro into Arrow:
 1. Row‑centric approach, typical of general Avro libraries such as `apache-avro`, deserializes one record at a time into native Rust values (i.e., `Value` or Serde types) and then builds Arrow arrays from those values.
 2. Vectorized approach, what `arrow-avro` provides, decodes directly into Arrow builders/arrays and emits `RecordBatch`es, avoiding most per‑row overhead.
 
