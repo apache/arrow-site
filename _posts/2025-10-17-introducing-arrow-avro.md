@@ -25,7 +25,7 @@ limitations under the License.
 {% endcomment %}
 -->
 
-`arrow-avro` is a Rust crate that reads and writes Avro data directly as Arrow `RecordBatch`es. It supports Avro Object Container Files (OCF), Single‑Object Encoding, and the Confluent Schema Registry wire format, with projection/evolution, tunable batch sizing, and an optional `StringViewArray` for faster strings. Its vectorized design reduces copies and cache misses, making both batch (files) and streaming (Kafka) pipelines simpler and faster.
+`arrow-avro` is a Rust crate that reads and writes Avro data directly as Arrow `RecordBatch`es. It supports Avro Object Container Files (OCF), Single‑Object Encoding, and the Confluent Schema Registry wire format, with projection/evolution, tunable batch sizing, and optional `StringViewArray` support for faster strings. Its vectorized design reduces copies and cache misses, making both batch (files) and streaming (Kafka) pipelines simpler and faster.
 
 ## Motivation
 
