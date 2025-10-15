@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Parsing Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust"
+title: "2x-7x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust"
 date: "2025-10-08 00:00:00"
 author: "Andrew Lamb (InfluxData)"
 categories: [release]   
@@ -33,7 +33,7 @@ high-performance implementation of the Parquet format.*
 
 Version `57.0.0` of the [parquet] Rust crate decodes metadata roughly twice as
 fast as previous versions thanks to a new custom [Apache Thrift] parser. The new
-parser is 2× faster in all cases and sets the stage for further performance improvements not
+parser is 2× faster in all cases and enables further performance improvements not
 possible with generated parsers, such as skipping unnecessary fields and selective parsing.
 
 <!-- AAL: TODO: update the benchmark and charts with results from 57.0.0 -->
@@ -69,7 +69,7 @@ and the speedup is similar regardless of the number of columns. See the [benchma
 
 ## Introduction: Parquet and the Importance of Metadata Parsing
 
-[Apache Parquet] is a popular columnar storage format for big data processing. It
+[Apache Parquet] is a popular columnar storage format. It
 is designed to be efficient for both storage and query performance. Parquet
 files consist of a header, a series of data pages, and a footer, as shown in Figure 3. The footer
 contains metadata about the file, including schema, statistics, and other
@@ -84,36 +84,36 @@ information needed to decode the data.
 
 Getting information stored in the footer is typically the first step in reading
 a Parquet file, as it is required to interpret the data pages. *Parsing* the
-footer is often on the critical path for reading data:
+footer is often performance critical when reading data:
 
 * When reading from fast local storage, such as modern NVMe SSDs, footer parsing
-  must be completed before data pages are read, placing it on the critical
+  must be completed to know what data pages to read, placing it directly on the critical
   I/O path.
 * Footer parsing scales linearly with the number of columns and row groups in a
   Parquet file and thus can be a bottleneck for tables with many columns or files
   with many row groups.
 * For systems that cache the parsed footer in memory, as explained in [Using
   External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries
-  on Apache Parquet], the footer must be parsed when the cache is cold or the
-  hit rate is low.
+  on Apache Parquet], the footer must still be parsed on cache miss.
 
 <!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
   <img src="{{ site.baseurl }}/img/rust-parquet-metadata/flow.png" width="100%" class="img-responsive" alt="Typical Parquet processing flow" aria-hidden="true">
 </div>
 
-*Figure 4:* Typical processing flow for Parquet files for stateless and stateful systems.
-The performance of footer parsing is important for both types of systems, but especially
-for stateless systems that do not cache the parsed footer.
+*Figure 4:* Typical processing flow for Parquet files for stateless and stateful
+systems. Stateless engines read the footer on every query, and the time taken to
+parse the footer directly adds to query latency. Stateful systems cache some or
+all of the parsed footer in advance of queries. The performance of footer
+parsing is important for both types of systems, but especially for stateless.
 
 [Using External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries on Apache Parquet]: https://datafusion.apache.org/blog/2025/08/15/external-parquet-indexes/
 
 The speed of parsing metadata has grown even more important as Parquet spreads
 throughout the data ecosystem and is used for more latency-sensitive workloads such
-as observability (TODO find citations), interactive analytics, and single-point
-lookups for Retrieval-Augmented Generation (RAG) applications feeding LLMs (TODO
-find citations). As overall query times decrease, the relative
-importance of footer parsing increases.
+as observability, interactive analytics, and single-point
+lookups for Retrieval-Augmented Generation (RAG) applications feeding LLMs. 
+As overall query times decrease, the proportion spent on footer parsing increases.
 
 ## Background: Apache Thrift
 
@@ -124,9 +124,9 @@ types in a language-neutral way, and systems use code generators to
 automatically create code for a specific programming language to read and write
 those data types.
 
-The [parquet.thrift] file defines the format of Parquet metadata that is
-serialized at the end of each Parquet file in the [Thrift compact binary
-encoding format], as shown below in Figure 5. The binary encoding is "variable-length",
+The [parquet.thrift] file defines the format of the metadata 
+serialized at the end of each Parquet file in the [Thrift Compact 
+protocol], as shown below in Figure 5. The binary encoding is "variable-length",
 meaning that the length of each element depends on its content, not
 just its type. Smaller-valued primitive types are encoded in fewer bytes than
 larger values, and strings and lists are stored inline, prefixed with their
@@ -134,15 +134,16 @@ length.
 
 This encoding is space-efficient but, due to being variable-length, does not
 support random access: it is not possible to locate a particular field without
-scanning all previous fields. Other formats such as [Flatbuffers] provide
-random-access parsing and have [been proposed as alternatives] given their
+scanning all previous fields. Other formats such as [FlatBuffers] provide
+random-access parsing and have been [proposed as alternatives] given their
 theoretical performance advantages. However, changing the Parquet format is a
 significant undertaking, requires buy-in from the community and ecosystem,
 and would likely take years to be adopted.
 
 [How Good is Parquet for Wide Tables (Machine Learning Workloads) Really?]: https://www.influxdata.com/blog/how-good-parquet-wide-tables/
 [Apache Thrift]: https://thrift.apache.org/
-[Flatbuffers]: https://google.github.io/flatbuffers/
+[FlatBuffers]: https://google.github.io/flatbuffers/
+[proposed as alternatives]: https://lists.apache.org/thread/j9qv5vyg0r4jk6tbm6sqthltly4oztd3
 
 <!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
@@ -154,7 +155,7 @@ encoding format]. Each field is stored using a variable number of bytes that
 depends on its value. Primitive types use a variable-length encoding and strings
 and lists are prefixed with their lengths.
 
-[Thrift compact binary encoding format]: https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md
+[Thrift Compact protocol]: https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md
 [Protocol Buffers]: https://developers.google.com/protocol-buffers
 [data definition language]: https://thrift.apache.org/docs/idl
 [parquet.thrift]: https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift
