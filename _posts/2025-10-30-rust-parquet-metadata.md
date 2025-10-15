@@ -220,7 +220,6 @@ choice given Thrift's original design goal of encoding network messages.
 Network messages typically don't contain extra information irrelevant for receivers; 
 however, Parquet metadata often *does* contain information
 that is not needed for a particular query. In such cases, parsing the entire
-<<<<<<< HEAD
 metadata into in-memory structures is wasteful. 
 
 For example, a query on a file with 1,000 columns that reads 
@@ -237,17 +236,6 @@ variable encoding used for the metadata, all metadata bytes must still be
 fetched and scanned; however, CPUs are (very) fast at scanning data, and
 skipping *parsing* of unneeded fields speeds up overall metadata performance
 significantly.
-=======
-metadata into in-memory structures is wasteful. For example, a query that reads
-only 10 columns from a file with 1,000 columns with a single column predicate
-(e.g., `time > now() - '1 minute'`) needs [`Statistics`] (or
-[`ColumnIndex`]) only for the predicate column and the [`ColumnChunk`] for the 10
-columns. Parsing (allocating and copying) statistics for the remaining 999 columns
-that are not used by the predicate is unnecessary. As discussed above, given the
-variable encoding used for the metadata, all the metadata bytes must still be
-fetched and scanned; however, since CPUs are quite fast at scanning data, skipping
-parsing of unneeded fields can speed up overall metadata performance significantly.
->>>>>>> 62e564c15e9c089c80bbc005006376d7e7c6f83c
 
 [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
 [`std::vector`]: https://en.cppreference.com/w/cpp/container/vector.html
