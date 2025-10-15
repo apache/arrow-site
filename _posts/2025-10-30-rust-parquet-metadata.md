@@ -231,7 +231,7 @@ only 10 columns and has a single column predicate
 
 The default strategy to parse (allocating and copying) all statistics and all
 `ColumnChunks` results in 999 more statistics and 990 more `ColumnChunks` being
-than needed. As discussed above, given the
+parsed than are necessary. As discussed above, given the
 variable encoding used for the metadata, all metadata bytes must still be
 fetched and scanned; however, CPUs are (very) fast at scanning data, and
 skipping *parsing* of unneeded fields speeds up overall metadata performance
