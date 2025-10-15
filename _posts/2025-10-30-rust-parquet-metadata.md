@@ -354,8 +354,8 @@ struct FileMetaData<'a> {
 
 This system makes it easy to see the correspondence between the Thrift
 definition and the Rust structure, making it straightforward to support newly added
-structures such as the recent `GeospatialStatistics`. The carefully hand-
-optimized parsers for the most performance-critical structures, such as
+structures such as the recent `GeospatialStatistics`. The carefully hand-optimized
+parsers for the most performance-critical structures, such as
 `RowGroupMetaData` and `ColumnChunkMetaData`, are harder—though still
 straightforward—to update (see [this PR]). However, those structures are less
 likely to change frequently.
