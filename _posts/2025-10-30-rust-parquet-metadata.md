@@ -223,7 +223,7 @@ only 10 columns from a file with 1,000 columns with a single column predicate
 (e.g., `time > now() - '1 minute'`) needs [`Statistics`] (or
 [`ColumnIndex`]) only for the predicate column and the [`ColumnChunk`] for the 10
 columns. Parsing (allocating and copying) statistics for the remaining 999 columns
-that are not used is unnecessary. As discussed above, given the
+that are not used by the predicate is unnecessary. As discussed above, given the
 variable encoding used for the metadata, all the metadata bytes must still be
 fetched and scanned; however, since CPUs are quite fast at scanning data, skipping
 parsing of unneeded fields can speed up overall metadata performance significantly.
