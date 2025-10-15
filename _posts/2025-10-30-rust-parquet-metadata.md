@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "2x-7x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust"
+title: "3x-8x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust"
 date: "2025-10-08 00:00:00"
 author: "Andrew Lamb (InfluxData)"
 categories: [release]   
@@ -31,9 +31,9 @@ high-performance implementation of the Parquet format.*
 
 ## Summary
 
-Version `57.0.0` of the [parquet] Rust crate decodes metadata roughly twice as
+Version `57.0.0` of the [parquet] Rust crate decodes metadata roughly three times as
 fast as previous versions thanks to a new custom [Apache Thrift] parser. The new
-parser is 2× faster in all cases and enables further performance improvements not
+parser is 3× faster in all cases and enables further performance improvements not
 possible with generated parsers, such as skipping unnecessary fields and selective parsing.
 
 <!-- AAL: TODO: update the benchmark and charts with results from 57.0.0 -->
