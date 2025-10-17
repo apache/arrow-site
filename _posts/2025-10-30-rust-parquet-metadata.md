@@ -268,13 +268,15 @@ the behavior of generated Thrift parsers is limited:
 
 [last release of the Rust `thrift` crate]: https://crates.io/crates/thrift/0.17.0
 
-
 These limitations are a consequence of the Thrift project's design goals: general purpose
 code that is easy to embed in a wide variety of other projects, rather than
 any fundamental limitation of the Thrift format.
-Given our goal of fast Parquet metadata parsing, we needed a more
+Given our goal of fast Parquet metadata parsing, we needed 
 a custom, easier to optimize parser, to convert Thrift binary directly into the needed
-structures (Figure 8).
+structures (Figure 8). Since arrow-rs already did some postprocessing on the generated code 
+and included a custom implementation of the compact protocol api, this change
+to a completely custom parser was a natural next step.
+
 
 <!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
