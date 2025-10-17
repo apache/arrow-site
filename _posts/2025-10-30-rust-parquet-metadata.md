@@ -62,7 +62,7 @@ See the [benchmark page] for more details.
 </div>
 
 *Figure 2:* Speedup of the [custom Thrift decoder] for string and floating-point data types,
-for `100`, `1000`, and `100,000` columns. The new parser is faster in all cases,
+for `100`, `1000`, `10,000`, and `100,000` columns. The new parser is faster in all cases,
 and the speedup is similar regardless of the number of columns. See the [benchmark page] for more details.
 
 ## Introduction: Parquet and the Importance of Metadata Parsing
