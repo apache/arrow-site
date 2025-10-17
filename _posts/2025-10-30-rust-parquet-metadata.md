@@ -25,18 +25,16 @@ limitations under the License.
 -->
 
 *Editor’s Note: While [Apache Arrow] and [Apache Parquet] are separate
-projects, this post is part of the Arrow site because the Arrow [arrow-rs]
+projects, this post is on the Arrow site because the Arrow [arrow-rs]
 repository hosts the development of the [parquet] Rust crate, a widely used and
-high-performance implementation of the Parquet format.*
+high-performance Parquet implementation.*
 
 ## Summary
 
-Version `57.0.0` of the [parquet] Rust crate decodes metadata roughly three times as
-fast as previous versions thanks to a new custom [Apache Thrift] parser. The new
-parser is 3× faster in all cases and enables further performance improvements not
+Version `57.0.0` of the [parquet] Rust crate decodes metadata roughly three times
+faster than previous versions thanks to a new custom [Apache Thrift] parser. The new
+parser is both faster in all cases and enables further performance improvements not
 possible with generated parsers, such as skipping unnecessary fields and selective parsing.
-
-<!-- AAL: TODO: update the benchmark and charts with results from 57.0.0 -->
 
 <!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
@@ -92,9 +90,9 @@ footer is often performance critical when reading data:
 * Footer parsing scales linearly with the number of columns and row groups in a
   Parquet file and thus can be a bottleneck for tables with many columns or files
   with many row groups.
-* For systems that cache the parsed footer in memory, as explained in [Using
+* Even in systems that cache the parsed footer in memory (see [Using
   External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries
-  on Apache Parquet], the footer must still be parsed on cache miss.
+  on Apache Parquet]), the footer must still be parsed on cache miss.
 
 <!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
@@ -120,7 +118,7 @@ As overall query times decrease, the proportion spent on footer parsing increase
 Parquet stores metadata using [Apache Thrift], a framework for
 network data types and service interfaces. It includes a [data definition
 language] similar to [Protocol Buffers]. Thrift definition files describe data
-types in a language-neutral way, and systems use code generators to
+types in a language-neutral way, and systems typically use code generators to
 automatically create code for a specific programming language to read and write
 those data types.
 
@@ -165,9 +163,9 @@ prefixed with their lengths.
 Despite Thrift's very real disadvantage due to lack of random access, software
 optimizations are much easier to deploy than format changes. [Xiangpeng Hao]'s
 previous analysis theorized significant (2x–4x) potential performance
-improvements simply by optimizing the implementation of Parquet footer parsing.
-See the blog post [How Good is Parquet for Wide Tables (Machine Learning
-Workloads) Really?] for more details.
+improvements simply by optimizing the implementation of Parquet footer parsing
+(see [How Good is Parquet for Wide Tables (Machine Learning
+Workloads) Really?] for more details).
 
 ## Processing Thrift Using Generated Parsers
 
@@ -230,8 +228,8 @@ only 10 columns and has a single column predicate
 2. [`ColumnChunk`] information for the 10 selected columns 
 
 The default strategy to parse (allocating and copying) all statistics and all
-`ColumnChunks` results in 999 more statistics and 990 more `ColumnChunks` being
-parsed than are necessary. As discussed above, given the
+`ColumnChunks` results in creating 999 more statistics and 990 more `ColumnChunks`
+than necessary. As discussed above, given the
 variable encoding used for the metadata, all metadata bytes must still be
 fetched and scanned; however, CPUs are (very) fast at scanning data, and
 skipping *parsing* of unneeded fields speeds up overall metadata performance
@@ -271,12 +269,12 @@ the behavior of generated Thrift parsers is limited:
 [last release of the Rust `thrift` crate]: https://crates.io/crates/thrift/0.17.0
 
 
-These limitations are a consequence of the design goals for producing code that
-is general purpose and easy to embed in a wide variety of projects, rather than
-any fundamental limitation of generated code.
-Given our goal of fast Parquet metadata parsing, we concluded we
-needed a custom parser that converts the Thrift binary directly into the needed
-structures and is easier to optimize (Figure 8).
+These limitations are a consequence of the Thrift project's design goals: general purpose
+code that is easy to embed in a wide variety of other projects, rather than
+any fundamental limitation of the Thrift format.
+Given our goal of fast Parquet metadata parsing, we needed a more
+a custom, easier to optimize parser, to convert Thrift binary directly into the needed
+structures (Figure 8).
 
 <!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
@@ -314,9 +312,9 @@ a [Rust macro based approach] for generating code with annotated Rust structs
 that closely resemble the Thrift definitions while permitting additional hand
 optimization where necessary. This approach is similar to the [serde] crate
 where generic implementations can be generated with `#[derive]` annotations and
-specialized serialization is written by hand where needed. [Ed Seidl] 
-rewrote the metadata parsing code in the [parquet] crate using this
-approach. Please see the [final PR] for details of the level of effort involved.
+specialized serialization is written by hand where needed. [Ed Seidl] then
+rewrote the metadata parsing code in the [parquet] crate using these macros. 
+Please see the [final PR] for details of the level of effort involved.
 
 [final PR]: https://github.com/apache/arrow-rs/pull/8530
 [Jörn Horstmann]: https://github.com/jhorstmann
@@ -367,7 +365,7 @@ definition and the Rust structure, and it is straightforward to support newly ad
 features such as `GeospatialStatistics`. The carefully hand-
 optimized parsers for the most performance-critical structures, such as
 `RowGroupMetaData` and `ColumnChunkMetaData`, are harder—though still
-straightforward—to update (see [#8587]). However, those structures are less
+straightforward—to update (see [#8587]). However, those structures are also less
 likely to change frequently.
 
 ### Future Improvements
