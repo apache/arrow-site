@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Announcing arrow-avro in Arrow Rust | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Announcing arrow-avro in Arrow Rust" />
+<meta name="author" content="jecsand838" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="A new native Rust vectorized reader/writer for Avro to Arrow, with OCF, Single‑Object, and Confluent wire format support." />
+<meta property="og:description" content="A new native Rust vectorized reader/writer for Avro to Arrow, with OCF, Single‑Object, and Confluent wire format support." />
+<link rel="canonical" href="https://arrow.apache.org/blog/2025/10/23/introducing-arrow-avro/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2025/10/23/introducing-arrow-avro/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-10-23T00:00:00-04:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="Announcing arrow-avro in Arrow Rust" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"jecsand838"},"dateModified":"2025-10-23T00:00:00-04:00","datePublished":"2025-10-23T00:00:00-04:00","description":"A new native Rust vectorized reader/writer for Avro to Arrow, with OCF, Single‑Object, and Confluent wire format support.","headline":"Announcing arrow-avro in Arrow Rust","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2025/10/23/introducing-arrow-avro/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"jecsand838"},"url":"https://arrow.apache.org/blog/2025/10/23/introducing-arrow-avro/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+    <link type="application/atom+xml" rel="alternate" href="https://arrow.apache.org/feed.xml" title="Apache Arrow" />
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownGetArrow" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownDocumentation" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Docs
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/csharp/README.md" target="_blank" rel="noopener">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow" target="_blank" rel="noopener">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="/julia/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/matlab/README.md" target="_blank" rel="noopener">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/ruby/README.md" target="_blank" rel="noopener">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/arrow/latest" target="_blank" rel="noopener">Rust</a>
+            <a class="dropdown-item" href="/swift">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSource" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Source
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSource">
+            <a class="dropdown-item" href="https://github.com/apache/arrow" target="_blank" rel="noopener">Main Repo</a>
+            <hr>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/c_glib" target="_blank" rel="noopener">C GLib</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/cpp" target="_blank" rel="noopener">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/csharp" target="_blank" rel="noopener">C#</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-go" target="_blank" rel="noopener">Go</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-java" target="_blank" rel="noopener">Java</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-js" target="_blank" rel="noopener">JavaScript</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-julia" target="_blank" rel="noopener">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/matlab" target="_blank" rel="noopener">MATLAB</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/python" target="_blank" rel="noopener">Python</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/r" target="_blank" rel="noopener">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/ruby" target="_blank" rel="noopener">Ruby</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-rs" target="_blank" rel="noopener">Rust</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-swift" target="_blank" rel="noopener">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSubprojects" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/adbc">ADBC</a>
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="https://datafusion.apache.org" target="_blank" rel="noopener">DataFusion</a>
+            <a class="dropdown-item" href="/nanoarrow">nanoarrow</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownCommunity" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/index.html">Contributing</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/issues" target="_blank" rel="noopener">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html" target="_blank" rel="noopener">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownASF" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/" target="_blank" rel="noopener">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/" target="_blank" rel="noopener">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html" target="_blank" rel="noopener">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html" target="_blank" rel="noopener">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/" target="_blank" rel="noopener">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+<!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Announcing arrow-avro in Arrow Rust
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    23 Oct 2025
+  </span>
+  <br>
+  <span class="badge badge-secondary">By</span>
+  
+    <a class="mr-3" href="https://github.com/jecsand838" target="_blank" rel="noopener">Connor Sanders (jecsand838) </a>
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+<p><a href="https://crates.io/crates/arrow-avro" target="_blank" rel="noopener"><code>arrow-avro</code></a>, a newly rewritten Rust crate that reads and writes <a href="https://avro.apache.org/" target="_blank" rel="noopener">Apache Avro</a> data directly as Arrow <code>RecordBatch</code>es, is now available. It supports <a href="https://avro.apache.org/docs/1.11.1/specification/#object-container-files" target="_blank" rel="noopener">Avro Object Container Files</a> (OCF), <a href="https://avro.apache.org/docs/1.11.1/specification/#single-object-encoding" target="_blank" rel="noopener">Single‑Object Encoding</a> (SOE), the <a href="https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format" target="_blank" rel="noopener">Confluent Schema Registry wire format</a>, and the <a href="https://www.apicur.io/registry/docs/apicurio-registry/1.3.3.Final/getting-started/assembly-using-kafka-client-serdes.html#registry-serdes-types-avro-registry" target="_blank" rel="noopener">Apicurio Registry wire format</a>, with projection/evolution, tunable batch sizing, and optional <code>StringViewArray</code> support for faster strings. Its vectorized design reduces copies and cache misses, making both batch and streaming pipelines simpler and faster.</p>
+<h2>Motivation</h2>
+<p>Apache Avro’s row‑oriented design is effective for encoding one record at a time, while Apache Arrow’s columnar layout is optimized for vectorized analytics. A major challenge lies in converting between these formats without reintroducing row‑wise overhead. Decoding Avro a row at a time and then building Arrow arrays incurs extra allocations and cache‑unfriendly access (the very costs Arrow is designed to avoid). In the real world, this overhead commonly shows up in analytical hot paths. For instance, <a href="https://github.com/apache/datafusion/tree/main/datafusion/datasource-avro" target="_blank" rel="noopener">DataFusion’s Avro data source</a> currently ships with its own row‑centric Avro‑to‑Arrow layer. This implementation has led to an open issue for <a href="https://github.com/apache/datafusion/issues/14097" target="_blank" rel="noopener">using an upstream arrow-avro reader</a> to simplify the code and speed up scans. Additionally, DataFusion has another open issue for <a href="https://github.com/apache/datafusion/issues/7679#issuecomment-3412302891" target="_blank" rel="noopener">supporting Avro format writes</a> that is predicated on the development of an upstream <code>arrow-avro</code> writer.</p>
+<h3>Why not use the existing <code>apache-avro</code> crate?</h3>
+<p>Rust already has a mature, general‑purpose Avro crate, <a href="https://crates.io/crates/apache-avro" target="_blank" rel="noopener">apache-avro</a>. It reads and writes Avro records as Avro value types and provides Object Container File readers and writers. What it does not do is decode directly into Arrow arrays, so any Arrow integration must materialize rows and then build columns.</p>
+<p>What’s needed is a complementary approach that decodes column‑by‑column straight into Arrow builders and emits <code>RecordBatch</code>es. This would enable projection pushdown while keeping execution vectorized end to end. For projects such as <a href="https://datafusion.apache.org/" target="_blank" rel="noopener">Apache DataFusion</a>, access to a mature, upstream Arrow‑native reader and writer would help simplify the code path and reduce duplication.</p>
+<p>Modern pipelines heighten this need because <a href="https://www.confluent.io/blog/avro-kafka-data/" target="_blank" rel="noopener">Avro is also used on the wire</a>, not just in files. Kafka ecosystems commonly use Confluent’s Schema Registry framing, and many services adopt the Avro Single‑Object Encoding format. An approach that enables decoding straight into Arrow batches (rather than through per‑row values) would let downstream compute remain vectorized at streaming rates.</p>
+<h3>Why this matters</h3>
+<p>Apache Avro is a first‑class format across stream processors and cloud services:</p>
+<ul>
+<li>Confluent Schema Registry supports <a href="https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/serdes-avro.html" target="_blank" rel="noopener">Avro across multiple languages and tooling</a>.</li>
+<li>Apache Flink exposes an <a href="https://nightlies.apache.org/flink/flink-docs-release-1.19/docs/connectors/table/formats/avro-confluent/" target="_blank" rel="noopener"><code>avro-confluent</code> format for Kafka</a>.</li>
+<li>AWS Lambda <a href="https://aws.amazon.com/about-aws/whats-new/2025/06/aws-lambda-native-support-avro-protobuf-kafka-events/" target="_blank" rel="noopener">(June 2025) added native handling for Avro‑formatted Kafka events</a> with Glue and Confluent Schema Registry integrations.</li>
+<li>Azure Event Hubs provides a <a href="https://learn.microsoft.com/en-us/azure/event-hubs/schema-registry-overview" target="_blank" rel="noopener">Schema Registry with Avro support</a> for Kafka‑compatible clients.</li>
+</ul>
+<p>In short: Arrow users encounter Avro both on disk (OCF) and on the wire (SOE). An Arrow‑first, vectorized reader/writer for OCF, SOE, and Confluent framing removes a pervasive bottleneck and keeps pipelines columnar end‑to‑end.</p>
+<h2>Introducing <code>arrow-avro</code>
+</h2>
+<p><a href="https://github.com/apache/arrow-rs/tree/main/arrow-avro" target="_blank" rel="noopener"><code>arrow-avro</code></a> is a high-performance Rust crate that converts between Avro and Arrow with a column‑first, batch‑oriented design. On the read side, it decodes Avro Object Container Files (OCF), Single‑Object Encoding (SOE), and the Confluent Schema Registry wire format directly into Arrow <code>RecordBatch</code>es. Meanwhile, the write path provides formats for encoding to OCF and SOE as well.</p>
+<p>The crate exposes two primary read APIs: a high-level <code>Reader</code> for OCF inputs and a low-level <code>Decoder</code> for streaming SOE frames. For SOE and Confluent/Apicurio frames, a <code>SchemaStore</code> is provided that resolves fingerprints or schema IDs to full Avro writer schemas, enabling schema evolution while keeping the decode path vectorized.</p>
+<p>On the write side, <code>AvroWriter</code> produces OCF (including container‑level compression), while <code>AvroStreamWriter</code> produces framed Avro messages for Single‑Object or Confluent/Apicurio encodings, as configured via the <code>WriterBuilder::with_fingerprint_strategy(...)</code> knob.</p>
+<p>Configuration is intentionally minimal but practical. For instance, the <code>ReaderBuilder</code> exposes knobs covering both batch file ingestion and streaming systems without forcing format‑specific code paths.</p>
+<h3>How this mirrors Parquet in Arrow‑rs</h3>
+<p>If you have used Parquet with Arrow‑rs, you already know the pattern. The <code>parquet</code> crate exposes a <a href="https://docs.rs/parquet/latest/parquet/arrow/index.html" target="_blank" rel="noopener">parquet::arrow module</a> that reads and writes Arrow <code>RecordBatch</code>es directly. Most users reach for <code>ParquetRecordBatchReaderBuilder</code> when reading and <code>ArrowWriter</code> when writing. You choose columns up front, set a batch size, and the reader gives you Arrow batches that flow straight into vectorized operators. This is the widely adopted "format crate + Arrow‑native bridge" approach in Rust.</p>
+<p><code>arrow‑avro</code> brings that same bridge to Avro. You get a single <code>ReaderBuilder</code> that can produce a <code>Reader</code> for OCF, or a streaming <code>Decoder</code> for on‑the‑wire frames. Both return Arrow <code>RecordBatch</code>es, which means engines can keep projection and filtering close to the reader and avoid building rows only to reassemble them back into columns later. For evolving streams, a small <code>SchemaStore</code> resolves fingerprints or ids before decoding, so the batches that come out are already shaped for vectorized execution.</p>
+<p>The reason this pattern matters is straightforward. Arrow’s columnar format is designed for vectorized work and good cache locality. When a format reader produces Arrow batches directly, copies and branchy per‑row work are minimized, keeping downstream operators fast. That is the same story that made <code>parquet::arrow</code> popular in Rust, and it is what <code>arrow‑avro</code> now enables for Avro.</p>
+<h2>Architecture &amp; Technical Overview</h2>
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start; padding: 20px 15px;">
+<img src="/img/introducing-arrow-avro/arrow-avro-architecture.svg" width="100%" alt="High-level `arrow-avro` architecture" style="background:#fff">
+</div>
+<p>At a high level, <a href="https://arrow.apache.org/rust/arrow_avro/index.html">arrow-avro</a> splits cleanly into read and write paths built around Arrow <code>RecordBatch</code>es. The read side turns Avro (OCF files or framed byte streams) into batched Arrow arrays, while the write side takes Arrow batches and produces OCF files or streaming frames. When using an <code>AvroStreamWriter</code>, the framing (SOE or Confluent) is part of the stream output based on the configured fingerprint strategy; thus no separate framing work is required. The public API and module layout are intentionally small, so most applications only touch a builder, a reader/decoder, and (optionally) a schema store for schema evolution.</p>
+<p>On the <a href="https://arrow.apache.org/rust/arrow_avro/reader/index.html">read</a> path, everything starts with the <a href="https://arrow.apache.org/rust/arrow_avro/reader/struct.ReaderBuilder.html">ReaderBuilder</a>. A single builder can create a <a href="https://arrow.apache.org/rust/arrow_avro/reader/struct.Reader.html">Reader</a> for Object Container Files (OCF) or a streaming <a href="https://arrow.apache.org/rust/arrow_avro/reader/struct.Decoder.html">Decoder</a> for SOE/Confluent/Apicurio frames. The <code>Reader</code> pulls OCF blocks and yields Arrow <code>RecordBatch</code>es while the <code>Decoder</code> is push‑based, i.e., bytes are fed in as they arrive and then drained as completed batches once <code>flush</code> is called. Both use the same schema‑driven decoding logic (per‑column decoders with projection/union/nullability handling), so file and streaming inputs produce batches using fewer per‑row allocations and minimal branching/redundancy. Additionally, the streaming <code>Decoder</code> maintains a cache of per‑schema record decoders keyed by fingerprint to avoid re‑planning when a stream interleaves schema versions. This keeps steady‑state decode fast even as schemas evolve.</p>
+<p>When reading an OCF, the <code>Reader</code> parses a header and then iterates over blocks of encoded data. The header contains a metadata map with the embedded Avro schema and optional compression (i.e., <code>deflate</code>, <code>snappy</code>, <code>zstd</code>, <code>bzip2</code>, <code>xz</code>), plus a 16‑byte sync marker used to delimit blocks. Each subsequent OCF block then carries a row count and the encoded payload. The parsed OCF header and block structures are also encoded with variable‑length integers that use zig‑zag encoding for signed values. <code>arrow-avro</code> implements a small <code>vlq</code> (variable‑length quantity) module, which is used during both header parsing and block iteration. Efficient <code>vlq</code> decode is part of why the <code>Reader</code> and <code>Decoder</code> can stay vectorized and avoid unnecessary per‑row overhead.</p>
+<p>On the <a href="https://arrow.apache.org/rust/arrow_avro/writer/index.html">write</a> path, the <a href="https://arrow.apache.org/rust/arrow_avro/writer/struct.WriterBuilder.html">WriterBuilder</a> produces either an <a href="https://arrow.apache.org/rust/arrow_avro/writer/type.AvroWriter.html">AvroWriter</a> (OCF) or an <a href="https://arrow.apache.org/rust/arrow_avro/writer/type.AvroStreamWriter.html">AvroStreamWriter</a> (SOE/Message). The <code>with_compression(...)</code> knob is used for OCF block compression while <code>with_fingerprint_strategy(...)</code> selects the streaming frame, i.e., Rabin for SOE, a 32‑bit schema ID for Confluent, or a 64-bit schema ID for Apicurio. The <code>AvroStreamWriter</code> also adds the appropriate prefix automatically while encoding, thus eliminating the need for potentially expensive post‑processing steps to wrap output Avro SOEs.</p>
+<p>Schema handling is centralized in the <a href="https://arrow.apache.org/rust/arrow_avro/schema/index.html">schema</a> module. <a href="https://arrow.apache.org/rust/arrow_avro/schema/struct.AvroSchema.html">AvroSchema</a> wraps a valid Avro Schema JSON string, supports computing a <code>Fingerprint</code>, and can be loaded into a <a href="https://arrow.apache.org/rust/arrow_avro/schema/struct.SchemaStore.html">SchemaStore</a> as a writer schema. At runtime, the <code>Reader</code>/<code>Decoder</code> can use a <code>SchemaStore</code> to resolve fingerprints before decoding, enabling <a href="https://avro.apache.org/docs/1.11.1/specification/#schema-resolution" target="_blank" rel="noopener">schema resolution</a>. The <code>FingerprintAlgorithm</code> captures how fingerprints are derived (i.e., CRC‑64‑AVRO Rabin, MD5, SHA‑256, or a registry ID), and <code>FingerprintStrategy</code> configures how the <code>Writer</code> prefixes each record while encoding SOE streams. This schema module is the glue that enables SOE and Confluent/Apicurio support without coupling to a specific registry client.</p>
+<p>At the heart of <code>arrow-avro</code> is a type‑mapping <code>Codec</code> that the library uses to construct both encoders and decoders. The <code>Codec</code> captures, for every Avro field, how it maps to Arrow and how it should be encoded or decoded. The <code>Reader</code> logic builds a <code>Codec</code> per <em>(writer, reader)</em> schema pair, which the decoder later uses to vectorize parsing of Avro values directly into the correct Arrow builders. The <code>Writer</code> logic uses the same <code>Codec</code> mappings to drive pre-computed record encoding plans which enable fast serialization of Arrow arrays to the correct Avro physical representation (i.e., decimals as bytes vs fixed, enum symbol handling, union branch tagging, etc.). Because the <code>Codec</code> informs union and nullable decisions in both the encoder and decoder, the common Avro pattern <code>["null", T]</code> seamlessly maps to and from an Arrow optional field, while Avro unions map to Arrow unions using an 8‑bit type‑id with minimal overhead. Meanwhile, enabling <code>strict_mode</code> applies tighter Avro resolution rules in the <code>Codec</code> to help surface ambiguous unions early.</p>
+<p>Finally, by keeping container and stream framing (OCF vs. SOE) separate from encoding and decoding, the crate composes naturally with the rest of Arrow‑rs: you read or write Arrow <code>RecordBatch</code>es, pick OCF or SOE streams as needed, and wire up fingerprints only when you're on a streaming path. This results in a compact API surface that covers both batch files and high‑throughput streams without sacrificing columnar, vectorized execution.</p>
+<h2>Examples</h2>
+<h3>Decoding a Confluent-framed Kafka Stream</h3>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">reader</span><span class="p">::</span><span class="n">ReaderBuilder</span><span class="p">;</span>
+<span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">schema</span><span class="p">::{</span>
+    <span class="n">SchemaStore</span><span class="p">,</span> <span class="n">AvroSchema</span><span class="p">,</span> <span class="n">Fingerprint</span><span class="p">,</span> <span class="n">FingerprintAlgorithm</span><span class="p">,</span> <span class="n">CONFLUENT_MAGIC</span>
+<span class="p">};</span>
+
+<span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="p">(),</span> <span class="nb">Box</span><span class="o">&lt;</span><span class="k">dyn</span> <span class="nn">std</span><span class="p">::</span><span class="nn">error</span><span class="p">::</span><span class="n">Error</span><span class="o">&gt;&gt;</span> <span class="p">{</span>
+    <span class="c1">// Register writer schema under Confluent id=1.</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">store</span> <span class="o">=</span> <span class="nn">SchemaStore</span><span class="p">::</span><span class="nf">new_with_type</span><span class="p">(</span><span class="nn">FingerprintAlgorithm</span><span class="p">::</span><span class="n">Id</span><span class="p">);</span>
+    <span class="n">store</span><span class="nf">.set</span><span class="p">(</span>
+        <span class="nn">Fingerprint</span><span class="p">::</span><span class="nf">Id</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+        <span class="nn">AvroSchema</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="s">r#"{"type":"record","name":"T","fields":[{"name":"x","type":"long"}]}"#</span><span class="nf">.into</span><span class="p">()),</span>
+    <span class="p">)</span><span class="o">?</span><span class="p">;</span>
+
+    <span class="c1">// Define reader schema to enable projection/schema evolution.</span>
+    <span class="k">let</span> <span class="n">reader_schema</span> <span class="o">=</span> <span class="nn">AvroSchema</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="s">r#"{"type":"record","name":"T","fields":[{"name":"x","type":"long"}]}"#</span><span class="nf">.into</span><span class="p">());</span>
+
+    <span class="c1">// Build Decoder using reader and writer schemas</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">decoder</span> <span class="o">=</span> <span class="nn">ReaderBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">()</span>
+        <span class="nf">.with_reader_schema</span><span class="p">(</span><span class="n">reader_schema</span><span class="p">)</span>
+        <span class="nf">.with_writer_schema_store</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
+        <span class="nf">.build_decoder</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+
+    <span class="c1">// Simulate one frame: magic 0x00 + 4‑byte big‑endian schema ID + Avro body (x=1 encoded as zig‑zag/VLQ).</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">frame</span> <span class="o">=</span> <span class="nn">Vec</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="n">CONFLUENT_MAGIC</span><span class="p">);</span> <span class="n">frame</span><span class="nf">.extend_from_slice</span><span class="p">(</span><span class="o">&amp;</span><span class="mi">1u32</span><span class="nf">.to_be_bytes</span><span class="p">());</span> <span class="n">frame</span><span class="nf">.extend_from_slice</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+
+    <span class="c1">// Consume from decoder</span>
+    <span class="k">let</span> <span class="n">_consumed</span> <span class="o">=</span> <span class="n">decoder</span><span class="nf">.decode</span><span class="p">(</span><span class="o">&amp;</span><span class="n">frame</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+    <span class="k">while</span> <span class="k">let</span> <span class="nf">Some</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">=</span> <span class="n">decoder</span><span class="nf">.flush</span><span class="p">()</span><span class="o">?</span> <span class="p">{</span>
+        <span class="nd">println!</span><span class="p">(</span><span class="s">"rows={}, cols={}"</span><span class="p">,</span> <span class="n">batch</span><span class="nf">.num_rows</span><span class="p">(),</span> <span class="n">batch</span><span class="nf">.num_columns</span><span class="p">());</span>
+    <span class="p">}</span>
+    <span class="nf">Ok</span><span class="p">(())</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>The <code>SchemaStore</code> maps the incoming schema ID to the correct Avro writer schema so the decoder can perform projection/evolution against the reader schema. Confluent's wire format prefixes each message with a magic byte <code>0x00</code> followed by a big‑endian 4‑byte schema ID. After decoding Avro messages, the <code>Decoder::flush()</code> method yields Arrow <code>RecordBatch</code>es suitable for vectorized processing.</p>
+<p>A more advanced example can be found <a href="https://github.com/apache/arrow-rs/blob/main/arrow-avro/examples/decode_kafka_stream.rs" target="_blank" rel="noopener">here</a>.</p>
+<h3>Writing a Snappy Compressed Avro OCF file</h3>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="k">use</span> <span class="nn">arrow_array</span><span class="p">::{</span><span class="n">Int64Array</span><span class="p">,</span> <span class="n">RecordBatch</span><span class="p">};</span>
+<span class="k">use</span> <span class="nn">arrow_schema</span><span class="p">::{</span><span class="n">Schema</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">DataType</span><span class="p">};</span>
+<span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">writer</span><span class="p">::{</span><span class="n">Writer</span><span class="p">,</span> <span class="n">WriterBuilder</span><span class="p">};</span>
+<span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">writer</span><span class="p">::</span><span class="nn">format</span><span class="p">::</span><span class="n">AvroOcfFormat</span><span class="p">;</span>
+<span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">compression</span><span class="p">::</span><span class="n">CompressionCodec</span><span class="p">;</span>
+<span class="k">use</span> <span class="nn">std</span><span class="p">::{</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="p">,</span> <span class="nn">fs</span><span class="p">::</span><span class="n">File</span><span class="p">,</span> <span class="nn">io</span><span class="p">::</span><span class="n">BufWriter</span><span class="p">};</span>
+
+<span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="p">(),</span> <span class="nb">Box</span><span class="o">&lt;</span><span class="k">dyn</span> <span class="nn">std</span><span class="p">::</span><span class="nn">error</span><span class="p">::</span><span class="n">Error</span><span class="o">&gt;&gt;</span> <span class="p">{</span>
+  <span class="k">let</span> <span class="n">schema</span> <span class="o">=</span> <span class="nn">Schema</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="nd">vec!</span><span class="p">[</span><span class="nn">Field</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="s">"id"</span><span class="p">,</span> <span class="nn">DataType</span><span class="p">::</span><span class="n">Int64</span><span class="p">,</span> <span class="kc">false</span><span class="p">)]);</span>
+  <span class="k">let</span> <span class="n">batch</span> <span class="o">=</span> <span class="nn">RecordBatch</span><span class="p">::</span><span class="nf">try_new</span><span class="p">(</span>
+    <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">schema</span><span class="nf">.clone</span><span class="p">()),</span>
+    <span class="nd">vec!</span><span class="p">[</span><span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="nn">Int64Array</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="nd">vec!</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))],</span>
+  <span class="p">)</span><span class="o">?</span><span class="p">;</span>
+  <span class="k">let</span> <span class="n">file</span> <span class="o">=</span> <span class="nn">File</span><span class="p">::</span><span class="nf">create</span><span class="p">(</span><span class="s">"target/example.avro"</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+
+  <span class="c1">// Choose OCF block compression (e.g., None, Deflate, Snappy, Zstd)</span>
+  <span class="k">let</span> <span class="k">mut</span> <span class="n">writer</span><span class="p">:</span> <span class="n">Writer</span><span class="o">&lt;</span><span class="n">_</span><span class="p">,</span> <span class="n">AvroOcfFormat</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nn">WriterBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span>
+      <span class="nf">.with_compression</span><span class="p">(</span><span class="nf">Some</span><span class="p">(</span><span class="nn">CompressionCodec</span><span class="p">::</span><span class="n">Snappy</span><span class="p">))</span>
+      <span class="nf">.build</span><span class="p">(</span><span class="nn">BufWriter</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">file</span><span class="p">))</span><span class="o">?</span><span class="p">;</span>
+  <span class="n">writer</span><span class="nf">.write</span><span class="p">(</span><span class="o">&amp;</span><span class="n">batch</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+  <span class="n">writer</span><span class="nf">.finish</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+  <span class="nf">Ok</span><span class="p">(())</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>The example above configures an Avro OCF <code>Writer</code>. It constructs a <code>Writer&lt;_, AvroOcfFormat&gt;</code> using <code>WriterBuilder::new(schema)</code> and wraps a <code>File</code> in a <code>BufWriter</code> for efficient I/O. The call to <code>.with_compression(Some(CompressionCodec::Snappy))</code> enables block‑level snappy compression. Finally, <code>writer.write(&amp;batch)?</code> serializes the batch as an Avro encoded block, and <code>writer.finish()?</code> flushes and finalizes the outputted file.</p>
+<h2>Alternatives &amp; Benchmarks</h2>
+<p>There are fundamentally two different approaches for bringing Avro into Arrow:</p>
+<ol>
+<li>Row‑centric approach, typical of general Avro libraries such as <code>apache-avro</code>, deserializes one record at a time into native Rust values (i.e., <code>Value</code> or Serde types) and then builds Arrow arrays from those values.</li>
+<li>Vectorized approach, what <code>arrow-avro</code> provides, decodes directly into Arrow builders/arrays and emits <code>RecordBatch</code>es, avoiding most per‑row overhead.</li>
+</ol>
+<p>This section compares the performance of both approaches using these <a href="https://github.com/jecsand838/arrow-rs/tree/blog-benches/arrow-avro/benches" target="_blank" rel="noopener">Criterion benchmarks</a>.</p>
+<h3>Read performance (1M)</h3>
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start; padding: 5px 5px;">
+<img src="/img/introducing-arrow-avro/read_violin_1m.svg" width="100%" alt="1M Row Read Violin Plot" style="background:#fff">
+</div>
+<h3>Read performance (10K)</h3>
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start; padding: 5px 5px;">
+<img src="/img/introducing-arrow-avro/read_violin_10k.svg" width="100%" alt="10K Row Read Violin Plot" style="background:#fff">
+</div>
+<h3>Write performance (1M)</h3>
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start; padding: 5px 5px;">
+<img src="/img/introducing-arrow-avro/write_violin_1m.svg" width="100%" alt="1M Row Write Violin Plot" style="background:#fff">
+</div>
+<h3>Write performance (10K)</h3>
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start; padding: 5px 5px;">
+<img src="/img/introducing-arrow-avro/write_violin_10k.svg" width="100%" alt="10K Row Write Violin Plot" style="background:#fff">
+</div>
+<p>Across benchmarks, the violin plots show lower medians and tighter spreads for <code>arrow-avro</code> on both read and write paths. The gap widens when per‑row work dominates (i.e., 10K‑row scenarios). At 1M rows, the distributions remain favorable to <code>arrow-avro</code>, reflecting better cache locality and fewer copies once decoding goes straight to Arrow arrays. The general behavior is consistent with <code>apache-avro</code>'s record‑by‑record iteration and <code>arrow-avro</code>'s batch‑oriented design.</p>
+<p>The table below lists the cases we report in the figures:</p>
+<ul>
+<li>10K vs 1M rows for multiple data shapes.</li>
+<li>
+<strong>Read cases:</strong>
+<ul>
+<li>
+<code>f8</code>: <em>Full schema, 8K batch size.</em>
+Decode all four columns with batch_size = 8192.</li>
+<li>
+<code>f1</code>: <em>Full schema, 1K batch size.</em>
+Decode all four columns with batch_size = 1024.</li>
+<li>
+<code>p8</code>: <em>Projected <code>{id,name}</code>, 8K batch size (pushdown).</em>
+Decode only <code>id</code> and <code>name</code> with batch_size = 8192`.
+<em>How projection is applied:</em>
+<ul>
+<li>
+<code>arrow-avro/p8</code>: projection via reader schema (<code>ReaderBuilder::with_reader_schema(...)</code>) so decoding is column‑pushed down in the Arrow‑first reader.</li>
+<li>
+<code>apache-avro/p8</code>: projection via Avro reader schema (<code>AvroReader::with_schema(...)</code>) so the Avro library decodes only the projected fields.</li>
+</ul>
+</li>
+<li>
+<code>np</code>: <em>Projected <code>{id,name}</code>, no pushdown, 8K batch size.</em>
+Both readers decode the full record (all four columns), materialize all arrays, then project down to <code>{id,name}</code> after decode. This models systems that can't push projection into the file/codec reader.</li>
+</ul>
+</li>
+<li>
+<strong>Write cases:</strong>
+<ul>
+<li>
+<code>c</code> (cold): <em>Schema conversion each iteration.</em>
+</li>
+<li>
+<code>h</code> (hot): <em>Avro JSON "hot" path.</em>
+</li>
+</ul>
+</li>
+<li>The resulting Apache‑Avro vs Arrow‑Avro medians with the computed speedup.</li>
+</ul>
+<h3>Benchmark Median Time Results (Apple Silicon Mac)</h3>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th align="right">apache-avro median</th>
+<th align="right">arrow-avro median</th>
+<th align="right">speedup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R/f8/10K</td>
+<td align="right">2.60 ms</td>
+<td align="right">0.24 ms</td>
+<td align="right">10.83x</td>
+</tr>
+<tr>
+<td>R/p8/10K</td>
+<td align="right">7.91 ms</td>
+<td align="right">0.24 ms</td>
+<td align="right">32.95x</td>
+</tr>
+<tr>
+<td>R/f1/10K</td>
+<td align="right">2.65 ms</td>
+<td align="right">0.25 ms</td>
+<td align="right">10.60x</td>
+</tr>
+<tr>
+<td>R/np/10K</td>
+<td align="right">2.62 ms</td>
+<td align="right">0.25 ms</td>
+<td align="right">10.48x</td>
+</tr>
+<tr>
+<td>R/f8/1M</td>
+<td align="right">267.21 ms</td>
+<td align="right">27.91 ms</td>
+<td align="right">9.57x</td>
+</tr>
+<tr>
+<td>R/p8/1M</td>
+<td align="right">791.79 ms</td>
+<td align="right">26.28 ms</td>
+<td align="right">30.13x</td>
+</tr>
+<tr>
+<td>R/f1/1M</td>
+<td align="right">262.93 ms</td>
+<td align="right">28.25 ms</td>
+<td align="right">9.31x</td>
+</tr>
+<tr>
+<td>R/np/1M</td>
+<td align="right">268.79 ms</td>
+<td align="right">27.69 ms</td>
+<td align="right">9.71x</td>
+</tr>
+<tr>
+<td>W/c/10K</td>
+<td align="right">4.78 ms</td>
+<td align="right">0.27 ms</td>
+<td align="right">17.70x</td>
+</tr>
+<tr>
+<td>W/h/10K</td>
+<td align="right">0.82 ms</td>
+<td align="right">0.28 ms</td>
+<td align="right">2.93x</td>
+</tr>
+<tr>
+<td>W/c/1M</td>
+<td align="right">485.58 ms</td>
+<td align="right">36.97 ms</td>
+<td align="right">13.13x</td>
+</tr>
+<tr>
+<td>W/h/1M</td>
+<td align="right">83.58 ms</td>
+<td align="right">36.75 ms</td>
+<td align="right">2.27x</td>
+</tr>
+</tbody>
+</table>
+<h2>Closing</h2>
+<p><code>arrow-avro</code> brings a purpose‑built, vectorized bridge connecting Arrow-rs and Avro that covers Object Container Files (OCF), Single‑Object Encoding (SOE), and the Confluent/Apicurio Schema Registry wire formats. This means you can now keep your ingestion paths columnar for both batch files and streaming systems. The reader and writer APIs shown above are now available for you to use with the v57.0.0 release of <code>arrow-rs</code>.</p>
+<p>This work is part of the ongoing Arrow‑rs effort to implement first-class Avro support in Rust. We'd love your feedback on real‑world use-cases, workloads, and integrations. We also welcome contributions, whether that's issues, benchmarks, or PRs. To follow along or help, open an <a href="https://github.com/apache/arrow-rs/issues" target="_blank" rel="noopener">issue on GitHub</a> and/or track <a href="https://github.com/apache/arrow-rs/issues/4886" target="_blank" rel="noopener">Add Avro Support</a> in <code>apache/arrow-rs</code>.</p>
+<h3>Acknowledgments</h3>
+<p>Special thanks to:</p>
+<ul>
+<li>
+<a href="https://github.com/tustvold" target="_blank" rel="noopener">tustvold</a> for laying an incredible zero-copy foundation.</li>
+<li>
+<a href="https://github.com/nathaniel-d-ef" target="_blank" rel="noopener">nathaniel-d-ef</a> and <a href="https://github.com/elastiflow" target="_blank" rel="noopener">ElastiFlow</a> for their numerous and invaluable project-wide contributions.</li>
+<li>
+<a href="https://github.com/veronica-m-ef" target="_blank" rel="noopener">veronica-m-ef</a> for making Impala‑related contributions to the <code>Reader</code>.</li>
+<li>
+<a href="https://github.com/Supermetal-Inc" target="_blank" rel="noopener">Supermetal</a> for contributions related to Apicurio Registry and Run-End Encoding type support.</li>
+<li>
+<a href="https://github.com/kumarlokesh" target="_blank" rel="noopener">kumarlokesh</a> for contributing <code>Utf8View</code> support.</li>
+<li>
+<a href="https://github.com/alamb" target="_blank" rel="noopener">alamb</a>, <a href="https://github.com/scovich" target="_blank" rel="noopener">scovich</a>, <a href="https://github.com/mbrobbel" target="_blank" rel="noopener">mbrobbel</a>, and <a href="https://github.com/klion26" target="_blank" rel="noopener">klion26</a> for their thoughtful reviews, detailed feedback, and support throughout the development of <code>arrow-avro</code>.</li>
+</ul>
+<p>If you have any questions about this blog post, please feel free to contact the author, <a href="mailto:jecs838@gmail.com">Connor Sanders</a>.</p>
+
+      </main>
+    </div>
+
+    <hr>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>© 2016-2025 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html" target="_blank" rel="noopener">
+        <img src="https://www.apache.org/events/current-event-234x60.png">
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
