@@ -52,7 +52,7 @@ See the [benchmark page] for more details.
 [Apache Parquet]: https://parquet.apache.org/
 [custom Thrift decoder]: https://github.com/apache/arrow-rs/issues/5854
 [arrow-rs]: https://github.com/apache/arrow-rs
-[57.0.0]: https://github.com/apache/arrow-rs/issues/7835
+[57.0.0]: https://crates.io/crates/parquet/57.0.0
 
 [benchmark page]: https://github.com/alamb/parquet_footer_parsing
 
