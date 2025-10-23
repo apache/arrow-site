@@ -25,7 +25,9 @@ limitations under the License.
 {% endcomment %}
 -->
 
-`arrow-avro` is a Rust crate that reads and writes [Apache Avro](https://avro.apache.org/) data directly as Arrow `RecordBatch`es. It supports [Avro Object Container Files](https://avro.apache.org/docs/1.11.1/specification/#object-container-files) (OCF), [Single‑Object Encoding](https://avro.apache.org/docs/1.11.1/specification/#single-object-encoding) (SOE), the [Confluent Schema Registry wire format](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format), and the [Apicurio Registry wire format](https://www.apicur.io/registry/docs/apicurio-registry/1.3.3.Final/getting-started/assembly-using-kafka-client-serdes.html#registry-serdes-types-avro-registry), with projection/evolution, tunable batch sizing, and optional `StringViewArray` support for faster strings. Its vectorized design reduces copies and cache misses, making both batch and streaming pipelines simpler and faster.
+[`arrow-avro`], a newly rewritten Rust crate that reads and writes [Apache Avro](https://avro.apache.org/) data directly as Arrow `RecordBatch`es, is now available. It supports [Avro Object Container Files](https://avro.apache.org/docs/1.11.1/specification/#object-container-files) (OCF), [Single‑Object Encoding](https://avro.apache.org/docs/1.11.1/specification/#single-object-encoding) (SOE), the [Confluent Schema Registry wire format](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format), and the [Apicurio Registry wire format](https://www.apicur.io/registry/docs/apicurio-registry/1.3.3.Final/getting-started/assembly-using-kafka-client-serdes.html#registry-serdes-types-avro-registry), with projection/evolution, tunable batch sizing, and optional `StringViewArray` support for faster strings. Its vectorized design reduces copies and cache misses, making both batch and streaming pipelines simpler and faster.
+
+[`arrow-avro`]: https://crates.io/crates/arrow-avro
 
 ## Motivation
 
