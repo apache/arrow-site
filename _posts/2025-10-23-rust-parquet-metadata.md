@@ -1,8 +1,8 @@
 ---
 layout: post
-title: "3x-8x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust"
-date: "2025-10-08 00:00:00"
-author: "Andrew Lamb (InfluxData)"
+title: "3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust"
+date: "2025-10-23 00:00:00"
+author: alamb
 categories: [release]   
 ---
 <!--
