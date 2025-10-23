@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust" />
+<meta name="author" content="alamb" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Editor’s Note: While Apache Arrow and Apache Parquet are separate projects, the Arrow arrow-rs repository hosts the development of the parquet Rust crate, a widely used and high-performance Parquet implementation. Summary Version 57.0.0 of the parquet Rust crate decodes metadata more than three times faster than previous versions thanks to a new custom Apache Thrift parser. The new parser is both faster in all cases and enables further performance improvements not possible with generated parsers, such as skipping unnecessary fields and selective parsing. Figure 1: Performance comparison of Apache Parquet metadata parsing using a generated Thrift parser (versions 56.2.0 and earlier) and the new custom Thrift parser in arrow-rs version 57.0.0. No changes are needed to the Parquet format itself. See the benchmark page for more details. Figure 2: Speedup of the [custom Thrift decoder] for string and floating-point data types, for 100, 1000, 10,000, and 100,000 columns. The new parser is faster in all cases, and the speedup is similar regardless of the number of columns. See the benchmark page for more details. Introduction: Parquet and the Importance of Metadata Parsing Apache Parquet is a popular columnar storage format designed to be efficient for both storage and query processing. Parquet files consist of a series of data pages, and a footer, as shown in Figure 3. The footer contains metadata about the file, including schema, statistics, and other information needed to decode the data pages. Figure 3: Structure of a Parquet file showing the header, data pages, and footer metadata. Getting information stored in the footer is typically the first step in reading a Parquet file, as it is required to interpret the data pages. Parsing the footer is often performance critical: When reading from fast local storage, such as modern NVMe SSDs, footer parsing must be completed to know what data pages to read, placing it directly on the critical I/O path. Footer parsing scales linearly with the number of columns and row groups in a Parquet file and thus can be a bottleneck for tables with many columns or files with many row groups. Even in systems that cache the parsed footer in memory (see Using External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries on Apache Parquet), the footer must still be parsed on cache miss. Figure 4: Typical processing flow for Parquet files for stateless and stateful systems. Stateless engines read the footer on every query, so the time taken to parse the footer directly adds to query latency. Stateful systems cache some or all of the parsed footer in advance of queries. The speed of parsing metadata has grown even more important as Parquet spreads throughout the data ecosystem and is used for more latency-sensitive workloads such as observability, interactive analytics, and single-point lookups for Retrieval-Augmented Generation (RAG) applications feeding LLMs. As overall query times decrease, the proportion spent on footer parsing increases. Background: Apache Thrift Parquet stores metadata using Apache Thrift, a framework for network data types and service interfaces. It includes a data definition language similar to Protocol Buffers. Thrift definition files describe data types in a language-neutral way, and systems typically use code generators to automatically create code for a specific programming language to read and write those data types. The parquet.thrift file defines the format of the metadata serialized at the end of each Parquet file in the Thrift Compact protocol, as shown below in Figure 5. The binary encoding is &quot;variable-length&quot;, meaning that the length of each element depends on its content, not just its type. Smaller-valued primitive types are encoded in fewer bytes than larger values, and strings and lists are stored inline, prefixed with their length. This encoding is space-efficient but, due to being variable-length, does not support random access: it is not possible to locate a particular field without scanning all previous fields. Other formats such as FlatBuffers provide random-access parsing and have been proposed as alternatives given their theoretical performance advantages. However, changing the Parquet format is a significant undertaking, requires buy-in from the community and ecosystem, and would likely take years to be adopted. Figure 5: Parquet metadata is serialized using the Thrift Compact protocol. Each field is stored using a variable number of bytes that depends on its value. Primitive types use a variable-length encoding and strings and lists are prefixed with their lengths. Despite Thrift&#39;s very real disadvantage due to lack of random access, software optimizations are much easier to deploy than format changes. Xiangpeng Hao&#39;s previous analysis theorized significant (2x–4x) potential performance improvements simply by optimizing the implementation of Parquet footer parsing (see How Good is Parquet for Wide Tables (Machine Learning Workloads) Really? for more details). Processing Thrift Using Generated Parsers Parsing Parquet metadata is the process of decoding the Thrift-encoded bytes into in-memory structures that can be used for computation. Most Parquet implementations use one of the existing Thrift compilers to generate a parser that converts Thrift binary data into generated code structures, and then copy relevant portions of those generated structures into API-level structures. For example, the C/C++ Parquet implementation includes a two-step process, as does parquet-java. DuckDB also contains a Thrift compiler–generated parser. In versions 56.2.0 and earlier, the Apache Arrow Rust implementation used the same pattern. The format module contains a parser generated by the thrift crate and the parquet.thrift definition. Parsing metadata involves: Invoke the generated parser on the Thrift binary data, producing generated in-memory structures (e.g., struct FileMetaData), then Copy the relevant fields into a more user-friendly representation, ParquetMetadata. Figure 6: Two-step process to read Parquet metadata: A parser created with the thrift crate and parquet.thrift parses the metadata bytes into generated in-memory structures. These structures are then converted into API objects. The parsers generated by standard Thrift compilers typically parse all fields in a single pass over the Thrift-encoded bytes, copying data into in-memory, heap-allocated structures (e.g., Rust Vec, or C++ std::vector) as shown in Figure 7 below. Parsing all fields is straightforward and a good default choice given Thrift&#39;s original design goal of encoding network messages. Network messages typically don&#39;t contain extra information irrelevant for receivers; however, Parquet metadata often does contain information that is not needed for a particular query. In such cases, parsing the entire metadata into in-memory structures is wasteful. For example, a query on a file with 1,000 columns that reads only 10 columns and has a single column predicate (e.g., time &gt; now() - &#39;1 minute&#39;) only needs Statistics (or ColumnIndex) for the time column ColumnChunk information for the 10 selected columns The default strategy to parse (allocating and copying) all statistics and all ColumnChunks results in creating 999 more statistics and 990 more ColumnChunks than necessary. As discussed above, given the variable encoding used for the metadata, all metadata bytes must still be fetched and scanned; however, CPUs are (very) fast at scanning data, and skipping parsing of unneeded fields speeds up overall metadata performance significantly. Figure 7: Generated Thrift parsers typically parse encoded bytes into structures requiring many small heap allocations, which are expensive. New Design: Custom Thrift Parser As is typical of generated code, opportunities for specializing the behavior of generated Thrift parsers is limited: It is not easy to modify (it is re-generated from the Thrift definitions when they change and carries the warning /* DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING */). It typically maps one-to-one with Thrift definitions, limiting additional optimizations such as zero-copy parsing, field skipping, and amortized memory allocation strategies. Its API is very stable (hard to change), which is important for easy maintenance when a large number of projects are built using the thrift crate. For example, the last release of the Rust thrift crate was almost three years ago at the time of this writing. These limitations are a consequence of the Thrift project&#39;s design goals: general purpose code that is easy to embed in a wide variety of other projects, rather than any fundamental limitation of the Thrift format. Given our goal of fast Parquet metadata parsing, we needed a custom, easier to optimize parser, to convert Thrift binary directly into the needed structures (Figure 8). Since arrow-rs already did some postprocessing on the generated code and included a custom implementation of the compact protocol api, this change to a completely custom parser was a natural next step. Figure 8: One-step Parquet metadata parsing using a custom Thrift parser. The Thrift binary is parsed directly into the desired in-memory representation with highly optimized code. Our new custom parser is optimized for the specific subset of Thrift used by Parquet and contains various performance optimizations, such as careful memory allocation. The largest initial speedup came from removing intermediate structures and directly creating the needed in-memory representation. We also carefully hand-optimized several performance-critical code paths (see #8574, #8587, and #8599). Maintainability The largest concern with a custom parser is that it is more difficult to maintain than generated parsers because the custom parser must be updated to reflect any changes to parquet.thrift. This is a growing concern given the resurgent interest in Parquet and the recent addition of new features such as Geospatial and Variant types. Thankfully, after discussions with the community, Jörn Horstmann developed a Rust macro based approach for generating code with annotated Rust structs that closely resemble the Thrift definitions while permitting additional hand optimization where necessary. This approach is similar to the serde crate where generic implementations can be generated with #[derive] annotations and specialized serialization is written by hand where needed. Ed Seidl then rewrote the metadata parsing code in the parquet crate using these macros. Please see the final PR for details of the level of effort involved. For example, here is the original Thrift definition of the FileMetaData structure (comments omitted for brevity): struct FileMetaData { 1: required i32 version 2: required list&lt;SchemaElement&gt; schema; 3: required i64 num_rows 4: required list&lt;RowGroup&gt; row_groups 5: optional list&lt;KeyValue&gt; key_value_metadata 6: optional string created_by 7: optional list&lt;ColumnOrder&gt; column_orders; 8: optional EncryptionAlgorithm encryption_algorithm 9: optional binary footer_signing_key_metadata } And here (source) is the corresponding Rust structure using the Thrift macros (before Ed wrote a custom version in #8574): thrift_struct!( struct FileMetaData&lt;&#39;a&gt; { 1: required i32 version 2: required list&lt;&#39;a&gt;&lt;SchemaElement&gt; schema; 3: required i64 num_rows 4: required list&lt;&#39;a&gt;&lt;RowGroup&gt; row_groups 5: optional list&lt;KeyValue&gt; key_value_metadata 6: optional string&lt;&#39;a&gt; created_by 7: optional list&lt;ColumnOrder&gt; column_orders; 8: optional EncryptionAlgorithm encryption_algorithm 9: optional binary&lt;&#39;a&gt; footer_signing_key_metadata } ); This system makes it easy to see the correspondence between the Thrift definition and the Rust structure, and it is straightforward to support newly added features such as GeospatialStatistics. The carefully hand- optimized parsers for the most performance-critical structures, such as RowGroupMetaData and ColumnChunkMetaData, are harder—though still straightforward—to update (see #8587). However, those structures are also less likely to change frequently. Future Improvements With the custom parser in place, we are working on additional improvements: Implementing special &quot;skip&quot; indexes to skip directly to the parts of the metadata that are needed for a particular query, such as the row group offsets. Selectively decoding only the statistics for columns that are needed for a particular query. Potentially contributing the macros back to the thrift crate. Conclusion We believe metadata parsing in many open source Parquet readers is slow primarily because they use parsers automatically generated by Thrift compilers, which are not optimized for Parquet metadata parsing. By writing a custom parser, we significantly sped up metadata parsing in the parquet Rust crate, which is widely used in the Apache Arrow ecosystem. While this is not the first open source custom Thrift parser for Parquet metadata (CUDF has had one for many years), we hope that our results will encourage additional Parquet implementations to consider similar optimizations. The approach and optimizations we describe in this post are likely applicable to Parquet implementations in other languages, such as C++ and Java. Previously, efforts like this were only possible at well-financed commercial enterprises. On behalf of the arrow-rs and Parquet contributors, we are excited to share this technology with the community in the upcoming 57.0.0 release and invite you to come join us and help make it even better!" />
+<meta property="og:description" content="Editor’s Note: While Apache Arrow and Apache Parquet are separate projects, the Arrow arrow-rs repository hosts the development of the parquet Rust crate, a widely used and high-performance Parquet implementation. Summary Version 57.0.0 of the parquet Rust crate decodes metadata more than three times faster than previous versions thanks to a new custom Apache Thrift parser. The new parser is both faster in all cases and enables further performance improvements not possible with generated parsers, such as skipping unnecessary fields and selective parsing. Figure 1: Performance comparison of Apache Parquet metadata parsing using a generated Thrift parser (versions 56.2.0 and earlier) and the new custom Thrift parser in arrow-rs version 57.0.0. No changes are needed to the Parquet format itself. See the benchmark page for more details. Figure 2: Speedup of the [custom Thrift decoder] for string and floating-point data types, for 100, 1000, 10,000, and 100,000 columns. The new parser is faster in all cases, and the speedup is similar regardless of the number of columns. See the benchmark page for more details. Introduction: Parquet and the Importance of Metadata Parsing Apache Parquet is a popular columnar storage format designed to be efficient for both storage and query processing. Parquet files consist of a series of data pages, and a footer, as shown in Figure 3. The footer contains metadata about the file, including schema, statistics, and other information needed to decode the data pages. Figure 3: Structure of a Parquet file showing the header, data pages, and footer metadata. Getting information stored in the footer is typically the first step in reading a Parquet file, as it is required to interpret the data pages. Parsing the footer is often performance critical: When reading from fast local storage, such as modern NVMe SSDs, footer parsing must be completed to know what data pages to read, placing it directly on the critical I/O path. Footer parsing scales linearly with the number of columns and row groups in a Parquet file and thus can be a bottleneck for tables with many columns or files with many row groups. Even in systems that cache the parsed footer in memory (see Using External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries on Apache Parquet), the footer must still be parsed on cache miss. Figure 4: Typical processing flow for Parquet files for stateless and stateful systems. Stateless engines read the footer on every query, so the time taken to parse the footer directly adds to query latency. Stateful systems cache some or all of the parsed footer in advance of queries. The speed of parsing metadata has grown even more important as Parquet spreads throughout the data ecosystem and is used for more latency-sensitive workloads such as observability, interactive analytics, and single-point lookups for Retrieval-Augmented Generation (RAG) applications feeding LLMs. As overall query times decrease, the proportion spent on footer parsing increases. Background: Apache Thrift Parquet stores metadata using Apache Thrift, a framework for network data types and service interfaces. It includes a data definition language similar to Protocol Buffers. Thrift definition files describe data types in a language-neutral way, and systems typically use code generators to automatically create code for a specific programming language to read and write those data types. The parquet.thrift file defines the format of the metadata serialized at the end of each Parquet file in the Thrift Compact protocol, as shown below in Figure 5. The binary encoding is &quot;variable-length&quot;, meaning that the length of each element depends on its content, not just its type. Smaller-valued primitive types are encoded in fewer bytes than larger values, and strings and lists are stored inline, prefixed with their length. This encoding is space-efficient but, due to being variable-length, does not support random access: it is not possible to locate a particular field without scanning all previous fields. Other formats such as FlatBuffers provide random-access parsing and have been proposed as alternatives given their theoretical performance advantages. However, changing the Parquet format is a significant undertaking, requires buy-in from the community and ecosystem, and would likely take years to be adopted. Figure 5: Parquet metadata is serialized using the Thrift Compact protocol. Each field is stored using a variable number of bytes that depends on its value. Primitive types use a variable-length encoding and strings and lists are prefixed with their lengths. Despite Thrift&#39;s very real disadvantage due to lack of random access, software optimizations are much easier to deploy than format changes. Xiangpeng Hao&#39;s previous analysis theorized significant (2x–4x) potential performance improvements simply by optimizing the implementation of Parquet footer parsing (see How Good is Parquet for Wide Tables (Machine Learning Workloads) Really? for more details). Processing Thrift Using Generated Parsers Parsing Parquet metadata is the process of decoding the Thrift-encoded bytes into in-memory structures that can be used for computation. Most Parquet implementations use one of the existing Thrift compilers to generate a parser that converts Thrift binary data into generated code structures, and then copy relevant portions of those generated structures into API-level structures. For example, the C/C++ Parquet implementation includes a two-step process, as does parquet-java. DuckDB also contains a Thrift compiler–generated parser. In versions 56.2.0 and earlier, the Apache Arrow Rust implementation used the same pattern. The format module contains a parser generated by the thrift crate and the parquet.thrift definition. Parsing metadata involves: Invoke the generated parser on the Thrift binary data, producing generated in-memory structures (e.g., struct FileMetaData), then Copy the relevant fields into a more user-friendly representation, ParquetMetadata. Figure 6: Two-step process to read Parquet metadata: A parser created with the thrift crate and parquet.thrift parses the metadata bytes into generated in-memory structures. These structures are then converted into API objects. The parsers generated by standard Thrift compilers typically parse all fields in a single pass over the Thrift-encoded bytes, copying data into in-memory, heap-allocated structures (e.g., Rust Vec, or C++ std::vector) as shown in Figure 7 below. Parsing all fields is straightforward and a good default choice given Thrift&#39;s original design goal of encoding network messages. Network messages typically don&#39;t contain extra information irrelevant for receivers; however, Parquet metadata often does contain information that is not needed for a particular query. In such cases, parsing the entire metadata into in-memory structures is wasteful. For example, a query on a file with 1,000 columns that reads only 10 columns and has a single column predicate (e.g., time &gt; now() - &#39;1 minute&#39;) only needs Statistics (or ColumnIndex) for the time column ColumnChunk information for the 10 selected columns The default strategy to parse (allocating and copying) all statistics and all ColumnChunks results in creating 999 more statistics and 990 more ColumnChunks than necessary. As discussed above, given the variable encoding used for the metadata, all metadata bytes must still be fetched and scanned; however, CPUs are (very) fast at scanning data, and skipping parsing of unneeded fields speeds up overall metadata performance significantly. Figure 7: Generated Thrift parsers typically parse encoded bytes into structures requiring many small heap allocations, which are expensive. New Design: Custom Thrift Parser As is typical of generated code, opportunities for specializing the behavior of generated Thrift parsers is limited: It is not easy to modify (it is re-generated from the Thrift definitions when they change and carries the warning /* DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING */). It typically maps one-to-one with Thrift definitions, limiting additional optimizations such as zero-copy parsing, field skipping, and amortized memory allocation strategies. Its API is very stable (hard to change), which is important for easy maintenance when a large number of projects are built using the thrift crate. For example, the last release of the Rust thrift crate was almost three years ago at the time of this writing. These limitations are a consequence of the Thrift project&#39;s design goals: general purpose code that is easy to embed in a wide variety of other projects, rather than any fundamental limitation of the Thrift format. Given our goal of fast Parquet metadata parsing, we needed a custom, easier to optimize parser, to convert Thrift binary directly into the needed structures (Figure 8). Since arrow-rs already did some postprocessing on the generated code and included a custom implementation of the compact protocol api, this change to a completely custom parser was a natural next step. Figure 8: One-step Parquet metadata parsing using a custom Thrift parser. The Thrift binary is parsed directly into the desired in-memory representation with highly optimized code. Our new custom parser is optimized for the specific subset of Thrift used by Parquet and contains various performance optimizations, such as careful memory allocation. The largest initial speedup came from removing intermediate structures and directly creating the needed in-memory representation. We also carefully hand-optimized several performance-critical code paths (see #8574, #8587, and #8599). Maintainability The largest concern with a custom parser is that it is more difficult to maintain than generated parsers because the custom parser must be updated to reflect any changes to parquet.thrift. This is a growing concern given the resurgent interest in Parquet and the recent addition of new features such as Geospatial and Variant types. Thankfully, after discussions with the community, Jörn Horstmann developed a Rust macro based approach for generating code with annotated Rust structs that closely resemble the Thrift definitions while permitting additional hand optimization where necessary. This approach is similar to the serde crate where generic implementations can be generated with #[derive] annotations and specialized serialization is written by hand where needed. Ed Seidl then rewrote the metadata parsing code in the parquet crate using these macros. Please see the final PR for details of the level of effort involved. For example, here is the original Thrift definition of the FileMetaData structure (comments omitted for brevity): struct FileMetaData { 1: required i32 version 2: required list&lt;SchemaElement&gt; schema; 3: required i64 num_rows 4: required list&lt;RowGroup&gt; row_groups 5: optional list&lt;KeyValue&gt; key_value_metadata 6: optional string created_by 7: optional list&lt;ColumnOrder&gt; column_orders; 8: optional EncryptionAlgorithm encryption_algorithm 9: optional binary footer_signing_key_metadata } And here (source) is the corresponding Rust structure using the Thrift macros (before Ed wrote a custom version in #8574): thrift_struct!( struct FileMetaData&lt;&#39;a&gt; { 1: required i32 version 2: required list&lt;&#39;a&gt;&lt;SchemaElement&gt; schema; 3: required i64 num_rows 4: required list&lt;&#39;a&gt;&lt;RowGroup&gt; row_groups 5: optional list&lt;KeyValue&gt; key_value_metadata 6: optional string&lt;&#39;a&gt; created_by 7: optional list&lt;ColumnOrder&gt; column_orders; 8: optional EncryptionAlgorithm encryption_algorithm 9: optional binary&lt;&#39;a&gt; footer_signing_key_metadata } ); This system makes it easy to see the correspondence between the Thrift definition and the Rust structure, and it is straightforward to support newly added features such as GeospatialStatistics. The carefully hand- optimized parsers for the most performance-critical structures, such as RowGroupMetaData and ColumnChunkMetaData, are harder—though still straightforward—to update (see #8587). However, those structures are also less likely to change frequently. Future Improvements With the custom parser in place, we are working on additional improvements: Implementing special &quot;skip&quot; indexes to skip directly to the parts of the metadata that are needed for a particular query, such as the row group offsets. Selectively decoding only the statistics for columns that are needed for a particular query. Potentially contributing the macros back to the thrift crate. Conclusion We believe metadata parsing in many open source Parquet readers is slow primarily because they use parsers automatically generated by Thrift compilers, which are not optimized for Parquet metadata parsing. By writing a custom parser, we significantly sped up metadata parsing in the parquet Rust crate, which is widely used in the Apache Arrow ecosystem. While this is not the first open source custom Thrift parser for Parquet metadata (CUDF has had one for many years), we hope that our results will encourage additional Parquet implementations to consider similar optimizations. The approach and optimizations we describe in this post are likely applicable to Parquet implementations in other languages, such as C++ and Java. Previously, efforts like this were only possible at well-financed commercial enterprises. On behalf of the arrow-rs and Parquet contributors, we are excited to share this technology with the community in the upcoming 57.0.0 release and invite you to come join us and help make it even better!" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-10-23T00:00:00-04:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"alamb"},"dateModified":"2025-10-23T00:00:00-04:00","datePublished":"2025-10-23T00:00:00-04:00","description":"Editor’s Note: While Apache Arrow and Apache Parquet are separate projects, the Arrow arrow-rs repository hosts the development of the parquet Rust crate, a widely used and high-performance Parquet implementation. Summary Version 57.0.0 of the parquet Rust crate decodes metadata more than three times faster than previous versions thanks to a new custom Apache Thrift parser. The new parser is both faster in all cases and enables further performance improvements not possible with generated parsers, such as skipping unnecessary fields and selective parsing. Figure 1: Performance comparison of Apache Parquet metadata parsing using a generated Thrift parser (versions 56.2.0 and earlier) and the new custom Thrift parser in arrow-rs version 57.0.0. No changes are needed to the Parquet format itself. See the benchmark page for more details. Figure 2: Speedup of the [custom Thrift decoder] for string and floating-point data types, for 100, 1000, 10,000, and 100,000 columns. The new parser is faster in all cases, and the speedup is similar regardless of the number of columns. See the benchmark page for more details. Introduction: Parquet and the Importance of Metadata Parsing Apache Parquet is a popular columnar storage format designed to be efficient for both storage and query processing. Parquet files consist of a series of data pages, and a footer, as shown in Figure 3. The footer contains metadata about the file, including schema, statistics, and other information needed to decode the data pages. Figure 3: Structure of a Parquet file showing the header, data pages, and footer metadata. Getting information stored in the footer is typically the first step in reading a Parquet file, as it is required to interpret the data pages. Parsing the footer is often performance critical: When reading from fast local storage, such as modern NVMe SSDs, footer parsing must be completed to know what data pages to read, placing it directly on the critical I/O path. Footer parsing scales linearly with the number of columns and row groups in a Parquet file and thus can be a bottleneck for tables with many columns or files with many row groups. Even in systems that cache the parsed footer in memory (see Using External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries on Apache Parquet), the footer must still be parsed on cache miss. Figure 4: Typical processing flow for Parquet files for stateless and stateful systems. Stateless engines read the footer on every query, so the time taken to parse the footer directly adds to query latency. Stateful systems cache some or all of the parsed footer in advance of queries. The speed of parsing metadata has grown even more important as Parquet spreads throughout the data ecosystem and is used for more latency-sensitive workloads such as observability, interactive analytics, and single-point lookups for Retrieval-Augmented Generation (RAG) applications feeding LLMs. As overall query times decrease, the proportion spent on footer parsing increases. Background: Apache Thrift Parquet stores metadata using Apache Thrift, a framework for network data types and service interfaces. It includes a data definition language similar to Protocol Buffers. Thrift definition files describe data types in a language-neutral way, and systems typically use code generators to automatically create code for a specific programming language to read and write those data types. The parquet.thrift file defines the format of the metadata serialized at the end of each Parquet file in the Thrift Compact protocol, as shown below in Figure 5. The binary encoding is &quot;variable-length&quot;, meaning that the length of each element depends on its content, not just its type. Smaller-valued primitive types are encoded in fewer bytes than larger values, and strings and lists are stored inline, prefixed with their length. This encoding is space-efficient but, due to being variable-length, does not support random access: it is not possible to locate a particular field without scanning all previous fields. Other formats such as FlatBuffers provide random-access parsing and have been proposed as alternatives given their theoretical performance advantages. However, changing the Parquet format is a significant undertaking, requires buy-in from the community and ecosystem, and would likely take years to be adopted. Figure 5: Parquet metadata is serialized using the Thrift Compact protocol. Each field is stored using a variable number of bytes that depends on its value. Primitive types use a variable-length encoding and strings and lists are prefixed with their lengths. Despite Thrift&#39;s very real disadvantage due to lack of random access, software optimizations are much easier to deploy than format changes. Xiangpeng Hao&#39;s previous analysis theorized significant (2x–4x) potential performance improvements simply by optimizing the implementation of Parquet footer parsing (see How Good is Parquet for Wide Tables (Machine Learning Workloads) Really? for more details). Processing Thrift Using Generated Parsers Parsing Parquet metadata is the process of decoding the Thrift-encoded bytes into in-memory structures that can be used for computation. Most Parquet implementations use one of the existing Thrift compilers to generate a parser that converts Thrift binary data into generated code structures, and then copy relevant portions of those generated structures into API-level structures. For example, the C/C++ Parquet implementation includes a two-step process, as does parquet-java. DuckDB also contains a Thrift compiler–generated parser. In versions 56.2.0 and earlier, the Apache Arrow Rust implementation used the same pattern. The format module contains a parser generated by the thrift crate and the parquet.thrift definition. Parsing metadata involves: Invoke the generated parser on the Thrift binary data, producing generated in-memory structures (e.g., struct FileMetaData), then Copy the relevant fields into a more user-friendly representation, ParquetMetadata. Figure 6: Two-step process to read Parquet metadata: A parser created with the thrift crate and parquet.thrift parses the metadata bytes into generated in-memory structures. These structures are then converted into API objects. The parsers generated by standard Thrift compilers typically parse all fields in a single pass over the Thrift-encoded bytes, copying data into in-memory, heap-allocated structures (e.g., Rust Vec, or C++ std::vector) as shown in Figure 7 below. Parsing all fields is straightforward and a good default choice given Thrift&#39;s original design goal of encoding network messages. Network messages typically don&#39;t contain extra information irrelevant for receivers; however, Parquet metadata often does contain information that is not needed for a particular query. In such cases, parsing the entire metadata into in-memory structures is wasteful. For example, a query on a file with 1,000 columns that reads only 10 columns and has a single column predicate (e.g., time &gt; now() - &#39;1 minute&#39;) only needs Statistics (or ColumnIndex) for the time column ColumnChunk information for the 10 selected columns The default strategy to parse (allocating and copying) all statistics and all ColumnChunks results in creating 999 more statistics and 990 more ColumnChunks than necessary. As discussed above, given the variable encoding used for the metadata, all metadata bytes must still be fetched and scanned; however, CPUs are (very) fast at scanning data, and skipping parsing of unneeded fields speeds up overall metadata performance significantly. Figure 7: Generated Thrift parsers typically parse encoded bytes into structures requiring many small heap allocations, which are expensive. New Design: Custom Thrift Parser As is typical of generated code, opportunities for specializing the behavior of generated Thrift parsers is limited: It is not easy to modify (it is re-generated from the Thrift definitions when they change and carries the warning /* DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING */). It typically maps one-to-one with Thrift definitions, limiting additional optimizations such as zero-copy parsing, field skipping, and amortized memory allocation strategies. Its API is very stable (hard to change), which is important for easy maintenance when a large number of projects are built using the thrift crate. For example, the last release of the Rust thrift crate was almost three years ago at the time of this writing. These limitations are a consequence of the Thrift project&#39;s design goals: general purpose code that is easy to embed in a wide variety of other projects, rather than any fundamental limitation of the Thrift format. Given our goal of fast Parquet metadata parsing, we needed a custom, easier to optimize parser, to convert Thrift binary directly into the needed structures (Figure 8). Since arrow-rs already did some postprocessing on the generated code and included a custom implementation of the compact protocol api, this change to a completely custom parser was a natural next step. Figure 8: One-step Parquet metadata parsing using a custom Thrift parser. The Thrift binary is parsed directly into the desired in-memory representation with highly optimized code. Our new custom parser is optimized for the specific subset of Thrift used by Parquet and contains various performance optimizations, such as careful memory allocation. The largest initial speedup came from removing intermediate structures and directly creating the needed in-memory representation. We also carefully hand-optimized several performance-critical code paths (see #8574, #8587, and #8599). Maintainability The largest concern with a custom parser is that it is more difficult to maintain than generated parsers because the custom parser must be updated to reflect any changes to parquet.thrift. This is a growing concern given the resurgent interest in Parquet and the recent addition of new features such as Geospatial and Variant types. Thankfully, after discussions with the community, Jörn Horstmann developed a Rust macro based approach for generating code with annotated Rust structs that closely resemble the Thrift definitions while permitting additional hand optimization where necessary. This approach is similar to the serde crate where generic implementations can be generated with #[derive] annotations and specialized serialization is written by hand where needed. Ed Seidl then rewrote the metadata parsing code in the parquet crate using these macros. Please see the final PR for details of the level of effort involved. For example, here is the original Thrift definition of the FileMetaData structure (comments omitted for brevity): struct FileMetaData { 1: required i32 version 2: required list&lt;SchemaElement&gt; schema; 3: required i64 num_rows 4: required list&lt;RowGroup&gt; row_groups 5: optional list&lt;KeyValue&gt; key_value_metadata 6: optional string created_by 7: optional list&lt;ColumnOrder&gt; column_orders; 8: optional EncryptionAlgorithm encryption_algorithm 9: optional binary footer_signing_key_metadata } And here (source) is the corresponding Rust structure using the Thrift macros (before Ed wrote a custom version in #8574): thrift_struct!( struct FileMetaData&lt;&#39;a&gt; { 1: required i32 version 2: required list&lt;&#39;a&gt;&lt;SchemaElement&gt; schema; 3: required i64 num_rows 4: required list&lt;&#39;a&gt;&lt;RowGroup&gt; row_groups 5: optional list&lt;KeyValue&gt; key_value_metadata 6: optional string&lt;&#39;a&gt; created_by 7: optional list&lt;ColumnOrder&gt; column_orders; 8: optional EncryptionAlgorithm encryption_algorithm 9: optional binary&lt;&#39;a&gt; footer_signing_key_metadata } ); This system makes it easy to see the correspondence between the Thrift definition and the Rust structure, and it is straightforward to support newly added features such as GeospatialStatistics. The carefully hand- optimized parsers for the most performance-critical structures, such as RowGroupMetaData and ColumnChunkMetaData, are harder—though still straightforward—to update (see #8587). However, those structures are also less likely to change frequently. Future Improvements With the custom parser in place, we are working on additional improvements: Implementing special &quot;skip&quot; indexes to skip directly to the parts of the metadata that are needed for a particular query, such as the row group offsets. Selectively decoding only the statistics for columns that are needed for a particular query. Potentially contributing the macros back to the thrift crate. Conclusion We believe metadata parsing in many open source Parquet readers is slow primarily because they use parsers automatically generated by Thrift compilers, which are not optimized for Parquet metadata parsing. By writing a custom parser, we significantly sped up metadata parsing in the parquet Rust crate, which is widely used in the Apache Arrow ecosystem. While this is not the first open source custom Thrift parser for Parquet metadata (CUDF has had one for many years), we hope that our results will encourage additional Parquet implementations to consider similar optimizations. The approach and optimizations we describe in this post are likely applicable to Parquet implementations in other languages, such as C++ and Java. Previously, efforts like this were only possible at well-financed commercial enterprises. On behalf of the arrow-rs and Parquet contributors, we are excited to share this technology with the community in the upcoming 57.0.0 release and invite you to come join us and help make it even better!","headline":"3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"alamb"},"url":"https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+    <link type="application/atom+xml" rel="alternate" href="https://arrow.apache.org/feed.xml" title="Apache Arrow" />
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownGetArrow" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownDocumentation" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Docs
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/csharp/README.md" target="_blank" rel="noopener">C#</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow" target="_blank" rel="noopener">Go</a>
+            <a class="dropdown-item" href="/docs/java">Java</a>
+            <a class="dropdown-item" href="/docs/js">JavaScript</a>
+            <a class="dropdown-item" href="/julia/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/matlab/README.md" target="_blank" rel="noopener">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/ruby/README.md" target="_blank" rel="noopener">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/arrow/latest" target="_blank" rel="noopener">Rust</a>
+            <a class="dropdown-item" href="/swift">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSource" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Source
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSource">
+            <a class="dropdown-item" href="https://github.com/apache/arrow" target="_blank" rel="noopener">Main Repo</a>
+            <hr>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/c_glib" target="_blank" rel="noopener">C GLib</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/cpp" target="_blank" rel="noopener">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/csharp" target="_blank" rel="noopener">C#</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-go" target="_blank" rel="noopener">Go</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-java" target="_blank" rel="noopener">Java</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-js" target="_blank" rel="noopener">JavaScript</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-julia" target="_blank" rel="noopener">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/matlab" target="_blank" rel="noopener">MATLAB</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/python" target="_blank" rel="noopener">Python</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/r" target="_blank" rel="noopener">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/ruby" target="_blank" rel="noopener">Ruby</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-rs" target="_blank" rel="noopener">Rust</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-swift" target="_blank" rel="noopener">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSubprojects" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/adbc">ADBC</a>
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="https://datafusion.apache.org" target="_blank" rel="noopener">DataFusion</a>
+            <a class="dropdown-item" href="/nanoarrow">nanoarrow</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownCommunity" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/index.html">Contributing</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/issues" target="_blank" rel="noopener">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html" target="_blank" rel="noopener">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownASF" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/" target="_blank" rel="noopener">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/" target="_blank" rel="noopener">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html" target="_blank" rel="noopener">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html" target="_blank" rel="noopener">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/" target="_blank" rel="noopener">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+<!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    23 Oct 2025
+  </span>
+  <br>
+  <span class="badge badge-secondary">By</span>
+  
+    <a class="mr-3" href="https://github.com/alamb" target="_blank" rel="noopener">Andrew Lamb (alamb) </a>
+  
+
+  
+</p>
+
+
+        <!--
+
+-->
+<p><em>Editor’s Note: While <a href="https://arrow.apache.org/">Apache Arrow</a> and <a href="https://parquet.apache.org/" target="_blank" rel="noopener">Apache Parquet</a> are separate projects,
+the Arrow <a href="https://github.com/apache/arrow-rs" target="_blank" rel="noopener">arrow-rs</a> repository hosts the development of the <a href="https://crates.io/crates/parquet" target="_blank" rel="noopener">parquet</a> Rust
+crate, a widely used and high-performance Parquet implementation.</em></p>
+<h2>Summary</h2>
+<p>Version <a href="https://crates.io/crates/parquet/57.0.0" target="_blank" rel="noopener">57.0.0</a> of the <a href="https://crates.io/crates/parquet" target="_blank" rel="noopener">parquet</a> Rust crate decodes metadata more than three times
+faster than previous versions thanks to a new custom <a href="https://thrift.apache.org/" target="_blank" rel="noopener">Apache Thrift</a> parser. The new
+parser is both faster in all cases and enables further performance improvements not
+possible with generated parsers, such as skipping unnecessary fields and selective parsing.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/results.png" width="100%" class="img-responsive" alt="" aria-hidden="true">
+</div>
+<p><em>Figure 1:</em> Performance comparison of <a href="https://parquet.apache.org/" target="_blank" rel="noopener">Apache Parquet</a> metadata parsing using a generated
+Thrift parser (versions <code>56.2.0</code> and earlier) and the new
+<a href="https://github.com/apache/arrow-rs/issues/5854" target="_blank" rel="noopener">custom Thrift parser</a> in <a href="https://github.com/apache/arrow-rs" target="_blank" rel="noopener">arrow-rs</a> version <a href="https://crates.io/crates/parquet/57.0.0" target="_blank" rel="noopener">57.0.0</a>. No
+changes are needed to the Parquet format itself.
+See the <a href="https://github.com/alamb/parquet_footer_parsing" target="_blank" rel="noopener">benchmark page</a> for more details.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/scaling.png" width="100%" class="img-responsive" alt="Scaling behavior of custom Thrift parser" aria-hidden="true">
+</div>
+<p><em>Figure 2:</em> Speedup of the [custom Thrift decoder] for string and floating-point data types,
+for <code>100</code>, <code>1000</code>, <code>10,000</code>, and <code>100,000</code> columns. The new parser is faster in all cases,
+and the speedup is similar regardless of the number of columns. See the <a href="https://github.com/alamb/parquet_footer_parsing" target="_blank" rel="noopener">benchmark page</a> for more details.</p>
+<h2>Introduction: Parquet and the Importance of Metadata Parsing</h2>
+<p><a href="https://parquet.apache.org/" target="_blank" rel="noopener">Apache Parquet</a> is a popular columnar storage format
+designed to be efficient for both storage and query processing. Parquet
+files consist of a series of data pages, and a footer, as shown in Figure 3. The footer
+contains metadata about the file, including schema, statistics, and other
+information needed to decode the data pages.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/parquet.png" width="100%" class="img-responsive" alt="Physical File Structure of Parquet" aria-hidden="true">
+</div>
+<p><em>Figure 3:</em> Structure of a Parquet file showing the header, data pages, and footer metadata.</p>
+<p>Getting information stored in the footer is typically the first step in reading
+a Parquet file, as it is required to interpret the data pages. <em>Parsing</em> the
+footer is often performance critical:</p>
+<ul>
+<li>When reading from fast local storage, such as modern NVMe SSDs, footer parsing
+must be completed to know what data pages to read, placing it directly on the critical
+I/O path.</li>
+<li>Footer parsing scales linearly with the number of columns and row groups in a
+Parquet file and thus can be a bottleneck for tables with many columns or files
+with many row groups.</li>
+<li>Even in systems that cache the parsed footer in memory (see <a href="https://datafusion.apache.org/blog/2025/08/15/external-parquet-indexes/" target="_blank" rel="noopener">Using
+External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries
+on Apache Parquet</a>), the footer must still be parsed on cache miss.</li>
+</ul>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/flow.png" width="100%" class="img-responsive" alt="Typical Parquet processing flow" aria-hidden="true">
+</div>
+<p><em>Figure 4:</em> Typical processing flow for Parquet files for stateless and stateful
+systems. Stateless engines read the footer on every query, so the time taken to
+parse the footer directly adds to query latency. Stateful systems cache some or
+all of the parsed footer in advance of queries.</p>
+<p>The speed of parsing metadata has grown even more important as Parquet spreads
+throughout the data ecosystem and is used for more latency-sensitive workloads such
+as observability, interactive analytics, and single-point
+lookups for Retrieval-Augmented Generation (RAG) applications feeding LLMs.
+As overall query times decrease, the proportion spent on footer parsing increases.</p>
+<h2>Background: Apache Thrift</h2>
+<p>Parquet stores metadata using <a href="https://thrift.apache.org/" target="_blank" rel="noopener">Apache Thrift</a>, a framework for
+network data types and service interfaces. It includes a <a href="https://thrift.apache.org/docs/idl" target="_blank" rel="noopener">data definition
+language</a> similar to <a href="https://developers.google.com/protocol-buffers" target="_blank" rel="noopener">Protocol Buffers</a>. Thrift definition files describe data
+types in a language-neutral way, and systems typically use code generators to
+automatically create code for a specific programming language to read and write
+those data types.</p>
+<p>The <a href="https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift" target="_blank" rel="noopener">parquet.thrift</a> file defines the format of the metadata
+serialized at the end of each Parquet file in the <a href="https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md" target="_blank" rel="noopener">Thrift Compact
+protocol</a>, as shown below in Figure 5. The binary encoding is "variable-length",
+meaning that the length of each element depends on its content, not
+just its type. Smaller-valued primitive types are encoded in fewer bytes than
+larger values, and strings and lists are stored inline, prefixed with their
+length.</p>
+<p>This encoding is space-efficient but, due to being variable-length, does not
+support random access: it is not possible to locate a particular field without
+scanning all previous fields. Other formats such as <a href="https://google.github.io/flatbuffers/" target="_blank" rel="noopener">FlatBuffers</a> provide
+random-access parsing and have been <a href="https://lists.apache.org/thread/j9qv5vyg0r4jk6tbm6sqthltly4oztd3" target="_blank" rel="noopener">proposed as alternatives</a> given their
+theoretical performance advantages. However, changing the Parquet format is a
+significant undertaking, requires buy-in from the community and ecosystem,
+and would likely take years to be adopted.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/thrift-compact-encoding.png" width="100%" class="img-responsive" alt="Thrift Compact Encoding Illustration" aria-hidden="true">
+</div>
+<p><em>Figure 5:</em> Parquet metadata is serialized using the <a href="https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md" target="_blank" rel="noopener">Thrift Compact protocol</a>.
+Each field is stored using a variable number of bytes that depends on its value.
+Primitive types use a variable-length encoding and strings and lists are
+prefixed with their lengths.</p>
+<p>Despite Thrift's very real disadvantage due to lack of random access, software
+optimizations are much easier to deploy than format changes. <a href="https://xiangpeng.systems/" target="_blank" rel="noopener">Xiangpeng Hao</a>'s
+previous analysis theorized significant (2x–4x) potential performance
+improvements simply by optimizing the implementation of Parquet footer parsing
+(see <a href="https://www.influxdata.com/blog/how-good-parquet-wide-tables/" target="_blank" rel="noopener">How Good is Parquet for Wide Tables (Machine Learning
+Workloads) Really?</a> for more details).</p>
+<h2>Processing Thrift Using Generated Parsers</h2>
+<p><em>Parsing</em> Parquet metadata is the process of decoding the Thrift-encoded bytes
+into in-memory structures that can be used for computation. Most Parquet
+implementations use one of the existing <a href="https://thrift.apache.org/lib/" target="_blank" rel="noopener">Thrift compilers</a> to generate a parser
+that converts Thrift binary data into generated code structures, and then copy
+relevant portions of those generated structures into API-level structures.
+For example, the <a href="https://github.com/apache/arrow/blob/e1f727cbb447d2385949a54d8f4be2fdc6cefe29/cpp/src/parquet" target="_blank" rel="noopener">C/C++ Parquet implementation</a> includes a <a href="https://github.com/apache/arrow/blob/e1f727cbb447d2385949a54d8f4be2fdc6cefe29/cpp/build-support/update-thrift.sh#L23" target="_blank" rel="noopener">two</a>-<a href="https://github.com/apache/arrow/blob/e1f727cbb447d2385949a54d8f4be2fdc6cefe29/cpp/src/parquet/thrift_internal.h#L56" target="_blank" rel="noopener">step</a> process,
+as does <a href="https://github.com/apache/parquet-java/blob/0fea3e1e22fffb0a25193e3efb9a5d090899458a/parquet-format-structures/pom.xml#L69-L88" target="_blank" rel="noopener">parquet-java</a>. <a href="https://github.com/duckdb/duckdb/blob/8f512187537c65d36ce6d6f562b75a37e8d4ee54/third_party/parquet/parquet_types.h#L1-L6" target="_blank" rel="noopener">DuckDB</a> also contains a Thrift compiler–generated
+parser.</p>
+<p>In versions <code>56.2.0</code> and earlier, the Apache Arrow Rust implementation used the
+same pattern. The <a href="https://docs.rs/parquet/56.2.0/parquet/format/index.html" target="_blank" rel="noopener">format</a> module contains a parser generated by the <a href="https://crates.io/crates/thrift" target="_blank" rel="noopener">thrift
+crate</a> and the <a href="https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift" target="_blank" rel="noopener">parquet.thrift</a> definition. Parsing metadata involves:</p>
+<ol>
+<li>Invoke the generated parser on the Thrift binary data, producing
+generated in-memory structures (e.g., <a href="https://docs.rs/parquet/56.2.0/parquet/format/struct.FileMetaData.html" target="_blank" rel="noopener"><code>struct FileMetaData</code></a>), then</li>
+<li>Copy the relevant fields into a more user-friendly representation,
+<a href="https://docs.rs/parquet/56.2.0/parquet/file/metadata/struct.ParquetMetaData.html" target="_blank" rel="noopener"><code>ParquetMetadata</code></a>.</li>
+</ol>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/original-pipeline.png" width="100%" class="img-responsive" alt="Original Parquet Parsing Pipeline" aria-hidden="true">
+</div>
+<p><em>Figure 6:</em> Two-step process to read Parquet metadata: A parser created with the
+<code>thrift</code> crate and <code>parquet.thrift</code> parses the metadata bytes
+into generated in-memory structures. These structures are then converted into
+API objects.</p>
+<p>The parsers generated by standard Thrift compilers typically parse <em>all</em> fields
+in a single pass over the Thrift-encoded bytes, copying data into in-memory,
+heap-allocated structures (e.g., Rust <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html" target="_blank" rel="noopener"><code>Vec</code></a>, or C++ <a href="https://en.cppreference.com/w/cpp/container/vector.html" target="_blank" rel="noopener"><code>std::vector</code></a>) as shown
+in Figure 7 below.</p>
+<p>Parsing all fields is straightforward and a good default
+choice given Thrift's original design goal of encoding network messages.
+Network messages typically don't contain extra information irrelevant for receivers;
+however, Parquet metadata often <em>does</em> contain information
+that is not needed for a particular query. In such cases, parsing the entire
+metadata into in-memory structures is wasteful.</p>
+<p>For example, a query on a file with 1,000 columns that reads
+only 10 columns and has a single column predicate
+(e.g., <code>time &gt; now() - '1 minute'</code>) only needs</p>
+<ol>
+<li>
+<a href="https://github.com/apache/parquet-format/blob/9fd57b59e0ce1a82a69237dcf8977d3e72a2965d/src/main/thrift/parquet.thrift#L912" target="_blank" rel="noopener"><code>Statistics</code></a> (or <a href="https://github.com/apache/parquet-format/blob/9fd57b59e0ce1a82a69237dcf8977d3e72a2965d/src/main/thrift/parquet.thrift#L1163" target="_blank" rel="noopener"><code>ColumnIndex</code></a>) for the <code>time</code> column</li>
+<li>
+<a href="https://github.com/apache/parquet-format/blob/9fd57b59e0ce1a82a69237dcf8977d3e72a2965d/src/main/thrift/parquet.thrift#L958" target="_blank" rel="noopener"><code>ColumnChunk</code></a> information for the 10 selected columns</li>
+</ol>
+<p>The default strategy to parse (allocating and copying) all statistics and all
+<code>ColumnChunks</code> results in creating 999 more statistics and 990 more <code>ColumnChunks</code>
+than necessary. As discussed above, given the
+variable encoding used for the metadata, all metadata bytes must still be
+fetched and scanned; however, CPUs are (very) fast at scanning data, and
+skipping <em>parsing</em> of unneeded fields speeds up overall metadata performance
+significantly.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/thrift-parsing-allocations.png" width="100%" class="img-responsive" alt="Thrift Parsing Allocations" aria-hidden="true">
+</div>
+<p><em>Figure 7:</em> Generated Thrift parsers typically parse encoded bytes into
+structures requiring many small heap allocations, which are expensive.</p>
+<h2>New Design: Custom Thrift Parser</h2>
+<p>As is typical of generated code, opportunities for specializing
+the behavior of generated Thrift parsers is limited:</p>
+<ol>
+<li>It is not easy to modify (it is re-generated from the
+Thrift definitions when they change and carries the warning
+<code>/* DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING */</code>).</li>
+<li>It typically maps one-to-one with Thrift definitions, limiting
+additional optimizations such as zero-copy parsing, field
+skipping, and amortized memory allocation strategies.</li>
+<li>Its API is very stable (hard to change), which is important for easy maintenance when a large number
+of projects are built using the <a href="https://crates.io/crates/thrift" target="_blank" rel="noopener">thrift crate</a>. For example, the
+<a href="https://crates.io/crates/thrift/0.17.0" target="_blank" rel="noopener">last release of the Rust <code>thrift</code> crate</a> was almost three years ago at
+the time of this writing.</li>
+</ol>
+<p>These limitations are a consequence of the Thrift project's design goals: general purpose
+code that is easy to embed in a wide variety of other projects, rather than
+any fundamental limitation of the Thrift format.
+Given our goal of fast Parquet metadata parsing, we needed
+a custom, easier to optimize parser, to convert Thrift binary directly into the needed
+structures (Figure 8). Since arrow-rs already did some postprocessing on the generated code
+and included a custom implementation of the compact protocol api, this change
+to a completely custom parser was a natural next step.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/new-pipeline.png" width="100%" class="img-responsive" alt="New Parquet Parsing Pipeline" aria-hidden="true">
+</div>
+<p><em>Figure 8:</em> One-step Parquet metadata parsing using a custom Thrift parser. The
+Thrift binary is parsed directly into the desired in-memory representation with
+highly optimized code.</p>
+<p>Our new custom parser is optimized for the specific subset of Thrift used by
+Parquet and contains various performance optimizations, such as careful
+memory allocation. The largest initial speedup came from removing
+intermediate structures and directly creating the needed in-memory representation.
+We also carefully hand-optimized several performance-critical code paths (see <a href="https://github.com/apache/arrow-rs/pull/8574" target="_blank" rel="noopener">#8574</a>,
+<a href="https://github.com/apache/arrow-rs/pull/8587" target="_blank" rel="noopener">#8587</a>, and <a href="https://github.com/apache/arrow-rs/pull/8599" target="_blank" rel="noopener">#8599</a>).</p>
+<h3>Maintainability</h3>
+<p>The largest concern with a custom parser is that it is more difficult
+to maintain than generated parsers because the custom parser must be updated to
+reflect any changes to <a href="https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift" target="_blank" rel="noopener">parquet.thrift</a>. This is a growing concern given the
+resurgent interest in Parquet and the recent addition of new features such as
+<a href="https://github.com/apache/parquet-format/blob/master/Geospatial.md" target="_blank" rel="noopener">Geospatial</a> and <a href="https://github.com/apache/parquet-format/blob/master/VariantEncoding.md" target="_blank" rel="noopener">Variant</a> types.</p>
+<p>Thankfully, after discussions with the community, <a href="https://github.com/jhorstmann" target="_blank" rel="noopener">Jörn Horstmann</a> developed
+a <a href="https://github.com/jhorstmann/compact-thrift" target="_blank" rel="noopener">Rust macro based approach</a> for generating code with annotated Rust structs
+that closely resemble the Thrift definitions while permitting additional hand
+optimization where necessary. This approach is similar to the <a href="https://serde.rs/" target="_blank" rel="noopener">serde</a> crate
+where generic implementations can be generated with <code>#[derive]</code> annotations and
+specialized serialization is written by hand where needed. <a href="https://github.com/etseidl" target="_blank" rel="noopener">Ed Seidl</a> then
+rewrote the metadata parsing code in the <a href="https://crates.io/crates/parquet" target="_blank" rel="noopener">parquet</a> crate using these macros.
+Please see the <a href="https://github.com/apache/arrow-rs/pull/8530" target="_blank" rel="noopener">final PR</a> for details of the level of effort involved.</p>
+<p>For example, here is the original Thrift definition of the <a href="https://github.com/apache/parquet-format/blob/9fd57b59e0ce1a82a69237dcf8977d3e72a2965d/src/main/thrift/parquet.thrift#L1254C1-L1314C2" target="_blank" rel="noopener"><code>FileMetaData</code></a> structure (comments omitted for brevity):</p>
+<div class="language-thrift highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="thrift">struct FileMetaData {
+  1: required i32 version
+  2: required list&lt;SchemaElement&gt; schema;
+  3: required i64 num_rows
+  4: required list&lt;RowGroup&gt; row_groups
+  5: optional list&lt;KeyValue&gt; key_value_metadata
+  6: optional string created_by
+  7: optional list&lt;ColumnOrder&gt; column_orders;
+  8: optional EncryptionAlgorithm encryption_algorithm
+  9: optional binary footer_signing_key_metadata
+}
+</code></pre></div></div>
+<p>And here (<a href="https://github.com/apache/arrow-rs/blob/02fa779a9cb122c5218293be3afb980832701683/parquet/src/file/metadata/thrift_gen.rs#L146-L158" target="_blank" rel="noopener">source</a>) is the corresponding Rust structure using the Thrift macros (before Ed wrote a custom version in <a href="https://github.com/apache/arrow-rs/pull/8574" target="_blank" rel="noopener">#8574</a>):</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="nd">thrift_struct!</span><span class="p">(</span>
+<span class="k">struct</span> <span class="n">FileMetaData</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;</span> <span class="p">{</span>
+<span class="mi">1</span><span class="p">:</span> <span class="n">required</span> <span class="nb">i32</span> <span class="n">version</span>
+<span class="mi">2</span><span class="p">:</span> <span class="n">required</span> <span class="n">list</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;&lt;</span><span class="n">SchemaElement</span><span class="o">&gt;</span> <span class="n">schema</span><span class="p">;</span>
+<span class="mi">3</span><span class="p">:</span> <span class="n">required</span> <span class="nb">i64</span> <span class="n">num_rows</span>
+<span class="mi">4</span><span class="p">:</span> <span class="n">required</span> <span class="n">list</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;&lt;</span><span class="n">RowGroup</span><span class="o">&gt;</span> <span class="n">row_groups</span>
+<span class="mi">5</span><span class="p">:</span> <span class="n">optional</span> <span class="n">list</span><span class="o">&lt;</span><span class="n">KeyValue</span><span class="o">&gt;</span> <span class="n">key_value_metadata</span>
+<span class="mi">6</span><span class="p">:</span> <span class="n">optional</span> <span class="n">string</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;</span> <span class="n">created_by</span>
+<span class="mi">7</span><span class="p">:</span> <span class="n">optional</span> <span class="n">list</span><span class="o">&lt;</span><span class="n">ColumnOrder</span><span class="o">&gt;</span> <span class="n">column_orders</span><span class="p">;</span>
+<span class="mi">8</span><span class="p">:</span> <span class="n">optional</span> <span class="n">EncryptionAlgorithm</span> <span class="n">encryption_algorithm</span>
+<span class="mi">9</span><span class="p">:</span> <span class="n">optional</span> <span class="n">binary</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;</span> <span class="n">footer_signing_key_metadata</span>
+<span class="p">}</span>
+<span class="p">);</span>
+</code></pre></div></div>
+<p>This system makes it easy to see the correspondence between the Thrift
+definition and the Rust structure, and it is straightforward to support newly added
+features such as <code>GeospatialStatistics</code>. The carefully hand-
+optimized parsers for the most performance-critical structures, such as
+<code>RowGroupMetaData</code> and <code>ColumnChunkMetaData</code>, are harder—though still
+straightforward—to update (see <a href="https://github.com/apache/arrow-rs/pull/8587" target="_blank" rel="noopener">#8587</a>). However, those structures are also less
+likely to change frequently.</p>
+<h3>Future Improvements</h3>
+<p>With the custom parser in place, we are working on additional improvements:</p>
+<ul>
+<li>Implementing special "skip" indexes to skip directly to the parts of the metadata
+that are needed for a particular query, such as the row group offsets.</li>
+<li>Selectively decoding only the statistics for columns that are needed for a particular query.</li>
+<li>Potentially contributing the macros back to the thrift crate.</li>
+</ul>
+<h3>Conclusion</h3>
+<p>We believe metadata parsing in many open source Parquet
+readers is slow primarily because they use parsers automatically generated by Thrift
+compilers, which are not optimized for Parquet metadata parsing. By writing a
+custom parser, we significantly sped up metadata parsing in the
+<a href="https://crates.io/crates/parquet" target="_blank" rel="noopener">parquet</a> Rust crate, which is widely used in the <a href="https://arrow.apache.org/">Apache Arrow</a> ecosystem.</p>
+<p>While this is not the first open source custom Thrift parser for Parquet
+metadata (<a href="https://github.com/rapidsai/cudf/blob/branch-25.12/cpp/src/io/parquet/compact_protocol_reader.hpp" target="_blank" rel="noopener">CUDF has had one</a> for many years), we hope that our results will
+encourage additional Parquet implementations to consider similar optimizations.
+The approach and optimizations we describe in this post are likely applicable to
+Parquet implementations in other languages, such as C++ and Java.</p>
+<p>Previously, efforts like this were only possible at well-financed commercial
+enterprises. On behalf of the arrow-rs and Parquet contributors, we are excited
+to share this technology with the community in the upcoming <a href="https://crates.io/crates/parquet/57.0.0" target="_blank" rel="noopener">57.0.0</a> release and
+invite you to <a href="https://github.com/apache/arrow-rs/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">come join us</a> and help make it even better!</p>
+
+      </main>
+    </div>
+
+    <hr>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>© 2016-2025 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html" target="_blank" rel="noopener">
+        <img src="https://www.apache.org/events/current-event-234x60.png">
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>

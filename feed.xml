@@ -1,4 +1,267 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2025-10-12T16:26:45-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow ADBC 20 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/09/12/adbc-20-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 20 (Libraries) Release" /><published>2025-09-12T00:00:00-04:00</published><updated>2025-09-12T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/09/12/adbc-20-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/09/12/adbc-20-release/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2025-10-23T12:22:18-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust</title><link href="https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/" rel="alternate" type="text/html" title="3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust" /><published>2025-10-23T00:00:00-04:00</published><updated>2025-10-23T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/"><![CDATA[<!--
+
+-->
+<p><em>Editor’s Note: While <a href="https://arrow.apache.org/">Apache Arrow</a> and <a href="https://parquet.apache.org/">Apache Parquet</a> are separate projects,
+the Arrow <a href="https://github.com/apache/arrow-rs">arrow-rs</a> repository hosts the development of the <a href="https://crates.io/crates/parquet">parquet</a> Rust
+crate, a widely used and high-performance Parquet implementation.</em></p>
+<h2>Summary</h2>
+<p>Version <a href="https://crates.io/crates/parquet/57.0.0">57.0.0</a> of the <a href="https://crates.io/crates/parquet">parquet</a> Rust crate decodes metadata more than three times
+faster than previous versions thanks to a new custom <a href="https://thrift.apache.org/">Apache Thrift</a> parser. The new
+parser is both faster in all cases and enables further performance improvements not
+possible with generated parsers, such as skipping unnecessary fields and selective parsing.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/results.png" width="100%" class="img-responsive" alt="" aria-hidden="true">
+</div>
+<p><em>Figure 1:</em> Performance comparison of <a href="https://parquet.apache.org/">Apache Parquet</a> metadata parsing using a generated
+Thrift parser (versions <code>56.2.0</code> and earlier) and the new
+<a href="https://github.com/apache/arrow-rs/issues/5854">custom Thrift parser</a> in <a href="https://github.com/apache/arrow-rs">arrow-rs</a> version <a href="https://crates.io/crates/parquet/57.0.0">57.0.0</a>. No
+changes are needed to the Parquet format itself.
+See the <a href="https://github.com/alamb/parquet_footer_parsing">benchmark page</a> for more details.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/scaling.png" width="100%" class="img-responsive" alt="Scaling behavior of custom Thrift parser" aria-hidden="true">
+</div>
+<p><em>Figure 2:</em> Speedup of the [custom Thrift decoder] for string and floating-point data types,
+for <code>100</code>, <code>1000</code>, <code>10,000</code>, and <code>100,000</code> columns. The new parser is faster in all cases,
+and the speedup is similar regardless of the number of columns. See the <a href="https://github.com/alamb/parquet_footer_parsing">benchmark page</a> for more details.</p>
+<h2>Introduction: Parquet and the Importance of Metadata Parsing</h2>
+<p><a href="https://parquet.apache.org/">Apache Parquet</a> is a popular columnar storage format
+designed to be efficient for both storage and query processing. Parquet
+files consist of a series of data pages, and a footer, as shown in Figure 3. The footer
+contains metadata about the file, including schema, statistics, and other
+information needed to decode the data pages.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/parquet.png" width="100%" class="img-responsive" alt="Physical File Structure of Parquet" aria-hidden="true">
+</div>
+<p><em>Figure 3:</em> Structure of a Parquet file showing the header, data pages, and footer metadata.</p>
+<p>Getting information stored in the footer is typically the first step in reading
+a Parquet file, as it is required to interpret the data pages. <em>Parsing</em> the
+footer is often performance critical:</p>
+<ul>
+<li>When reading from fast local storage, such as modern NVMe SSDs, footer parsing
+must be completed to know what data pages to read, placing it directly on the critical
+I/O path.</li>
+<li>Footer parsing scales linearly with the number of columns and row groups in a
+Parquet file and thus can be a bottleneck for tables with many columns or files
+with many row groups.</li>
+<li>Even in systems that cache the parsed footer in memory (see <a href="https://datafusion.apache.org/blog/2025/08/15/external-parquet-indexes/">Using
+External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries
+on Apache Parquet</a>), the footer must still be parsed on cache miss.</li>
+</ul>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/flow.png" width="100%" class="img-responsive" alt="Typical Parquet processing flow" aria-hidden="true">
+</div>
+<p><em>Figure 4:</em> Typical processing flow for Parquet files for stateless and stateful
+systems. Stateless engines read the footer on every query, so the time taken to
+parse the footer directly adds to query latency. Stateful systems cache some or
+all of the parsed footer in advance of queries.</p>
+<p>The speed of parsing metadata has grown even more important as Parquet spreads
+throughout the data ecosystem and is used for more latency-sensitive workloads such
+as observability, interactive analytics, and single-point
+lookups for Retrieval-Augmented Generation (RAG) applications feeding LLMs.
+As overall query times decrease, the proportion spent on footer parsing increases.</p>
+<h2>Background: Apache Thrift</h2>
+<p>Parquet stores metadata using <a href="https://thrift.apache.org/">Apache Thrift</a>, a framework for
+network data types and service interfaces. It includes a <a href="https://thrift.apache.org/docs/idl">data definition
+language</a> similar to <a href="https://developers.google.com/protocol-buffers">Protocol Buffers</a>. Thrift definition files describe data
+types in a language-neutral way, and systems typically use code generators to
+automatically create code for a specific programming language to read and write
+those data types.</p>
+<p>The <a href="https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift">parquet.thrift</a> file defines the format of the metadata
+serialized at the end of each Parquet file in the <a href="https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md">Thrift Compact
+protocol</a>, as shown below in Figure 5. The binary encoding is &quot;variable-length&quot;,
+meaning that the length of each element depends on its content, not
+just its type. Smaller-valued primitive types are encoded in fewer bytes than
+larger values, and strings and lists are stored inline, prefixed with their
+length.</p>
+<p>This encoding is space-efficient but, due to being variable-length, does not
+support random access: it is not possible to locate a particular field without
+scanning all previous fields. Other formats such as <a href="https://google.github.io/flatbuffers/">FlatBuffers</a> provide
+random-access parsing and have been <a href="https://lists.apache.org/thread/j9qv5vyg0r4jk6tbm6sqthltly4oztd3">proposed as alternatives</a> given their
+theoretical performance advantages. However, changing the Parquet format is a
+significant undertaking, requires buy-in from the community and ecosystem,
+and would likely take years to be adopted.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/thrift-compact-encoding.png" width="100%" class="img-responsive" alt="Thrift Compact Encoding Illustration" aria-hidden="true">
+</div>
+<p><em>Figure 5:</em> Parquet metadata is serialized using the <a href="https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md">Thrift Compact protocol</a>.
+Each field is stored using a variable number of bytes that depends on its value.
+Primitive types use a variable-length encoding and strings and lists are
+prefixed with their lengths.</p>
+<p>Despite Thrift's very real disadvantage due to lack of random access, software
+optimizations are much easier to deploy than format changes. <a href="https://xiangpeng.systems/">Xiangpeng Hao</a>'s
+previous analysis theorized significant (2x–4x) potential performance
+improvements simply by optimizing the implementation of Parquet footer parsing
+(see <a href="https://www.influxdata.com/blog/how-good-parquet-wide-tables/">How Good is Parquet for Wide Tables (Machine Learning
+Workloads) Really?</a> for more details).</p>
+<h2>Processing Thrift Using Generated Parsers</h2>
+<p><em>Parsing</em> Parquet metadata is the process of decoding the Thrift-encoded bytes
+into in-memory structures that can be used for computation. Most Parquet
+implementations use one of the existing <a href="https://thrift.apache.org/lib/">Thrift compilers</a> to generate a parser
+that converts Thrift binary data into generated code structures, and then copy
+relevant portions of those generated structures into API-level structures.
+For example, the <a href="https://github.com/apache/arrow/blob/e1f727cbb447d2385949a54d8f4be2fdc6cefe29/cpp/src/parquet">C/C++ Parquet implementation</a> includes a <a href="https://github.com/apache/arrow/blob/e1f727cbb447d2385949a54d8f4be2fdc6cefe29/cpp/build-support/update-thrift.sh#L23">two</a>-<a href="https://github.com/apache/arrow/blob/e1f727cbb447d2385949a54d8f4be2fdc6cefe29/cpp/src/parquet/thrift_internal.h#L56">step</a> process,
+as does <a href="https://github.com/apache/parquet-java/blob/0fea3e1e22fffb0a25193e3efb9a5d090899458a/parquet-format-structures/pom.xml#L69-L88">parquet-java</a>. <a href="https://github.com/duckdb/duckdb/blob/8f512187537c65d36ce6d6f562b75a37e8d4ee54/third_party/parquet/parquet_types.h#L1-L6">DuckDB</a> also contains a Thrift compiler–generated
+parser.</p>
+<p>In versions <code>56.2.0</code> and earlier, the Apache Arrow Rust implementation used the
+same pattern. The <a href="https://docs.rs/parquet/56.2.0/parquet/format/index.html">format</a> module contains a parser generated by the <a href="https://crates.io/crates/thrift">thrift
+crate</a> and the <a href="https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift">parquet.thrift</a> definition. Parsing metadata involves:</p>
+<ol>
+<li>Invoke the generated parser on the Thrift binary data, producing
+generated in-memory structures (e.g., <a href="https://docs.rs/parquet/56.2.0/parquet/format/struct.FileMetaData.html"><code>struct FileMetaData</code></a>), then</li>
+<li>Copy the relevant fields into a more user-friendly representation,
+<a href="https://docs.rs/parquet/56.2.0/parquet/file/metadata/struct.ParquetMetaData.html"><code>ParquetMetadata</code></a>.</li>
+</ol>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/original-pipeline.png" width="100%" class="img-responsive" alt="Original Parquet Parsing Pipeline" aria-hidden="true">
+</div>
+<p><em>Figure 6:</em> Two-step process to read Parquet metadata: A parser created with the
+<code>thrift</code> crate and <code>parquet.thrift</code> parses the metadata bytes
+into generated in-memory structures. These structures are then converted into
+API objects.</p>
+<p>The parsers generated by standard Thrift compilers typically parse <em>all</em> fields
+in a single pass over the Thrift-encoded bytes, copying data into in-memory,
+heap-allocated structures (e.g., Rust <a href="https://doc.rust-lang.org/std/vec/struct.Vec.html"><code>Vec</code></a>, or C++ <a href="https://en.cppreference.com/w/cpp/container/vector.html"><code>std::vector</code></a>) as shown
+in Figure 7 below.</p>
+<p>Parsing all fields is straightforward and a good default
+choice given Thrift's original design goal of encoding network messages.
+Network messages typically don't contain extra information irrelevant for receivers;
+however, Parquet metadata often <em>does</em> contain information
+that is not needed for a particular query. In such cases, parsing the entire
+metadata into in-memory structures is wasteful.</p>
+<p>For example, a query on a file with 1,000 columns that reads
+only 10 columns and has a single column predicate
+(e.g., <code>time &gt; now() - '1 minute'</code>) only needs</p>
+<ol>
+<li><a href="https://github.com/apache/parquet-format/blob/9fd57b59e0ce1a82a69237dcf8977d3e72a2965d/src/main/thrift/parquet.thrift#L912"><code>Statistics</code></a> (or <a href="https://github.com/apache/parquet-format/blob/9fd57b59e0ce1a82a69237dcf8977d3e72a2965d/src/main/thrift/parquet.thrift#L1163"><code>ColumnIndex</code></a>) for the <code>time</code> column</li>
+<li><a href="https://github.com/apache/parquet-format/blob/9fd57b59e0ce1a82a69237dcf8977d3e72a2965d/src/main/thrift/parquet.thrift#L958"><code>ColumnChunk</code></a> information for the 10 selected columns</li>
+</ol>
+<p>The default strategy to parse (allocating and copying) all statistics and all
+<code>ColumnChunks</code> results in creating 999 more statistics and 990 more <code>ColumnChunks</code>
+than necessary. As discussed above, given the
+variable encoding used for the metadata, all metadata bytes must still be
+fetched and scanned; however, CPUs are (very) fast at scanning data, and
+skipping <em>parsing</em> of unneeded fields speeds up overall metadata performance
+significantly.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/thrift-parsing-allocations.png" width="100%" class="img-responsive" alt="Thrift Parsing Allocations" aria-hidden="true">
+</div>
+<p><em>Figure 7:</em> Generated Thrift parsers typically parse encoded bytes into
+structures requiring many small heap allocations, which are expensive.</p>
+<h2>New Design: Custom Thrift Parser</h2>
+<p>As is typical of generated code, opportunities for specializing
+the behavior of generated Thrift parsers is limited:</p>
+<ol>
+<li>It is not easy to modify (it is re-generated from the
+Thrift definitions when they change and carries the warning
+<code>/* DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING */</code>).</li>
+<li>It typically maps one-to-one with Thrift definitions, limiting
+additional optimizations such as zero-copy parsing, field
+skipping, and amortized memory allocation strategies.</li>
+<li>Its API is very stable (hard to change), which is important for easy maintenance when a large number
+of projects are built using the <a href="https://crates.io/crates/thrift">thrift crate</a>. For example, the
+<a href="https://crates.io/crates/thrift/0.17.0">last release of the Rust <code>thrift</code> crate</a> was almost three years ago at
+the time of this writing.</li>
+</ol>
+<p>These limitations are a consequence of the Thrift project's design goals: general purpose
+code that is easy to embed in a wide variety of other projects, rather than
+any fundamental limitation of the Thrift format.
+Given our goal of fast Parquet metadata parsing, we needed
+a custom, easier to optimize parser, to convert Thrift binary directly into the needed
+structures (Figure 8). Since arrow-rs already did some postprocessing on the generated code
+and included a custom implementation of the compact protocol api, this change
+to a completely custom parser was a natural next step.</p>
+<!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
+<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
+  <img src="/img/rust-parquet-metadata/new-pipeline.png" width="100%" class="img-responsive" alt="New Parquet Parsing Pipeline" aria-hidden="true">
+</div>
+<p><em>Figure 8:</em> One-step Parquet metadata parsing using a custom Thrift parser. The
+Thrift binary is parsed directly into the desired in-memory representation with
+highly optimized code.</p>
+<p>Our new custom parser is optimized for the specific subset of Thrift used by
+Parquet and contains various performance optimizations, such as careful
+memory allocation. The largest initial speedup came from removing
+intermediate structures and directly creating the needed in-memory representation.
+We also carefully hand-optimized several performance-critical code paths (see <a href="https://github.com/apache/arrow-rs/pull/8574">#8574</a>,
+<a href="https://github.com/apache/arrow-rs/pull/8587">#8587</a>, and <a href="https://github.com/apache/arrow-rs/pull/8599">#8599</a>).</p>
+<h3>Maintainability</h3>
+<p>The largest concern with a custom parser is that it is more difficult
+to maintain than generated parsers because the custom parser must be updated to
+reflect any changes to <a href="https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift">parquet.thrift</a>. This is a growing concern given the
+resurgent interest in Parquet and the recent addition of new features such as
+<a href="https://github.com/apache/parquet-format/blob/master/Geospatial.md">Geospatial</a> and <a href="https://github.com/apache/parquet-format/blob/master/VariantEncoding.md">Variant</a> types.</p>
+<p>Thankfully, after discussions with the community, <a href="https://github.com/jhorstmann">Jörn Horstmann</a> developed
+a <a href="https://github.com/jhorstmann/compact-thrift">Rust macro based approach</a> for generating code with annotated Rust structs
+that closely resemble the Thrift definitions while permitting additional hand
+optimization where necessary. This approach is similar to the <a href="https://serde.rs/">serde</a> crate
+where generic implementations can be generated with <code>#[derive]</code> annotations and
+specialized serialization is written by hand where needed. <a href="https://github.com/etseidl">Ed Seidl</a> then
+rewrote the metadata parsing code in the <a href="https://crates.io/crates/parquet">parquet</a> crate using these macros.
+Please see the <a href="https://github.com/apache/arrow-rs/pull/8530">final PR</a> for details of the level of effort involved.</p>
+<p>For example, here is the original Thrift definition of the <a href="https://github.com/apache/parquet-format/blob/9fd57b59e0ce1a82a69237dcf8977d3e72a2965d/src/main/thrift/parquet.thrift#L1254C1-L1314C2"><code>FileMetaData</code></a> structure (comments omitted for brevity):</p>
+<div class="language-thrift highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="thrift">struct FileMetaData {
+  1: required i32 version
+  2: required list&lt;SchemaElement&gt; schema;
+  3: required i64 num_rows
+  4: required list&lt;RowGroup&gt; row_groups
+  5: optional list&lt;KeyValue&gt; key_value_metadata
+  6: optional string created_by
+  7: optional list&lt;ColumnOrder&gt; column_orders;
+  8: optional EncryptionAlgorithm encryption_algorithm
+  9: optional binary footer_signing_key_metadata
+}
+</code></pre></div></div>
+<p>And here (<a href="https://github.com/apache/arrow-rs/blob/02fa779a9cb122c5218293be3afb980832701683/parquet/src/file/metadata/thrift_gen.rs#L146-L158">source</a>) is the corresponding Rust structure using the Thrift macros (before Ed wrote a custom version in <a href="https://github.com/apache/arrow-rs/pull/8574">#8574</a>):</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="nd">thrift_struct!</span><span class="p">(</span>
+<span class="k">struct</span> <span class="n">FileMetaData</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;</span> <span class="p">{</span>
+<span class="mi">1</span><span class="p">:</span> <span class="n">required</span> <span class="nb">i32</span> <span class="n">version</span>
+<span class="mi">2</span><span class="p">:</span> <span class="n">required</span> <span class="n">list</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;&lt;</span><span class="n">SchemaElement</span><span class="o">&gt;</span> <span class="n">schema</span><span class="p">;</span>
+<span class="mi">3</span><span class="p">:</span> <span class="n">required</span> <span class="nb">i64</span> <span class="n">num_rows</span>
+<span class="mi">4</span><span class="p">:</span> <span class="n">required</span> <span class="n">list</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;&lt;</span><span class="n">RowGroup</span><span class="o">&gt;</span> <span class="n">row_groups</span>
+<span class="mi">5</span><span class="p">:</span> <span class="n">optional</span> <span class="n">list</span><span class="o">&lt;</span><span class="n">KeyValue</span><span class="o">&gt;</span> <span class="n">key_value_metadata</span>
+<span class="mi">6</span><span class="p">:</span> <span class="n">optional</span> <span class="n">string</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;</span> <span class="n">created_by</span>
+<span class="mi">7</span><span class="p">:</span> <span class="n">optional</span> <span class="n">list</span><span class="o">&lt;</span><span class="n">ColumnOrder</span><span class="o">&gt;</span> <span class="n">column_orders</span><span class="p">;</span>
+<span class="mi">8</span><span class="p">:</span> <span class="n">optional</span> <span class="n">EncryptionAlgorithm</span> <span class="n">encryption_algorithm</span>
+<span class="mi">9</span><span class="p">:</span> <span class="n">optional</span> <span class="n">binary</span><span class="o">&lt;</span><span class="nv">'a</span><span class="o">&gt;</span> <span class="n">footer_signing_key_metadata</span>
+<span class="p">}</span>
+<span class="p">);</span>
+</code></pre></div></div>
+<p>This system makes it easy to see the correspondence between the Thrift
+definition and the Rust structure, and it is straightforward to support newly added
+features such as <code>GeospatialStatistics</code>. The carefully hand-
+optimized parsers for the most performance-critical structures, such as
+<code>RowGroupMetaData</code> and <code>ColumnChunkMetaData</code>, are harder—though still
+straightforward—to update (see <a href="https://github.com/apache/arrow-rs/pull/8587">#8587</a>). However, those structures are also less
+likely to change frequently.</p>
+<h3>Future Improvements</h3>
+<p>With the custom parser in place, we are working on additional improvements:</p>
+<ul>
+<li>Implementing special &quot;skip&quot; indexes to skip directly to the parts of the metadata
+that are needed for a particular query, such as the row group offsets.</li>
+<li>Selectively decoding only the statistics for columns that are needed for a particular query.</li>
+<li>Potentially contributing the macros back to the thrift crate.</li>
+</ul>
+<h3>Conclusion</h3>
+<p>We believe metadata parsing in many open source Parquet
+readers is slow primarily because they use parsers automatically generated by Thrift
+compilers, which are not optimized for Parquet metadata parsing. By writing a
+custom parser, we significantly sped up metadata parsing in the
+<a href="https://crates.io/crates/parquet">parquet</a> Rust crate, which is widely used in the <a href="https://arrow.apache.org/">Apache Arrow</a> ecosystem.</p>
+<p>While this is not the first open source custom Thrift parser for Parquet
+metadata (<a href="https://github.com/rapidsai/cudf/blob/branch-25.12/cpp/src/io/parquet/compact_protocol_reader.hpp">CUDF has had one</a> for many years), we hope that our results will
+encourage additional Parquet implementations to consider similar optimizations.
+The approach and optimizations we describe in this post are likely applicable to
+Parquet implementations in other languages, such as C++ and Java.</p>
+<p>Previously, efforts like this were only possible at well-financed commercial
+enterprises. On behalf of the arrow-rs and Parquet contributors, we are excited
+to share this technology with the community in the upcoming <a href="https://crates.io/crates/parquet/57.0.0">57.0.0</a> release and
+invite you to <a href="https://github.com/apache/arrow-rs/blob/main/CONTRIBUTING.md">come join us</a> and help make it even better!</p>]]></content><author><name>alamb</name></author><category term="release" /><summary type="html"><![CDATA[Editor’s Note: While Apache Arrow and Apache Parquet are separate projects, the Arrow arrow-rs repository hosts the development of the parquet Rust crate, a widely used and high-performance Parquet implementation. Summary Version 57.0.0 of the parquet Rust crate decodes metadata more than three times faster than previous versions thanks to a new custom Apache Thrift parser. The new parser is both faster in all cases and enables further performance improvements not possible with generated parsers, such as skipping unnecessary fields and selective parsing. Figure 1: Performance comparison of Apache Parquet metadata parsing using a generated Thrift parser (versions 56.2.0 and earlier) and the new custom Thrift parser in arrow-rs version 57.0.0. No changes are needed to the Parquet format itself. See the benchmark page for more details. Figure 2: Speedup of the [custom Thrift decoder] for string and floating-point data types, for 100, 1000, 10,000, and 100,000 columns. The new parser is faster in all cases, and the speedup is similar regardless of the number of columns. See the benchmark page for more details. Introduction: Parquet and the Importance of Metadata Parsing Apache Parquet is a popular columnar storage format designed to be efficient for both storage and query processing. Parquet files consist of a series of data pages, and a footer, as shown in Figure 3. The footer contains metadata about the file, including schema, statistics, and other information needed to decode the data pages. Figure 3: Structure of a Parquet file showing the header, data pages, and footer metadata. Getting information stored in the footer is typically the first step in reading a Parquet file, as it is required to interpret the data pages. Parsing the footer is often performance critical: When reading from fast local storage, such as modern NVMe SSDs, footer parsing must be completed to know what data pages to read, placing it directly on the critical I/O path. Footer parsing scales linearly with the number of columns and row groups in a Parquet file and thus can be a bottleneck for tables with many columns or files with many row groups. Even in systems that cache the parsed footer in memory (see Using External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries on Apache Parquet), the footer must still be parsed on cache miss. Figure 4: Typical processing flow for Parquet files for stateless and stateful systems. Stateless engines read the footer on every query, so the time taken to parse the footer directly adds to query latency. Stateful systems cache some or all of the parsed footer in advance of queries. The speed of parsing metadata has grown even more important as Parquet spreads throughout the data ecosystem and is used for more latency-sensitive workloads such as observability, interactive analytics, and single-point lookups for Retrieval-Augmented Generation (RAG) applications feeding LLMs. As overall query times decrease, the proportion spent on footer parsing increases. Background: Apache Thrift Parquet stores metadata using Apache Thrift, a framework for network data types and service interfaces. It includes a data definition language similar to Protocol Buffers. Thrift definition files describe data types in a language-neutral way, and systems typically use code generators to automatically create code for a specific programming language to read and write those data types. The parquet.thrift file defines the format of the metadata serialized at the end of each Parquet file in the Thrift Compact protocol, as shown below in Figure 5. The binary encoding is &quot;variable-length&quot;, meaning that the length of each element depends on its content, not just its type. Smaller-valued primitive types are encoded in fewer bytes than larger values, and strings and lists are stored inline, prefixed with their length. This encoding is space-efficient but, due to being variable-length, does not support random access: it is not possible to locate a particular field without scanning all previous fields. Other formats such as FlatBuffers provide random-access parsing and have been proposed as alternatives given their theoretical performance advantages. However, changing the Parquet format is a significant undertaking, requires buy-in from the community and ecosystem, and would likely take years to be adopted. Figure 5: Parquet metadata is serialized using the Thrift Compact protocol. Each field is stored using a variable number of bytes that depends on its value. Primitive types use a variable-length encoding and strings and lists are prefixed with their lengths. Despite Thrift's very real disadvantage due to lack of random access, software optimizations are much easier to deploy than format changes. Xiangpeng Hao's previous analysis theorized significant (2x–4x) potential performance improvements simply by optimizing the implementation of Parquet footer parsing (see How Good is Parquet for Wide Tables (Machine Learning Workloads) Really? for more details). Processing Thrift Using Generated Parsers Parsing Parquet metadata is the process of decoding the Thrift-encoded bytes into in-memory structures that can be used for computation. Most Parquet implementations use one of the existing Thrift compilers to generate a parser that converts Thrift binary data into generated code structures, and then copy relevant portions of those generated structures into API-level structures. For example, the C/C++ Parquet implementation includes a two-step process, as does parquet-java. DuckDB also contains a Thrift compiler–generated parser. In versions 56.2.0 and earlier, the Apache Arrow Rust implementation used the same pattern. The format module contains a parser generated by the thrift crate and the parquet.thrift definition. Parsing metadata involves: Invoke the generated parser on the Thrift binary data, producing generated in-memory structures (e.g., struct FileMetaData), then Copy the relevant fields into a more user-friendly representation, ParquetMetadata. Figure 6: Two-step process to read Parquet metadata: A parser created with the thrift crate and parquet.thrift parses the metadata bytes into generated in-memory structures. These structures are then converted into API objects. The parsers generated by standard Thrift compilers typically parse all fields in a single pass over the Thrift-encoded bytes, copying data into in-memory, heap-allocated structures (e.g., Rust Vec, or C++ std::vector) as shown in Figure 7 below. Parsing all fields is straightforward and a good default choice given Thrift's original design goal of encoding network messages. Network messages typically don't contain extra information irrelevant for receivers; however, Parquet metadata often does contain information that is not needed for a particular query. In such cases, parsing the entire metadata into in-memory structures is wasteful. For example, a query on a file with 1,000 columns that reads only 10 columns and has a single column predicate (e.g., time &gt; now() - '1 minute') only needs Statistics (or ColumnIndex) for the time column ColumnChunk information for the 10 selected columns The default strategy to parse (allocating and copying) all statistics and all ColumnChunks results in creating 999 more statistics and 990 more ColumnChunks than necessary. As discussed above, given the variable encoding used for the metadata, all metadata bytes must still be fetched and scanned; however, CPUs are (very) fast at scanning data, and skipping parsing of unneeded fields speeds up overall metadata performance significantly. Figure 7: Generated Thrift parsers typically parse encoded bytes into structures requiring many small heap allocations, which are expensive. New Design: Custom Thrift Parser As is typical of generated code, opportunities for specializing the behavior of generated Thrift parsers is limited: It is not easy to modify (it is re-generated from the Thrift definitions when they change and carries the warning /* DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING */). It typically maps one-to-one with Thrift definitions, limiting additional optimizations such as zero-copy parsing, field skipping, and amortized memory allocation strategies. Its API is very stable (hard to change), which is important for easy maintenance when a large number of projects are built using the thrift crate. For example, the last release of the Rust thrift crate was almost three years ago at the time of this writing. These limitations are a consequence of the Thrift project's design goals: general purpose code that is easy to embed in a wide variety of other projects, rather than any fundamental limitation of the Thrift format. Given our goal of fast Parquet metadata parsing, we needed a custom, easier to optimize parser, to convert Thrift binary directly into the needed structures (Figure 8). Since arrow-rs already did some postprocessing on the generated code and included a custom implementation of the compact protocol api, this change to a completely custom parser was a natural next step. Figure 8: One-step Parquet metadata parsing using a custom Thrift parser. The Thrift binary is parsed directly into the desired in-memory representation with highly optimized code. Our new custom parser is optimized for the specific subset of Thrift used by Parquet and contains various performance optimizations, such as careful memory allocation. The largest initial speedup came from removing intermediate structures and directly creating the needed in-memory representation. We also carefully hand-optimized several performance-critical code paths (see #8574, #8587, and #8599). Maintainability The largest concern with a custom parser is that it is more difficult to maintain than generated parsers because the custom parser must be updated to reflect any changes to parquet.thrift. This is a growing concern given the resurgent interest in Parquet and the recent addition of new features such as Geospatial and Variant types. Thankfully, after discussions with the community, Jörn Horstmann developed a Rust macro based approach for generating code with annotated Rust structs that closely resemble the Thrift definitions while permitting additional hand optimization where necessary. This approach is similar to the serde crate where generic implementations can be generated with #[derive] annotations and specialized serialization is written by hand where needed. Ed Seidl then rewrote the metadata parsing code in the parquet crate using these macros. Please see the final PR for details of the level of effort involved. For example, here is the original Thrift definition of the FileMetaData structure (comments omitted for brevity): struct FileMetaData { 1: required i32 version 2: required list&lt;SchemaElement&gt; schema; 3: required i64 num_rows 4: required list&lt;RowGroup&gt; row_groups 5: optional list&lt;KeyValue&gt; key_value_metadata 6: optional string created_by 7: optional list&lt;ColumnOrder&gt; column_orders; 8: optional EncryptionAlgorithm encryption_algorithm 9: optional binary footer_signing_key_metadata } And here (source) is the corresponding Rust structure using the Thrift macros (before Ed wrote a custom version in #8574): thrift_struct!( struct FileMetaData&lt;'a&gt; { 1: required i32 version 2: required list&lt;'a&gt;&lt;SchemaElement&gt; schema; 3: required i64 num_rows 4: required list&lt;'a&gt;&lt;RowGroup&gt; row_groups 5: optional list&lt;KeyValue&gt; key_value_metadata 6: optional string&lt;'a&gt; created_by 7: optional list&lt;ColumnOrder&gt; column_orders; 8: optional EncryptionAlgorithm encryption_algorithm 9: optional binary&lt;'a&gt; footer_signing_key_metadata } ); This system makes it easy to see the correspondence between the Thrift definition and the Rust structure, and it is straightforward to support newly added features such as GeospatialStatistics. The carefully hand- optimized parsers for the most performance-critical structures, such as RowGroupMetaData and ColumnChunkMetaData, are harder—though still straightforward—to update (see #8587). However, those structures are also less likely to change frequently. Future Improvements With the custom parser in place, we are working on additional improvements: Implementing special &quot;skip&quot; indexes to skip directly to the parts of the metadata that are needed for a particular query, such as the row group offsets. Selectively decoding only the statistics for columns that are needed for a particular query. Potentially contributing the macros back to the thrift crate. Conclusion We believe metadata parsing in many open source Parquet readers is slow primarily because they use parsers automatically generated by Thrift compilers, which are not optimized for Parquet metadata parsing. By writing a custom parser, we significantly sped up metadata parsing in the parquet Rust crate, which is widely used in the Apache Arrow ecosystem. While this is not the first open source custom Thrift parser for Parquet metadata (CUDF has had one for many years), we hope that our results will encourage additional Parquet implementations to consider similar optimizations. The approach and optimizations we describe in this post are likely applicable to Parquet implementations in other languages, such as C++ and Java. Previously, efforts like this were only possible at well-financed commercial enterprises. On behalf of the arrow-rs and Parquet contributors, we are excited to share this technology with the community in the upcoming 57.0.0 release and invite you to come join us and help make it even better!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow ADBC 20 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/09/12/adbc-20-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 20 (Libraries) Release" /><published>2025-09-12T00:00:00-04:00</published><updated>2025-09-12T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/09/12/adbc-20-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/09/12/adbc-20-release/"><![CDATA[<!--
 
 -->
 <p>The Apache Arrow team is pleased to announce the version 20 release of
@@ -875,63 +1138,4 @@ This minor release covers 21 commits from 8 distinct contributors.</p>
 <li>@ashishnegi made their first contribution in <a href="https://github.com/apache/arrow-go/pull/366">#366</a></li>
 <li>@mateuszrzeszutek made their first contribution in <a href="https://github.com/apache/arrow-go/pull/361">#361</a></li>
 </ul>
-<p><strong>Full Changelog</strong>: <a href="https://github.com/apache/arrow-go/compare/v18.2.0...v18.3.0">https://github.com/apache/arrow-go/compare/v18.2.0...v18.3.0</a></p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the v18.3.0 release of Apache Arrow Go. This minor release covers 21 commits from 8 distinct contributors. Contributors $ git shortlog -sn v18.2.0..v18.3.0 13 Matt Topol 2 Chris Pahl 1 Ashish Negi 1 David Li 1 Jeroen Demeyer 1 Mateusz Rzeszutek 1 Raúl Cumplido 1 Saurabh Singh Highlights Fix alignment of atomic refcount handling for ARM #323 Arrow Functions to convert RecordReader to Go iter.Seq and vice versa #314 New &quot;is_in&quot; function for Arrow compute package Allow returning column remarks for FlightSQL CommandGetTables #361 Parquet Added new SeekToRow function for pqarrow.RecordReader #321 Bloom filters can now be read and written, then utilized for skipping #341 #336 Fix a panic when WriteDataPage fails #366 Changelog What's Changed feat(arrow/array): convert RecordReader and iterators by @zeroshade in #314 refactor(arrow/array): replace some codegen with generics by @zeroshade in #315 feat(parquet/pqarrow): Add SeekToRow for RecordReader by @zeroshade in #321 fix: go's atomic operations require 64bit alignment in structs on ARM by @sahib in #323 feat(arrow/compute): implement &quot;is_in&quot; function by @zeroshade in #319 fix(parquet/pqarrow): fix propagation of FieldIds for nested fields by @zeroshade in #324 Fix: Handle null values in PlainFixedLenByteArrayEncoder gracefully by @singh1203 in #320 fix(parquet/pqarrow): fix definition levels with non-nullable lists by @zeroshade in #325 chore: fix macOS Go 1.24 CI by @lidavidm in #334 feat(parquet/metadata): bloom filter implementation by @zeroshade in #336 feat(parquet): Write/Read bloom filters from files by @zeroshade in #341 fix: move from atomic.(Add|Load|Store) to atomic.Int64{} by @sahib in #326 fix(parquet/file): restore goroutine safety for reader by @zeroshade in #343 chore: Enable GitHub discussions on arrow-go repository by @raulcd in #353 Compress: add MarshalText and UnmarshalText by @jdemeyer in #357 fix(arrow/array): optional struct array with required field by @zeroshade in #359 feat(parquet/schema): initial variant logical type by @zeroshade in #352 chore(arrow): remove most lock copies by @zeroshade in #362 Fix panic when WriteDataPage fails by @ashishnegi in #366 GH-46087: [FlightSQL] Allow returning column remarks in FlightSQL's CommandGetTables by @mateuszrzeszutek in #361 New Contributors @sahib made their first contribution in #323 @jdemeyer made their first contribution in #357 @ashishnegi made their first contribution in #366 @mateuszrzeszutek made their first contribution in #361 Full Changelog: https://github.com/apache/arrow-go/compare/v18.2.0...v18.3.0]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow ADBC 18 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/05/06/adbc-18-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 18 (Libraries) Release" /><published>2025-05-06T00:00:00-04:00</published><updated>2025-05-06T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/05/06/adbc-18-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/05/06/adbc-18-release/"><![CDATA[<!--
-
--->
-<p>The Apache Arrow team is pleased to announce the version 18 release of
-the Apache Arrow ADBC libraries. This release includes <a href="https://github.com/apache/arrow-adbc/milestone/22"><strong>28
-resolved issues</strong></a> from <a href="#contributors"><strong>22 distinct contributors</strong></a>.</p>
-<p>This is a release of the <strong>libraries</strong>, which are at version 18.  The
-<a href="https://arrow.apache.org/adbc/18/format/specification.html"><strong>API specification</strong></a> is versioned separately and is at
-version 1.1.0.</p>
-<p>The subcomponents are versioned independently:</p>
-<ul>
-<li>C/C++/GLib/Go/Python/Ruby: 1.6.0</li>
-<li>C#: 0.18.0</li>
-<li>Java: 0.18.0</li>
-<li>R: 0.18.0</li>
-<li>Rust: 0.18.0</li>
-</ul>
-<p>The release notes below are not exhaustive and only expose selected
-highlights of the release. Many other bugfixes and improvements have
-been made: we refer you to the <a href="https://github.com/apache/arrow-adbc/blob/apache-arrow-adbc-18/CHANGELOG.md">complete changelog</a>.</p>
-<h2>Release Highlights</h2>
-<p>Using Meson to build the project has been improved (#2735, #2746).</p>
-<p>The C# bindings and its drivers have seen a lot of activity in this release.  A Databricks Spark driver is now available (#2672, #2737, #2743, #2692), with support for features like CloudFetch (#2634, #2678, #2691).  The general Spark driver now has better retry behavior for 503 responses (#2664), supports LZ4 compression applied outside of the Arrow IPC format (#2669), and supports OAuth (#2579), among other improvements.  The &quot;Apache&quot; driver for various Thrift-based systems now supports Apache Hive in addition to Apache Spark and Apache Impala (#2540), among other improvements.  The BigQuery driver adds more authentication and other configuration settings (#2655, #2566, #2541, #2698).</p>
-<p>The Flight SQL driver supports OAuth (#2651).</p>
-<p>The Java bindings experimentally support a JNI wrapper around drivers exposing the ADBC C API (#2401).  These are not currently distributed via Maven and must be built by hand.</p>
-<p>The Go bindings now support union types in the <code>database/sql</code> wrapper (#2637).  The Golang-based BigQuery driver returns more metadata about tables (#2697).</p>
-<p>The PostgreSQL driver now avoids spurious commit/rollback commands (#2685).  It also handles improper usage more gracefully (#2653).</p>
-<p>The Python bindings now make it easier to pass options in various places (#2589, #2700).  Also, the DB-API layer can be minimally used without PyArrow installed, making it easier for users of libraries like polars that don't need or want a second Arrow implementation (#2609).</p>
-<p>The Rust bindings now avoid locking the driver on every operation, allowing concurrent usage (#2736).</p>
-<h2>Contributors</h2>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-arrow-adbc-17..apache-arrow-adbc-18
-    20	David Li
-     6	William Ayd
-     5	Curt Hagenlocher
-     5	davidhcoe
-     4	Alex Guo
-     4	Felipe Oliveira Carvalho
-     4	Jade Wang
-     4	Matthijs Brobbel
-     4	Sutou Kouhei
-     4	eric-wang-1990
-     3	Bruce Irschick
-     2	Milos Gligoric
-     2	Sudhir Reddy Emmadi
-     2	Todd Meng
-     1	Bryce Mecum
-     1	Dewey Dunnington
-     1	Filip Wojciechowski
-     1	Hiroaki Yutani
-     1	Hélder Gregório
-     1	Marin Nozhchev
-     1	amangoyal
-     1	qifanzhang-ms
-</code></pre></div></div>
-<h2>Roadmap</h2>
-<p>There is some discussion on a potential second revision of ADBC to include more missing functionality and asynchronous API support.  For more, see the <a href="https://github.com/apache/arrow-adbc/milestone/8">milestone</a>.  We would welcome suggestions on APIs that could be added or extended.  Some of the contributors are planning to begin work on a proposal in the near future.</p>
-<h2>Getting Involved</h2>
-<p>We welcome questions and contributions from all interested.  Issues
-can be filed on <a href="https://github.com/apache/arrow-adbc/issues">GitHub</a>, and questions can be directed to GitHub
-or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the version 18 release of the Apache Arrow ADBC libraries. This release includes 28 resolved issues from 22 distinct contributors. This is a release of the libraries, which are at version 18. The API specification is versioned separately and is at version 1.1.0. The subcomponents are versioned independently: C/C++/GLib/Go/Python/Ruby: 1.6.0 C#: 0.18.0 Java: 0.18.0 R: 0.18.0 Rust: 0.18.0 The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights Using Meson to build the project has been improved (#2735, #2746). The C# bindings and its drivers have seen a lot of activity in this release. A Databricks Spark driver is now available (#2672, #2737, #2743, #2692), with support for features like CloudFetch (#2634, #2678, #2691). The general Spark driver now has better retry behavior for 503 responses (#2664), supports LZ4 compression applied outside of the Arrow IPC format (#2669), and supports OAuth (#2579), among other improvements. The &quot;Apache&quot; driver for various Thrift-based systems now supports Apache Hive in addition to Apache Spark and Apache Impala (#2540), among other improvements. The BigQuery driver adds more authentication and other configuration settings (#2655, #2566, #2541, #2698). The Flight SQL driver supports OAuth (#2651). The Java bindings experimentally support a JNI wrapper around drivers exposing the ADBC C API (#2401). These are not currently distributed via Maven and must be built by hand. The Go bindings now support union types in the database/sql wrapper (#2637). The Golang-based BigQuery driver returns more metadata about tables (#2697). The PostgreSQL driver now avoids spurious commit/rollback commands (#2685). It also handles improper usage more gracefully (#2653). The Python bindings now make it easier to pass options in various places (#2589, #2700). Also, the DB-API layer can be minimally used without PyArrow installed, making it easier for users of libraries like polars that don't need or want a second Arrow implementation (#2609). The Rust bindings now avoid locking the driver on every operation, allowing concurrent usage (#2736). Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-arrow-adbc-17..apache-arrow-adbc-18 20 David Li 6 William Ayd 5 Curt Hagenlocher 5 davidhcoe 4 Alex Guo 4 Felipe Oliveira Carvalho 4 Jade Wang 4 Matthijs Brobbel 4 Sutou Kouhei 4 eric-wang-1990 3 Bruce Irschick 2 Milos Gligoric 2 Sudhir Reddy Emmadi 2 Todd Meng 1 Bryce Mecum 1 Dewey Dunnington 1 Filip Wojciechowski 1 Hiroaki Yutani 1 Hélder Gregório 1 Marin Nozhchev 1 amangoyal 1 qifanzhang-ms Roadmap There is some discussion on a potential second revision of ADBC to include more missing functionality and asynchronous API support. For more, see the milestone. We would welcome suggestions on APIs that could be added or extended. Some of the contributors are planning to begin work on a proposal in the near future. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/apache/arrow-go/compare/v18.2.0...v18.3.0">https://github.com/apache/arrow-go/compare/v18.2.0...v18.3.0</a></p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the v18.3.0 release of Apache Arrow Go. This minor release covers 21 commits from 8 distinct contributors. Contributors $ git shortlog -sn v18.2.0..v18.3.0 13 Matt Topol 2 Chris Pahl 1 Ashish Negi 1 David Li 1 Jeroen Demeyer 1 Mateusz Rzeszutek 1 Raúl Cumplido 1 Saurabh Singh Highlights Fix alignment of atomic refcount handling for ARM #323 Arrow Functions to convert RecordReader to Go iter.Seq and vice versa #314 New &quot;is_in&quot; function for Arrow compute package Allow returning column remarks for FlightSQL CommandGetTables #361 Parquet Added new SeekToRow function for pqarrow.RecordReader #321 Bloom filters can now be read and written, then utilized for skipping #341 #336 Fix a panic when WriteDataPage fails #366 Changelog What's Changed feat(arrow/array): convert RecordReader and iterators by @zeroshade in #314 refactor(arrow/array): replace some codegen with generics by @zeroshade in #315 feat(parquet/pqarrow): Add SeekToRow for RecordReader by @zeroshade in #321 fix: go's atomic operations require 64bit alignment in structs on ARM by @sahib in #323 feat(arrow/compute): implement &quot;is_in&quot; function by @zeroshade in #319 fix(parquet/pqarrow): fix propagation of FieldIds for nested fields by @zeroshade in #324 Fix: Handle null values in PlainFixedLenByteArrayEncoder gracefully by @singh1203 in #320 fix(parquet/pqarrow): fix definition levels with non-nullable lists by @zeroshade in #325 chore: fix macOS Go 1.24 CI by @lidavidm in #334 feat(parquet/metadata): bloom filter implementation by @zeroshade in #336 feat(parquet): Write/Read bloom filters from files by @zeroshade in #341 fix: move from atomic.(Add|Load|Store) to atomic.Int64{} by @sahib in #326 fix(parquet/file): restore goroutine safety for reader by @zeroshade in #343 chore: Enable GitHub discussions on arrow-go repository by @raulcd in #353 Compress: add MarshalText and UnmarshalText by @jdemeyer in #357 fix(arrow/array): optional struct array with required field by @zeroshade in #359 feat(parquet/schema): initial variant logical type by @zeroshade in #352 chore(arrow): remove most lock copies by @zeroshade in #362 Fix panic when WriteDataPage fails by @ashishnegi in #366 GH-46087: [FlightSQL] Allow returning column remarks in FlightSQL's CommandGetTables by @mateuszrzeszutek in #361 New Contributors @sahib made their first contribution in #323 @jdemeyer made their first contribution in #357 @ashishnegi made their first contribution in #366 @mateuszrzeszutek made their first contribution in #361 Full Changelog: https://github.com/apache/arrow-go/compare/v18.2.0...v18.3.0]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
