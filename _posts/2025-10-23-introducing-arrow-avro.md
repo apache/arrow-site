@@ -2,7 +2,7 @@
 layout: post
 title: "Announcing arrow-avro in Arrow Rust"
 description: "A new native Rust vectorized reader/writer for Avro to Arrow, with OCF, Single‑Object, and Confluent wire format support."
-date: "2025-10-24 00:00:00"
+date: "2025-10-23 00:00:00"
 author: jecsand838
 categories: [application]
 ---
