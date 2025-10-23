@@ -24,14 +24,13 @@ limitations under the License.
 {% endcomment %}
 -->
 
-*Editor’s Note: While [Apache Arrow] and [Apache Parquet] are separate
-projects, this post is on the Arrow site because the Arrow [arrow-rs]
-repository hosts the development of the [parquet] Rust crate, a widely used and
-high-performance Parquet implementation.*
+*Editor’s Note: While [Apache Arrow] and [Apache Parquet] are separate projects,
+the Arrow [arrow-rs] repository hosts the development of the [parquet] Rust
+crate, a widely used and high-performance Parquet implementation.*
 
 ## Summary
 
-Version `57.0.0` of the [parquet] Rust crate decodes metadata roughly three times
+Version [57.0.0] of the [parquet] Rust crate decodes metadata more than three times
 faster than previous versions thanks to a new custom [Apache Thrift] parser. The new
 parser is both faster in all cases and enables further performance improvements not
 possible with generated parsers, such as skipping unnecessary fields and selective parsing.
@@ -43,14 +42,14 @@ possible with generated parsers, such as skipping unnecessary fields and selecti
 
 *Figure 1:* Performance comparison of [Apache Parquet] metadata parsing using a generated
 Thrift parser (versions `56.2.0` and earlier) and the new
-[custom Thrift decoder] in [arrow-rs] version [57.0.0]. No
+[custom Thrift parser] in [arrow-rs] version [57.0.0]. No
 changes are needed to the Parquet format itself.
 See the [benchmark page] for more details.
 
 [parquet]: https://crates.io/crates/parquet
 [Apache Arrow]: https://arrow.apache.org/
 [Apache Parquet]: https://parquet.apache.org/
-[custom Thrift decoder]: https://github.com/apache/arrow-rs/issues/5854
+[custom Thrift parser]: https://github.com/apache/arrow-rs/issues/5854
 [arrow-rs]: https://github.com/apache/arrow-rs
 [57.0.0]: https://crates.io/crates/parquet/57.0.0
 
@@ -67,11 +66,11 @@ and the speedup is similar regardless of the number of columns. See the [benchma
 
 ## Introduction: Parquet and the Importance of Metadata Parsing
 
-[Apache Parquet] is a popular columnar storage format. It
-is designed to be efficient for both storage and query performance. Parquet
-files consist of a header, a series of data pages, and a footer, as shown in Figure 3. The footer
+[Apache Parquet] is a popular columnar storage format
+designed to be efficient for both storage and query processing. Parquet
+files consist of a series of data pages, and a footer, as shown in Figure 3. The footer
 contains metadata about the file, including schema, statistics, and other
-information needed to decode the data.
+information needed to decode the data pages.
 
 <!-- Image source: https://docs.google.com/presentation/d/1WjX4t7YVj2kY14SqCpenGqNl_swjdHvPg86UeBT3IcY -->
 <div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
@@ -82,7 +81,7 @@ information needed to decode the data.
 
 Getting information stored in the footer is typically the first step in reading
 a Parquet file, as it is required to interpret the data pages. *Parsing* the
-footer is often performance critical when reading data:
+footer is often performance critical:
 
 * When reading from fast local storage, such as modern NVMe SSDs, footer parsing
   must be completed to know what data pages to read, placing it directly on the critical
@@ -100,10 +99,9 @@ footer is often performance critical when reading data:
 </div>
 
 *Figure 4:* Typical processing flow for Parquet files for stateless and stateful
-systems. Stateless engines read the footer on every query, and the time taken to
+systems. Stateless engines read the footer on every query, so the time taken to
 parse the footer directly adds to query latency. Stateful systems cache some or
-all of the parsed footer in advance of queries. The performance of footer
-parsing is important for both types of systems, but especially for stateless.
+all of the parsed footer in advance of queries.
 
 [Using External Indexes, Metadata Stores, Catalogs and Caches to Accelerate Queries on Apache Parquet]: https://datafusion.apache.org/blog/2025/08/15/external-parquet-indexes/
 
@@ -290,7 +288,7 @@ highly optimized code.
 Our new custom parser is optimized for the specific subset of Thrift used by
 Parquet and contains various performance optimizations, such as careful
 memory allocation. The largest initial speedup came from removing
-intermediate in-memory structures and directly creating the needed in-memory representation.
+intermediate structures and directly creating the needed in-memory representation.
 We also carefully hand-optimized several performance-critical code paths (see [#8574],
 [#8587], and [#8599]).
 
