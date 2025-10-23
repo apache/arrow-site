@@ -31,7 +31,7 @@ limitations under the License.
 
 ## Motivation
 
-Apache Avro’s row‑oriented design is effective for encoding one record at a time, while Apache Arrow’s columnar layout is optimized for vectorized analytics. A major challenge lies in converting between these formats without reintroducing row‑wise overhead. Decoding Avro a row at a time and then building Arrow arrays incurs extra allocations and cache‑unfriendly access (the very costs Arrow is designed to avoid). In the real world, this overhead commonly shows up in analytical hot paths. For instance, [DataFusion’s Avro datasource](https://github.com/apache/datafusion/tree/main/datafusion/datasource-avro) currently ships with its own row‑centric Avro‑to‑Arrow layer. This implementation has led to an open issue for [using an upstream arrow-avro reader](https://github.com/apache/datafusion/issues/14097) to simplify the code and speed up scans. Additionally, DataFusion has another open issue for [supporting Avro format writes](https://github.com/apache/datafusion/issues/7679#issuecomment-3412302891) that is predicated on the development of an upstream `arrow-avro` writer.
+Apache Avro’s row‑oriented design is effective for encoding one record at a time, while Apache Arrow’s columnar layout is optimized for vectorized analytics. A major challenge lies in converting between these formats without reintroducing row‑wise overhead. Decoding Avro a row at a time and then building Arrow arrays incurs extra allocations and cache‑unfriendly access (the very costs Arrow is designed to avoid). In the real world, this overhead commonly shows up in analytical hot paths. For instance, [DataFusion’s Avro data source](https://github.com/apache/datafusion/tree/main/datafusion/datasource-avro) currently ships with its own row‑centric Avro‑to‑Arrow layer. This implementation has led to an open issue for [using an upstream arrow-avro reader](https://github.com/apache/datafusion/issues/14097) to simplify the code and speed up scans. Additionally, DataFusion has another open issue for [supporting Avro format writes](https://github.com/apache/datafusion/issues/7679#issuecomment-3412302891) that is predicated on the development of an upstream `arrow-avro` writer.
 
 ### Why not use the existing `apache-avro` crate?
 
@@ -63,7 +63,7 @@ Configuration is intentionally minimal but practical. For instance, the `ReaderB
 
 ### How this mirrors Parquet in Arrow‑rs
 
-If you have used Parquet with Arrow‑rs, you already know the pattern. The `parquet` crate exposes an [parquet::arrow module](https://docs.rs/parquet/latest/parquet/arrow/index.html) that reads and writes Arrow `RecordBatch`es directly. Most users reach for `ParquetRecordBatchReaderBuilder` when reading and `ArrowWriter` when writing. You choose columns up front, set a batch size, and the reader gives you Arrow batches that flow straight into vectorized operators. This is the widely adopted "format crate + Arrow‑native bridge" approach in Rust.
+If you have used Parquet with Arrow‑rs, you already know the pattern. The `parquet` crate exposes a [parquet::arrow module](https://docs.rs/parquet/latest/parquet/arrow/index.html) that reads and writes Arrow `RecordBatch`es directly. Most users reach for `ParquetRecordBatchReaderBuilder` when reading and `ArrowWriter` when writing. You choose columns up front, set a batch size, and the reader gives you Arrow batches that flow straight into vectorized operators. This is the widely adopted "format crate + Arrow‑native bridge" approach in Rust.
 
 `arrow‑avro` brings that same bridge to Avro. You get a single `ReaderBuilder` that can produce a `Reader` for OCF, or a streaming `Decoder` for on‑the‑wire frames. Both return Arrow `RecordBatch`es, which means engines can keep projection and filtering close to the reader and avoid building rows only to reassemble them back into columns later. For evolving streams, a small `SchemaStore` resolves fingerprints or ids before decoding, so the batches that come out are already shaped for vectorized execution.
 
@@ -83,9 +83,9 @@ At a high level, [arrow-avro](https://arrow.apache.org/rust/arrow_avro/index.htm
 
 On the [read](https://arrow.apache.org/rust/arrow_avro/reader/index.html) path, everything starts with the [ReaderBuilder](https://arrow.apache.org/rust/arrow_avro/reader/struct.ReaderBuilder.html). A single builder can create a [Reader](https://arrow.apache.org/rust/arrow_avro/reader/struct.Reader.html) for Object Container Files (OCF) or a streaming [Decoder](https://arrow.apache.org/rust/arrow_avro/reader/struct.Decoder.html) for SOE/Confluent/Apicurio frames. The `Reader` pulls OCF blocks and yields Arrow `RecordBatch`es while the `Decoder` is push‑based, i.e., bytes are fed in as they arrive and then drained as completed batches once `flush` is called. Both use the same schema‑driven decoding logic (per‑column decoders with projection/union/nullability handling), so file and streaming inputs produce batches using fewer per‑row allocations and minimal branching/redundancy. Additionally, the streaming `Decoder` maintains a cache of per‑schema record decoders keyed by fingerprint to avoid re‑planning when a stream interleaves schema versions. This keeps steady‑state decode fast even as schemas evolve.
 
-When reading an OCF, the `Reader` parses a header and then iterates on blocks of encoded data. The header contains a metadata map with the embedded Avro schema and optional compression (i.e., `deflate`, `snappy`, `zstd`, `bzip2`, `xz`), plus a 16‑byte sync marker used to delimit blocks. Each subsequent OCF block then carries a row count and the encoded payload. The parsed OCF header and block structures are also encoded with variable‑length integers that use zig‑zag encoding for signed values. `arrow-avro` implements a small `vlq` (variable‑length quantity) module, which is used during both header parsing and block iteration. Efficient `vlq` decode is part of why the `Reader` and `Decoder` can stay vectorized and avoid unnecessary per‑row overhead.
+When reading an OCF, the `Reader` parses a header and then iterates over blocks of encoded data. The header contains a metadata map with the embedded Avro schema and optional compression (i.e., `deflate`, `snappy`, `zstd`, `bzip2`, `xz`), plus a 16‑byte sync marker used to delimit blocks. Each subsequent OCF block then carries a row count and the encoded payload. The parsed OCF header and block structures are also encoded with variable‑length integers that use zig‑zag encoding for signed values. `arrow-avro` implements a small `vlq` (variable‑length quantity) module, which is used during both header parsing and block iteration. Efficient `vlq` decode is part of why the `Reader` and `Decoder` can stay vectorized and avoid unnecessary per‑row overhead.
 
-On the [write](https://arrow.apache.org/rust/arrow_avro/writer/index.html) path, the [WriterBuilder](https://arrow.apache.org/rust/arrow_avro/writer/struct.WriterBuilder.html) produces either an [AvroWriter](https://arrow.apache.org/rust/arrow_avro/writer/type.AvroWriter.html) (OCF) or an [AvroStreamWriter](https://arrow.apache.org/rust/arrow_avro/writer/type.AvroStreamWriter.html) (SOE/Message). The `with_compression(...)` knob is used for OCF block compression while `with_fingerprint_strategy(...)` selects the streaming frame, i.e., Rabin for SOE, a 32‑bit schema ID for Confluent, or a 64-bit schema ID for Apicurio. The `AvroStreamWriter` also adds the appropriate prefix automatically while encoding, thus eliminating the need for potentially expensive post-processes to wrap the outputted Avro SOEs.
+On the [write](https://arrow.apache.org/rust/arrow_avro/writer/index.html) path, the [WriterBuilder](https://arrow.apache.org/rust/arrow_avro/writer/struct.WriterBuilder.html) produces either an [AvroWriter](https://arrow.apache.org/rust/arrow_avro/writer/type.AvroWriter.html) (OCF) or an [AvroStreamWriter](https://arrow.apache.org/rust/arrow_avro/writer/type.AvroStreamWriter.html) (SOE/Message). The `with_compression(...)` knob is used for OCF block compression while `with_fingerprint_strategy(...)` selects the streaming frame, i.e., Rabin for SOE, a 32‑bit schema ID for Confluent, or a 64-bit schema ID for Apicurio. The `AvroStreamWriter` also adds the appropriate prefix automatically while encoding, thus eliminating the need for potentially expensive post‑processing steps to wrap output Avro SOEs.
 
 Schema handling is centralized in the [schema](https://arrow.apache.org/rust/arrow_avro/schema/index.html) module. [AvroSchema](https://arrow.apache.org/rust/arrow_avro/schema/struct.AvroSchema.html) wraps a valid Avro Schema JSON string, supports computing a `Fingerprint`, and can be loaded into a [SchemaStore](https://arrow.apache.org/rust/arrow_avro/schema/struct.SchemaStore.html) as a writer schema. At runtime, the `Reader`/`Decoder` can use a `SchemaStore` to resolve fingerprints before decoding, enabling [schema resolution](https://avro.apache.org/docs/1.11.1/specification/#schema-resolution). The `FingerprintAlgorithm` captures how fingerprints are derived (i.e., CRC‑64‑AVRO Rabin, MD5, SHA‑256, or a registry ID), and `FingerprintStrategy` configures how the `Writer` prefixes each record while encoding SOE streams. This schema module is the glue that enables SOE and Confluent/Apicurio support without coupling to a specific registry client.
 
@@ -120,7 +120,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_writer_schema_store(store)
         .build_decoder()?;
 
-    // Simulate one frame: magic 0x00 + 4‑byte big‑endian schema id + Avro body (x=1 encoded as zig‑zag/VLQ).
+    // Simulate one frame: magic 0x00 + 4‑byte big‑endian schema ID + Avro body (x=1 encoded as zig‑zag/VLQ).
     let mut frame = Vec::from(CONFLUENT_MAGIC); frame.extend_from_slice(&1u32.to_be_bytes()); frame.extend_from_slice(&[2]);
 
     // Consume from decoder
@@ -132,7 +132,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The `SchemaStore` maps the incoming schema id to the correct Avro writer schema so the decoder can perform projection/evolution against the reader schema. Confluent's wire format prefixes each message with a magic byte `0x00` followed by a big‑endian 4‑byte schema id. After decoding Avro messages, the `Decoder::flush()` method yields Arrow `RecordBatch`es suitable for vectorized processing.
+The `SchemaStore` maps the incoming schema ID to the correct Avro writer schema so the decoder can perform projection/evolution against the reader schema. Confluent's wire format prefixes each message with a magic byte `0x00` followed by a big‑endian 4‑byte schema ID. After decoding Avro messages, the `Decoder::flush()` method yields Arrow `RecordBatch`es suitable for vectorized processing.
 
 A more advanced example can be found [here](https://github.com/apache/arrow-rs/blob/main/arrow-avro/examples/decode_kafka_stream.rs).
 
@@ -251,7 +251,7 @@ The table below lists the cases we report in the figures:
 
 ## Closing
 
-`arrow-avro` brings a purpose‑built, vectorized bridge connecting Arrow-rs and Avro that covers Object Container Files (OCF), Single‑Object Encodings (SOE), and the Confluent/Apicurio Schema Registry wire formats. This means you can now keep your ingestion paths columnar for both batch files and streaming systems. The reader and writer APIs shown above are now available for you to use with the v57.0.0 release of `arrow-rs`.
+`arrow-avro` brings a purpose‑built, vectorized bridge connecting Arrow-rs and Avro that covers Object Container Files (OCF), Single‑Object Encoding (SOE), and the Confluent/Apicurio Schema Registry wire formats. This means you can now keep your ingestion paths columnar for both batch files and streaming systems. The reader and writer APIs shown above are now available for you to use with the v57.0.0 release of `arrow-rs`.
 
 This work is part of the ongoing Arrow‑rs effort to implement first-class Avro support in Rust. We'd love your feedback on real‑world use-cases, workloads, and integrations. We also welcome contributions, whether that's issues, benchmarks, or PRs. To follow along or help, open an [issue on GitHub](https://github.com/apache/arrow-rs/issues) and/or track [Add Avro Support](https://github.com/apache/arrow-rs/issues/4886) in `apache/arrow-rs`.
 
@@ -260,8 +260,8 @@ This work is part of the ongoing Arrow‑rs effort to implement first-class Avro
 Special thanks to:
 * [tustvold](https://github.com/tustvold) for laying an incredible zero-copy foundation.
 * [nathaniel-d-ef](https://github.com/nathaniel-d-ef) and [ElastiFlow](https://github.com/elastiflow) for their numerous and invaluable project-wide contributions.
-* [veronica-m-ef](https://github.com/veronica-m-ef) for making Impala support related contributions to the `Reader`.
-* [Supermetal](https://github.com/Supermetal-Inc) for contributions related to Apicurio registry and Run-end Encoding type support.
+* [veronica-m-ef](https://github.com/veronica-m-ef) for making Impala‑related contributions to the `Reader`.
+* [Supermetal](https://github.com/Supermetal-Inc) for contributions related to Apicurio Registry and Run-End Encoding type support.
 * [kumarlokesh](https://github.com/kumarlokesh) for contributing `Utf8View` support.
 * [alamb](https://github.com/alamb), [scovich](https://github.com/scovich), [mbrobbel](https://github.com/mbrobbel), and [klion26](https://github.com/klion26) for their thoughtful reviews, detailed feedback, and support throughout the development of `arrow-avro`.
 
