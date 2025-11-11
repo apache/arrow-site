@@ -230,6 +230,12 @@ short description of your use case.
   investigations. VAST uses Arrow as standardized data plane to provide a
   high-bandwidth output path for downstream analytics. This makes it easy and
   efficient to access security data via pyarrow and other available bindings.
+* **[DACP][59]:** Data Access and Collaboration Protocol (DACP)is a communication protocol
+  designed to support cross-node, cross-process data access in scientific and distributed
+  computing environments. DACP provides standardized streaming-based data interactions
+  over the Apache Arrow Flight protocol and defines a unified Streaming DataFrame (SDF) model,
+  which acts as a high-performance abstraction for accessing
+  and processing both structured and unstructured data. 
 
 [1]: https://www.apache.org/foundation/marks/
 [2]: https://www.apache.org/foundation/marks/faq/
@@ -289,3 +295,4 @@ short description of your use case.
 [56]: https://github.com/spiceai/spiceai
 [57]: https://squey.org
 [58]: https://www.weisang.com/
+[59]: https://github.com/rdcn-link/dftp-dacp/tree/main
