@@ -295,4 +295,4 @@ short description of your use case.
 [56]: https://github.com/spiceai/spiceai
 [57]: https://squey.org
 [58]: https://www.weisang.com/
-[59]: https://github.com/rdcn-link/dftp-dacp/tree/main
+[59]: https://github.com/rdcn-link/dftp-dacp
