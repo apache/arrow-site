@@ -32,6 +32,8 @@ questions, and get involved.
 All participation in the Apache Arrow project is governed by the Apache
 Software Foundation's [code of conduct](https://www.apache.org/foundation/policies/conduct.html).
 
+<a name="mailing-lists"></a>
+
 ## Mailing Lists
 
 These arrow.apache.org mailing lists are for project discussion:
@@ -86,6 +88,8 @@ activity is captured in email form for archival purposes.
   <li> <code>github@</code> for all activity on the GitHub repositories {% include mailing_list_links.html list="github" %} </li>
 </ul>
 
+<a name="github"></a>
+
 ## GitHub
 
 <p>We use GitHub Issues as a place to report bugs, request new features, and track the queue of development work. For usage questions, our repositories use GitHub Discussions as an alternative to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %}. Discussions are mirrored to the <code>user@</code> mailing list {% include mailing_list_links.html list="user" %} and users are welcome to ask usage questions in either location. Maintainers may convert usage type Issues to Discussions as appropriate.</p>
@@ -107,6 +111,8 @@ Standards:
 - ADBC: [apache/arrow-adbc](https://github.com/apache/arrow-adbc) ([Issues](https://github.com/apache/arrow-adbc/issues), [Discussions](https://github.com/apache/arrow-adbc/discussions))
 - All Others: [apache/arrow](http://github.com/apache/arrow) ([Issues](http://github.com/apache/arrow/issues), [Discussions](http://github.com/apache/arrow/discussions))
 
+<a name="stack-overflow"></a>
+
 ## Stack Overflow
 
 For questions on how to use Arrow libraries, you may want to use the Stack
@@ -115,6 +121,8 @@ Overflow tag
 addition to the programming language. Some languages and subprojects may have
 their own tags (for example,
 [pyarrow](https://stackoverflow.com/questions/tagged/pyarrow)).
+
+<a name="meetings"></a>
 
 ## Meetings
 
@@ -151,11 +159,15 @@ We host online meetings to provide spaces for synchronous discussions about the 
 
 For information about how to attend these meetings, see the meeting notes and subscribe to the <code>dev@</code> mailing list as described above. The hosts of some of these meetings send reminder emails to the mailing list prior to each meeting with information about how to join.
 
+<a name="chat"></a>
+
 ## Chat
 
 For synchronous communication, we maintain a [Zulip](https://zulip.com) instance at [arrow-dev.zulipchat.com](https://arrow-dev.zulipchat.com). Some channels can be viewed without an account but you will need to create an account to chat. If you don't see a channel for the topic you'd like to chat about, please post in `#dev`.
 
 If you're not familiar with Zulip, it works a bit different from other chat tools. Zulip has a [Getting started](https://zulip.com/help/getting-started-with-zulip) guide which might be helpful to get you oriented.
+
+<a name="contributing"></a>
 
 ## Contributing
 
