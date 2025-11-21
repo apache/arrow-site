@@ -17,10 +17,10 @@ Guide](https://arrow.apache.org/docs/developers/release.html#post-release-tasks)
     this checklist to the issue.
 -   Review deprecated functions to advance their deprecation status.
 -   Evaluate the status of any failing [nightly tests and nightly
-    packaging builds](http://crossbow.voltrondata.com). These checks
-    replicate most of the checks that CRAN runs, so we need them all to
-    be passing or to understand that the failures may (though won’t
-    necessarily) result in a rejection from CRAN.
+    packaging builds](https://s3.amazonaws.com/arrow-data/index.html).
+    These checks replicate most of the checks that CRAN runs, so we need
+    them all to be passing or to understand that the failures may
+    (though won’t necessarily) result in a rejection from CRAN.
 -   Check [current CRAN check
     results](https://cran.rstudio.org/web/checks/check_results_arrow.html).
 -   Ensure the contents of the README are accurate and up to date.
