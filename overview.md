@@ -83,7 +83,7 @@ analytic database systems, data frame libraries, and more.
       The Arrow project contains libraries that enable you to work with data
       in the Arrow columnar format in many languages. The
       <a href="{{ site.baseurl }}/docs/cpp/">C++</a>,
-      <a href="https://github.com/apache/arrow/blob/main/csharp/README.md">C#</a>,
+      <a href="https://arrow.apache.org/dotnet/">C#</a>,
       <a href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>,
       <a href="{{ site.baseurl }}/docs/java/">Java</a>,
       <a href="{{ site.baseurl }}/docs/js/">JavaScript</a>,
