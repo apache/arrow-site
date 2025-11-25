@@ -86,7 +86,7 @@ analytic database systems, data frame libraries, and more.
       <a href="https://arrow.apache.org/dotnet/">.NET</a>,
       <a href="https://godoc.org/github.com/apache/arrow/go/arrow">Go</a>,
       <a href="{{ site.baseurl }}/docs/java/">Java</a>,
-      <a href="{{ site.baseurl }}/docs/js/">JavaScript</a>,
+      <a href="{{ site.baseurl }}/js/">JavaScript</a>,
       <a href="{{ site.baseurl }}/julia/">Julia</a>,
       <a href="https://docs.rs/crate/arrow/">Rust</a>,
       and <a href="https://github.com/apache/arrow/blob/main/swift">Swift</a>
