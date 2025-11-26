@@ -169,7 +169,7 @@ read_tsv_arrow(
 
     A character vector of column names to keep, as in the "select"
     argument to `data.table::fread()`, or a [tidy selection
-    specification](https://tidyselect.r-lib.org/reference/eval_select.html)
+    specification](https://rdrr.io/pkg/tidyselect/man/eval_select.html)
     of columns, as used in `dplyr::select()`.
 
 -   na:
