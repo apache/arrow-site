@@ -85,13 +85,13 @@ this data set consists of 5 Parquet files totaling less than 1MB in
 size.
 
 The diamonds data set is hosted on both S3 and GCS, in a bucket named
-`voltrondata-labs-datasets`. To create an S3FileSystem object that
-refers to that bucket, use the following command:
+`arrow-datasets`. To create an S3FileSystem object that refers to that
+bucket, use the following command:
 
 <div id="cb2" class="sourceCode">
 
 ``` r
-bucket <- s3_bucket("voltrondata-labs-datasets")
+bucket <- s3_bucket("arrow-datasets")
 ```
 
 </div>
@@ -101,7 +101,7 @@ To do this for the GCS version of the data, the command is as follows:
 <div id="cb3" class="sourceCode">
 
 ``` r
-bucket <- gs_bucket("voltrondata-labs-datasets", anonymous = TRUE)
+bucket <- gs_bucket("arrow-datasets", anonymous = TRUE)
 ```
 
 </div>
@@ -213,8 +213,8 @@ relevant URIs are as follows:
 <div id="cb11" class="sourceCode">
 
 ``` r
-uri <- "s3://voltrondata-labs-datasets/diamonds/cut=Good/part-0.parquet"
-uri <- "gs://anonymous@voltrondata-labs-datasets/diamonds/cut=Good/part-0.parquet"
+uri <- "s3://arrow-datasets/diamonds/cut=Good/part-0.parquet"
+uri <- "gs://anonymous@arrow-datasets/diamonds/cut=Good/part-0.parquet"
 ```
 
 </div>
@@ -235,7 +235,7 @@ URIs accept additional options in the query parameters (the part after
 the `?`) that are passed down to configure the underlying file system.
 They are separated by `&`. For example,
 
-    s3://voltrondata-labs-datasets/?endpoint_override=https%3A%2F%2Fstorage.googleapis.com&allow_bucket_creation=true
+    s3://arrow-datasets/?endpoint_override=https%3A%2F%2Fstorage.googleapis.com&allow_bucket_creation=true
 
 is equivalent to:
 
@@ -246,7 +246,7 @@ bucket <- S3FileSystem$create(
   endpoint_override="https://storage.googleapis.com",
   allow_bucket_creation=TRUE
 )
-bucket$path("voltrondata-labs-datasets/")
+bucket$path("arrow-datasets/")
 ```
 
 </div>
@@ -273,7 +273,7 @@ of seconds a request may spend retrying before returning an error. The
 current default is 15 minutes, so in many interactive contexts it’s nice
 to set a lower value:
 
-    gs://anonymous@voltrondata-labs-datasets/diamonds/?retry_limit_seconds=10
+    gs://anonymous@arrow-datasets/diamonds/?retry_limit_seconds=10
 
 </div>
 
@@ -332,9 +332,9 @@ you must pass `anonymous = TRUE` or `anonymous` as the user in a URI:
 <div id="cb17" class="sourceCode">
 
 ``` r
-bucket <- gs_bucket("voltrondata-labs-datasets", anonymous = TRUE)
+bucket <- gs_bucket("arrow-datasets", anonymous = TRUE)
 fs <- GcsFileSystem$create(anonymous = TRUE)
-df <- read_parquet("gs://anonymous@voltrondata-labs-datasets/diamonds/cut=Good/part-0.parquet")
+df <- read_parquet("gs://anonymous@arrow-datasets/diamonds/cut=Good/part-0.parquet")
 ```
 
 </div>
@@ -356,7 +356,7 @@ can be used like this:
 
 ``` r
 bucket <- s3_bucket(
-  bucket = "voltrondata-labs-datasets", 
+  bucket = "arrow-datasets", 
   proxy_options = "http://localhost:1316"
 )
 ```

@@ -55,7 +55,7 @@ you are authorized to access the bucket's contents.
 
 ``` r
 if (FALSE) {
-bucket <- gs_bucket("voltrondata-labs-datasets")
+bucket <- gs_bucket("arrow-datasets")
 }
 ```
 

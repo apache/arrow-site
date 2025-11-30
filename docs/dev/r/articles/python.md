@@ -315,10 +315,8 @@ Now you have a single Array in R.
 -   R/Python integration in Arrow is also discussed in the [PyArrow
     Integrations
     Documentation](https://arrow.apache.org/docs/python/integration/python_r.html),
-    in this [blog post about reticulate integration in
-    Arrow](https://voltrondata.com/blog/passing-arrow-data-between-r-and-python-with-reticulate/),
-    and in this [blog post about rpy2 integration in
-    Arrow](https://voltrondata.com/blog/data-transfer-between-python-and-r-with-rpy2-and-apache-arrow/).
+    and in this [blog post about reticulate integration in
+    Arrow](https://blog.djnavarro.net/posts/2022-09-09_reticulated-arrow/).
 -   The integration between R Arrow and PyArrow is supported through the
     [Arrow C data
     interface](https://arrow.apache.org/docs/format/CDataInterface.html#c-data-interface).

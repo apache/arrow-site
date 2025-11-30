@@ -53,7 +53,7 @@ command:
 <div id="cb2" class="sourceCode">
 
 ``` r
-bucket <- s3_bucket("voltrondata-labs-datasets/nyc-taxi-tiny")
+bucket <- s3_bucket("arrow-datasets/nyc-taxi-tiny")
 ```
 
 </div>
@@ -64,7 +64,7 @@ Storage (GCS) using the following command:
 <div id="cb3" class="sourceCode">
 
 ``` r
-bucket <- gs_bucket("voltrondata-labs-datasets/nyc-taxi-tiny", anonymous = TRUE)
+bucket <- gs_bucket("arrow-datasets/nyc-taxi-tiny", anonymous = TRUE)
 ```
 
 </div>

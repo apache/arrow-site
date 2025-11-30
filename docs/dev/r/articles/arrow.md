@@ -418,7 +418,7 @@ stored there:
 <div id="cb21" class="sourceCode">
 
 ``` r
-bucket <- s3_bucket("voltrondata-labs-datasets/nyc-taxi")
+bucket <- s3_bucket("arrow-datasets/nyc-taxi")
 nyc_taxi <- open_dataset(bucket)
 ```
 
