@@ -153,6 +153,8 @@ Guide](https://arrow.apache.org/docs/developers/release.html#post-release-tasks)
     -   Use Bryce’s
         [script](https://gist.githubusercontent.com/amoeba/4e26c064d1a0d0227cd8c2260cf0072a/raw/bc0d983152bdde4820de9074d4caee9986624bc5/new_contributors.R)
         for contributor calculation.
+-   Check C++ updates for this release and create issues for any items
+    which need bindings in R
 
 </div>
 
