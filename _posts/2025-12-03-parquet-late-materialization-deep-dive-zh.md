@@ -254,3 +254,4 @@ assert_eq!(
 ## 4. 总结
 
 `arrow-rs` 的 Parquet reader 不仅仅是一个格式解析器——它是一个 **微型查询引擎**。像谓词下推和晚物化这样的技术被直接嵌入在文件读取器中。通过 `ReadPlanBuilder` 编排级联计划和 `RowSelection` 保持精确控制，Reader 避免了解压和解码你不需要的数据，同时保持正确性无损。
+
