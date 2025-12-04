@@ -28,13 +28,13 @@ limitations under the License.
 {% endcomment %}
 -->
 
-This article explores the decisions, pitfalls, and specific code locations that enable `arrow-rs` to behave like a tiny query engine when reading Parquet with late materialization.
+This article dives into the decisions and pitfalls of Late Materialization in `arrow-rs` (the engine powering DataFusion). We'll see how a humble file reader has evolved into something with the complex logic of a query engine—effectively becoming a **tiny query engine** in its own right.
 
 ## 1. Why Late Materialization?
 
 Columnar reads are a constant battle between **I/O bandwidth** and **CPU decode costs**. While skipping data is generally good, the act of skipping itself carries a computational cost. The goal in `arrow-rs` is **pipeline-style late materialization**: evaluate predicates first, then access projected columns, keeping the pipeline tight at the page level to ensure minimal reads and minimal decode work.
 
-Borrowing Abadi's classification from his [paper](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf), the target architecture is **LM-pipelined**: interleaving predicates and data column access instead of creating a massive "materialize everything" barrier.
+Borrowing Abadi's classification from his [paper](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf), the target architecture is **LM-pipelined**: interleaving predicates and data column access instead of reading all columns at once and trying to **stitch them back together** into rows.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/LM-pipelined.png" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
@@ -54,13 +54,13 @@ The rest of this post zooms into how the code makes this path work.
 
 ### 2.1 LM-pipelined
 
-"LM-pipelined" might sound academic. In `arrow-rs`, it simply refers to a pipeline that runs sequentially: "read predicate column → generate row selection → read data column". This contrasts with a **parallel** strategy, where all predicate columns are read simultaneously. While parallelism can maximize multi-core CPU usage, the pipelined approach is often superior in columnar storage because each filtering step drastically reduces the amount of data subsequent steps need to read and parse.
+"LM-pipelined" might sound like something from a textbook. In `arrow-rs`, it simply refers to a pipeline that runs sequentially: "read predicate column → generate row selection → read data column". This contrasts with a **parallel** strategy, where all predicate columns are read simultaneously. While parallelism can maximize multi-core CPU usage, the pipelined approach is often superior in columnar storage because each filtering step drastically reduces the amount of data subsequent steps need to read and parse.
 
 To achieve this, we defined these core roles:
 
--   **ReadPlan / ReadPlanBuilder**: Encodes "which columns to read and with what row subset" into a plan. It does not pre-read all predicate columns. It reads one, tightens the selection, and then moves on.
--   **RowSelection**: Describes "skip/select N rows" via RLE (`RowSelector::select/skip`) or a bitmask. This is the core mechanism that carries sparsity through the pipeline.
--   **ArrayReader**: The component responsible for I/O and decoding. It receives a `RowSelection` and decides which pages to read and which values to decode.
+-   **[ReadPlan](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302) / [ReadPlanBuilder](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34)**: Encodes "which columns to read and with what row subset" into a plan. It does not pre-read all predicate columns. It reads one, tightens the selection, and then moves on.
+-   **[RowSelection](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139)**: Describes "skip/select N rows" via RLE (`RowSelector::select/skip`) or a bitmask. This is the core mechanism that carries sparsity through the pipeline.
+-   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**: The component responsible for I/O and decoding. It receives a `RowSelection` and decides which pages to read and which values to decode.
 
 > `RowSelection` can switch dynamically between RLE (selectors) and bitmasks. Bitmasks are faster when gaps are tiny and sparsity is high; RLE is friendlier to large, page-level skips. Details on this trade-off appear in section 3.1.
 
@@ -109,7 +109,7 @@ Once the pipeline exists, the next question is **how to represent and combine th
 * **Input Predicate B (filters within A)**: `[Select 10, Skip 40]` (within the 50 selected rows, only the first 10 survive B)
 
 **How it runs**:
-Traverse both lists at once, zipper-style:
+Think of it like a zipper: we traverse both lists simultaneously...
 
 1. **First 100 rows**: A is Skip → result is Skip 100.
 2. **Next 50 rows**: A is Select. Look at B:
@@ -127,23 +127,23 @@ This keeps narrowing the filter while touching only lightweight metadata—no da
 
 ## 3. Engineering Challenges
 
-While relatively straightforward in theory, actually implementing Late Materialization in a production-grade system such as `arrow-rs` requires significant engineering. Previously, the effort required meant that such technology was typically only available in proprietary engines and was difficult to implement in the open-source community (see [the DataFusion ticket about enabling filter pushdown](https://github.com/apache/datafusion/issues/3463)). After several years of effort, late materialization is now competitive with full materialization across typical workloads. Getting to this point required several major implementation details, which are described below.
+It sounds simple enough in theory, but implementing Late Materialization in a production-grade system like `arrow-rs` is an absolute **engineering nightmare**. Historically, this stuff was so tricky that it was locked away in proprietary engines. In the open source world, we've been grinding away at this for years (just look at [the DataFusion ticket](https://github.com/apache/datafusion/issues/3463)), and finally, we can **flex our muscles** and go toe-to-toe with full materialization. To pull this off, we had to tackle some serious headaches.
 
 ### 3.1 Adaptive RowSelection Policy (Bitmask vs. RLE)
 
-- **Ultra sparse** (e.g., take 1 row every 10,000): bitmask wastes memory (1 bit per row) while RLE needs just a few selectors.
-- **Sparse with tiny gaps** (e.g., "read 1, skip 1" repeatedly): RLE makes the decoder fire constantly; bitmask wins.
+- **Ultra sparse** (e.g., 1 row every 10,000): Using a bitmask here is just wasteful (1 bit per row adds up), whereas RLE is super clean—just a few selectors and you're done.
+- **Sparse but with tiny gaps** (e.g., "read 1, skip 1"): RLE creates a fragmented mess that makes the decoder work overtime; here, bitmasks are way more efficient.
 
-Instead of a global strategy, we use an adaptive strategy:
+Since both have their pros and cons, we decided to get the **best of both worlds** with an adaptive strategy:
 
-- Compare the average selector run length against a threshold (currently 32). If the selection breaks into many short runs, prefer bitmask; otherwise selectors (RLE) win.
-- **Safety override**: Bitmask plus page pruning can produce "missing page" panics because the mask might try to filter rows from pages never read. The `RowSelection` detects this and forces RLE so the necessary pages are read before skipping rows (see 3.1.2).
+- We look at the average run length of the selectors and compare it to a threshold (currently 32). If things are getting too choppy, we switch to bitmasks; otherwise, we stick with selectors (RLE).
+- **The Safety Net**: Bitmasks look great until you hit Page Pruning, which can cause a nasty "missing page" panic because the mask might blindly try to filter rows from pages that were never even read. The `RowSelection` logic watches out for this **recipe for disaster** and forces a switch back to RLE to keep things from crashing (see 3.1.2).
 
-#### 3.1.1 Threshold and Benchmarks
+#### 3.1.1 Where did the threshold come from?
 
-The threshold 32 comes from benchmarks across multiple distributions (even spacing, exponential sparsity, random sparsity) and column types. It separates "choppy but dense" from "long skip regions" well. Future heuristics may incorporate data types and distributions for finer tuning.
+The number 32 wasn't just pulled out of thin air. It came from a data-driven "face-off" using various distributions (even spacing, exponential sparsity, random noise). It does a solid job of distinguishing between "choppy but dense" and "long skip regions." In the future, we might get even fancier with heuristics based on data types.
 
-A performance comparison between selectors (RLE) and bitmasks is shown below: the vertical axis represents the selection time (lower is better), and the horizontal axis represents the average length of the selection. You can see the performance curves cross at around 32.
+The chart below shows the showdown between selectors (RLE) and bitmasks. Vertical axis is time (lower is better), horizontal is average run length. You can see the performance curves cross right around 32.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.1.1.png" alt="Bitmask vs RLE benchmark threshold" width="100%" class="img-responsive">
@@ -151,19 +151,19 @@ A performance comparison between selectors (RLE) and bitmasks is shown below: th
 
 #### 3.1.2 The Bitmask Trap: Missing Pages
 
-Bitmasks are an excellent design when every row will be decoded, but they introduce a hidden engineering trap: a conflict with Page Pruning.
+Bitmasks seem perfect on paper, but they hide a nasty trap. When combined with **Page Pruning**, it's basically a **head-on collision**.
 
-Before diving in, note that Parquet columns are split into Pages (see Section 3.2). To reduce I/O, if we know an entire page won't be read, that page isn't decompressed or decoded, and its address isn't even recorded in the `ArrayReader`'s metadata.
+Before we get into the weeds, a quick refresher on Pages (more in Section 3.2). Parquet files are sliced into Pages. To save I/O, if we know a page is useless, we **don't even touch it**—no decompression, no decoding. The `ArrayReader` doesn't even know it exists.
 
-**Example Scenario:**
+**The Scene of the Crime:**
 
-We read a section of data where only the first and last rows match the predicate; the middle four rows are skipped. The file stores two rows per page, so the middle Page is fully pruned and not recorded by the `ArrayReader`.
+Imagine reading a chunk of data where only the first and last rows matter; the middle four rows are junk. It just so happens those middle four rows sit in their own Page, so that Page gets completely pruned.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.3.2-fig1.jpg" alt="Page pruning example with only first and last rows kept" width="100%" class="img-responsive">
 </figure>
 
-If we use RLE encoding (`RowSelector`), when we execute `Skip(4)`, the middle page is correctly skipped.
+If we use RLE (`RowSelector`), executing `Skip(4)` is smooth sailing: we just jump over the gap.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.3.2-fig3.jpg" alt="RLE skipping pruned pages safely" width="100%" class="img-responsive">
@@ -171,18 +171,18 @@ If we use RLE encoding (`RowSelector`), when we execute `Skip(4)`, the middle pa
 
 **The Problem:**
 
-In mask mode, the reader still attempts to decode all 6 rows and then apply the mask. Because the pruned page was never loaded, it panics as soon as decoding reaches that gap. The `ArrayReader` is intentionally stream-like—it does not carry page boundaries forward—so it cannot preflight whether a mask will wander into a pruned page.
+If we use a bitmask, the Reader blindly tries to decode all 6 rows first, intending to filter them later. But that middle Page isn't there! As soon as the decoder hits that gap, it panics. The `ArrayReader` is a stream processing unit—it doesn't know the layer above decided to prune a page, so it can't see the cliff coming.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.3.2-fig2.jpg" alt="Bitmask hitting a missing page panic" width="100%" class="img-responsive">
 </figure>
 
-**The Solution:**
+**The Fix:**
 
-Our current fix is a conservative fallback: **if Page Pruning is detected, we disable bitmasks and force a fallback to RLE mode.**
+Our solution is conservative but bulletproof: **if we detect Page Pruning, we ban bitmasks and force a fallback to RLE.**
 
 ```rust
-// Auto prefers bitmask, but page pruning forces a switch back to RLE
+// Auto prefers bitmask, but... wait, offset_index says page pruning is on.
 let policy = RowSelectionPolicy::Auto { threshold: 32 };
 let plan_builder = ReadPlanBuilder::new(1024).with_row_selection_policy(policy);
 let plan_builder = override_selector_strategy_if_needed(
@@ -190,15 +190,16 @@ let plan_builder = override_selector_strategy_if_needed(
     &projection_mask,
     Some(offset_index), // page index enables page pruning
 );
+// ...so we play it safe and switch to Selectors (RLE).
 assert_eq!(plan_builder.row_selection_policy(), &RowSelectionPolicy::Selectors);
 ```
 
 ### 3.2 Page Level Pruning
 
-Ideally, high performance means **issuing no disk reads at all**. In practice—especially against object storage—small range requests can be expensive. When page indexes are present, `arrow-rs` emits per-page ranges from `scan_ranges`; it does **not** coalesce them. Some storage backends may merge those ranges for efficiency, which can blunt bandwidth savings, but pruning still pays off: if ranges are honored it reduces bytes read, and in all cases it saves CPU by **completely skipping the decompression and decoding** of pruned pages.
+The ultimate performance win is **not reading the disk at all**. In the real world (especially with object storage), firing off a million tiny read requests is a **performance killer**. Since we have the Page Index, `arrow-rs` calculates exactly which Pages contain data we actually need. Even if the underlying storage client merges adjacent requests, the real win is CPU: **we completely skip the heavy lifting of decompressing and decoding pruned pages.**
 
-* **Challenge**: If `RowSelection` touches even one row in a page, we must decompress the entire page to hand it to the decoder.
-* **Implementation**: `scan_ranges` uses each page's `first_row_index` and `compressed_page_size` to compute which page ranges are completely skipped and returns a list of `(offset, length)` for the reads we *must* issue. The decode phase then uses `skip_records` to skip rows inside the page.
+* **The Catch**: If `RowSelection` selects even a **single row** in a Page, the whole Page has to be decompressed and decoded.
+* **Implementation**: `scan_ranges` crunches the numbers using each page's metadata (`first_row_index` and `compressed_page_size`) to figure out which ranges are total skips, returning only the essential `(offset, length)` list. The decoder then cleans up the rest using `skip_records` inside the page.
 
 ```rust
 // Example: two pages; page0 covers 0..100, page1 covers 100..200
@@ -206,14 +207,14 @@ let locations = vec![
     PageLocation { offset: 0, compressed_page_size: 10, first_row_index: 0 },
     PageLocation { offset: 10, compressed_page_size: 10, first_row_index: 100 },
 ];
-// RowSelection only keeps 150..160; page0 fully skipped, page1 must be read
+// RowSelection wants 150..160; page0 is total junk, only read page1
 let sel: RowSelection = vec![
     RowSelector::skip(150),
     RowSelector::select(10),
     RowSelector::skip(40),
 ].into();
 let ranges = sel.scan_ranges(&locations);
-assert_eq!(ranges.len(), 1); // only request page1
+assert_eq!(ranges.len(), 1); // Only request page1
 ```
 
 <figure style="text-align: center;">
@@ -222,29 +223,31 @@ assert_eq!(ranges.len(), 1); // only request page1
 
 ### 3.3 Smart Caching
 
-Late materialization means the same column often plays both predicate and projection. Without caching, column `B` would be decoded once for filtering and again for projection—wasting I/O and CPU. `CachedArrayReader` simplifies this: **stash the batch the first time it is decoded and reuse it the next time.**
+Late materialization puts us in a bit of a **Catch-22**: we often need to read the same column twice—first to filter it, and then again to project it. Without caching, you're basically **paying double** for the same data: decoding it once for the predicate, and again for the output. `CachedArrayReader` fixes this: **stash the batch the first time you see it, and reuse it later.**
 
-Why two cache layers? One cache should be **shareable**; another should **guarantee self-use**. The common case: column B is read during predicates, then read again during projection. If projection hits the Shared Cache, it can reuse the decoded Arrow array. The Shared Cache might evict entries (capacity limits or other readers), so a Local Cache is the safety net—if the shared entry is gone, you can still read your own batch or fall back to re-decode. Correctness is never at risk; only performance varies.
+Why the dual-layer cache? One layer is **shareable**, the other is a **guarantee**.
+Take column B: read by the predicate, then by the projection. If the projection finds it in the Shared Cache, great—free reuse! But the Shared Cache is finite and might evict data to make room for others. That's where the Local Cache comes in as a **safety net**, ensuring the data *you* just read is still there.
 
-Scope is intentionally narrow: the Shared Cache lives only within a single row group and resets between groups so we do not pin 100MB forever. Batch IDs are also row-group local (`row_offset / batch_size`), so predicate and projection batches naturally align.
-
-To keep memory spiky instead of staircase-shaped, caches have a size cap and evict older batches; consumers also drop earlier batches after they are consumed.
+We keep the scope tight to avoid **memory bloat**: the Shared Cache is wiped clean between row groups so we don't hoard memory forever.
 
 ### 3.4 Zero-Copy
 
-One of the common costs in Parquet decode is "decode into a Vec, then memcpy into an Arrow buffer." Fixed-width types suffer most: same layout, same size, but still copied. `PrimitiveArrayReader` fixes this with zero-copy on the fixed-width path: it hands ownership of the decoded `Vec<T>` directly to an Arrow `Buffer`, skipping the memcpy. Numeric columns finish decode with almost no tail cost.
+A classic **"unnecessary tax"** in Parquet decoding is decompressing data into a `Vec` and then `memcpy`-ing it into an Arrow Buffer. For fixed-width types (like integers or floats), this is completely redundant—the memory layout is identical. Why jump through hoops?
+
+`PrimitiveArrayReader` cuts out the middleman with zero-copy: it simply **hands over ownership** of the decoded `Vec<T>` directly to the Arrow `Buffer`. No copying, no wasted cycles.
 
 ### 3.5 The Alignment Gauntlet
 
-In chained filtering, every operator uses a different coordinate system. The "first row" in filter N might be the "row 10,001" of the file.
+Chained filtering is a **hair-pulling** exercise in coordinate systems. "Row 1" in Filter N might actually be "Row 10,001" in the file.
 
-* **Fix**: Every `RowSelection` operation (`split_off`, `and_then`, `trim`) has fuzz tests to guarantee exact translation between relative and absolute offsets under any Skip/Select pattern. Correctness here decides whether readers stay stable under the triple stress of batch boundaries, sparse selections, and page pruning.
+* **How do we keep the train on the rails?**: We **fuzz the heck out of** every `RowSelection` operation (`split_off`, `and_then`, `trim`). We need absolute certainty that our translation between relative and absolute offsets is pixel-perfect. This correctness is the bedrock that keeps the Reader stable under the triple threat of batch boundaries, sparse selections, and page pruning.
 
 ```rust
-// Example: trim the first 100 rows, then take 10 rows within the trimmed window
+// Example: Skip 100 rows, then take the next 10
 let a: RowSelection = vec![RowSelector::skip(100), RowSelector::select(50)].into();
 let b: RowSelection = vec![RowSelector::select(10), RowSelector::skip(40)].into();
 let result = a.and_then(&b);
+// Result should be: Skip 100, Select 10, Skip 40
 assert_eq!(
     Vec::<RowSelector>::from(result),
     vec![RowSelector::skip(100), RowSelector::select(10), RowSelector::skip(40)]
@@ -253,4 +256,4 @@ assert_eq!(
 
 ## 4. Conclusion
 
-The Parquet reader in `arrow-rs` is more than a format parser—it is a **mini query engine**. Techniques like predicate pushdown and late materialization are embedded right in the file reader. With `ReadPlanBuilder` orchestrating a cascading plan and `RowSelection` keeping precise control, the reader avoids decompressing and decoding data you do not need, while keeping correctness intact.
+To wrap it up: the Parquet reader in `arrow-rs` isn't just a humble file reader—it's a **mini query engine** in disguise. We've baked in high-end features like predicate pushdown and late materialization deep into its bones. With `ReadPlanBuilder` calling the shots and `RowSelection` handling the fine-grained control, the Reader manages to "read only what's needed, decode only what's necessary," saving resources without sacrificing a drop of correctness.
