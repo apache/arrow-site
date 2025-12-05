@@ -56,21 +56,28 @@ The rest of this post zooms into how the code makes this path work.
 
 "LM-pipelined" might sound like something from a textbook. In `arrow-rs`, it simply refers to a pipeline that runs sequentially: "read predicate column → generate row selection → read data column". This contrasts with a **parallel** strategy, where all predicate columns are read simultaneously. While parallelism can maximize multi-core CPU usage, the pipelined approach is often superior in columnar storage because each filtering step drastically reduces the amount of data subsequent steps need to read and parse.
 
-To achieve this, we defined these core roles:
+The code is structured into a few core roles:
 
 -   **[ReadPlan](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302) / [ReadPlanBuilder](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34)**: Encodes "which columns to read and with what row subset" into a plan. It does not pre-read all predicate columns. It reads one, tightens the selection, and then moves on.
--   **[RowSelection](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139)**: Describes "skip/select N rows" via RLE (`RowSelector::select/skip`) or a bitmask. This is the core mechanism that carries sparsity through the pipeline.
--   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**: The component responsible for I/O and decoding. It receives a `RowSelection` and decides which pages to read and which values to decode.
+-   **[RowSelection](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139)**: Describes "skip/select N rows" using either [Run-length encoding] (RLE) (called a [`RowSelector`]) or a bitmask. This is the core mechanism that carries sparsity through the pipeline.
+-   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**: Responsible for decoding. It receives a `RowSelection` and decides which pages to read and which values to decode.
 
-> `RowSelection` can switch dynamically between RLE (selectors) and bitmasks. Bitmasks are faster when gaps are tiny and sparsity is high; RLE is friendlier to large, page-level skips. Details on this trade-off appear in section 3.1.
+[Run-length encoding]: https://en.wikipedia.org/wiki/Run-length_encoding
+[`RowSelector`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66
 
-Consider a query with two filters: `SELECT * FROM table WHERE A > 10 AND B < 5`:
+`RowSelection` can switch dynamically between RLE and bitmasks. Bitmasks are faster when gaps are tiny and sparsity is high; RLE is friendlier to large, page-level skips. Details on this trade-off appear in section 3.1.
+
+Consider again the query: `SELECT B, C  FROM table WHERE A > 10 AND B < 5`:
 
 1.  **Initial**: `selection = None` (equivalent to "select all").
-2.  **Read A**: `ArrayReader` decodes column A in batches; the predicate builds a boolean mask; `RowSelection::from_filters` turns it into a sparse selection.
-3.  **Tighten**: `ReadPlanBuilder::with_predicate` chains the new mask via `RowSelection::and_then`.
+2.  **Read A**: `ArrayReader` decodes column A in batches; the predicate builds a boolean mask; [`RowSelection::from_filters`] turns it into a sparse selection.
+3.  **Tighten**: [`ReadPlanBuilder::with_predicate`] chains the new mask via [`RowSelection::and_then`].
 4.  **Read B**: Build column B's reader with the current `selection`; the reader only performs I/O and decode for selected rows, producing an even sparser mask.
 5.  **Merge**: `selection = selection.and_then(selection_b)`; projection columns now decode a tiny row set.
+
+[`RowSelection::from_filters`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L149
+[`ReadPlanBuilder::with_predicate`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L143
+[`RowSelection::and_then`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345
 
 **Code locations and sketch**:
 
@@ -91,13 +98,13 @@ let plan = builder.build();
 let reader = ParquetRecordBatchReader::new(array_reader, plan);
 ```
 
-I've drawn a simple flowchart to help you understand:
+I've drawn a simple flowchart that illustrates this flow to help you understand:
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/fig2.jpg" alt="Predicate-first pipeline flow" width="100%" class="img-responsive">
 </figure>
 
-Once the pipeline exists, the next question is **how to represent and combine these sparse selections** (the **Row Mask** in the diagram), which is where `RowSelection` comes in.
+Now that you understand how this pipeline works, the next question is **how to represent and combine these sparse selections** (the **Row Mask** in the diagram), which is where `RowSelection` comes in.
 
 ### 2.2 Logical ops on row selectors (`RowSelection::and_then`)
 
