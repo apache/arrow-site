@@ -127,37 +127,43 @@ This keeps narrowing the filter while touching only lightweight metadata—no da
 
 ## 3. Engineering Challenges
 
-It sounds simple enough in theory, but implementing Late Materialization in a production-grade system like `arrow-rs` is an absolute **engineering nightmare**. Historically, this stuff was so tricky that it was locked away in proprietary engines. In the open source world, we've been grinding away at this for years (just look at [the DataFusion ticket](https://github.com/apache/datafusion/issues/3463)), and finally, we can **flex our muscles** and go toe-to-toe with full materialization. To pull this off, we had to tackle some serious headaches.
+Late Materialization sounds simple enough in theory, but implementing it in a production-grade system like `arrow-rs` is an absolute **engineering nightmare**. Historically, these techniques are so tricky they have been locked away in proprietary engines. In the open source world, we've been grinding away at this for years (just look at [the DataFusion ticket](https://github.com/apache/datafusion/issues/3463)), and finally, we can **flex our muscles** and go toe-to-toe with full materialization. To pull this off, we had to tackle several serious engineering challenges.
 
 ### 3.1 Adaptive RowSelection Policy (Bitmask vs. RLE)
+
+One major hurdle is choosing the right internal representation for `RowSelection` because the best choice depends on the sparsity pattern.
 
 - **Ultra sparse** (e.g., 1 row every 10,000): Using a bitmask here is just wasteful (1 bit per row adds up), whereas RLE is super clean—just a few selectors and you're done.
 - **Sparse but with tiny gaps** (e.g., "read 1, skip 1"): RLE creates a fragmented mess that makes the decoder work overtime; here, bitmasks are way more efficient.
 
-Since both have their pros and cons, we decided to get the **best of both worlds** with an adaptive strategy:
+Since both have their pros and cons, we decided to get the **best of both worlds** with an adaptive strategy (see [#arrow-rs/8733] for more details):
 
-- We look at the average run length of the selectors and compare it to a threshold (currently 32). If things are getting too choppy, we switch to bitmasks; otherwise, we stick with selectors (RLE).
+- We look at the average run length of the selectors and compare it to a threshold (currently `32`). If the average is too small, we switch to bitmasks; otherwise, we stick with selectors (RLE).
 - **The Safety Net**: Bitmasks look great until you hit Page Pruning, which can cause a nasty "missing page" panic because the mask might blindly try to filter rows from pages that were never even read. The `RowSelection` logic watches out for this **recipe for disaster** and forces a switch back to RLE to keep things from crashing (see 3.1.2).
 
-#### 3.1.1 Where did the threshold come from?
+[#arrow-rs/8733]: https://github.com/apache/arrow-rs/pull/8733
 
-The number 32 wasn't just pulled out of thin air. It came from a data-driven "face-off" using various distributions (even spacing, exponential sparsity, random noise). It does a solid job of distinguishing between "choppy but dense" and "long skip regions." In the future, we might get even fancier with heuristics based on data types.
+#### 3.1.1 Where did the threshold of `32` come from?
 
-The chart below shows the showdown between selectors (RLE) and bitmasks. Vertical axis is time (lower is better), horizontal is average run length. You can see the performance curves cross right around 32.
+The number 32 wasn't just pulled out of thin air. It came from a [data-driven "face-off"] using various distributions (even spacing, exponential sparsity, random noise). It does a solid job of distinguishing between "choppy but dense" and "long skip regions." In the future, we might get even fancier with heuristics based on data types.
+
+The chart below shows an example run from the showdown. Blue lines are `read_selector` (RLE) and orange lines are `read_mask` (bitmasks). The vertical axis is time (lower is better), and the horizontal axis is average run length. You can see the performance curves cross around 32.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.1.1.png" alt="Bitmask vs RLE benchmark threshold" width="100%" class="img-responsive">
 </figure>
 
+[data-driven "face-off"]: https://github.com/apache/arrow-rs/pull/8733#issuecomment-3468441165
+
 #### 3.1.2 The Bitmask Trap: Missing Pages
 
-Bitmasks seem perfect on paper, but they hide a nasty trap. When combined with **Page Pruning**, it's basically a **head-on collision**.
+When implementing the adaptive strategy, bitmasks seem perfect on paper, but they hide a nasty trap when combined with **Page Pruning**.
 
-Before we get into the weeds, a quick refresher on Pages (more in Section 3.2). Parquet files are sliced into Pages. To save I/O, if we know a page is useless, we **don't even touch it**—no decompression, no decoding. The `ArrayReader` doesn't even know it exists.
+Before we get into the weeds, a quick refresher on pages (more in Section 3.2): Parquet files are sliced into pages. If we know a page has no rows in the selection, we **don't even touch it**—no decompression, no decoding. The `ArrayReader` doesn't even know it exists.
 
 **The Scene of the Crime:**
 
-Imagine reading a chunk of data where only the first and last rows matter; the middle four rows are junk. It just so happens those middle four rows sit in their own Page, so that Page gets completely pruned.
+Imagine reading a chunk of data and selecting only the first and last rows; the middle four rows are filtered out. It just so happens those middle four rows sit in their own page, so that page gets completely pruned.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.3.2-fig1.jpg" alt="Page pruning example with only first and last rows kept" width="100%" class="img-responsive">
@@ -171,7 +177,7 @@ If we use RLE (`RowSelector`), executing `Skip(4)` is smooth sailing: we just ju
 
 **The Problem:**
 
-If we use a bitmask, the Reader blindly tries to decode all 6 rows first, intending to filter them later. But that middle Page isn't there! As soon as the decoder hits that gap, it panics. The `ArrayReader` is a stream processing unit—it doesn't know the layer above decided to prune a page, so it can't see the cliff coming.
+If we use a bitmask, however, the reader will decode all 6 rows first, intending to filter them later. But that middle page isn't there! As soon as the decoder hits that gap, it panics. The `ArrayReader` is a stream processing unit—it doesn't handle I/O and thus doesn't know the layer above decided to prune a page, so it can't see the cliff coming.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.3.2-fig2.jpg" alt="Bitmask hitting a missing page panic" width="100%" class="img-responsive">
@@ -179,7 +185,9 @@ If we use a bitmask, the Reader blindly tries to decode all 6 rows first, intend
 
 **The Fix:**
 
-Our solution is conservative but bulletproof: **if we detect Page Pruning, we ban bitmasks and force a fallback to RLE.**
+Our current solution is conservative but bulletproof: **if we detect Page Pruning, we ban bitmasks and force a fallback to RLE.** In the future, we hope to extend the bitmask logic to be Page Pruning-aware (see [#arrow-rs/8845]).
+
+[#arrow-rs/8845]: https://github.com/apache/arrow-rs/issues/8845
 
 ```rust
 // Auto prefers bitmask, but... wait, offset_index says page pruning is on.
