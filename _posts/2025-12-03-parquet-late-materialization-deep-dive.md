@@ -28,22 +28,26 @@ limitations under the License.
 {% endcomment %}
 -->
 
-This article dives into the decisions and pitfalls of Late Materialization in `arrow-rs` (the engine powering DataFusion). We'll see how a humble file reader has evolved into something with the complex logic of a query engine—effectively becoming a **tiny query engine** in its own right.
+This article dives into the decisions and pitfalls of implementing Late Materialization in the [Apache Parquet] reader from [`arrow-rs`] (the reader powering [Apache DataFusion] among other projects). We'll see how a seemingly humble file reader requires complex logic to evaluate predicates—effectively becoming a **tiny query engine** in its own right.
+
+[Apache Parquet]: https://parquet.apache.org/
+[Apache DataFusion]: https://datafusion.apache.org/
+[`arrow-rs`]: https://github.com/apache/arrow-rs
 
 ## 1. Why Late Materialization?
 
-Columnar reads are a constant battle between **I/O bandwidth** and **CPU decode costs**. While skipping data is generally good, the act of skipping itself carries a computational cost. The goal in `arrow-rs` is **pipeline-style late materialization**: evaluate predicates first, then access projected columns, keeping the pipeline tight at the page level to ensure minimal reads and minimal decode work.
+Columnar reads are a constant battle between **I/O bandwidth** and **CPU decode costs**. While skipping data is generally good, the act of skipping itself carries a computational cost. The goal of the Parquet reader in `arrow-rs` is **pipeline-style late materialization**: evaluate predicates first, then access projected columns. For predicates that filter many rows, materializing after evaluation minimizes reads and decode work.
 
-Borrowing Abadi's classification from his [paper](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf), the target architecture is **LM-pipelined**: interleaving predicates and data column access instead of reading all columns at once and trying to **stitch them back together** into rows.
+The approach closely mirrors the  **LM-pipelined** strategy from [Materialization Strategies in a Column-Oriented DBMS](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf) by Abadi et al.: interleaving predicates and data column access instead of reading all columns at once and trying to **stitch them back together** into rows.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/LM-pipelined.png" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
 </figure>
 
-Take `SELECT B, C FROM table WHERE A > 10 AND B < 5` as a running example:
+To evaluate a query like `SELECT B, C FROM table WHERE A > 10 AND B < 5` using late materialization, the reader follows these steps:
 
-1.  Read column `A`, build a `RowSelection` (a sparse mask), and obtain the initial set of surviving rows.
-2.  Use that `RowSelection` to read column `B`, decoding and filtering on the fly to make the selection even sparser.
+1.  Read column `A` and evaluate `A > 10` to build a `RowSelection` (a sparse mask) representing the initial set of surviving rows.
+2.  Use that `RowSelection` to read surviving values of column `B` and evaluate `B < 5`, to update the RowSelection to make it even sparser.
 3.  Use the refined `RowSelection` to read column `C` (a projection column), decoding only the final surviving rows.
 
 The rest of this post zooms into how the code makes this path work.
