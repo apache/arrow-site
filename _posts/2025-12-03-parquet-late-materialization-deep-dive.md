@@ -38,7 +38,7 @@ This article dives into the decisions and pitfalls of implementing Late Material
 
 Columnar reads are a constant battle between **I/O bandwidth** and **CPU decode costs**. While skipping data is generally good, the act of skipping itself carries a computational cost. The goal of the Parquet reader in `arrow-rs` is **pipeline-style late materialization**: evaluate predicates first, then access projected columns. For predicates that filter many rows, materializing after evaluation minimizes reads and decode work.
 
-The approach closely mirrors the  **LM-pipelined** strategy from [Materialization Strategies in a Column-Oriented DBMS](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf) by Abadi et al.: interleaving predicates and data column access instead of reading all columns at once and trying to **stitch them back together** into rows.
+The approach closely mirrors the **LM-pipelined** strategy from [Materialization Strategies in a Column-Oriented DBMS](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf) by Abadi et al.: interleaving predicates and data column access instead of reading all columns at once and trying to **stitch them back together** into rows.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/LM-pipelined.png" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
@@ -47,10 +47,10 @@ The approach closely mirrors the  **LM-pipelined** strategy from [Materializatio
 To evaluate a query like `SELECT B, C FROM table WHERE A > 10 AND B < 5` using late materialization, the reader follows these steps:
 
 1.  Read column `A` and evaluate `A > 10` to build a `RowSelection` (a sparse mask) representing the initial set of surviving rows.
-2.  Use that `RowSelection` to read surviving values of column `B` and evaluate `B < 5`, to update the RowSelection to make it even sparser.
+2.  Use that `RowSelection` to read surviving values of column `B` and evaluate `B < 5` and update the `RowSelection` to make it even sparser.
 3.  Use the refined `RowSelection` to read column `C` (a projection column), decoding only the final surviving rows.
 
-The rest of this post zooms into how the code makes this path work.
+The rest of this post zooms in on how the code makes this path work.
 
 ---
 
