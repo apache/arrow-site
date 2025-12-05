@@ -37,7 +37,7 @@ Columnar reads are a constant battle between **I/O bandwidth** and **CPU decode 
 Borrowing Abadi's classification from his [paper](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf), the target architecture is **LM-pipelined**: interleaving predicates and data column access instead of reading all columns at once and trying to **stitch them back together** into rows.
 
 <figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/late-materialization/LM-pipelined.png" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
+  <img src="{{ site.baseurl }}/img/late-materialization/fig1.png" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
 </figure>
 
 Take `SELECT B, C FROM table WHERE A > 10 AND B < 5` as a running example:
