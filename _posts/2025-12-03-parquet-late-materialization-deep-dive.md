@@ -67,12 +67,12 @@ The code is structured into a few core roles:
 
 `RowSelection` can switch dynamically between RLE and bitmasks. Bitmasks are faster when gaps are tiny and sparsity is high; RLE is friendlier to large, page-level skips. Details on this trade-off appear in section 3.1.
 
-Consider again the query: `SELECT B, C  FROM table WHERE A > 10 AND B < 5`:
+Consider again the query: `SELECT B, C FROM table WHERE A > 10 AND B < 5`:
 
 1.  **Initial**: `selection = None` (equivalent to "select all").
 2.  **Read A**: `ArrayReader` decodes column A in batches; the predicate builds a boolean mask; [`RowSelection::from_filters`] turns it into a sparse selection.
 3.  **Tighten**: [`ReadPlanBuilder::with_predicate`] chains the new mask via [`RowSelection::and_then`].
-4.  **Read B**: Build column B's reader with the current `selection`; the reader only performs I/O and decode for selected rows, producing an even sparser mask.
+4.  **Read B**: Build column B's reader with the current `selection`; the reader only performs I/O and decoding for selected rows, producing an even sparser mask.
 5.  **Merge**: `selection = selection.and_then(selection_b)`; projection columns now decode a tiny row set.
 
 [`RowSelection::from_filters`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L149
