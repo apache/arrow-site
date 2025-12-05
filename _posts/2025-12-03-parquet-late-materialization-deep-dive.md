@@ -238,21 +238,11 @@ A classic **"unnecessary tax"** in Parquet decoding is decompressing data into a
 
 ### 3.5 The Alignment Gauntlet
 
-Chained filtering is a **hair-pulling** exercise in coordinate systems. "Row 1" in Filter N might actually be "Row 10,001" in the file.
+Chained filtering is a **hair-pulling** exercise in coordinate systems. "Row 1" in filter N might actually be "Row 10,001" in the file due to prior filters.
 
-* **How do we keep the train on the rails?**: We **fuzz the heck out of** every `RowSelection` operation (`split_off`, `and_then`, `trim`). We need absolute certainty that our translation between relative and absolute offsets is pixel-perfect. This correctness is the bedrock that keeps the Reader stable under the triple threat of batch boundaries, sparse selections, and page pruning.
+* **How do we keep the train on the rails?**: We [fuzz test] every `RowSelection` operation (`split_off`, `and_then`, `trim`). We need absolute certainty that our translation between relative and absolute offsets is pixel-perfect. This correctness is the bedrock that keeps the Reader stable under the triple threat of batch boundaries, sparse selections, and page pruning.
 
-```rust
-// Example: Skip 100 rows, then take the next 10
-let a: RowSelection = vec![RowSelector::skip(100), RowSelector::select(50)].into();
-let b: RowSelection = vec![RowSelector::select(10), RowSelector::skip(40)].into();
-let result = a.and_then(&b);
-// Result should be: Skip 100, Select 10, Skip 40
-assert_eq!(
-    Vec::<RowSelector>::from(result),
-    vec![RowSelector::skip(100), RowSelector::select(10), RowSelector::skip(40)]
-);
-```
+[fuzz_test]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309
 
 ## 4. Conclusion
 
