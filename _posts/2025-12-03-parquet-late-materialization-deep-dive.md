@@ -119,6 +119,20 @@ Think of it like a zipper: we traverse both lists simultaneously...
 
 **Result**: `[Skip 100, Select 10, Skip 90]`.
 
+Here is an example in code:
+
+```rust
+// Example: Skip 100 rows, then take the next 10
+let a: RowSelection = vec![RowSelector::skip(100), RowSelector::select(50)].into();
+let b: RowSelection = vec![RowSelector::select(10), RowSelector::skip(40)].into();
+let result = a.and_then(&b);
+// Result should be: Skip 100, Select 10, Skip 40
+assert_eq!(
+    Vec::<RowSelector>::from(result),
+    vec![RowSelector::skip(100), RowSelector::select(10), RowSelector::skip(40)]
+);
+```
+
 This keeps narrowing the filter while touching only lightweight metadata—no data copies. The implementation is a two-pointer linear scan; complexity is linear in selector segments. The sooner predicates shrink the selection, the cheaper later scans become.
 
 <figure style="text-align: center;">
