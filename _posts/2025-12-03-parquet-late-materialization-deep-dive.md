@@ -99,17 +99,21 @@ I've drawn a simple flowchart to help you understand:
 
 Once the pipeline exists, the next question is **how to represent and combine these sparse selections** (the **Row Mask** in the diagram), which is where `RowSelection` comes in.
 
-### 2.2 Logical ops on row selectors (`RowSelection::and_then`)
+### 2.2 Combining row selectors (`RowSelection::and_then`)
 
-`RowSelection`—defined in `selection.rs`—is the token that every stage passes around. It mostly uses RLE (`RowSelector::select/skip(len)`) to describe sparse ranges. `and_then` is the core operator for "apply one selection to another": left-hand side is "rows already allowed," right-hand side further filters those rows, and the output is their boolean AND.
+[`RowSelection`] represents the set of rows that will eventually be produced. It currently uses RLE (`RowSelector::select/skip(len)`) to describe sparse ranges. [`RowSelection::and_then`] is the core operator for "apply one selection to another": the left-hand argument is "rows already passed" and the right-hand argument is "which of the passed rows also pass the second filter." The output is their boolean AND.
 
-**Walkthrough**:
+[`RowSelection`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139
+[`RowSelection::and_then`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L345
+
+**Walkthrough Example**:
 
 * **Input Selection A (already filtered)**: `[Skip 100, Select 50, Skip 50]` (physical rows 100-150 are selected)
-* **Input Predicate B (filters within A)**: `[Select 10, Skip 40]` (within the 50 selected rows, only the first 10 survive B)
+* **Selection B (filters within A)**: `[Select 10, Skip 40]` (within the 50 selected rows, only the first 10 survive B)
+* **Result**: `[Skip 100, Select 10, Skip 90]`.
 
 **How it runs**:
-Think of it like a zipper: we traverse both lists simultaneously...
+Think of it like a zipper: we traverse both lists simultaneously, as shown below:
 
 1. **First 100 rows**: A is Skip → result is Skip 100.
 2. **Next 50 rows**: A is Select. Look at B:
@@ -117,13 +121,12 @@ Think of it like a zipper: we traverse both lists simultaneously...
    * B's remaining 40 are Skip → result Skip 40.
 3. **Final 50 rows**: A is Skip → result Skip 50.
 
-**Result**: `[Skip 100, Select 10, Skip 90]`.
-
-This keeps narrowing the filter while touching only lightweight metadata—no data copies. The implementation is a two-pointer linear scan; complexity is linear in selector segments. The sooner predicates shrink the selection, the cheaper later scans become.
-
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/fig3.jpg" alt="RowSelection logical AND walkthrough" width="100%" class="img-responsive">
 </figure>
+
+
+This keeps narrowing the filter while touching only lightweight metadata—no data copies. The current implementation of `and_then` is a two-pointer linear scan; complexity is linear in selector segments. The sooner predicates shrink the selection, the cheaper later scans become.
 
 ## 3. Engineering Challenges
 
