@@ -1,9 +1,9 @@
 ---
 layout: post
 title: "Push Decoder: Fine-Grained Control over IO and CPU when Reading Parquet Files"
-date: "2025-12-17 00:00:00"
+date: "2025-12-01 00:00:00"
 author: alamb
-categories: [release]   
+categories: [arrow-rs]   
 ---
 <!--
 {% comment %}
