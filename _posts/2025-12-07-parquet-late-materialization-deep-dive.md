@@ -2,12 +2,12 @@
 layout: post
 title: "A Practical Dive Into Late Materialization in arrow-rs Parquet Reads"
 description: "How arrow-rs pipelines predicates and projections to minimize work during Parquet scans"
-date: "2025-12-03 00:00:00"
-author: hhhizzz
+date: "2025-12-07 00:00:00"
+author: hhhizzz and alamb
 categories: [application]
 translations:
   - language: 简体中文
-    post_id: 2025-12-03-parquet-late-materialization-deep-dive-zh
+    post_id: 2025-12-07-parquet-late-materialization-deep-dive-zh
 ---
 <!--
 {% comment %}
@@ -240,7 +240,7 @@ The ultimate performance win is **not doing I/O or decoding at all**. In the rea
 
 [PageIndex]: https://parquet.apache.org/docs/file-format/pageindex/
 
-* **The Catch**: If the `RowSelection` selects even a **single row** from a page, the whole page must be decompressed and decoded.
+* **The Catch**: If the `RowSelection` selects even a **single row** from a page, the whole page must be decompressed.
 * **Implementation**: [`RowSelection::scan_ranges`] crunches the numbers using each page's metadata (`first_row_index` and `compressed_page_size`) to figure out which ranges are total skips, returning only the required `(offset, length)` list. 
 
 [`RowSelection::scan_ranges`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204
