@@ -295,4 +295,8 @@ assert_eq!(
 
 ## 4. Conclusion
 
-To wrap it up: the Parquet reader in `arrow-rs` isn't just a humble file reader—it's a **mini query engine** in disguise. We've baked in high-end features like predicate pushdown and late materialization deep into its bones. With `ReadPlanBuilder` calling the shots and `RowSelection` handling the fine-grained control, the Reader manages to "read only what's needed, decode only what's necessary," saving resources without sacrificing a drop of correctness.
+The Parquet reader in `arrow-rs` isn't just a humble file reader—it's a **mini query engine** in disguise. We've baked in high-end features like predicate pushdown and late materialization. The reader reads only what's needed and decodes only what's necessary, saving resources while maintaining correctness. Previously, these features were restricted to proprietary or tightly integrated systems. Now, thanks to the community's efforts, `arrow-rs` brings the benefits of advanced query processing techniques to even lightweight applications.
+
+We invite you to [join the community], explore the code, experiment with it, and contribute to its ongoing evolution. The journey of optimizing data access is never-ending, and together, we can push the boundaries of what's possible in open-source data processing.
+
+[Join the community]: https://github.com/apache/arrow-rs?tab=readme-ov-file#arrow-rust-community
