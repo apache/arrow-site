@@ -216,12 +216,18 @@ let plan_builder = override_selector_strategy_if_needed(
 assert_eq!(plan_builder.row_selection_policy(), &RowSelectionPolicy::Selectors);
 ```
 
-### 3.2 Page Level Pruning
+### 3.2 Page Pruning
 
-The ultimate performance win is **not reading the disk at all**. In the real world (especially with object storage), firing off a million tiny read requests is a **performance killer**. Since we have the Page Index, `arrow-rs` calculates exactly which Pages contain data we actually need. Even if the underlying storage client merges adjacent requests, the real win is CPU: **we completely skip the heavy lifting of decompressing and decoding pruned pages.**
+The ultimate performance win is **not doing I/O or decoding at all**. In the real world (especially with object storage), firing off a million tiny read requests is a **performance killer**. `arrow-rs` uses the Parquet [PageIndex] to calculate exactly which pages contain data we actually need. For very selective predicates, skipping pages can result in substantial I/O savings, even if the underlying storage client merges adjacent range requests. Another major win is reduced CPU: **we completely skip the heavy lifting of decompressing and decoding entirely pruned pages.**
 
-* **The Catch**: If `RowSelection` selects even a **single row** in a Page, the whole Page has to be decompressed and decoded.
-* **Implementation**: `scan_ranges` crunches the numbers using each page's metadata (`first_row_index` and `compressed_page_size`) to figure out which ranges are total skips, returning only the essential `(offset, length)` list. The decoder then cleans up the rest using `skip_records` inside the page.
+[PageIndex]: https://parquet.apache.org/docs/file-format/pageindex/
+
+* **The Catch**: If the `RowSelection` selects even a **single row** from a page, the whole page must be decompressed and decoded.
+* **Implementation**: [`RowSelection::scan_ranges`] crunches the numbers using each page's metadata (`first_row_index` and `compressed_page_size`) to figure out which ranges are total skips, returning only the required `(offset, length)` list. 
+
+[`RowSelection::scan_ranges`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204
+
+Page skipping is illustrated in the following code example:
 
 ```rust
 // Example: two pages; page0 covers 0..100, page1 covers 100..200
@@ -238,6 +244,11 @@ let sel: RowSelection = vec![
 let ranges = sel.scan_ranges(&locations);
 assert_eq!(ranges.len(), 1); // Only request page1
 ```
+
+The following figure illustrates page skipping with RLE selections. The
+first page is neither read nor decoded, as no rows are selected. The second page
+is read and fully decompressed (e.g., zstd), and then only the needed rows are decoded. 
+The third page is decompressed and decoded in full, as all rows are selected.
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/fig4.jpg" alt="Page-level scan range calculation" width="100%" class="img-responsive">
