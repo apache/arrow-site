@@ -256,18 +256,24 @@ The third page is decompressed and decoded in full, as all rows are selected.
 
 ### 3.3 Smart Caching
 
-Late materialization puts us in a bit of a **Catch-22**: we often need to read the same column twice—first to filter it, and then again to project it. Without caching, you're basically **paying double** for the same data: decoding it once for the predicate, and again for the output. `CachedArrayReader` fixes this: **stash the batch the first time you see it, and reuse it later.**
+Late materialization puts us in a bit of a **Catch-22**: arrow-rs evaluates predicates progressively on all rows in a row group. This approach uses a small number of large I/Os, which performs well for slow remote storage systems such as object storage. However, it means we may need to read the same column twice—first to filter it, and then again to produce the final rows necessary for the output projection. Without caching, you're **paying double** for the same data: decoding it once for the predicate, and again for the output. [`CachedArrayReader`], introduced in [#arrow-rs/7850], fixes this: **stash the batch the first time you see it, and reuse it later.**
 
-Why the dual-layer cache? One layer is **shareable**, the other is a **guarantee**.
-Take column B: read by the predicate, then by the projection. If the projection finds it in the Shared Cache, great—free reuse! But the Shared Cache is finite and might evict data to make room for others. That's where the Local Cache comes in as a **safety net**, ensuring the data *you* just read is still there.
+[`CachedArrayReader`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/cached_array_reader.rs#L40-L68
+[#arrow-rs/7850]: https://github.com/apache/arrow-rs/pull/7850
+
+Why the dual-layer cache? One layer is **shareable**, the other is a **guarantee**. As with all caches, the cache in the reader has a (user configurable) memory limit and thus cannot guarantee that it can hold all decoded pages. 
+For example, when reading column B for both predicate evaluation and projection (output), if the projection finds the relevant pages in the Shared Cache, great—free reuse! But the Shared Cache is finite and might evict data to make room for others. That's where the Local Cache comes in as a **safety net**, ensuring the data *you* just read is still there.
 
 We keep the scope tight to avoid **memory bloat**: the Shared Cache is wiped clean between row groups so we don't hoard memory forever.
 
-### 3.4 Zero-Copy
+### 3.4 Minimizing Copies and Allocations
 
-A classic **"unnecessary tax"** in Parquet decoding is decompressing data into a `Vec` and then `memcpy`-ing it into an Arrow Buffer. For fixed-width types (like integers or floats), this is completely redundant—the memory layout is identical. Why jump through hoops?
+Another area where arrow-rs has significant optimization is **avoiding unnecessary copies**. Rust's [memory safe] design makes it easy to copy, and every extra allocation and copy wastes CPU cycles and memory bandwidth. Significant care has been taken with memory allocations to avoid the **"unnecessary tax"** from decompressing data into a `Vec` and then `memcpy`-ing it into an Arrow Buffer. For fixed-width types (like integers or floats), this is completely redundant—the memory layout is identical and Arrow offers [zero-copy conversions]. Why jump through hoops? [`PrimitiveArrayReader`] cuts out the middleman with zero-copy: it simply **hands over ownership** of the decoded `Vec<T>` directly to the Arrow `Buffer`. No copying, no wasted cycles.
 
-`PrimitiveArrayReader` cuts out the middleman with zero-copy: it simply **hands over ownership** of the decoded `Vec<T>` directly to the Arrow `Buffer`. No copying, no wasted cycles.
+[memory safe]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
+[zero-copy conversions]: https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec
+[`PrimitiveArrayReader`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/primitive_array.rs#L102
+
 
 ### 3.5 The Alignment Gauntlet
 
