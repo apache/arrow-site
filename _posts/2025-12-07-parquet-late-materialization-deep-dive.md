@@ -300,7 +300,7 @@ Chained filtering is a **hair-pulling** exercise in coordinate systems. "Row 1" 
 
 * **How do we keep the train on the rails?**: We [fuzz test] every `RowSelection` operation (`split_off`, `and_then`, `trim`). We need absolute certainty that our translation between relative and absolute offsets is pixel-perfect. This correctness is the bedrock that keeps the Reader stable under the triple threat of batch boundaries, sparse selections, and page pruning.
 
-[fuzz_test]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309
+[fuzz test]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309
 
 ## 4. Conclusion
 

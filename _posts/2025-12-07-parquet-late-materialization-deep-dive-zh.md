@@ -293,7 +293,7 @@ arrow-rs 进行重大优化的另一个领域是**避免不必要的拷贝**。R
 
 * **我们如何保持正轨？**：我们对每个 `RowSelection` 操作（`split_off`, `and_then`, `trim`）进行 [模糊测试 (fuzz test)]。我们需要绝对确定相对偏移量和绝对偏移量之间的转换是精准无误的。这种正确性是保持读取器在批次边界、稀疏选择和页面修剪这三重威胁下保持稳定的基石。
 
-[fuzz_test]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309
+[模糊测试 (fuzz test)]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309
 
 ## 4. 结论
 
