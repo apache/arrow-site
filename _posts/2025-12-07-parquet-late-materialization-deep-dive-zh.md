@@ -63,13 +63,14 @@ limitations under the License.
 代码结构分为几个核心角色：
 
 -   **[ReadPlan](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302) / [ReadPlanBuilder](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34)**：将“读取哪些列以及使用什么行子集”编码为一个计划。它不会预先读取所有谓词列。它读取一列，收紧选择，然后继续。
--   **[RowSelection](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139)**：使用 [游程编码（Run-length encoding）] (RLE)（称为 [`RowSelector`]）或位掩码来描述“跳过/选择 N 行”。这是通过流水线传递稀疏性的核心机制。
--   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**：负责解码。它接收一个 `RowSelection` 并决定读取哪些页面以及解码哪些值。
+-   **[RowSelection](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139)**：有两种实现方式：用 [游程编码（Run-length encoding）] (RLE)（[`RowSelector`]）来“跳过/选择 N 行”，或用 Arrow [`BooleanBuffer`] 作为位掩码来过滤行。它是沿着流水线传递稀疏性的核心机制。
+-   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**：负责解码。它接收一个[`RowSelection`]并决定读取哪些页面以及解码哪些值。
 
 [Run-length encoding]: https://en.wikipedia.org/wiki/Run-length_encoding
 [`RowSelector`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66
+[`BooleanBuffer`]: https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37C1-L37C27
 
-`RowSelection` 可以在 RLE 和位掩码之间动态切换。当间隙很小且稀疏度很高时，位掩码更快；RLE 则对大范围的页面级跳过更友好。关于这种权衡的细节将在 3.1 节中介绍。
+[`RowSelection`] 可以在 RLE 和位掩码之间动态切换。当间隙很小且稀疏度很高时，位掩码更快；RLE 则对大范围的页面级跳过更友好。关于这种权衡的细节将在 3.1 节中介绍。
 
 再次考虑查询：`SELECT B, C FROM table WHERE A > 10 AND B < 5`：
 

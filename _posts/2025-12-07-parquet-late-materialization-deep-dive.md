@@ -63,13 +63,14 @@ The rest of this post zooms in on how the code makes this path work.
 The code is structured into a few core roles:
 
 -   **[ReadPlan](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302) / [ReadPlanBuilder](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34)**: Encodes "which columns to read and with what row subset" into a plan. It does not pre-read all predicate columns. It reads one, tightens the selection, and then moves on.
--   **[RowSelection](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139)**: Describes "skip/select N rows" using either [Run-length encoding] (RLE) (called a [`RowSelector`]) or a bitmask. This is the core mechanism that carries sparsity through the pipeline.
--   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**: Responsible for decoding. It receives a `RowSelection` and decides which pages to read and which values to decode.
+-   **[RowSelection](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139)**: Two implementations: use [Run-length encoding] (RLE) (via [`RowSelector`]) to "skip/select N rows", or use an Arrow [`BooleanBuffer`] bitmask to filter rows. This is the core mechanism that carries sparsity through the pipeline.
+-   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**: Responsible for decoding. It receives a [`RowSelection`] and decides which pages to read and which values to decode.
 
 [Run-length encoding]: https://en.wikipedia.org/wiki/Run-length_encoding
 [`RowSelector`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66
+[`BooleanBuffer`]: https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37
 
-`RowSelection` can switch dynamically between RLE and bitmasks. Bitmasks are faster when gaps are tiny and sparsity is high; RLE is friendlier to large, page-level skips. Details on this trade-off appear in section 3.1.
+[`RowSelection`] can switch dynamically between RLE and bitmasks. Bitmasks are faster when gaps are tiny and sparsity is high; RLE is friendlier to large, page-level skips. Details on this trade-off appear in section 3.1.
 
 Consider again the query: `SELECT B, C FROM table WHERE A > 10 AND B < 5`:
 
