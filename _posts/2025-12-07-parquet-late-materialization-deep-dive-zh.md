@@ -3,7 +3,7 @@ layout: post
 title: "Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析"
 description: "arrow-rs 如何通过流水线化谓词和投影来最小化 Parquet 扫描过程中的工作量"
 date: "2025-12-07 00:00:00"
-author: hhhizzz and alamb
+author: "<a href=\"https://github.com/hhhizzz\">Huang Qiwei</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"
 categories: [application,translation]
 translations:
   - language: 原文（English）
