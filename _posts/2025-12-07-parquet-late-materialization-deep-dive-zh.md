@@ -68,7 +68,8 @@ limitations under the License.
 
 [Run-length encoding]: https://en.wikipedia.org/wiki/Run-length_encoding
 [`RowSelector`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66
-[`BooleanBuffer`]: https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37C1-L37C27
+[`BooleanBuffer`]: https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37
+[游程编码（Run-length encoding）]: https://en.wikipedia.org/wiki/Run-length_encoding
 
 [`RowSelection`] 可以在 RLE 和位掩码之间动态切换。当间隙很小且稀疏度很高时，位掩码更快；RLE 则对大范围的页面级跳过更友好。关于这种权衡的细节将在 3.1 节中介绍。
 
@@ -284,6 +285,8 @@ arrow-rs 进行重大优化的另一个领域是**避免不必要的拷贝**。R
 
 [memory safe]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 [zero-copy conversions]: https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec
+[内存安全]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
+[零拷贝转换]: https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec
 [`PrimitiveArrayReader`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/primitive_array.rs#L102
 
 
