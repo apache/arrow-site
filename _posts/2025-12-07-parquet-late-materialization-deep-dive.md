@@ -154,7 +154,7 @@ assert_eq!(
 </figure>
 
 
-This keeps narrowing the filter while touching only lightweight metadata—no data copies. The current implementation of `and_then` is a two-pointer linear scan; complexity is linear in selector segments. The more predicates shrink the selection, the cheaper later scans become.
+This keeps narrowing the filter while touching only lightweight metadata—no data copies. The current implementation of `and_then` is a two-pointer linear scan; complexity is linear in the number of selector segments. The more predicates shrink the selection, the cheaper later scans become.
 
 ## 3. Engineering Challenges
 
