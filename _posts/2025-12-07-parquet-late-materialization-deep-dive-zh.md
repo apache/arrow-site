@@ -3,7 +3,7 @@ layout: post
 title: "Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析"
 description: "arrow-rs 如何通过流水线化谓词和投影来最小化 Parquet 扫描过程中的工作量"
 date: "2025-12-07 00:00:00"
-author: "<a href=\"https://github.com/hhhizzz\">Huang Qiwei</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"
+author: "<a href=\"https://github.com/hhhizzz\">Qiwei Huang</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"
 categories: [application,translation]
 translations:
   - language: 原文（English）
@@ -41,7 +41,7 @@ limitations under the License.
 这种方法与 Abadi 等人的论文 [列式 DBMS 中的物化策略](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf) 中的 **LM-pipelined** 策略非常相似：交错进行谓词评估和数据列访问，而不是一次性读取所有列并试图将它们**重新拼接**成行。
 
 <figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/late-materialization/fig1.png" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
+  <img src="{{ site.baseurl }}/img/late-materialization/fig1.jpg" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
 </figure>
 
 为了使用延迟物化评估像 `SELECT B, C FROM table WHERE A > 10 AND B < 5` 这样的查询，读取器遵循以下步骤：
@@ -64,14 +64,14 @@ limitations under the License.
 
 -   **[ReadPlan](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302) / [ReadPlanBuilder](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34)**：将“读取哪些列以及使用什么行子集”编码为一个计划。它不会预先读取所有谓词列。它读取一列，收紧选择，然后继续。
 -   **[RowSelection](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139)**：有两种实现方式：用 [游程编码（Run-length encoding）] (RLE)（[`RowSelector`]）来“跳过/选择 N 行”，或用 Arrow [`BooleanBuffer`] 作为位掩码来过滤行。它是沿着流水线传递稀疏性的核心机制。
--   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**：负责解码。它接收一个[`RowSelection`]并决定读取哪些页面以及解码哪些值。
+-   **[ArrayReader](https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85)**：负责解码。它接收一个[`RowSelection`]并决定读取哪些页以及解码哪些值。
 
 [Run-length encoding]: https://en.wikipedia.org/wiki/Run-length_encoding
 [`RowSelector`]: https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66
 [`BooleanBuffer`]: https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37
 [游程编码（Run-length encoding）]: https://en.wikipedia.org/wiki/Run-length_encoding
 
-[`RowSelection`] 可以在 RLE 和位掩码之间动态切换。当间隙很小且稀疏度很高时，位掩码更快；RLE 则对大范围的页面级跳过更友好。关于这种权衡的细节将在 3.1 节中介绍。
+[`RowSelection`] 可以在 RLE 和位掩码之间动态切换。当间隙很小且稀疏度很高时，位掩码更快；RLE 则对大范围的页级跳过更友好。关于这种权衡的细节将在 3.1 节中介绍。
 
 再次考虑查询：`SELECT B, C FROM table WHERE A > 10 AND B < 5`：
 
@@ -150,11 +150,12 @@ assert_eq!(
 );
 ```
 
-这不断缩小过滤范围，同时只触及轻量级的元数据——没有数据拷贝。目前的 `and_then` 实现是一个双指针线性扫描；复杂度与选择器段数呈线性关系。谓词越早缩小选择范围，后续的扫描就越便宜。
-
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/fig3.jpg" alt="RowSelection logical AND walkthrough" width="100%" class="img-responsive">
 </figure>
+
+
+这不断缩小过滤范围，同时只触及轻量级的元数据——没有数据拷贝。目前的 `and_then` 实现是一个双指针线性扫描；复杂度与选择器段数呈线性关系。谓词收缩选择的越多，后续的扫描就越便宜。
 
 
 ### 3. 工程挑战
@@ -163,7 +164,7 @@ assert_eq!(
 
 ### 3.1 自适应 RowSelection 策略（位掩码 vs. RLE）
 
-一个主要的障碍是为 `RowSelection` 选择正确的内部表示，因为最佳选择取决于稀疏模式。
+一个主要的障碍是为 `RowSelection` 选择正确的内部表示，因为最佳选择取决于稀疏模式。[这篇论文](https://db.cs.cmu.edu/papers/2021/ngom-damon2021.pdf) 揭示了一个关键障碍：对于 `RowSelection` 来说，不存在“一刀切”的格式。研究人员发现，最佳的内部表示是一个移动的目标，随着数据的“密集”或“稀疏”程度——不断变化。
 
 - **极度稀疏**（例如，每 10,000 行 1 行）：这里使用位掩码很浪费（每行 1 位加起来也不少），而 RLE 非常干净——只需几个选择器就搞定了。
 - **稀疏但有微小间隙**（例如，“读 1，跳 1”）：RLE 会产生碎片化的混乱，让解码器超负荷工作；这里位掩码效率高得多。
@@ -171,7 +172,7 @@ assert_eq!(
 由于两者各有优缺点，我们决定采用自适应策略来**兼得两者之长**（详情见 [#arrow-rs/8733]）：
 
 - 我们查看选择器的平均游程长度，并将其与阈值（目前为 `32`）进行比较。如果平均值太小，我们切换到位掩码；否则，我们坚持使用选择器（RLE）。
-- **安全网**：位掩码看起来很棒，直到遇到页面修剪（Page Pruning），这可能会导致糟糕的“页面丢失”恐慌（panic），因为掩码可能会盲目地试图过滤从未读取过的页面中的行。`RowSelection` 逻辑会提防这种**灾难配方**，并强制切回 RLE 以防止崩溃（见 3.1.2）。
+- **安全网**：位掩码看起来很棒，直到遇到页修剪（Page Pruning），这可能会导致糟糕的“页丢失”恐慌（panic），因为掩码可能会盲目地试图过滤从未读取过的页中的行。`RowSelection` 逻辑会提防这种**灾难配方**，并强制切回 RLE 以防止崩溃（见 3.1.2）。
 
 [#arrow-rs/8733]: https://github.com/apache/arrow-rs/pull/8733
 
@@ -185,15 +186,15 @@ assert_eq!(
   <img src="{{ site.baseurl }}/img/late-materialization/3.1.1.png" alt="Bitmask vs RLE benchmark threshold" width="100%" class="img-responsive">
 </figure>
 
-#### 3.1.2 位掩码陷阱：丢失的页面
+#### 3.1.2 位掩码陷阱：丢失的页
 
-在实现自适应策略时，位掩码在纸面上看起来很完美，但在结合 **页面修剪（Page Pruning）** 时隐藏着一个讨厌的陷阱。
+在实现自适应策略时，位掩码在纸面上看起来很完美，但在结合 **页修剪（Page Pruning）** 时隐藏着一个讨厌的陷阱。
 
-在深入细节之前，先快速回顾一下页面（更多内容见 3.2 节）：Parquet 文件被切分成页面。如果我们知道一个页面在选择中没有行，我们**根本不会触碰它**——不解压，不解码。`ArrayReader` 甚至不知道它的存在。
+在深入细节之前，先快速回顾一下页（更多内容见 3.2 节）：Parquet 文件被切分成页（Page）。如果我们知道一个页在选择中没有行，我们**根本不会触碰它**——不解压，不解码。`ArrayReader` 甚至不知道它的存在。
 
 **案发现场：**
 
-想象一下读取一块数据并只选择第一行和最后一行；中间的四行被过滤掉。恰好中间这四行位于它们自己的页面中，所以那个页面被完全修剪掉了。
+想象一下读取一块数据`[0,1,2,3,4,5,6]`，中间的四行 `[1,2,3,4]`被过滤掉了。碰巧其中两行 `[2,3]` 位于它们自己的页中，因此该页被完全修剪掉了。
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.3.2-fig1.jpg" alt="Page pruning example with only first and last rows kept" width="100%" class="img-responsive">
@@ -207,7 +208,7 @@ assert_eq!(
 
 **问题：**
 
-然而，如果我们使用位掩码，读取器将首先解码所有 6 行，打算稍后过滤它们。但是中间的页面不存在！一旦解码器遇到那个间隙，它就会恐慌（panic）。`ArrayReader` 是一个流处理单元——它不处理 I/O，因此不知道上层决定修剪页面，所以它看不到前面的悬崖。
+然而，如果我们使用位掩码，读取器将首先解码所有 6 行，打算稍后过滤它们。但是中间的页不存在！一旦解码器遇到那个间隙，它就会恐慌（panic）。`ArrayReader` 是一个流处理单元——它不处理 I/O，因此不知道上层决定修剪页，所以它看不到前面的悬崖。
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.3.2-fig2.jpg" alt="Bitmask hitting a missing page panic" width="100%" class="img-responsive">
@@ -215,7 +216,7 @@ assert_eq!(
 
 **修复：**
 
-我们目前的解决方案既保守又稳健：**如果我们检测到页面修剪，我们就禁用位掩码并强制回退到 RLE。** 在未来，我们希望扩展位掩码逻辑以使其感知页面修剪（见 [#arrow-rs/8845]）。
+我们目前的解决方案既保守又稳健：**如果我们检测到页修剪，我们就禁用位掩码并强制回退到 RLE。** 在未来，我们希望扩展位掩码逻辑以使其感知页修剪（见 [#arrow-rs/8845]）。
 
 [#arrow-rs/8845]: https://github.com/apache/arrow-rs/issues/8845
 
@@ -232,18 +233,18 @@ let plan_builder = override_selector_strategy_if_needed(
 assert_eq!(plan_builder.row_selection_policy(), &RowSelectionPolicy::Selectors);
 ```
 
-### 3.2 页面修剪（Page Pruning）
+### 3.2 页修剪（Page Pruning）
 
-终极的性能胜利是**根本不进行 I/O 或解码**。但是在现实世界中（特别是对象存储），发出一百万个微小的读取请求是**性能杀手**。`arrow-rs` 使用 Parquet [PageIndex] 来精确计算哪些页面包含我们实际需要的数据。对于选择性极高的谓词，跳过页面可以节省大量的 I/O，即使底层存储客户端合并了相邻的范围请求。另一个主要的胜利是减少了 CPU：**我们完全跳过了对完全修剪页面的解压和解码的繁重工作。**
+终极的性能胜利是**根本不进行 I/O 或解码**。但是在现实世界中（特别是对象存储），发出一百万个微小的读取请求是**性能杀手**。`arrow-rs` 使用 Parquet [PageIndex] 来精确计算哪些页包含我们实际需要的数据。对于选择性极高的谓词，跳过页可以节省大量的 I/O，即使底层存储客户端合并了相邻的范围请求。另一个主要的胜利是减少了 CPU：**我们完全跳过了对完全修剪页的解压和解码的繁重工作。**
 
 [PageIndex]: https://parquet.apache.org/docs/file-format/pageindex/
 
-* **注意点**：如果 `RowSelection` 从一个页面中哪怕只选择了**一行**，整个页面也必须被解压。
-* **实现**：[`RowSelection::scan_ranges`] 使用每个页面的元数据（`first_row_index` 和 `compressed_page_size`）进行计算，找出哪些范围是完全跳过的，仅返回所需的 `(offset, length)` 列表。
+* **注意点**：如果 `RowSelection` 从一个页中哪怕只选择了**一行**，整个页也必须被解压。因此，这一步的效率很大程度上依赖于数据聚类和谓词之间的相关性。
+* **实现**：[`RowSelection::scan_ranges`] 使用每个页的元数据（`first_row_index` 和 `compressed_page_size`）进行计算，找出哪些范围是完全跳过的，仅返回所需的 `(offset, length)` 列表。
 
 [`RowSelection::scan_ranges`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204
 
-下面的代码示例说明了页面跳过：
+下面的代码示例说明了页跳过：
 
 ```rust
 // Example: two pages; page0 covers 0..100, page1 covers 100..200
@@ -261,27 +262,41 @@ let ranges = sel.scan_ranges(&locations);
 assert_eq!(ranges.len(), 1); // Only request page1
 ```
 
-下图说明了使用 RLE 选择进行的页面跳过。第一页既不读取也不解码，因为没有行被选中。第二页被读取并完全解压（例如，zstd），然后只解码所需的行。第三页被完全解压和解码，因为所有行都被选中。
+下图说明了使用 RLE 选择进行的页跳过。第一页既不读取也不解码，因为没有行被选中。第二页被读取并完全解压（例如，zstd），然后只解码所需的行。第三页被完全解压和解码，因为所有行都被选中。
 
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/fig4.jpg" alt="Page-level scan range calculation" width="100%" class="img-responsive">
 </figure>
 
+这种机制充当了逻辑行过滤和物理字节获取之间的桥梁。虽然我们无法将文件切分得比单个页更细（由于压缩边界），但页修剪确保了我们永远不会为页支付解压成本，除非它至少为结果贡献了一行。它达成了一种务实的平衡：利用粗粒度的页索引（Page Index）跳过大片数据，同时留给细粒度的 `RowSelection` 来处理幸存页内的具体行。
+
 ### 3.3 智能缓存
 
-延迟物化让我们陷入了一种**进退两难**的境地：arrow-rs 逐步对行组中的所有行评估谓词。这种方法使用少量的大型 I/O，这对于像对象存储这样的慢速远程存储系统表现良好。然而，这意味着我们可能需要读取同一列两次——首先是为了过滤它，然后是为了生成输出投影所需的最终行。如果不进行缓存，你就是在为同一数据**付双倍的钱**：为了谓词解码一次，为了输出再解码一次。在 [#arrow-rs/7850] 中引入的 [`CachedArrayReader`] 解决了这个问题：**第一次看到批次时将其存储起来，稍后重用。**
+延迟物化引入了一个结构性的进退两难（原文是Catch-22，第二十二条军规）：为了有效地跳过数据，我们必须先读取它。考虑像 `SELECT A FROM table WHERE A > 10` 这样的查询。读取器必须解码列 `A` 来评估过滤器。在传统的“读取所有内容”的方法中，这不是问题：列 `A` 只需留在内存中等待投影。然而，在严格的流水线中，“谓词”阶段和“投影”阶段是解耦的。一旦过滤器生成了 `RowSelection`，投影阶段发现它需要列 `A`，就会触发对同一数据的第二次读取。
+
+如果不加干预，我们会支付“双重税”：一次解码用于决定保留什么，再一次解码用于实际保留它。在 [#arrow-rs/7850] 中引入的 [`CachedArrayReader`] 使用**双层**缓存架构解决了这个难题。它允许我们在第一次看到解码批次时（在过滤期间）将其存储起来，并稍后（在投影期间）重用。
 
 [`CachedArrayReader`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/cached_array_reader.rs#L40-L68
 [#arrow-rs/7850]: https://github.com/apache/arrow-rs/pull/7850
 
-为什么要双层缓存？一层是**可共享的**，另一层是**保证的**。与所有缓存一样，读取器中的缓存有（用户可配置的）内存限制，因此不能保证它能保存所有解码的页面。
-例如，当为谓词评估和投影（输出）读取列 B 时，如果投影在共享缓存中找到了相关页面，太好了——免费重用！但共享缓存是有限的，可能会为了腾出空间而驱逐数据。这就是本地缓存作为**安全网**发挥作用的地方，确保*你*刚刚读取的数据还在那里。
+但是为什么要两层？为什么不直接用一个大缓存？
 
-我们保持紧凑的作用域以避免**内存膨胀**：共享缓存在行组之间被清空，这样我们就不会永远占用内存。
+  * **共享缓存（乐观重用）：** 这是一个跨所有列和读取器共享的全局缓存。它有一个用户可配置的内存限制（容量）。当一个页因谓词被解码时，它被放置在这里。如果投影步骤紧接着运行，它可以“命中”这个缓存并避免 I/O。然而，因为内存是有限的，**缓存驱逐**随时可能发生。如果我们仅依赖于此，繁重的工作负载可能会在我们再次需要数据之前就将其驱逐。
+  * **本地缓存（确定性保证）：** 这是一个特定于单列读取器的私有缓存。它充当**安全网**。当一个列正在被主动读取时，数据被“钉”(Pin)在本地缓存中。这保证了数据在当前操作期间仍然可用，不受全局共享缓存驱逐的影响。
+
+读取器在获取页时遵循严格的层级结构：
+
+1.  **检查本地：** 我已经钉住它了吗？
+2.  **检查共享：** 流水线的另一部分最近解码过它吗？如果是，将其**提升**到本地（钉住它）。
+3.  **从源读取：** 执行 I/O 和解码，然后插入到本地和共享缓存中。
+
+这种双重策略让我们兼得两者之长：在过滤和投影步骤之间共享数据的**效率**，以及知道必要数据不会因内存压力而在查询中途消失的**稳定性**。
 
 ### 3.4 最小化拷贝和分配
 
-arrow-rs 进行重大优化的另一个领域是**避免不必要的拷贝**。Rust 的 [内存安全] 设计使得拷贝变得容易，而每一次额外的分配和拷贝都会浪费 CPU 周期和内存带宽。我们在内存分配上非常小心，以避免因将数据解压到 `Vec` 然后 `memcpy` 到 Arrow Buffer 而产生的**“不必要的税”**。对于定长类型（如整数或浮点数），这完全是多余的——内存布局是相同的，且 Arrow 提供 [零拷贝转换]。为什么要绕圈子呢？[`PrimitiveArrayReader`] 通过零拷贝省去了中间环节：它只是将解码后的 `Vec<T>` 的**所有权直接移交**给 Arrow `Buffer`。没有拷贝，没有浪费的周期。
+arrow-rs 进行重大优化的另一个领域是**避免不必要的拷贝**。Rust 的 [内存安全] 设计使得拷贝变得容易，而每一次额外的分配和拷贝都会浪费 CPU 周期和内存带宽。一种幼稚的实现经常通过将数据解压到临时的 `Vec` 然后 `memcpy` 到 Arrow Buffer 而支付**“不必要的税”**。
+
+对于定长类型（如整数或浮点数），这完全是多余的，因为它们的内存布局是相同的。[`PrimitiveArrayReader`] 通过 [零拷贝转换] 消除了这种开销：它不再拷贝字节，而是简单地将解码后的 `Vec<T>` 的**所有权直接移交**给底层的 Arrow `Buffer`。
 
 [memory safe]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 [zero-copy conversions]: https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec
@@ -294,7 +309,7 @@ arrow-rs 进行重大优化的另一个领域是**避免不必要的拷贝**。R
 
 链式过滤是坐标系中的一种**令人抓狂**的练习。过滤器 N 中的“第 1 行”实际上可能是文件中的“第 10,001 行”，这是由于之前的过滤器所致。
 
-* **我们如何保持正轨？**：我们对每个 `RowSelection` 操作（`split_off`, `and_then`, `trim`）进行 [模糊测试 (fuzz test)]。我们需要绝对确定相对偏移量和绝对偏移量之间的转换是精准无误的。这种正确性是保持读取器在批次边界、稀疏选择和页面修剪这三重威胁下保持稳定的基石。
+* **我们如何保持正轨？**：我们对每个 `RowSelection` 操作（`split_off`, `and_then`, `trim`）进行 [模糊测试 (fuzz test)]。我们需要绝对确定相对偏移量和绝对偏移量之间的转换是精准无误的。这种正确性是保持读取器在批次边界、稀疏选择和页修剪这三重威胁下保持稳定的基石。
 
 [模糊测试 (fuzz test)]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309
 

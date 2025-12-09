@@ -3,7 +3,7 @@ layout: post
 title: "A Practical Dive Into Late Materialization in arrow-rs Parquet Reads"
 description: "How arrow-rs pipelines predicates and projections to minimize work during Parquet scans"
 date: "2025-12-07 00:00:00"
-author: "<a href=\"https://github.com/hhhizzz\">Huang Qiwei</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"
+author: "<a href=\"https://github.com/hhhizzz\">Qiwei Huang</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"
 categories: [application]
 translations:
   - language: 简体中文
@@ -41,7 +41,7 @@ Columnar reads are a constant battle between **I/O bandwidth** and **CPU decode 
 The approach closely mirrors the **LM-pipelined** strategy from [Materialization Strategies in a Column-Oriented DBMS](https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf) by Abadi et al.: interleaving predicates and data column access instead of reading all columns at once and trying to **stitch them back together** into rows.
 
 <figure style="text-align: center;">
-  <img src="{{ site.baseurl }}/img/late-materialization/fig1.png" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
+  <img src="{{ site.baseurl }}/img/late-materialization/fig1.jpg" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
 </figure>
 
 To evaluate a query like `SELECT B, C FROM table WHERE A > 10 AND B < 5` using late materialization, the reader follows these steps:
@@ -149,14 +149,12 @@ assert_eq!(
 );
 ```
 
-This keeps narrowing the filter while touching only lightweight metadata—no data copies. The implementation is a two-pointer linear scan; complexity is linear in selector segments. The sooner predicates shrink the selection, the cheaper later scans become.
-
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/fig3.jpg" alt="RowSelection logical AND walkthrough" width="100%" class="img-responsive">
 </figure>
 
 
-This keeps narrowing the filter while touching only lightweight metadata—no data copies. The current implementation of `and_then` is a two-pointer linear scan; complexity is linear in selector segments. The sooner predicates shrink the selection, the cheaper later scans become.
+This keeps narrowing the filter while touching only lightweight metadata—no data copies. The current implementation of `and_then` is a two-pointer linear scan; complexity is linear in selector segments. The more predicates shrink the selection, the cheaper later scans become.
 
 ## 3. Engineering Challenges
 
@@ -164,7 +162,7 @@ Late Materialization sounds simple enough in theory, but implementing it in a pr
 
 ### 3.1 Adaptive RowSelection Policy (Bitmask vs. RLE)
 
-One major hurdle is choosing the right internal representation for `RowSelection` because the best choice depends on the sparsity pattern.
+One major hurdle is choosing the right internal representation for `RowSelection` because the best choice depends on the sparsity pattern. [This paper](https://db.cs.cmu.edu/papers/2021/ngom-damon2021.pdf) reveals a critical hurdle: there is no 'one-size-fits-all' format for `RowSelection`. The researchers found that the optimal internal representation is a moving target, shifting constantly depending on the sparsity pattern—essentially, how 'dense' or 'sparse' the surviving data is at any given moment.
 
 - **Ultra sparse** (e.g., 1 row every 10,000): Using a bitmask here is just wasteful (1 bit per row adds up), whereas RLE is super clean—just a few selectors and you're done.
 - **Sparse but with tiny gaps** (e.g., "read 1, skip 1"): RLE creates a fragmented mess that makes the decoder work overtime; here, bitmasks are way more efficient.
@@ -196,8 +194,7 @@ Before we get into the weeds, a quick refresher on pages (more in Section 3.2): 
 
 **The Scene of the Crime:**
 
-Imagine reading a chunk of data and selecting only the first and last rows; the middle four rows are filtered out. It just so happens those middle four rows sit in their own page, so that page gets completely pruned.
-
+Imagine reading a chunk of data and the middle four rows`[0,1,2,3,4,5,6]`, `[1,2,3,4]`, are filtered out. It just so happens that two of those rows, `[2,3]` sit in their own page, so that page gets completely pruned.
 <figure style="text-align: center;">
   <img src="{{ site.baseurl }}/img/late-materialization/3.3.2-fig1.jpg" alt="Page pruning example with only first and last rows kept" width="100%" class="img-responsive">
 </figure>
@@ -241,7 +238,7 @@ The ultimate performance win is **not doing I/O or decoding at all**. In the rea
 
 [PageIndex]: https://parquet.apache.org/docs/file-format/pageindex/
 
-* **The Catch**: If the `RowSelection` selects even a **single row** from a page, the whole page must be decompressed.
+* **The Catch**: If the `RowSelection` selects even a **single row** from a page, the whole page must be decompressed. Therefore, the efficiency of this step relies heavily on the correlation between data clustering and the predicates.
 * **Implementation**: [`RowSelection::scan_ranges`] crunches the numbers using each page's metadata (`first_row_index` and `compressed_page_size`) to figure out which ranges are total skips, returning only the required `(offset, length)` list. 
 
 [`RowSelection::scan_ranges`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204
@@ -273,21 +270,35 @@ The third page is decompressed and decoded in full, as all rows are selected.
   <img src="{{ site.baseurl }}/img/late-materialization/fig4.jpg" alt="Page-level scan range calculation" width="100%" class="img-responsive">
 </figure>
 
+This mechanism acts as the bridge between logical row filtering and physical byte fetching. While we cannot slice the file thinner than a single page (due to compression boundaries), Page Pruning ensures that we never pay the decompression cost for a page unless it contributes at least one row to the result. It strikes a pragmatic balance: utilizing the coarse-grained Page Index to skip large swathes of data, while leaving the fine-grained `RowSelection` to handle the specific rows within the surviving pages.
+
 ### 3.3 Smart Caching
 
-Late materialization puts us in a bit of a **Catch-22**: arrow-rs evaluates predicates progressively on all rows in a row group. This approach uses a small number of large I/Os, which performs well for slow remote storage systems such as object storage. However, it means we may need to read the same column twice—first to filter it, and then again to produce the final rows necessary for the output projection. Without caching, you're **paying double** for the same data: decoding it once for the predicate, and again for the output. [`CachedArrayReader`], introduced in [#arrow-rs/7850], fixes this: **stash the batch the first time you see it, and reuse it later.**
+Late materialization introduces a structural Catch-22: to efficiently skip data, we must first read it. Consider a query like `SELECT A FROM table WHERE A > 10`. The reader must decode column `A` to evaluate the filter. In a traditional "read-everything" approach, this wouldn't be an issue: column A would simply sit in memory, waiting to be projected. However, in a strict pipeline, the "Predicate" stage and the "Projection" stage are decoupled. Once the filter produces a RowSelection, the projection stage sees that it needs column `A` and triggers a second read of the same data. 
+
+Without intervention, we pay a "double tax": decoding once to decide what to keep, and decoding again to actually keep it.[`CachedArrayReader`], introduced in [#arrow-rs/7850], solves this dilemma using a **Dual-Layer** Cache architecture. It allows us to stash the decoded batch the first time we see it (during filtering) and reuse it later (during projection).
 
 [`CachedArrayReader`]: https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/cached_array_reader.rs#L40-L68
 [#arrow-rs/7850]: https://github.com/apache/arrow-rs/pull/7850
 
-Why the dual-layer cache? One layer is **shareable**, the other is a **guarantee**. As with all caches, the cache in the reader has a (user configurable) memory limit and thus cannot guarantee that it can hold all decoded pages. 
-For example, when reading column B for both predicate evaluation and projection (output), if the projection finds the relevant pages in the Shared Cache, great—free reuse! But the Shared Cache is finite and might evict data to make room for others. That's where the Local Cache comes in as a **safety net**, ensuring the data *you* just read is still there.
+But why two layers? Why not just one big cache?
 
-We keep the scope tight to avoid **memory bloat**: the Shared Cache is wiped clean between row groups so we don't hoard memory forever.
+  * **The Shared Cache (Optimistic Reuse):** This is a global cache shared across all columns and readers. It has a user-configurable memory limit (capacity). When a page is decoded for a predicate, it is placed here. If the projection step runs soon after, it can "hit" this cache and avoid I/O. However, because memory is finite, **cache eviction** can happen at any moment. If we relied solely on this, a heavy workload could evict our data right before we need it again.
+  * **The Local Cache (Deterministic Guarantee):** This is a private cache specific to a single column's reader. It acts as a **safety net**. When a column is being actively read, the data is "pinned" in the Local Cache. This guarantees that the data remains available for the duration of the current operation, immune to eviction from the global Shared Cache.
+
+The reader follows a strict hierarchy when fetching a page:
+
+1.  **Check Local:** Do I already have it pinned?
+2.  **Check Shared:** Did another part of the pipeline decode this recently? If yes, **promote** it to Local (pin it).
+3.  **Read from Source:** Perform the I/O and decoding, then insert into both Local and Shared.
+
+This dual strategy gives us the best of both worlds: the **efficiency** of sharing data between filter and projection steps, and the **stability** of knowing that necessary data won't vanish mid-query due to memory pressure.
 
 ### 3.4 Minimizing Copies and Allocations
 
-Another area where arrow-rs has significant optimization is **avoiding unnecessary copies**. Rust's [memory safe] design makes it easy to copy, and every extra allocation and copy wastes CPU cycles and memory bandwidth. Significant care has been taken with memory allocations to avoid the **"unnecessary tax"** from decompressing data into a `Vec` and then `memcpy`-ing it into an Arrow Buffer. For fixed-width types (like integers or floats), this is completely redundant—the memory layout is identical and Arrow offers [zero-copy conversions]. Why jump through hoops? [`PrimitiveArrayReader`] cuts out the middleman with zero-copy: it simply **hands over ownership** of the decoded `Vec<T>` directly to the Arrow `Buffer`. No copying, no wasted cycles.
+Another area where arrow-rs has significant optimization is **avoiding unnecessary copies**. Rust's [memory safe] design makes it easy to copy, but every extra allocation wastes CPU cycles and memory bandwidth. A naive implementation often pays an **"unnecessary tax"** by decompressing data into a temporary `Vec` and then `memcpy`-ing it into an Arrow Buffer. 
+
+For fixed-width types (like integers or floats), this is completely redundant because their memory layouts are identical. [`PrimitiveArrayReader`] eliminates this overhead via [zero-copy conversions]: instead of copying bytes, it simply **hands over ownership** of the decoded `Vec<T>` directly to the underlying Arrow `Buffer`.
 
 [memory safe]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 [zero-copy conversions]: https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec
