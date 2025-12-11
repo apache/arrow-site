@@ -2,7 +2,7 @@
 layout: post
 title: "A Practical Dive Into Late Materialization in arrow-rs Parquet Reads"
 description: "How arrow-rs pipelines predicates and projections to minimize work during Parquet scans"
-date: "2025-12-07 00:00:00"
+date: "2025-12-11 00:00:00"
 author: "<a href=\"https://github.com/hhhizzz\">Qiwei Huang</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"
 categories: [application]
 translations:
