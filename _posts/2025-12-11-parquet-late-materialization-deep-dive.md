@@ -7,7 +7,7 @@ author: "<a href=\"https://github.com/hhhizzz\">Qiwei Huang</a> and <a href=\"ht
 categories: [application]
 translations:
   - language: 简体中文
-    post_id: 2025-12-07-parquet-late-materialization-deep-dive-zh
+    post_id: 2025-12-11-parquet-late-materialization-deep-dive-zh
 ---
 <!--
 {% comment %}
