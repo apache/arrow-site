@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析 | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析" />
+<meta name="author" content="<a href="https://github.com/hhhizzz">Qiwei Huang</a> and <a href="https://github.com/alamb">Andrew Lamb</a>" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="arrow-rs 如何通过流水线化谓词和投影来最小化 Parquet 扫描过程中的工作量" />
+<meta property="og:description" content="arrow-rs 如何通过流水线化谓词和投影来最小化 Parquet 扫描过程中的工作量" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive-zh/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive-zh/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-12-11T00:00:00-05:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"<a href=\"https://github.com/hhhizzz\">Qiwei Huang</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"},"dateModified":"2025-12-11T00:00:00-05:00","datePublished":"2025-12-11T00:00:00-05:00","description":"arrow-rs 如何通过流水线化谓词和投影来最小化 Parquet 扫描过程中的工作量","headline":"Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive-zh/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"<a href=\"https://github.com/hhhizzz\">Qiwei Huang</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"},"url":"https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive-zh/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+    <link type="application/atom+xml" rel="alternate" href="https://arrow.apache.org/feed.xml" title="Apache Arrow" />
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownGetArrow" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownDocumentation" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Docs
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://arrow.apache.org/dotnet/">.NET</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow" target="_blank" rel="noopener">Go</a>
+            <a class="dropdown-item" href="/java/">Java</a>
+            <a class="dropdown-item" href="/js/">JavaScript</a>
+            <a class="dropdown-item" href="/julia/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/matlab/README.md" target="_blank" rel="noopener">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/ruby/README.md" target="_blank" rel="noopener">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/arrow/latest" target="_blank" rel="noopener">Rust</a>
+            <a class="dropdown-item" href="/swift">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSource" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Source
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSource">
+            <a class="dropdown-item" href="https://github.com/apache/arrow" target="_blank" rel="noopener">Main Repo</a>
+            <hr>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/c_glib" target="_blank" rel="noopener">C GLib</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/cpp" target="_blank" rel="noopener">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-dotnet" target="_blank" rel="noopener">.NET</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-go" target="_blank" rel="noopener">Go</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-java" target="_blank" rel="noopener">Java</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-js" target="_blank" rel="noopener">JavaScript</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-julia" target="_blank" rel="noopener">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/matlab" target="_blank" rel="noopener">MATLAB</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/python" target="_blank" rel="noopener">Python</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/r" target="_blank" rel="noopener">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/ruby" target="_blank" rel="noopener">Ruby</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-rs" target="_blank" rel="noopener">Rust</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-swift" target="_blank" rel="noopener">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSubprojects" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/adbc">ADBC</a>
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="https://datafusion.apache.org" target="_blank" rel="noopener">DataFusion</a>
+            <a class="dropdown-item" href="/nanoarrow">nanoarrow</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownCommunity" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/index.html">Contributing</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/issues" target="_blank" rel="noopener">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html" target="_blank" rel="noopener">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownASF" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/" target="_blank" rel="noopener">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/" target="_blank" rel="noopener">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html" target="_blank" rel="noopener">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html" target="_blank" rel="noopener">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/" target="_blank" rel="noopener">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+<!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    11 Dec 2025
+  </span>
+  <br>
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://github.com/hhhizzz" target="_blank" rel="noopener">Qiwei Huang</a> and <a href="https://github.com/alamb" target="_blank" rel="noopener">Andrew Lamb</a>
+  
+
+  
+    <br>
+    <span class="badge badge-secondary">Translations</span>
+    
+      <a href="/blog/2025/12/11/parquet-late-materialization-deep-dive/">原文（English）</a>
+    
+  
+</p>
+
+
+        <!--
+
+-->
+<p>本文深入探讨了在 <a href="https://github.com/apache/arrow-rs" target="_blank" rel="noopener"><code>arrow-rs</code></a>（为 <a href="https://datafusion.apache.org/" target="_blank" rel="noopener">Apache DataFusion</a> 等项目提供动力的读取器）的 <a href="https://parquet.apache.org/" target="_blank" rel="noopener">Apache Parquet</a> 读取器中实现延迟物化（Late Materialization）的决策和陷阱。我们将看到一个看似简单的文件读取器如何通过复杂的逻辑来评估谓词——实际上它自身变成了一个<strong>微型查询引擎</strong>。</p>
+<h2>1. 为什么要延迟物化？</h2>
+<p>列式读取是 <strong>I/O 带宽</strong> 和 <strong>CPU 解码成本</strong> 之间的一场持久战。虽然跳过数据通常是好事，但跳过本身也有计算成本。<code>arrow-rs</code> 中 Parquet 读取器的目标是<strong>流水线式的延迟物化</strong>：首先评估谓词，然后访问投影列。对于过滤掉许多行的谓词，在评估之后再进行物化可以最大限度地减少读取和解码工作。</p>
+<p>这种方法与 Abadi 等人的论文 <a href="https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf" target="_blank" rel="noopener">列式 DBMS 中的物化策略</a> 中的 <strong>LM-pipelined</strong> 策略非常相似：交错进行谓词评估和数据列访问，而不是一次性读取所有列并试图将它们<strong>重新拼接</strong>成行。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig1.jpg" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
+</figure>
+<p>为了使用延迟物化评估像 <code>SELECT B, C FROM table WHERE A &gt; 10 AND B &lt; 5</code> 这样的查询，读取器遵循以下步骤：</p>
+<ol>
+<li>读取列 <code>A</code> 并评估 <code>A &gt; 10</code> 以构建一个 <code>RowSelection</code>（一个稀疏掩码），代表最初幸存的行集。</li>
+<li>使用该 <code>RowSelection</code> 读取列 <code>B</code> 中幸存的值，并评估 <code>B &lt; 5</code>，更新 <code>RowSelection</code> 使其更加稀疏。</li>
+<li>使用细化后的 <code>RowSelection</code> 读取列 <code>C</code>（投影列），仅解码最终幸存的行。</li>
+</ol>
+<p>本文的其余部分将详细介绍代码如何实现这一路径。</p>
+<hr>
+<h2>2. Rust Parquet 读取器中的延迟物化</h2>
+<h3>2.1 LM-pipelined（流水线延迟物化）</h3>
+<p>“LM-pipelined”听起来像是教科书里的术语。在 <code>arrow-rs</code> 中，它简单地指一个按顺序运行的流水线：“读取谓词列 → 生成行选择 → 读取数据列”。这与<strong>并行</strong>策略形成对比，后者同时读取所有谓词列。虽然并行可以最大化多核 CPU 的利用率，但在列式存储中，流水线方法通常更优，因为每个过滤步骤都大幅减少了后续步骤需要读取和解析的数据量。</p>
+<p>代码结构分为几个核心角色：</p>
+<ul>
+<li>
+<strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302" target="_blank" rel="noopener">ReadPlan</a> / <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34" target="_blank" rel="noopener">ReadPlanBuilder</a></strong>：将“读取哪些列以及使用什么行子集”编码为一个计划。它不会预先读取所有谓词列。它读取一列，收紧选择，然后继续。</li>
+<li>
+<strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139" target="_blank" rel="noopener">RowSelection</a></strong>：有两种实现方式：用 <a href="https://en.wikipedia.org/wiki/Run-length_encoding" target="_blank" rel="noopener">游程编码（Run-length encoding）</a> (RLE)（<a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66" target="_blank" rel="noopener"><code>RowSelector</code></a>）来“跳过/选择 N 行”，或用 Arrow <a href="https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37" target="_blank" rel="noopener"><code>BooleanBuffer</code></a> 作为位掩码来过滤行。它是沿着流水线传递稀疏性的核心机制。</li>
+<li>
+<strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85" target="_blank" rel="noopener">ArrayReader</a></strong>：负责解码。它接收一个<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139" target="_blank" rel="noopener"><code>RowSelection</code></a>并决定读取哪些页以及解码哪些值。</li>
+</ul>
+<p><a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139" target="_blank" rel="noopener"><code>RowSelection</code></a> 可以在 RLE 和位掩码之间动态切换。当间隙很小且稀疏度很高时，位掩码更快；RLE 则对大范围的页级跳过更友好。关于这种权衡的细节将在 3.1 节中介绍。</p>
+<p>再次考虑查询：<code>SELECT B, C FROM table WHERE A &gt; 10 AND B &lt; 5</code>：</p>
+<ol>
+<li>
+<strong>初始</strong>：<code>selection = None</code>（相当于“全选”）。</li>
+<li>
+<strong>读取 A</strong>：<code>ArrayReader</code> 分批解码列 A；谓词构建一个布尔掩码；<a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L149" target="_blank" rel="noopener"><code>RowSelection::from_filters</code></a> 将其转换为稀疏选择。</li>
+<li>
+<strong>收紧</strong>：<a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L143" target="_blank" rel="noopener"><code>ReadPlanBuilder::with_predicate</code></a> 通过 <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345" target="_blank" rel="noopener"><code>RowSelection::and_then</code></a> 链接新的掩码。</li>
+<li>
+<strong>读取 B</strong>：使用当前的 <code>selection</code> 构建列 B 的读取器；读取器仅对选定的行执行 I/O 和解码，产生一个更稀疏的掩码。</li>
+<li>
+<strong>合并</strong>：<code>selection = selection.and_then(selection_b)</code>；投影列现在只解码极小的行集。</li>
+</ol>
+<p><strong>代码位置和草图</strong>：</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Close to the flow in read_plan.rs (simplified)</span>
+<span class="k">let</span> <span class="k">mut</span> <span class="n">builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">batch_size</span><span class="p">);</span>
+
+<span class="c1">// 1) Inject external pruning (e.g., Page Index):</span>
+<span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_selection</span><span class="p">(</span><span class="n">page_index_selection</span><span class="p">);</span>
+
+<span class="c1">// 2) Append predicates serially:</span>
+<span class="k">for</span> <span class="n">predicate</span> <span class="k">in</span> <span class="n">predicates</span> <span class="p">{</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_predicate</span><span class="p">(</span><span class="n">predicate</span><span class="p">);</span> <span class="c1">// internally uses RowSelection::and_then</span>
+<span class="p">}</span>
+
+<span class="c1">// 3) Build readers; all ArrayReaders share the final selection strategy</span>
+<span class="k">let</span> <span class="n">plan</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.build</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">reader</span> <span class="o">=</span> <span class="nn">ParquetRecordBatchReader</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">array_reader</span><span class="p">,</span> <span class="n">plan</span><span class="p">);</span>
+</code></pre></div></div>
+<p>我画了一个简单的流程图来说明这个流程，帮助你理解：</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig2.jpg" alt="Predicate-first pipeline flow" width="100%" class="img-responsive">
+</figure>
+<p>现在你已经了解了这个流水线是如何工作的，下一个问题是<strong>如何表示和组合这些稀疏选择</strong>（图中的 <strong>Row Mask</strong>），这就是 <code>RowSelection</code> 发挥作用的地方。</p>
+<h3>2.2 组合行选择器 (<code>RowSelection::and_then</code>)</h3>
+<p><a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139" target="_blank" rel="noopener"><code>RowSelection</code></a> 代表了最终将生成的行集。它目前使用 RLE (<code>RowSelector::select/skip(len)</code>) 来描述稀疏范围。<a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345" target="_blank" rel="noopener"><code>RowSelection::and_then</code></a> 是“将一个选择应用于另一个”的核心操作：左侧参数是“已经通过的行”，右侧参数是“在通过的行中，哪些也通过了第二个过滤器”。输出是它们的布尔 AND。</p>
+<p><strong>演练示例</strong>：</p>
+<ul>
+<li>
+<strong>输入选择 A（已过滤）</strong>：<code>[Skip 100, Select 50, Skip 50]</code>（物理行 100-150 被选中）</li>
+<li>
+<strong>选择 B（在 A 内部过滤）</strong>：<code>[Select 10, Skip 40]</code>（在选中的 50 行中，只有前 10 行通过 B）</li>
+<li>
+<strong>结果</strong>：<code>[Skip 100, Select 10, Skip 90]</code>。</li>
+</ul>
+<p><strong>运行过程</strong>：
+想象一下它就像拉拉链：我们同时遍历两个列表，如下所示：</p>
+<ol>
+<li>
+<strong>前 100 行</strong>：A 是 Skip → 结果是 Skip 100。</li>
+<li>
+<strong>接下来的 50 行</strong>：A 是 Select。看 B：
+<ul>
+<li>B 的前 10 个是 Select → 结果 Select 10。</li>
+<li>B 的剩余 40 个是 Skip → 结果 Skip 40。</li>
+</ul>
+</li>
+<li>
+<strong>最后 50 行</strong>：A 是 Skip → 结果 Skip 50。</li>
+</ol>
+<p><strong>结果</strong>：<code>[Skip 100, Select 10, Skip 90]</code>。</p>
+<p>下面是代码示例：</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: Skip 100 rows, then take the next 10</span>
+<span class="k">let</span> <span class="n">a</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">50</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">b</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">result</span> <span class="o">=</span> <span class="n">a</span><span class="nf">.and_then</span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span>
+<span class="c1">// Result should be: Skip 100, Select 10, Skip 40</span>
+<span class="nd">assert_eq!</span><span class="p">(</span>
+    <span class="nn">Vec</span><span class="p">::</span><span class="o">&lt;</span><span class="n">RowSelector</span><span class="o">&gt;</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="n">result</span><span class="p">),</span>
+    <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span>
+<span class="p">);</span>
+</code></pre></div></div>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig3.jpg" alt="RowSelection logical AND walkthrough" width="100%" class="img-responsive">
+</figure>
+<p>这不断缩小过滤范围，同时只触及轻量级的元数据——没有数据拷贝。目前的 <code>and_then</code> 实现是一个双指针线性扫描；复杂度与选择器段数呈线性关系。谓词收缩选择的越多，后续的扫描就越便宜。</p>
+<h3>3. 工程挑战</h3>
+<p>延迟物化在理论上听起来很简单，但在像 <code>arrow-rs</code> 这样的生产级系统中实现它绝对是一场<strong>工程噩梦</strong>。历史上，这些技术非常棘手，一直被锁定在专有引擎中。在开源世界中，我们已经为此打磨了多年（看看 <a href="https://github.com/apache/datafusion/issues/3463" target="_blank" rel="noopener">DataFusion 的这个 ticket</a> 就知道了），终于，我们可以<strong>大展拳脚</strong>，与全物化一较高下。为了实现这一点，我们需要解决几个严重的工程挑战。</p>
+<h3>3.1 自适应 RowSelection 策略（位掩码 vs. RLE）</h3>
+<p>一个主要的障碍是为 <code>RowSelection</code> 选择正确的内部表示，因为最佳选择取决于稀疏模式。<a href="https://db.cs.cmu.edu/papers/2021/ngom-damon2021.pdf" target="_blank" rel="noopener">这篇论文</a> 揭示了一个关键障碍：对于 <code>RowSelection</code> 来说，不存在“一刀切”的格式。研究人员发现，最佳的内部表示是一个移动的目标，随着数据的“密集”或“稀疏”程度——不断变化。</p>
+<ul>
+<li>
+<strong>极度稀疏</strong>（例如，每 10,000 行 1 行）：这里使用位掩码很浪费（每行 1 位加起来也不少），而 RLE 非常干净——只需几个选择器就搞定了。</li>
+<li>
+<strong>稀疏但有微小间隙</strong>（例如，“读 1，跳 1”）：RLE 会产生碎片化的混乱，让解码器超负荷工作；这里位掩码效率高得多。</li>
+</ul>
+<p>由于两者各有优缺点，我们决定采用自适应策略来<strong>兼得两者之长</strong>（详情见 <a href="https://github.com/apache/arrow-rs/pull/8733" target="_blank" rel="noopener">#arrow-rs/8733</a>）：</p>
+<ul>
+<li>我们查看选择器的平均游程长度，并将其与阈值（目前为 <code>32</code>）进行比较。如果平均值太小，我们切换到位掩码；否则，我们坚持使用选择器（RLE）。</li>
+<li>
+<strong>安全网</strong>：位掩码看起来很棒，直到遇到页修剪（Page Pruning），这可能会导致糟糕的“页丢失”恐慌（panic），因为掩码可能会盲目地试图过滤从未读取过的页中的行。<code>RowSelection</code> 逻辑会提防这种<strong>灾难配方</strong>，并强制切回 RLE 以防止崩溃（见 3.1.2）。</li>
+</ul>
+<h4>3.1.1 <code>32</code> 这个阈值是怎么来的？</h4>
+<p>数字 32 并不是凭空捏造的。它来自于使用各种分布（均匀间隔、指数稀疏、随机噪声）进行的 <a href="https://github.com/apache/arrow-rs/pull/8733#issuecomment-3468441165" target="_blank" rel="noopener">数据驱动的“对决”</a>。它在区分“破碎但密集”和“长跳跃区域”方面做得很好。未来，我们可能会基于数据类型采用更复杂的启发式方法。</p>
+<p>下图展示了对决中的一个示例运行。蓝线是 <code>read_selector</code> (RLE)，橙线是 <code>read_mask</code> (位掩码)。纵轴是时间（越低越好），横轴是平均游程长度。你可以看到性能曲线在 32 附近交叉。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.1.1.png" alt="Bitmask vs RLE benchmark threshold" width="100%" class="img-responsive">
+</figure>
+<h4>3.1.2 位掩码陷阱：丢失的页</h4>
+<p>在实现自适应策略时，位掩码在纸面上看起来很完美，但在结合 <strong>页修剪（Page Pruning）</strong> 时隐藏着一个讨厌的陷阱。</p>
+<p>在深入细节之前，先快速回顾一下页（更多内容见 3.2 节）：Parquet 文件被切分成页（Page）。如果我们知道一个页在选择中没有行，我们<strong>根本不会触碰它</strong>——不解压，不解码。<code>ArrayReader</code> 甚至不知道它的存在。</p>
+<p><strong>案发现场：</strong></p>
+<p>想象一下读取一块数据<code>[0,1,2,3,4,5,6]</code>，中间的四行 <code>[1,2,3,4]</code>被过滤掉了。碰巧其中两行 <code>[2,3]</code> 位于它们自己的页中，因此该页被完全修剪掉了。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig1.jpg" alt="Page pruning example with only first and last rows kept" width="100%" class="img-responsive">
+</figure>
+<p>如果我们要使用 RLE (<code>RowSelector</code>)，执行 <code>Skip(4)</code> 是一帆风顺的：我们只是跳过间隙。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig3.jpg" alt="RLE skipping pruned pages safely" width="100%" class="img-responsive">
+</figure>
+<p><strong>问题：</strong></p>
+<p>然而，如果我们使用位掩码，读取器将首先解码所有 6 行，打算稍后过滤它们。但是中间的页不存在！一旦解码器遇到那个间隙，它就会恐慌（panic）。<code>ArrayReader</code> 是一个流处理单元——它不处理 I/O，因此不知道上层决定修剪页，所以它看不到前面的悬崖。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig2.jpg" alt="Bitmask hitting a missing page panic" width="100%" class="img-responsive">
+</figure>
+<p><strong>修复：</strong></p>
+<p>我们目前的解决方案既保守又稳健：<strong>如果我们检测到页修剪，我们就禁用位掩码并强制回退到 RLE。</strong> 在未来，我们希望扩展位掩码逻辑以使其感知页修剪（见 <a href="https://github.com/apache/arrow-rs/issues/8845" target="_blank" rel="noopener">#arrow-rs/8845</a>）。</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Auto prefers bitmask, but... wait, offset_index says page pruning is on.</span>
+<span class="k">let</span> <span class="n">policy</span> <span class="o">=</span> <span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Auto</span> <span class="p">{</span> <span class="n">threshold</span><span class="p">:</span> <span class="mi">32</span> <span class="p">};</span>
+<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span><span class="nf">.with_row_selection_policy</span><span class="p">(</span><span class="n">policy</span><span class="p">);</span>
+<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nf">override_selector_strategy_if_needed</span><span class="p">(</span>
+    <span class="n">plan_builder</span><span class="p">,</span>
+    <span class="o">&amp;</span><span class="n">projection_mask</span><span class="p">,</span>
+    <span class="nf">Some</span><span class="p">(</span><span class="n">offset_index</span><span class="p">),</span> <span class="c1">// page index enables page pruning</span>
+<span class="p">);</span>
+<span class="c1">// ...so we play it safe and switch to Selectors (RLE).</span>
+<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">plan_builder</span><span class="nf">.row_selection_policy</span><span class="p">(),</span> <span class="o">&amp;</span><span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Selectors</span><span class="p">);</span>
+</code></pre></div></div>
+<h3>3.2 页修剪（Page Pruning）</h3>
+<p>终极的性能胜利是<strong>根本不进行 I/O 或解码</strong>。但是在现实世界中（特别是对象存储），发出一百万个微小的读取请求是<strong>性能杀手</strong>。<code>arrow-rs</code> 使用 Parquet <a href="https://parquet.apache.org/docs/file-format/pageindex/" target="_blank" rel="noopener">PageIndex</a> 来精确计算哪些页包含我们实际需要的数据。对于选择性极高的谓词，跳过页可以节省大量的 I/O，即使底层存储客户端合并了相邻的范围请求。另一个主要的胜利是减少了 CPU：<strong>我们完全跳过了对完全修剪页的解压和解码的繁重工作。</strong></p>
+<ul>
+<li>
+<strong>注意点</strong>：如果 <code>RowSelection</code> 从一个页中哪怕只选择了<strong>一行</strong>，整个页也必须被解压。因此，这一步的效率很大程度上依赖于数据聚类和谓词之间的相关性。</li>
+<li>
+<strong>实现</strong>：<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204" target="_blank" rel="noopener"><code>RowSelection::scan_ranges</code></a> 使用每个页的元数据（<code>first_row_index</code> 和 <code>compressed_page_size</code>）进行计算，找出哪些范围是完全跳过的，仅返回所需的 <code>(offset, length)</code> 列表。</li>
+</ul>
+<p>下面的代码示例说明了页跳过：</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: two pages; page0 covers 0..100, page1 covers 100..200</span>
+<span class="k">let</span> <span class="n">locations</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
+    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">0</span> <span class="p">},</span>
+    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">100</span> <span class="p">},</span>
+<span class="p">];</span>
+<span class="c1">// RowSelection wants 150..160; page0 is total junk, only read page1</span>
+<span class="k">let</span> <span class="n">sel</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">150</span><span class="p">),</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">),</span>
+<span class="p">]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">ranges</span> <span class="o">=</span> <span class="n">sel</span><span class="nf">.scan_ranges</span><span class="p">(</span><span class="o">&amp;</span><span class="n">locations</span><span class="p">);</span>
+<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">ranges</span><span class="nf">.len</span><span class="p">(),</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// Only request page1</span>
+</code></pre></div></div>
+<p>下图说明了使用 RLE 选择进行的页跳过。第一页既不读取也不解码，因为没有行被选中。第二页被读取并完全解压（例如，zstd），然后只解码所需的行。第三页被完全解压和解码，因为所有行都被选中。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig4.jpg" alt="Page-level scan range calculation" width="100%" class="img-responsive">
+</figure>
+<p>这种机制充当了逻辑行过滤和物理字节获取之间的桥梁。虽然我们无法将文件切分得比单个页更细（由于压缩边界），但页修剪确保了我们永远不会为页支付解压成本，除非它至少为结果贡献了一行。它达成了一种务实的平衡：利用粗粒度的页索引（Page Index）跳过大片数据，同时留给细粒度的 <code>RowSelection</code> 来处理幸存页内的具体行。</p>
+<h3>3.3 智能缓存</h3>
+<p>延迟物化引入了一个结构性的进退两难（原文是Catch-22，第二十二条军规）：为了有效地跳过数据，我们必须先读取它。考虑像 <code>SELECT A FROM table WHERE A &gt; 10</code> 这样的查询。读取器必须解码列 <code>A</code> 来评估过滤器。在传统的“读取所有内容”的方法中，这不是问题：列 <code>A</code> 只需留在内存中等待投影。然而，在严格的流水线中，“谓词”阶段和“投影”阶段是解耦的。一旦过滤器生成了 <code>RowSelection</code>，投影阶段发现它需要列 <code>A</code>，就会触发对同一数据的第二次读取。</p>
+<p>如果不加干预，我们会支付“双重税”：一次解码用于决定保留什么，再一次解码用于实际保留它。在 <a href="https://github.com/apache/arrow-rs/pull/7850" target="_blank" rel="noopener">#arrow-rs/7850</a> 中引入的 <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/cached_array_reader.rs#L40-L68" target="_blank" rel="noopener"><code>CachedArrayReader</code></a> 使用<strong>双层</strong>缓存架构解决了这个难题。它允许我们在第一次看到解码批次时（在过滤期间）将其存储起来，并稍后（在投影期间）重用。</p>
+<p>但是为什么要两层？为什么不直接用一个大缓存？</p>
+<ul>
+<li>
+<strong>共享缓存（乐观重用）：</strong> 这是一个跨所有列和读取器共享的全局缓存。它有一个用户可配置的内存限制（容量）。当一个页因谓词被解码时，它被放置在这里。如果投影步骤紧接着运行，它可以“命中”这个缓存并避免 I/O。然而，因为内存是有限的，<strong>缓存驱逐</strong>随时可能发生。如果我们仅依赖于此，繁重的工作负载可能会在我们再次需要数据之前就将其驱逐。</li>
+<li>
+<strong>本地缓存（确定性保证）：</strong> 这是一个特定于单列读取器的私有缓存。它充当<strong>安全网</strong>。当一个列正在被主动读取时，数据被“钉”(Pin)在本地缓存中。这保证了数据在当前操作期间仍然可用，不受全局共享缓存驱逐的影响。</li>
+</ul>
+<p>读取器在获取页时遵循严格的层级结构：</p>
+<ol>
+<li>
+<strong>检查本地：</strong> 我已经钉住它了吗？</li>
+<li>
+<strong>检查共享：</strong> 流水线的另一部分最近解码过它吗？如果是，将其<strong>提升</strong>到本地（钉住它）。</li>
+<li>
+<strong>从源读取：</strong> 执行 I/O 和解码，然后插入到本地和共享缓存中。</li>
+</ol>
+<p>这种双重策略让我们兼得两者之长：在过滤和投影步骤之间共享数据的<strong>效率</strong>，以及知道必要数据不会因内存压力而在查询中途消失的<strong>稳定性</strong>。</p>
+<h3>3.4 最小化拷贝和分配</h3>
+<p>arrow-rs 进行重大优化的另一个领域是<strong>避免不必要的拷贝</strong>。Rust 的 <a href="https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html" target="_blank" rel="noopener">内存安全</a> 设计使得拷贝变得容易，而每一次额外的分配和拷贝都会浪费 CPU 周期和内存带宽。一种幼稚的实现经常通过将数据解压到临时的 <code>Vec</code> 然后 <code>memcpy</code> 到 Arrow Buffer 而支付**“不必要的税”**。</p>
+<p>对于定长类型（如整数或浮点数），这完全是多余的，因为它们的内存布局是相同的。<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/primitive_array.rs#L102" target="_blank" rel="noopener"><code>PrimitiveArrayReader</code></a> 通过 <a href="https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec" target="_blank" rel="noopener">零拷贝转换</a> 消除了这种开销：它不再拷贝字节，而是简单地将解码后的 <code>Vec&lt;T&gt;</code> 的<strong>所有权直接移交</strong>给底层的 Arrow <code>Buffer</code>。</p>
+<h3>3.5 对齐挑战</h3>
+<p>链式过滤是坐标系中的一种<strong>令人抓狂</strong>的练习。过滤器 N 中的“第 1 行”实际上可能是文件中的“第 10,001 行”，这是由于之前的过滤器所致。</p>
+<ul>
+<li>
+<strong>我们如何保持正轨？</strong>：我们对每个 <code>RowSelection</code> 操作（<code>split_off</code>, <code>and_then</code>, <code>trim</code>）进行 <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309" target="_blank" rel="noopener">模糊测试 (fuzz test)</a>。我们需要绝对确定相对偏移量和绝对偏移量之间的转换是精准无误的。这种正确性是保持读取器在批次边界、稀疏选择和页修剪这三重威胁下保持稳定的基石。</li>
+</ul>
+<h2>4. 结论</h2>
+<p><code>arrow-rs</code> 中的 Parquet 读取器不仅仅是一个简单的文件读取器——它是一个伪装的<strong>微型查询引擎</strong>。我们融入了诸如谓词下推和延迟物化等高端特性。读取器只读取需要的内容，只解码必要的内容，在节省资源的同时保持正确性。以前，这些功能仅限于专有或紧密集成的系统。现在，感谢社区的努力，<code>arrow-rs</code> 将高级查询处理技术的好处带给了即使是轻量级的应用程序。</p>
+<p>我们邀请您 <a href="https://github.com/apache/arrow-rs?tab=readme-ov-file#arrow-rust-community" target="_blank" rel="noopener">加入社区</a>，探索代码，进行实验，并为其不断的演进做出贡献。优化数据访问的旅程永无止境，我们可以一起推动开源数据处理可能性的边界。</p>
+
+      </main>
+    </div>
+
+    <hr>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>© 2016-2025 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html" target="_blank" rel="noopener">
+        <img src="https://www.apache.org/events/current-event-234x60.png">
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>

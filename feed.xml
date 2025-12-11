@@ -1,4 +1,393 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2025-12-01T05:30:14-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow ADBC 21 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/11/07/adbc-21-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 21 (Libraries) Release" /><published>2025-11-07T00:00:00-05:00</published><updated>2025-11-07T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2025/11/07/adbc-21-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/11/07/adbc-21-release/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2025-12-11T07:06:25-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析</title><link href="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive-zh/" rel="alternate" type="text/html" title="Arrow-rs Parquet 读取中的延迟物化（Late Materialization）实战深度解析" /><published>2025-12-11T00:00:00-05:00</published><updated>2025-12-11T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive-zh</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive-zh/"><![CDATA[<!--
+
+-->
+<p>本文深入探讨了在 <a href="https://github.com/apache/arrow-rs"><code>arrow-rs</code></a>（为 <a href="https://datafusion.apache.org/">Apache DataFusion</a> 等项目提供动力的读取器）的 <a href="https://parquet.apache.org/">Apache Parquet</a> 读取器中实现延迟物化（Late Materialization）的决策和陷阱。我们将看到一个看似简单的文件读取器如何通过复杂的逻辑来评估谓词——实际上它自身变成了一个<strong>微型查询引擎</strong>。</p>
+<h2>1. 为什么要延迟物化？</h2>
+<p>列式读取是 <strong>I/O 带宽</strong> 和 <strong>CPU 解码成本</strong> 之间的一场持久战。虽然跳过数据通常是好事，但跳过本身也有计算成本。<code>arrow-rs</code> 中 Parquet 读取器的目标是<strong>流水线式的延迟物化</strong>：首先评估谓词，然后访问投影列。对于过滤掉许多行的谓词，在评估之后再进行物化可以最大限度地减少读取和解码工作。</p>
+<p>这种方法与 Abadi 等人的论文 <a href="https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf">列式 DBMS 中的物化策略</a> 中的 <strong>LM-pipelined</strong> 策略非常相似：交错进行谓词评估和数据列访问，而不是一次性读取所有列并试图将它们<strong>重新拼接</strong>成行。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig1.jpg" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
+</figure>
+<p>为了使用延迟物化评估像 <code>SELECT B, C FROM table WHERE A &gt; 10 AND B &lt; 5</code> 这样的查询，读取器遵循以下步骤：</p>
+<ol>
+<li>读取列 <code>A</code> 并评估 <code>A &gt; 10</code> 以构建一个 <code>RowSelection</code>（一个稀疏掩码），代表最初幸存的行集。</li>
+<li>使用该 <code>RowSelection</code> 读取列 <code>B</code> 中幸存的值，并评估 <code>B &lt; 5</code>，更新 <code>RowSelection</code> 使其更加稀疏。</li>
+<li>使用细化后的 <code>RowSelection</code> 读取列 <code>C</code>（投影列），仅解码最终幸存的行。</li>
+</ol>
+<p>本文的其余部分将详细介绍代码如何实现这一路径。</p>
+<hr />
+<h2>2. Rust Parquet 读取器中的延迟物化</h2>
+<h3>2.1 LM-pipelined（流水线延迟物化）</h3>
+<p>“LM-pipelined”听起来像是教科书里的术语。在 <code>arrow-rs</code> 中，它简单地指一个按顺序运行的流水线：“读取谓词列 → 生成行选择 → 读取数据列”。这与<strong>并行</strong>策略形成对比，后者同时读取所有谓词列。虽然并行可以最大化多核 CPU 的利用率，但在列式存储中，流水线方法通常更优，因为每个过滤步骤都大幅减少了后续步骤需要读取和解析的数据量。</p>
+<p>代码结构分为几个核心角色：</p>
+<ul>
+<li><strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302">ReadPlan</a> / <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34">ReadPlanBuilder</a></strong>：将“读取哪些列以及使用什么行子集”编码为一个计划。它不会预先读取所有谓词列。它读取一列，收紧选择，然后继续。</li>
+<li><strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139">RowSelection</a></strong>：有两种实现方式：用 <a href="https://en.wikipedia.org/wiki/Run-length_encoding">游程编码（Run-length encoding）</a> (RLE)（<a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66"><code>RowSelector</code></a>）来“跳过/选择 N 行”，或用 Arrow <a href="https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37"><code>BooleanBuffer</code></a> 作为位掩码来过滤行。它是沿着流水线传递稀疏性的核心机制。</li>
+<li><strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85">ArrayReader</a></strong>：负责解码。它接收一个<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139"><code>RowSelection</code></a>并决定读取哪些页以及解码哪些值。</li>
+</ul>
+<p><a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139"><code>RowSelection</code></a> 可以在 RLE 和位掩码之间动态切换。当间隙很小且稀疏度很高时，位掩码更快；RLE 则对大范围的页级跳过更友好。关于这种权衡的细节将在 3.1 节中介绍。</p>
+<p>再次考虑查询：<code>SELECT B, C FROM table WHERE A &gt; 10 AND B &lt; 5</code>：</p>
+<ol>
+<li><strong>初始</strong>：<code>selection = None</code>（相当于“全选”）。</li>
+<li><strong>读取 A</strong>：<code>ArrayReader</code> 分批解码列 A；谓词构建一个布尔掩码；<a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L149"><code>RowSelection::from_filters</code></a> 将其转换为稀疏选择。</li>
+<li><strong>收紧</strong>：<a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L143"><code>ReadPlanBuilder::with_predicate</code></a> 通过 <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345"><code>RowSelection::and_then</code></a> 链接新的掩码。</li>
+<li><strong>读取 B</strong>：使用当前的 <code>selection</code> 构建列 B 的读取器；读取器仅对选定的行执行 I/O 和解码，产生一个更稀疏的掩码。</li>
+<li><strong>合并</strong>：<code>selection = selection.and_then(selection_b)</code>；投影列现在只解码极小的行集。</li>
+</ol>
+<p><strong>代码位置和草图</strong>：</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Close to the flow in read_plan.rs (simplified)</span>
+<span class="k">let</span> <span class="k">mut</span> <span class="n">builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">batch_size</span><span class="p">);</span>
+
+<span class="c1">// 1) Inject external pruning (e.g., Page Index):</span>
+<span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_selection</span><span class="p">(</span><span class="n">page_index_selection</span><span class="p">);</span>
+
+<span class="c1">// 2) Append predicates serially:</span>
+<span class="k">for</span> <span class="n">predicate</span> <span class="k">in</span> <span class="n">predicates</span> <span class="p">{</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_predicate</span><span class="p">(</span><span class="n">predicate</span><span class="p">);</span> <span class="c1">// internally uses RowSelection::and_then</span>
+<span class="p">}</span>
+
+<span class="c1">// 3) Build readers; all ArrayReaders share the final selection strategy</span>
+<span class="k">let</span> <span class="n">plan</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.build</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">reader</span> <span class="o">=</span> <span class="nn">ParquetRecordBatchReader</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">array_reader</span><span class="p">,</span> <span class="n">plan</span><span class="p">);</span>
+</code></pre></div></div>
+<p>我画了一个简单的流程图来说明这个流程，帮助你理解：</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig2.jpg" alt="Predicate-first pipeline flow" width="100%" class="img-responsive">
+</figure>
+<p>现在你已经了解了这个流水线是如何工作的，下一个问题是<strong>如何表示和组合这些稀疏选择</strong>（图中的 <strong>Row Mask</strong>），这就是 <code>RowSelection</code> 发挥作用的地方。</p>
+<h3>2.2 组合行选择器 (<code>RowSelection::and_then</code>)</h3>
+<p><a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139"><code>RowSelection</code></a> 代表了最终将生成的行集。它目前使用 RLE (<code>RowSelector::select/skip(len)</code>) 来描述稀疏范围。<a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345"><code>RowSelection::and_then</code></a> 是“将一个选择应用于另一个”的核心操作：左侧参数是“已经通过的行”，右侧参数是“在通过的行中，哪些也通过了第二个过滤器”。输出是它们的布尔 AND。</p>
+<p><strong>演练示例</strong>：</p>
+<ul>
+<li><strong>输入选择 A（已过滤）</strong>：<code>[Skip 100, Select 50, Skip 50]</code>（物理行 100-150 被选中）</li>
+<li><strong>选择 B（在 A 内部过滤）</strong>：<code>[Select 10, Skip 40]</code>（在选中的 50 行中，只有前 10 行通过 B）</li>
+<li><strong>结果</strong>：<code>[Skip 100, Select 10, Skip 90]</code>。</li>
+</ul>
+<p><strong>运行过程</strong>：
+想象一下它就像拉拉链：我们同时遍历两个列表，如下所示：</p>
+<ol>
+<li><strong>前 100 行</strong>：A 是 Skip → 结果是 Skip 100。</li>
+<li><strong>接下来的 50 行</strong>：A 是 Select。看 B：
+<ul>
+<li>B 的前 10 个是 Select → 结果 Select 10。</li>
+<li>B 的剩余 40 个是 Skip → 结果 Skip 40。</li>
+</ul>
+</li>
+<li><strong>最后 50 行</strong>：A 是 Skip → 结果 Skip 50。</li>
+</ol>
+<p><strong>结果</strong>：<code>[Skip 100, Select 10, Skip 90]</code>。</p>
+<p>下面是代码示例：</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: Skip 100 rows, then take the next 10</span>
+<span class="k">let</span> <span class="n">a</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">50</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">b</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">result</span> <span class="o">=</span> <span class="n">a</span><span class="nf">.and_then</span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span>
+<span class="c1">// Result should be: Skip 100, Select 10, Skip 40</span>
+<span class="nd">assert_eq!</span><span class="p">(</span>
+    <span class="nn">Vec</span><span class="p">::</span><span class="o">&lt;</span><span class="n">RowSelector</span><span class="o">&gt;</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="n">result</span><span class="p">),</span>
+    <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span>
+<span class="p">);</span>
+</code></pre></div></div>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig3.jpg" alt="RowSelection logical AND walkthrough" width="100%" class="img-responsive">
+</figure>
+<p>这不断缩小过滤范围，同时只触及轻量级的元数据——没有数据拷贝。目前的 <code>and_then</code> 实现是一个双指针线性扫描；复杂度与选择器段数呈线性关系。谓词收缩选择的越多，后续的扫描就越便宜。</p>
+<h3>3. 工程挑战</h3>
+<p>延迟物化在理论上听起来很简单，但在像 <code>arrow-rs</code> 这样的生产级系统中实现它绝对是一场<strong>工程噩梦</strong>。历史上，这些技术非常棘手，一直被锁定在专有引擎中。在开源世界中，我们已经为此打磨了多年（看看 <a href="https://github.com/apache/datafusion/issues/3463">DataFusion 的这个 ticket</a> 就知道了），终于，我们可以<strong>大展拳脚</strong>，与全物化一较高下。为了实现这一点，我们需要解决几个严重的工程挑战。</p>
+<h3>3.1 自适应 RowSelection 策略（位掩码 vs. RLE）</h3>
+<p>一个主要的障碍是为 <code>RowSelection</code> 选择正确的内部表示，因为最佳选择取决于稀疏模式。<a href="https://db.cs.cmu.edu/papers/2021/ngom-damon2021.pdf">这篇论文</a> 揭示了一个关键障碍：对于 <code>RowSelection</code> 来说，不存在“一刀切”的格式。研究人员发现，最佳的内部表示是一个移动的目标，随着数据的“密集”或“稀疏”程度——不断变化。</p>
+<ul>
+<li><strong>极度稀疏</strong>（例如，每 10,000 行 1 行）：这里使用位掩码很浪费（每行 1 位加起来也不少），而 RLE 非常干净——只需几个选择器就搞定了。</li>
+<li><strong>稀疏但有微小间隙</strong>（例如，“读 1，跳 1”）：RLE 会产生碎片化的混乱，让解码器超负荷工作；这里位掩码效率高得多。</li>
+</ul>
+<p>由于两者各有优缺点，我们决定采用自适应策略来<strong>兼得两者之长</strong>（详情见 <a href="https://github.com/apache/arrow-rs/pull/8733">#arrow-rs/8733</a>）：</p>
+<ul>
+<li>我们查看选择器的平均游程长度，并将其与阈值（目前为 <code>32</code>）进行比较。如果平均值太小，我们切换到位掩码；否则，我们坚持使用选择器（RLE）。</li>
+<li><strong>安全网</strong>：位掩码看起来很棒，直到遇到页修剪（Page Pruning），这可能会导致糟糕的“页丢失”恐慌（panic），因为掩码可能会盲目地试图过滤从未读取过的页中的行。<code>RowSelection</code> 逻辑会提防这种<strong>灾难配方</strong>，并强制切回 RLE 以防止崩溃（见 3.1.2）。</li>
+</ul>
+<h4>3.1.1 <code>32</code> 这个阈值是怎么来的？</h4>
+<p>数字 32 并不是凭空捏造的。它来自于使用各种分布（均匀间隔、指数稀疏、随机噪声）进行的 <a href="https://github.com/apache/arrow-rs/pull/8733#issuecomment-3468441165">数据驱动的“对决”</a>。它在区分“破碎但密集”和“长跳跃区域”方面做得很好。未来，我们可能会基于数据类型采用更复杂的启发式方法。</p>
+<p>下图展示了对决中的一个示例运行。蓝线是 <code>read_selector</code> (RLE)，橙线是 <code>read_mask</code> (位掩码)。纵轴是时间（越低越好），横轴是平均游程长度。你可以看到性能曲线在 32 附近交叉。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.1.1.png" alt="Bitmask vs RLE benchmark threshold" width="100%" class="img-responsive">
+</figure>
+<h4>3.1.2 位掩码陷阱：丢失的页</h4>
+<p>在实现自适应策略时，位掩码在纸面上看起来很完美，但在结合 <strong>页修剪（Page Pruning）</strong> 时隐藏着一个讨厌的陷阱。</p>
+<p>在深入细节之前，先快速回顾一下页（更多内容见 3.2 节）：Parquet 文件被切分成页（Page）。如果我们知道一个页在选择中没有行，我们<strong>根本不会触碰它</strong>——不解压，不解码。<code>ArrayReader</code> 甚至不知道它的存在。</p>
+<p><strong>案发现场：</strong></p>
+<p>想象一下读取一块数据<code>[0,1,2,3,4,5,6]</code>，中间的四行 <code>[1,2,3,4]</code>被过滤掉了。碰巧其中两行 <code>[2,3]</code> 位于它们自己的页中，因此该页被完全修剪掉了。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig1.jpg" alt="Page pruning example with only first and last rows kept" width="100%" class="img-responsive">
+</figure>
+<p>如果我们要使用 RLE (<code>RowSelector</code>)，执行 <code>Skip(4)</code> 是一帆风顺的：我们只是跳过间隙。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig3.jpg" alt="RLE skipping pruned pages safely" width="100%" class="img-responsive">
+</figure>
+<p><strong>问题：</strong></p>
+<p>然而，如果我们使用位掩码，读取器将首先解码所有 6 行，打算稍后过滤它们。但是中间的页不存在！一旦解码器遇到那个间隙，它就会恐慌（panic）。<code>ArrayReader</code> 是一个流处理单元——它不处理 I/O，因此不知道上层决定修剪页，所以它看不到前面的悬崖。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig2.jpg" alt="Bitmask hitting a missing page panic" width="100%" class="img-responsive">
+</figure>
+<p><strong>修复：</strong></p>
+<p>我们目前的解决方案既保守又稳健：<strong>如果我们检测到页修剪，我们就禁用位掩码并强制回退到 RLE。</strong> 在未来，我们希望扩展位掩码逻辑以使其感知页修剪（见 <a href="https://github.com/apache/arrow-rs/issues/8845">#arrow-rs/8845</a>）。</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Auto prefers bitmask, but... wait, offset_index says page pruning is on.</span>
+<span class="k">let</span> <span class="n">policy</span> <span class="o">=</span> <span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Auto</span> <span class="p">{</span> <span class="n">threshold</span><span class="p">:</span> <span class="mi">32</span> <span class="p">};</span>
+<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span><span class="nf">.with_row_selection_policy</span><span class="p">(</span><span class="n">policy</span><span class="p">);</span>
+<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nf">override_selector_strategy_if_needed</span><span class="p">(</span>
+    <span class="n">plan_builder</span><span class="p">,</span>
+    <span class="o">&amp;</span><span class="n">projection_mask</span><span class="p">,</span>
+    <span class="nf">Some</span><span class="p">(</span><span class="n">offset_index</span><span class="p">),</span> <span class="c1">// page index enables page pruning</span>
+<span class="p">);</span>
+<span class="c1">// ...so we play it safe and switch to Selectors (RLE).</span>
+<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">plan_builder</span><span class="nf">.row_selection_policy</span><span class="p">(),</span> <span class="o">&amp;</span><span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Selectors</span><span class="p">);</span>
+</code></pre></div></div>
+<h3>3.2 页修剪（Page Pruning）</h3>
+<p>终极的性能胜利是<strong>根本不进行 I/O 或解码</strong>。但是在现实世界中（特别是对象存储），发出一百万个微小的读取请求是<strong>性能杀手</strong>。<code>arrow-rs</code> 使用 Parquet <a href="https://parquet.apache.org/docs/file-format/pageindex/">PageIndex</a> 来精确计算哪些页包含我们实际需要的数据。对于选择性极高的谓词，跳过页可以节省大量的 I/O，即使底层存储客户端合并了相邻的范围请求。另一个主要的胜利是减少了 CPU：<strong>我们完全跳过了对完全修剪页的解压和解码的繁重工作。</strong></p>
+<ul>
+<li><strong>注意点</strong>：如果 <code>RowSelection</code> 从一个页中哪怕只选择了<strong>一行</strong>，整个页也必须被解压。因此，这一步的效率很大程度上依赖于数据聚类和谓词之间的相关性。</li>
+<li><strong>实现</strong>：<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204"><code>RowSelection::scan_ranges</code></a> 使用每个页的元数据（<code>first_row_index</code> 和 <code>compressed_page_size</code>）进行计算，找出哪些范围是完全跳过的，仅返回所需的 <code>(offset, length)</code> 列表。</li>
+</ul>
+<p>下面的代码示例说明了页跳过：</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: two pages; page0 covers 0..100, page1 covers 100..200</span>
+<span class="k">let</span> <span class="n">locations</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
+    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">0</span> <span class="p">},</span>
+    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">100</span> <span class="p">},</span>
+<span class="p">];</span>
+<span class="c1">// RowSelection wants 150..160; page0 is total junk, only read page1</span>
+<span class="k">let</span> <span class="n">sel</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">150</span><span class="p">),</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">),</span>
+<span class="p">]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">ranges</span> <span class="o">=</span> <span class="n">sel</span><span class="nf">.scan_ranges</span><span class="p">(</span><span class="o">&amp;</span><span class="n">locations</span><span class="p">);</span>
+<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">ranges</span><span class="nf">.len</span><span class="p">(),</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// Only request page1</span>
+</code></pre></div></div>
+<p>下图说明了使用 RLE 选择进行的页跳过。第一页既不读取也不解码，因为没有行被选中。第二页被读取并完全解压（例如，zstd），然后只解码所需的行。第三页被完全解压和解码，因为所有行都被选中。</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig4.jpg" alt="Page-level scan range calculation" width="100%" class="img-responsive">
+</figure>
+<p>这种机制充当了逻辑行过滤和物理字节获取之间的桥梁。虽然我们无法将文件切分得比单个页更细（由于压缩边界），但页修剪确保了我们永远不会为页支付解压成本，除非它至少为结果贡献了一行。它达成了一种务实的平衡：利用粗粒度的页索引（Page Index）跳过大片数据，同时留给细粒度的 <code>RowSelection</code> 来处理幸存页内的具体行。</p>
+<h3>3.3 智能缓存</h3>
+<p>延迟物化引入了一个结构性的进退两难（原文是Catch-22，第二十二条军规）：为了有效地跳过数据，我们必须先读取它。考虑像 <code>SELECT A FROM table WHERE A &gt; 10</code> 这样的查询。读取器必须解码列 <code>A</code> 来评估过滤器。在传统的“读取所有内容”的方法中，这不是问题：列 <code>A</code> 只需留在内存中等待投影。然而，在严格的流水线中，“谓词”阶段和“投影”阶段是解耦的。一旦过滤器生成了 <code>RowSelection</code>，投影阶段发现它需要列 <code>A</code>，就会触发对同一数据的第二次读取。</p>
+<p>如果不加干预，我们会支付“双重税”：一次解码用于决定保留什么，再一次解码用于实际保留它。在 <a href="https://github.com/apache/arrow-rs/pull/7850">#arrow-rs/7850</a> 中引入的 <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/cached_array_reader.rs#L40-L68"><code>CachedArrayReader</code></a> 使用<strong>双层</strong>缓存架构解决了这个难题。它允许我们在第一次看到解码批次时（在过滤期间）将其存储起来，并稍后（在投影期间）重用。</p>
+<p>但是为什么要两层？为什么不直接用一个大缓存？</p>
+<ul>
+<li><strong>共享缓存（乐观重用）：</strong> 这是一个跨所有列和读取器共享的全局缓存。它有一个用户可配置的内存限制（容量）。当一个页因谓词被解码时，它被放置在这里。如果投影步骤紧接着运行，它可以“命中”这个缓存并避免 I/O。然而，因为内存是有限的，<strong>缓存驱逐</strong>随时可能发生。如果我们仅依赖于此，繁重的工作负载可能会在我们再次需要数据之前就将其驱逐。</li>
+<li><strong>本地缓存（确定性保证）：</strong> 这是一个特定于单列读取器的私有缓存。它充当<strong>安全网</strong>。当一个列正在被主动读取时，数据被“钉”(Pin)在本地缓存中。这保证了数据在当前操作期间仍然可用，不受全局共享缓存驱逐的影响。</li>
+</ul>
+<p>读取器在获取页时遵循严格的层级结构：</p>
+<ol>
+<li><strong>检查本地：</strong> 我已经钉住它了吗？</li>
+<li><strong>检查共享：</strong> 流水线的另一部分最近解码过它吗？如果是，将其<strong>提升</strong>到本地（钉住它）。</li>
+<li><strong>从源读取：</strong> 执行 I/O 和解码，然后插入到本地和共享缓存中。</li>
+</ol>
+<p>这种双重策略让我们兼得两者之长：在过滤和投影步骤之间共享数据的<strong>效率</strong>，以及知道必要数据不会因内存压力而在查询中途消失的<strong>稳定性</strong>。</p>
+<h3>3.4 最小化拷贝和分配</h3>
+<p>arrow-rs 进行重大优化的另一个领域是<strong>避免不必要的拷贝</strong>。Rust 的 <a href="https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html">内存安全</a> 设计使得拷贝变得容易，而每一次额外的分配和拷贝都会浪费 CPU 周期和内存带宽。一种幼稚的实现经常通过将数据解压到临时的 <code>Vec</code> 然后 <code>memcpy</code> 到 Arrow Buffer 而支付**“不必要的税”**。</p>
+<p>对于定长类型（如整数或浮点数），这完全是多余的，因为它们的内存布局是相同的。<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/primitive_array.rs#L102"><code>PrimitiveArrayReader</code></a> 通过 <a href="https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec">零拷贝转换</a> 消除了这种开销：它不再拷贝字节，而是简单地将解码后的 <code>Vec&lt;T&gt;</code> 的<strong>所有权直接移交</strong>给底层的 Arrow <code>Buffer</code>。</p>
+<h3>3.5 对齐挑战</h3>
+<p>链式过滤是坐标系中的一种<strong>令人抓狂</strong>的练习。过滤器 N 中的“第 1 行”实际上可能是文件中的“第 10,001 行”，这是由于之前的过滤器所致。</p>
+<ul>
+<li><strong>我们如何保持正轨？</strong>：我们对每个 <code>RowSelection</code> 操作（<code>split_off</code>, <code>and_then</code>, <code>trim</code>）进行 <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309">模糊测试 (fuzz test)</a>。我们需要绝对确定相对偏移量和绝对偏移量之间的转换是精准无误的。这种正确性是保持读取器在批次边界、稀疏选择和页修剪这三重威胁下保持稳定的基石。</li>
+</ul>
+<h2>4. 结论</h2>
+<p><code>arrow-rs</code> 中的 Parquet 读取器不仅仅是一个简单的文件读取器——它是一个伪装的<strong>微型查询引擎</strong>。我们融入了诸如谓词下推和延迟物化等高端特性。读取器只读取需要的内容，只解码必要的内容，在节省资源的同时保持正确性。以前，这些功能仅限于专有或紧密集成的系统。现在，感谢社区的努力，<code>arrow-rs</code> 将高级查询处理技术的好处带给了即使是轻量级的应用程序。</p>
+<p>我们邀请您 <a href="https://github.com/apache/arrow-rs?tab=readme-ov-file#arrow-rust-community">加入社区</a>，探索代码，进行实验，并为其不断的演进做出贡献。优化数据访问的旅程永无止境，我们可以一起推动开源数据处理可能性的边界。</p>]]></content><author><name>&lt;a href=&quot;https://github.com/hhhizzz&quot;&gt;Qiwei Huang&lt;/a&gt; and &lt;a href=&quot;https://github.com/alamb&quot;&gt;Andrew Lamb&lt;/a&gt;</name></author><category term="application" /><category term="translation" /><summary type="html"><![CDATA[arrow-rs 如何通过流水线化谓词和投影来最小化 Parquet 扫描过程中的工作量]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">A Practical Dive Into Late Materialization in arrow-rs Parquet Reads</title><link href="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/" rel="alternate" type="text/html" title="A Practical Dive Into Late Materialization in arrow-rs Parquet Reads" /><published>2025-12-11T00:00:00-05:00</published><updated>2025-12-11T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/"><![CDATA[<!--
+
+-->
+<p>This article dives into the decisions and pitfalls of implementing Late Materialization in the <a href="https://parquet.apache.org/">Apache Parquet</a> reader from <a href="https://github.com/apache/arrow-rs"><code>arrow-rs</code></a> (the reader powering <a href="https://datafusion.apache.org/">Apache DataFusion</a> among other projects). We'll see how a seemingly humble file reader requires complex logic to evaluate predicates—effectively becoming a <strong>tiny query engine</strong> in its own right.</p>
+<h2>1. Why Late Materialization?</h2>
+<p>Columnar reads are a constant battle between <strong>I/O bandwidth</strong> and <strong>CPU decode costs</strong>. While skipping data is generally good, the act of skipping itself carries a computational cost. The goal of the Parquet reader in <code>arrow-rs</code> is <strong>pipeline-style late materialization</strong>: evaluate predicates first, then access projected columns. For predicates that filter many rows, materializing after evaluation minimizes reads and decode work.</p>
+<p>The approach closely mirrors the <strong>LM-pipelined</strong> strategy from <a href="https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf">Materialization Strategies in a Column-Oriented DBMS</a> by Abadi et al.: interleaving predicates and data column access instead of reading all columns at once and trying to <strong>stitch them back together</strong> into rows.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig1.jpg" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
+</figure>
+<p>To evaluate a query like <code>SELECT B, C FROM table WHERE A &gt; 10 AND B &lt; 5</code> using late materialization, the reader follows these steps:</p>
+<ol>
+<li>Read column <code>A</code> and evaluate <code>A &gt; 10</code> to build a <code>RowSelection</code> (a sparse mask) representing the initial set of surviving rows.</li>
+<li>Use that <code>RowSelection</code> to read surviving values of column <code>B</code> and evaluate <code>B &lt; 5</code> and update the <code>RowSelection</code> to make it even sparser.</li>
+<li>Use the refined <code>RowSelection</code> to read column <code>C</code> (a projection column), decoding only the final surviving rows.</li>
+</ol>
+<p>The rest of this post zooms in on how the code makes this path work.</p>
+<hr />
+<h2>2. Late Materialization in the Rust Parquet Reader</h2>
+<h3>2.1 LM-pipelined</h3>
+<p>&quot;LM-pipelined&quot; might sound like something from a textbook. In <code>arrow-rs</code>, it simply refers to a pipeline that runs sequentially: &quot;read predicate column → generate row selection → read data column&quot;. This contrasts with a <strong>parallel</strong> strategy, where all predicate columns are read simultaneously. While parallelism can maximize multi-core CPU usage, the pipelined approach is often superior in columnar storage because each filtering step drastically reduces the amount of data subsequent steps need to read and parse.</p>
+<p>The code is structured into a few core roles:</p>
+<ul>
+<li><strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302">ReadPlan</a> / <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34">ReadPlanBuilder</a></strong>: Encodes &quot;which columns to read and with what row subset&quot; into a plan. It does not pre-read all predicate columns. It reads one, tightens the selection, and then moves on.</li>
+<li><strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139">RowSelection</a></strong>: Two implementations: use <a href="https://en.wikipedia.org/wiki/Run-length_encoding">Run-length encoding</a> (RLE) (via <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66"><code>RowSelector</code></a>) to &quot;skip/select N rows&quot;, or use an Arrow <a href="https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37"><code>BooleanBuffer</code></a> bitmask to filter rows. This is the core mechanism that carries sparsity through the pipeline.</li>
+<li><strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85">ArrayReader</a></strong>: Responsible for decoding. It receives a <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139"><code>RowSelection</code></a> and decides which pages to read and which values to decode.</li>
+</ul>
+<p><a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139"><code>RowSelection</code></a> can switch dynamically between RLE and bitmasks. Bitmasks are faster when gaps are tiny and sparsity is high; RLE is friendlier to large, page-level skips. Details on this trade-off appear in section 3.1.</p>
+<p>Consider again the query: <code>SELECT B, C FROM table WHERE A &gt; 10 AND B &lt; 5</code>:</p>
+<ol>
+<li><strong>Initial</strong>: <code>selection = None</code> (equivalent to &quot;select all&quot;).</li>
+<li><strong>Read A</strong>: <code>ArrayReader</code> decodes column A in batches; the predicate builds a boolean mask; <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L149"><code>RowSelection::from_filters</code></a> turns it into a sparse selection.</li>
+<li><strong>Tighten</strong>: <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L143"><code>ReadPlanBuilder::with_predicate</code></a> chains the new mask via <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345"><code>RowSelection::and_then</code></a>.</li>
+<li><strong>Read B</strong>: Build column B's reader with the current <code>selection</code>; the reader only performs I/O and decoding for selected rows, producing an even sparser mask.</li>
+<li><strong>Merge</strong>: <code>selection = selection.and_then(selection_b)</code>; projection columns now decode a tiny row set.</li>
+</ol>
+<p><strong>Code locations and sketch</strong>:</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Close to the flow in read_plan.rs (simplified)</span>
+<span class="k">let</span> <span class="k">mut</span> <span class="n">builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">batch_size</span><span class="p">);</span>
+
+<span class="c1">// 1) Inject external pruning (e.g., Page Index):</span>
+<span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_selection</span><span class="p">(</span><span class="n">page_index_selection</span><span class="p">);</span>
+
+<span class="c1">// 2) Append predicates serially:</span>
+<span class="k">for</span> <span class="n">predicate</span> <span class="k">in</span> <span class="n">predicates</span> <span class="p">{</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_predicate</span><span class="p">(</span><span class="n">predicate</span><span class="p">);</span> <span class="c1">// internally uses RowSelection::and_then</span>
+<span class="p">}</span>
+
+<span class="c1">// 3) Build readers; all ArrayReaders share the final selection strategy</span>
+<span class="k">let</span> <span class="n">plan</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.build</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">reader</span> <span class="o">=</span> <span class="nn">ParquetRecordBatchReader</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">array_reader</span><span class="p">,</span> <span class="n">plan</span><span class="p">);</span>
+</code></pre></div></div>
+<p>I've drawn a simple flowchart that illustrates this flow to help you understand:</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig2.jpg" alt="Predicate-first pipeline flow" width="100%" class="img-responsive">
+</figure>
+<p>Now that you understand how this pipeline works, the next question is <strong>how to represent and combine these sparse selections</strong> (the <strong>Row Mask</strong> in the diagram), which is where <code>RowSelection</code> comes in.</p>
+<h3>2.2 Combining row selectors (<code>RowSelection::and_then</code>)</h3>
+<p><a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139"><code>RowSelection</code></a> represents the set of rows that will eventually be produced. It currently uses RLE (<code>RowSelector::select/skip(len)</code>) to describe sparse ranges. <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345"><code>RowSelection::and_then</code></a> is the core operator for &quot;apply one selection to another&quot;: the left-hand argument is &quot;rows already passed&quot; and the right-hand argument is &quot;which of the passed rows also pass the second filter.&quot; The output is their boolean AND.</p>
+<p><strong>Walkthrough Example</strong>:</p>
+<ul>
+<li><strong>Input Selection A (already filtered)</strong>: <code>[Skip 100, Select 50, Skip 50]</code> (physical rows 100-150 are selected)</li>
+<li><strong>Selection B (filters within A)</strong>: <code>[Select 10, Skip 40]</code> (within the 50 selected rows, only the first 10 survive B)</li>
+<li><strong>Result</strong>: <code>[Skip 100, Select 10, Skip 90]</code>.</li>
+</ul>
+<p><strong>How it runs</strong>:
+Think of it like a zipper: we traverse both lists simultaneously, as shown below:</p>
+<ol>
+<li><strong>First 100 rows</strong>: A is Skip → result is Skip 100.</li>
+<li><strong>Next 50 rows</strong>: A is Select. Look at B:
+<ul>
+<li>B's first 10 are Select → result Select 10.</li>
+<li>B's remaining 40 are Skip → result Skip 40.</li>
+</ul>
+</li>
+<li><strong>Final 50 rows</strong>: A is Skip → result Skip 50.</li>
+</ol>
+<p><strong>Result</strong>: <code>[Skip 100, Select 10, Skip 90]</code>.</p>
+<p>Here is an example in code:</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: Skip 100 rows, then take the next 10</span>
+<span class="k">let</span> <span class="n">a</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">50</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">b</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">result</span> <span class="o">=</span> <span class="n">a</span><span class="nf">.and_then</span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span>
+<span class="c1">// Result should be: Skip 100, Select 10, Skip 40</span>
+<span class="nd">assert_eq!</span><span class="p">(</span>
+    <span class="nn">Vec</span><span class="p">::</span><span class="o">&lt;</span><span class="n">RowSelector</span><span class="o">&gt;</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="n">result</span><span class="p">),</span>
+    <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span>
+<span class="p">);</span>
+</code></pre></div></div>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig3.jpg" alt="RowSelection logical AND walkthrough" width="100%" class="img-responsive">
+</figure>
+<p>This keeps narrowing the filter while touching only lightweight metadata—no data copies. The current implementation of <code>and_then</code> is a two-pointer linear scan; complexity is linear in the number of selector segments. The more predicates shrink the selection, the cheaper later scans become.</p>
+<h2>3. Engineering Challenges</h2>
+<p>Late Materialization sounds simple enough in theory, but implementing it in a production-grade system like <code>arrow-rs</code> is an absolute <strong>engineering nightmare</strong>. Historically, these techniques are so tricky they have been locked away in proprietary engines. In the open source world, we've been grinding away at this for years (just look at <a href="https://github.com/apache/datafusion/issues/3463">the DataFusion ticket</a>), and finally, we can <strong>flex our muscles</strong> and go toe-to-toe with full materialization. To pull this off, we had to tackle several serious engineering challenges.</p>
+<h3>3.1 Adaptive RowSelection Policy (Bitmask vs. RLE)</h3>
+<p>One major hurdle is choosing the right internal representation for <code>RowSelection</code> because the best choice depends on the sparsity pattern. <a href="https://db.cs.cmu.edu/papers/2021/ngom-damon2021.pdf">This paper</a> reveals a critical hurdle: there is no 'one-size-fits-all' format for <code>RowSelection</code>. The researchers found that the optimal internal representation is a moving target, shifting constantly depending on the sparsity pattern—essentially, how 'dense' or 'sparse' the surviving data is at any given moment.</p>
+<ul>
+<li><strong>Ultra sparse</strong> (e.g., 1 row every 10,000): Using a bitmask here is just wasteful (1 bit per row adds up), whereas RLE is super clean—just a few selectors and you're done.</li>
+<li><strong>Sparse but with tiny gaps</strong> (e.g., &quot;read 1, skip 1&quot;): RLE creates a fragmented mess that makes the decoder work overtime; here, bitmasks are way more efficient.</li>
+</ul>
+<p>Since both have their pros and cons, we decided to get the <strong>best of both worlds</strong> with an adaptive strategy (see <a href="https://github.com/apache/arrow-rs/pull/8733">#arrow-rs/8733</a> for more details):</p>
+<ul>
+<li>We look at the average run length of the selectors and compare it to a threshold (currently <code>32</code>). If the average is too small, we switch to bitmasks; otherwise, we stick with selectors (RLE).</li>
+<li><strong>The Safety Net</strong>: Bitmasks look great until you hit Page Pruning, which can cause a nasty &quot;missing page&quot; panic because the mask might blindly try to filter rows from pages that were never even read. The <code>RowSelection</code> logic watches out for this <strong>recipe for disaster</strong> and forces a switch back to RLE to keep things from crashing (see 3.1.2).</li>
+</ul>
+<h4>3.1.1 Where did the threshold of <code>32</code> come from?</h4>
+<p>The number 32 wasn't just pulled out of thin air. It came from a <a href="https://github.com/apache/arrow-rs/pull/8733#issuecomment-3468441165">data-driven &quot;face-off&quot;</a> using various distributions (even spacing, exponential sparsity, random noise). It does a solid job of distinguishing between &quot;choppy but dense&quot; and &quot;long skip regions.&quot; In the future, we might get even fancier with heuristics based on data types.</p>
+<p>The chart below shows an example run from the showdown. Blue lines are <code>read_selector</code> (RLE) and orange lines are <code>read_mask</code> (bitmasks). The vertical axis is time (lower is better), and the horizontal axis is average run length. You can see the performance curves cross around 32.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.1.1.png" alt="Bitmask vs RLE benchmark threshold" width="100%" class="img-responsive">
+</figure>
+<h4>3.1.2 The Bitmask Trap: Missing Pages</h4>
+<p>When implementing the adaptive strategy, bitmasks seem perfect on paper, but they hide a nasty trap when combined with <strong>Page Pruning</strong>.</p>
+<p>Before we get into the weeds, a quick refresher on pages (more in Section 3.2): Parquet files are sliced into pages. If we know a page has no rows in the selection, we <strong>don't even touch it</strong>—no decompression, no decoding. The <code>ArrayReader</code> doesn't even know it exists.</p>
+<p><strong>The Scene of the Crime:</strong></p>
+<p>Imagine reading a chunk of data and the middle four rows<code>[0,1,2,3,4,5,6]</code>, <code>[1,2,3,4]</code>, are filtered out. It just so happens that two of those rows, <code>[2,3]</code> sit in their own page, so that page gets completely pruned.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig1.jpg" alt="Page pruning example with only first and last rows kept" width="100%" class="img-responsive">
+</figure>
+<p>If we use RLE (<code>RowSelector</code>), executing <code>Skip(4)</code> is smooth sailing: we just jump over the gap.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig3.jpg" alt="RLE skipping pruned pages safely" width="100%" class="img-responsive">
+</figure>
+<p><strong>The Problem:</strong></p>
+<p>If we use a bitmask, however, the reader will decode all 6 rows first, intending to filter them later. But that middle page isn't there! As soon as the decoder hits that gap, it panics. The <code>ArrayReader</code> is a stream processing unit—it doesn't handle I/O and thus doesn't know the layer above decided to prune a page, so it can't see the cliff coming.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig2.jpg" alt="Bitmask hitting a missing page panic" width="100%" class="img-responsive">
+</figure>
+<p><strong>The Fix:</strong></p>
+<p>Our current solution is conservative but bulletproof: <strong>if we detect Page Pruning, we ban bitmasks and force a fallback to RLE.</strong> In the future, we hope to extend the bitmask logic to be Page Pruning-aware (see <a href="https://github.com/apache/arrow-rs/issues/8845">#arrow-rs/8845</a>).</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Auto prefers bitmask, but... wait, offset_index says page pruning is on.</span>
+<span class="k">let</span> <span class="n">policy</span> <span class="o">=</span> <span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Auto</span> <span class="p">{</span> <span class="n">threshold</span><span class="p">:</span> <span class="mi">32</span> <span class="p">};</span>
+<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span><span class="nf">.with_row_selection_policy</span><span class="p">(</span><span class="n">policy</span><span class="p">);</span>
+<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nf">override_selector_strategy_if_needed</span><span class="p">(</span>
+    <span class="n">plan_builder</span><span class="p">,</span>
+    <span class="o">&amp;</span><span class="n">projection_mask</span><span class="p">,</span>
+    <span class="nf">Some</span><span class="p">(</span><span class="n">offset_index</span><span class="p">),</span> <span class="c1">// page index enables page pruning</span>
+<span class="p">);</span>
+<span class="c1">// ...so we play it safe and switch to Selectors (RLE).</span>
+<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">plan_builder</span><span class="nf">.row_selection_policy</span><span class="p">(),</span> <span class="o">&amp;</span><span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Selectors</span><span class="p">);</span>
+</code></pre></div></div>
+<h3>3.2 Page Pruning</h3>
+<p>The ultimate performance win is <strong>not doing I/O or decoding at all</strong>. In the real world (especially with object storage), firing off a million tiny read requests is a <strong>performance killer</strong>. <code>arrow-rs</code> uses the Parquet <a href="https://parquet.apache.org/docs/file-format/pageindex/">PageIndex</a> to calculate exactly which pages contain data we actually need. For very selective predicates, skipping pages can result in substantial I/O savings, even if the underlying storage client merges adjacent range requests. Another major win is reduced CPU: <strong>we completely skip the heavy lifting of decompressing and decoding entirely pruned pages.</strong></p>
+<ul>
+<li><strong>The Catch</strong>: If the <code>RowSelection</code> selects even a <strong>single row</strong> from a page, the whole page must be decompressed. Therefore, the efficiency of this step relies heavily on the correlation between data clustering and the predicates.</li>
+<li><strong>Implementation</strong>: <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204"><code>RowSelection::scan_ranges</code></a> crunches the numbers using each page's metadata (<code>first_row_index</code> and <code>compressed_page_size</code>) to figure out which ranges are total skips, returning only the required <code>(offset, length)</code> list.</li>
+</ul>
+<p>Page skipping is illustrated in the following code example:</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: two pages; page0 covers 0..100, page1 covers 100..200</span>
+<span class="k">let</span> <span class="n">locations</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
+    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">0</span> <span class="p">},</span>
+    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">100</span> <span class="p">},</span>
+<span class="p">];</span>
+<span class="c1">// RowSelection wants 150..160; page0 is total junk, only read page1</span>
+<span class="k">let</span> <span class="n">sel</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">150</span><span class="p">),</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">),</span>
+<span class="p">]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">ranges</span> <span class="o">=</span> <span class="n">sel</span><span class="nf">.scan_ranges</span><span class="p">(</span><span class="o">&amp;</span><span class="n">locations</span><span class="p">);</span>
+<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">ranges</span><span class="nf">.len</span><span class="p">(),</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// Only request page1</span>
+</code></pre></div></div>
+<p>The following figure illustrates page skipping with RLE selections. The
+first page is neither read nor decoded, as no rows are selected. The second page
+is read and fully decompressed (e.g., zstd), and then only the needed rows are decoded.
+The third page is decompressed and decoded in full, as all rows are selected.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig4.jpg" alt="Page-level scan range calculation" width="100%" class="img-responsive">
+</figure>
+<p>This mechanism acts as the bridge between logical row filtering and physical byte fetching. While we cannot slice the file thinner than a single page (due to compression boundaries), Page Pruning ensures that we never pay the decompression cost for a page unless it contributes at least one row to the result. It strikes a pragmatic balance: utilizing the coarse-grained Page Index to skip large swathes of data, while leaving the fine-grained <code>RowSelection</code> to handle the specific rows within the surviving pages.</p>
+<h3>3.3 Smart Caching</h3>
+<p>Late materialization introduces a structural Catch-22: to efficiently skip data, we must first read it. Consider a query like <code>SELECT A FROM table WHERE A &gt; 10</code>. The reader must decode column <code>A</code> to evaluate the filter. In a traditional &quot;read-everything&quot; approach, this wouldn't be an issue: column A would simply sit in memory, waiting to be projected. However, in a strict pipeline, the &quot;Predicate&quot; stage and the &quot;Projection&quot; stage are decoupled. Once the filter produces a RowSelection, the projection stage sees that it needs column <code>A</code> and triggers a second read of the same data.</p>
+<p>Without intervention, we pay a &quot;double tax&quot;: decoding once to decide what to keep, and decoding again to actually keep it.<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/cached_array_reader.rs#L40-L68"><code>CachedArrayReader</code></a>, introduced in <a href="https://github.com/apache/arrow-rs/pull/7850">#arrow-rs/7850</a>, solves this dilemma using a <strong>Dual-Layer</strong> Cache architecture. It allows us to stash the decoded batch the first time we see it (during filtering) and reuse it later (during projection).</p>
+<p>But why two layers? Why not just one big cache?</p>
+<ul>
+<li><strong>The Shared Cache (Optimistic Reuse):</strong> This is a global cache shared across all columns and readers. It has a user-configurable memory limit (capacity). When a page is decoded for a predicate, it is placed here. If the projection step runs soon after, it can &quot;hit&quot; this cache and avoid I/O. However, because memory is finite, <strong>cache eviction</strong> can happen at any moment. If we relied solely on this, a heavy workload could evict our data right before we need it again.</li>
+<li><strong>The Local Cache (Deterministic Guarantee):</strong> This is a private cache specific to a single column's reader. It acts as a <strong>safety net</strong>. When a column is being actively read, the data is &quot;pinned&quot; in the Local Cache. This guarantees that the data remains available for the duration of the current operation, immune to eviction from the global Shared Cache.</li>
+</ul>
+<p>The reader follows a strict hierarchy when fetching a page:</p>
+<ol>
+<li><strong>Check Local:</strong> Do I already have it pinned?</li>
+<li><strong>Check Shared:</strong> Did another part of the pipeline decode this recently? If yes, <strong>promote</strong> it to Local (pin it).</li>
+<li><strong>Read from Source:</strong> Perform the I/O and decoding, then insert into both Local and Shared.</li>
+</ol>
+<p>This dual strategy gives us the best of both worlds: the <strong>efficiency</strong> of sharing data between filter and projection steps, and the <strong>stability</strong> of knowing that necessary data won't vanish mid-query due to memory pressure.</p>
+<h3>3.4 Minimizing Copies and Allocations</h3>
+<p>Another area where arrow-rs has significant optimization is <strong>avoiding unnecessary copies</strong>. Rust's <a href="https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html">memory safe</a> design makes it easy to copy, but every extra allocation wastes CPU cycles and memory bandwidth. A naive implementation often pays an <strong>&quot;unnecessary tax&quot;</strong> by decompressing data into a temporary <code>Vec</code> and then <code>memcpy</code>-ing it into an Arrow Buffer.</p>
+<p>For fixed-width types (like integers or floats), this is completely redundant because their memory layouts are identical. <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/primitive_array.rs#L102"><code>PrimitiveArrayReader</code></a> eliminates this overhead via <a href="https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec">zero-copy conversions</a>: instead of copying bytes, it simply <strong>hands over ownership</strong> of the decoded <code>Vec&lt;T&gt;</code> directly to the underlying Arrow <code>Buffer</code>.</p>
+<h3>3.5 The Alignment Gauntlet</h3>
+<p>Chained filtering is a <strong>hair-pulling</strong> exercise in coordinate systems. &quot;Row 1&quot; in filter N might actually be &quot;Row 10,001&quot; in the file due to prior filters.</p>
+<ul>
+<li><strong>How do we keep the train on the rails?</strong>: We <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309">fuzz test</a> every <code>RowSelection</code> operation (<code>split_off</code>, <code>and_then</code>, <code>trim</code>). We need absolute certainty that our translation between relative and absolute offsets is pixel-perfect. This correctness is the bedrock that keeps the Reader stable under the triple threat of batch boundaries, sparse selections, and page pruning.</li>
+</ul>
+<h2>4. Conclusion</h2>
+<p>The Parquet reader in <code>arrow-rs</code> isn't just a humble file reader—it's a <strong>mini query engine</strong> in disguise. We've baked in high-end features like predicate pushdown and late materialization. The reader reads only what's needed and decodes only what's necessary, saving resources while maintaining correctness. Previously, these features were restricted to proprietary or tightly integrated systems. Now, thanks to the community's efforts, <code>arrow-rs</code> brings the benefits of advanced query processing techniques to even lightweight applications.</p>
+<p>We invite you to <a href="https://github.com/apache/arrow-rs?tab=readme-ov-file#arrow-rust-community">join the community</a>, explore the code, experiment with it, and contribute to its ongoing evolution. The journey of optimizing data access is never-ending, and together, we can push the boundaries of what's possible in open-source data processing.</p>]]></content><author><name>&lt;a href=&quot;https://github.com/hhhizzz&quot;&gt;Qiwei Huang&lt;/a&gt; and &lt;a href=&quot;https://github.com/alamb&quot;&gt;Andrew Lamb&lt;/a&gt;</name></author><category term="application" /><summary type="html"><![CDATA[How arrow-rs pipelines predicates and projections to minimize work during Parquet scans]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow ADBC 21 (Libraries) Release</title><link href="https://arrow.apache.org/blog/2025/11/07/adbc-21-release/" rel="alternate" type="text/html" title="Apache Arrow ADBC 21 (Libraries) Release" /><published>2025-11-07T00:00:00-05:00</published><updated>2025-11-07T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2025/11/07/adbc-21-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/11/07/adbc-21-release/"><![CDATA[<!--
 
 -->
 <p>The Apache Arrow team is pleased to announce the version 21 release of
@@ -1091,340 +1480,4 @@ This minor release covers 25 commits from 11 distinct contributors.</p>
 <li>@Willem-J-an made their first contribution in <a href="https://github.com/apache/arrow-go/pull/416">https://github.com/apache/arrow-go/pull/416</a></li>
 <li>@arnoldwakim made their first contribution in <a href="https://github.com/apache/arrow-go/pull/437">https://github.com/apache/arrow-go/pull/437</a></li>
 </ul>
-<p><strong>Full Changelog</strong>: <a href="https://github.com/apache/arrow-go/compare/v18.3.0...v18.4.0">https://github.com/apache/arrow-go/compare/v18.3.0...v18.4.0</a></p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the v18.4.0 release of Apache Arrow Go. This minor release covers 25 commits from 11 distinct contributors. Contributors $ git shortlog -sn v18.3.1..v18.4.0 16 Matt Topol 1 Alvaro Viebrantz 1 Arnold Wakim 1 Daniil Mileev 1 Kristofer Gaudel 1 Marcin Bojanczyk 1 Raúl Cumplido 1 Saurabh Singh 1 Sutou Kouhei 1 Victor Perez 1 Willem Jan Changelog What's Changed feat(arrow/cdata): Add ReleaseCArrowArrayStream function by @karsov in https://github.com/apache/arrow-go/pull/373 fix: TestDeltaByteArray implementation and fix by @MetalBlueberry in https://github.com/apache/arrow-go/pull/369 chore: move .github/ISSUE_TEMPLATE/config.yaml to config.yml as currently does not work by @raulcd in https://github.com/apache/arrow-go/pull/383 fix: list_columns.parquet testing by @MetalBlueberry in https://github.com/apache/arrow-go/pull/378 feat: Extend arrow csv writter by @MetalBlueberry in https://github.com/apache/arrow-go/pull/375 feat(parquet/pqarrow): parallelize SeekToRow by @zeroshade in https://github.com/apache/arrow-go/pull/380 chore: Use apache/arrow-js for JS in integration test by @kou in https://github.com/apache/arrow-go/pull/389 feat(parquet): add variant encoder/decoder by @sfc-gh-mbojanczyk in https://github.com/apache/arrow-go/pull/344 chore: remove extra binary by @zeroshade in https://github.com/apache/arrow-go/pull/391 CI: add benchmark workflow and script by @singh1203 in https://github.com/apache/arrow-go/pull/250 feat(arrow/extensions): Add Variant extension type, array, and builder by @zeroshade in https://github.com/apache/arrow-go/pull/395 fix(parquet/pqarrow): Fix propagation of field-ids for Lists by @zeroshade in https://github.com/apache/arrow-go/pull/397 feat(arrow/_examples): enhance library examples by @kris-gaudel in https://github.com/apache/arrow-go/pull/394 chore: bump Windows GitHub hosted runner to windows-2022 by @raulcd in https://github.com/apache/arrow-go/pull/407 ci(benchmark): Fix benchmark runs by @zeroshade in https://github.com/apache/arrow-go/pull/409 ci: fix flaky test by @zeroshade in https://github.com/apache/arrow-go/pull/411 ci: make additional checks to prevent flaky EOF by @zeroshade in https://github.com/apache/arrow-go/pull/414 refactor: update linter and run it by @zeroshade in https://github.com/apache/arrow-go/pull/419 feat: expose Payload.WritePayload to allow serializing into IPC format by @alvarowolfx in https://github.com/apache/arrow-go/pull/421 feat(parquet/variant): Parse JSON into variant by @zeroshade in https://github.com/apache/arrow-go/pull/426 refactor(parquet/internal/encoding): Refactor parquet logic to use generics by @zeroshade in https://github.com/apache/arrow-go/pull/428 feat(arrrow/compute/expr): support substrait timestamp and decimal properly by @zeroshade in https://github.com/apache/arrow-go/pull/418 feat(parquet/examples): enhance library examples by @milden6 in https://github.com/apache/arrow-go/pull/429 feat(arrow/compute): support some float16 casts by @zeroshade in https://github.com/apache/arrow-go/pull/430 feat(parquet/pqarrow): Correctly handle Variant types in schema by @zeroshade in https://github.com/apache/arrow-go/pull/433 fix(arrow/avro-reader): bunch of types that didn't work by @Willem-J-an in https://github.com/apache/arrow-go/pull/416 feat(parquet/pqarrow): read/write variant by @zeroshade in https://github.com/apache/arrow-go/pull/434 build(deps): update to substrait-go v4.3.0 by @zeroshade in https://github.com/apache/arrow-go/pull/438 fix(arrow/flight/flightsql): drain channel in flightSqlServer.DoGet by @arnoldwakim in https://github.com/apache/arrow-go/pull/437 chore(arrow): Update PkgVersion by @zeroshade in https://github.com/apache/arrow-go/pull/439 New Contributors @karsov made their first contribution in https://github.com/apache/arrow-go/pull/373 @MetalBlueberry made their first contribution in https://github.com/apache/arrow-go/pull/369 @sfc-gh-mbojanczyk made their first contribution in https://github.com/apache/arrow-go/pull/344 @kris-gaudel made their first contribution in https://github.com/apache/arrow-go/pull/394 @alvarowolfx made their first contribution in https://github.com/apache/arrow-go/pull/421 @milden6 made their first contribution in https://github.com/apache/arrow-go/pull/429 @Willem-J-an made their first contribution in https://github.com/apache/arrow-go/pull/416 @arnoldwakim made their first contribution in https://github.com/apache/arrow-go/pull/437 Full Changelog: https://github.com/apache/arrow-go/compare/v18.3.0...v18.4.0]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Recent Improvements to Hash Join in Arrow C++</title><link href="https://arrow.apache.org/blog/2025/07/18/recent-improvements-to-hash-join/" rel="alternate" type="text/html" title="Recent Improvements to Hash Join in Arrow C++" /><published>2025-07-18T00:00:00-04:00</published><updated>2025-07-18T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/07/18/recent-improvements-to-hash-join</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/07/18/recent-improvements-to-hash-join/"><![CDATA[<!--
-
--->
-<p><em>Editor’s Note: Apache Arrow is an expansive project, ranging from the Arrow columnar format itself, to its numerous specifications, and a long list of implementations. Arrow is also an expansive project in terms of its community of contributors. In this blog post, we’d like to highlight recent work by Apache Arrow Committer Rossi Sun on improving the performance and stability of Arrow’s embeddable query execution engine: Acero.</em></p>
-<h1>Introduction</h1>
-<p>Hash join is a fundamental operation in analytical processing engines — it matches rows from two tables based on key values using a hash table for fast lookup. In the C++ implementation of Apache Arrow, the hash join is implemented in the C++ engine Acero, which powers query execution in bindings like PyArrow and the R Arrow package. Even if you haven't used Acero directly, your code may already be benefiting from it under the hood.</p>
-<p>For example, this simple PyArrow example uses Acero:</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
-
-<span class="n">t1</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="nf">table</span><span class="p">({</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
-               <span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">2022</span><span class="p">,</span> <span class="mi">2019</span><span class="p">]})</span>
-<span class="n">t2</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="nf">table</span><span class="p">({</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span>
-               <span class="sh">'</span><span class="s">n_legs</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
-               <span class="sh">'</span><span class="s">animal</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">Brittle stars</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">Centipede</span><span class="sh">"</span><span class="p">]})</span>
-
-<span class="n">t1</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">).</span><span class="nf">combine_chunks</span><span class="p">().</span><span class="nf">sort_by</span><span class="p">(</span><span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">)</span>
-</code></pre></div></div>
-<p>Acero was originally created in 2019 to demonstrate that the ever-growing library of compute kernels in Arrow C++ could be linked together into realistic workflows and also to take advantage of the emerging Datasets API to give these workflows access to data. Rather than aiming to compete with full query engines like DuckDB, Acero focuses on enabling flexible, composable, and embeddable query execution — serving as a building block for tools and systems that need fast, modular analytics capabilities — including those built atop Arrow C++, or integrating via bindings like PyArrow, Substrait, or ADBC.</p>
-<p>Across several recent Arrow C++ releases, we've made substantial improvements to the hash join implementation to address common user pain points. These changes improve stability, memory efficiency, and parallel performance, with a focus on making joins more usable and scalable out of the box. If you've had trouble using Arrow’s hash join in the past, now is a great time to try again.</p>
-<h1>Scaling Safely: Improvements to Stability</h1>
-<p>In earlier versions of Arrow C++, the hash join implementation used internal data structures that weren’t designed for very large datasets and lacked safeguards in some of the underlying memory operations. These limitations rarely surfaced in small to medium workloads but became problematic at scale, manifesting as crashes or subtle correctness issues.</p>
-<p>At the core of Arrow’s join implementation is a compact, row-oriented structure known as the “row table”. While Arrow’s data model is columnar, its hash join implementation operates in a row-wise fashion — similar to modern engines like DuckDB and Meta’s Velox. This layout minimizes CPU cache misses during hash table lookups by collocating keys, payloads, and null bits in memory so they can be accessed together.</p>
-<p>In previous versions, the row table used 32-bit offsets to reference packed rows. This capped each table’s size to 4GB and introduced risks of overflow when working with large datasets or wide rows. Several reported issues — <a href="https://github.com/apache/arrow/issues/34474">GH-34474</a>, <a href="https://github.com/apache/arrow/issues/41813">GH-41813</a>, and <a href="https://github.com/apache/arrow/issues/43202">GH-43202</a> — highlighted the limitations of this design. In response, PR <a href="https://github.com/apache/arrow/pull/43389">GH-43389</a> widened the internal offset type to 64-bit, reworking key parts of the row table infrastructure to support larger data sizes more safely and scalably.</p>
-<p>Besides the offset limitation, earlier versions of Arrow C++ also included overflow-prone logic in the buffer indexing paths used throughout the hash join implementation. Many internal calculations assumed that 32-bit integers were sufficient for addressing memory — a fragile assumption when working with large datasets or wide rows. These issues appeared not only in conventional C++ indexing code but also in Arrow’s SIMD-accelerated paths — Arrow includes heavy SIMD specializations, used to speed up operations like hash table probing and row comparison. Together, these assumptions led to subtle overflows and incorrect behavior, as documented in issues like <a href="https://github.com/apache/arrow/issues/44513">GH-44513</a>, <a href="https://github.com/apache/arrow/issues/45334">GH-45334</a>, and <a href="https://github.com/apache/arrow/issues/45506">GH-45506</a>.</p>
-<p>Two representative examples:</p>
-<ul>
-<li>Row-wise buffer access in C++</li>
-</ul>
-<p>The aforementioned row table stores fixed-length data in tightly packed buffers. Accessing a particular row (and optionally a column within it) typically involves <a href="https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L120">pointer arithmetic</a>:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="k">const</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">row_ptr</span> <span class="o">=</span> <span class="n">row_ptr_base</span> <span class="o">+</span> <span class="n">row_length</span> <span class="o">*</span> <span class="n">row_id</span><span class="p">;</span>
-</code></pre></div></div>
-<p>When both <code>row_length</code> and <code>row_id</code> are large 32-bit integers, their product can overflow.</p>
-<p>Similarly, accessing null masks involves <a href="https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L150">null-bit indexing arithmetic</a>:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="kt">int64_t</span> <span class="n">bit_id</span> <span class="o">=</span> <span class="n">row_id</span> <span class="o">*</span> <span class="n">null_mask_num_bytes</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">+</span> <span class="n">pos_after_encoding</span><span class="p">;</span>
-</code></pre></div></div>
-<p>The intermediate multiplication is performed using 32-bit arithmetic and can overflow even though the final result is stored in a 64-bit variable.</p>
-<ul>
-<li>SIMD gathers with 32-bit offsets</li>
-</ul>
-<p>One essential SIMD instruction is the AVX2 intrinsic <code>__m256i _mm256_i32gather_epi32(int const * base, __m256i vindex, const int scale);</code>, which performs a parallel memory gather of eight 32-bit integers based on eight 32-bit signed offsets. It was extensively used in Arrow for hash table operations, for example, <a href="https://github.com/apache/arrow/blob/0a00e25f2f6fb927fb555b69038d0be9b9d9f265/cpp/src/arrow/compute/key_map_internal_avx2.cc#L404">fetching 8 group IDs</a> (hash table slots) in parallel during hash table probing:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="n">__m256i</span> <span class="n">group_id</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-</code></pre></div></div>
-<p>and <a href="https://github.com/apache/arrow/blob/69e8a78c018da88b60f9eb2b3b45703f81f3c93d/cpp/src/arrow/compute/row/compare_internal_avx2.cc#L284">loading 8 corresponding key values</a> from the right-side input in parallel for comparison:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="n">__m256i</span> <span class="n">right</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">((</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">right_base</span><span class="p">,</span> <span class="n">offset_right</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-</code></pre></div></div>
-<p>If any of the computed offsets exceed <code>2^31 - 1</code>, they wrap into the negative range, which can lead to invalid memory access (i.e., a crash) or, more subtly, fetch data from a valid but incorrect location — producing silently wrong results (trust me, you don’t want to debug that).</p>
-<p>To mitigate these risks, PR <a href="https://github.com/apache/arrow/pull/45108">GH-45108</a>, <a href="https://github.com/apache/arrow/pull/45336">GH-45336</a>, and <a href="https://github.com/apache/arrow/pull/45515">GH-45515</a> promoted critical arithmetic to 64-bit and reworked SIMD logic to use safer indexing. Buffer access logic was also encapsulated in safer abstractions to avoid repeated manual casting or unchecked offset math. These examples are not unique to Arrow — they reflect common pitfalls in building data-intensive systems, where unchecked assumptions about integer sizes can silently compromise correctness.</p>
-<p>Together, these changes make Arrow’s hash join implementation significantly more robust and better equipped for modern data workloads. These foundations not only resolve known issues but also reduce the risk of similar bugs in future development.</p>
-<h1>Leaner Memory Usage</h1>
-<p>While refining overflow-prone parts of the hash join implementation, I ended up examining most of the code path for potential pitfalls. When doing this kind of work, one sits down quietly and interrogates every line — asking not just whether an intermediate value might overflow, but whether it even needs to exist at all. And during that process, I came across something unrelated to overflow — but even more impactful.</p>
-<p>In a textbook hash join algorithm, once the right-side table (the build-side) is fully accumulated, a hash table is constructed to support probing the left-side table (the probe-side) for matches. To parallelize this build step, Arrow C++’s implementation partitions the build-side into <code>N</code> partitions — typically matching the number of available CPU cores — and builds a separate hash table for each partition in parallel. These are then merged into a final, unified hash table used during the probe phase.</p>
-<p>The issue? The memory footprint. The total size of the partitioned hash tables is roughly equal to that of the final hash table, but they were being held in memory even after merging. Once the final hash table was built, these temporary structures had no further use — yet they persisted through the entire join operation. There were no crashes, no warnings, no visible red flags — just silent overhead.</p>
-<p>Once spotted, the fix was straightforward: restructure the join process to release these buffers immediately after the merge. The change was implemented in PR <a href="https://github.com/apache/arrow/issues/45552">GH-45552</a>. The memory profiles below illustrate its impact.</p>
-<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
-  <img src="/img/recent-improvements-to-hash-join/memory-profile-baseline.png" width="50%" class="img-responsive" alt="Memory profile before" aria-hidden="true">
-  <img src="/img/recent-improvements-to-hash-join/memory-profile-opt.png" width="50%" class="img-responsive" alt="Memory profile after" aria-hidden="true">
-</div>
-<p>At <code>A</code>, memory usage rises steadily as the join builds partitioned hash tables in parallel. <code>B</code> marks the merge point, where these partitions are combined into a final, unified hash table. <code>C</code> represents the start of the probe phase, where the left-side table is scanned and matched against the final hash table. Memory begins to rise again as join results are materialized. <code>D</code> is the peak of the join operation, just before memory begins to drop as processing completes. The “leap of faith” occurs at the star on the right profile, where the partitioned hash tables are released immediately after merging. This early release frees up substantial memory and makes room for downstream processing — reducing the overall peak memory observed at <code>D</code>.</p>
-<p>This improvement already benefits real-world scenarios — for example, the <a href="https://duckdblabs.github.io/db-benchmark/">DuckDB Labs DB Benchmark</a>. Some benchmark queries that previously failed with out-of-memory (OOM) errors can now complete successfully — as shown in the comparison below.</p>
-<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
-  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-oom-baseline.png" width="50%" class="img-responsive" alt="DuckDB benchmark OOM before" aria-hidden="true">
-  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-oom-opt.png" width="50%" class="img-responsive" alt="DuckDB benchmark OOM after" aria-hidden="true">
-</div>
-<p>As one reviewer noted in the PR, this was a “low-hanging fruit.” And sometimes, meaningful performance gains don’t come from tuning hot loops or digging through flame graphs — they come from noticing something that doesn’t feel right and asking: why are we still keeping this around?</p>
-<h1>Faster Execution Through Better Parallelism</h1>
-<p>Not every improvement comes from poring over flame graphs — but some definitely do. Performance is, after all, the most talked-about aspect of any query engine. So, how about a nice cup of flame graph?</p>
-<img src="/img/recent-improvements-to-hash-join/a-nice-cup-of-flame-graph.png" width="100%" class="img-responsive" alt="A nice cup of flame graph" aria-hidden="true">
-<p>It’s hard not to notice the long, flat bar dominating the middle — especially with the rather alarming word “Lock” in it. That’s our red flag.</p>
-<p>We’ve mentioned that in the build phase, we build partitioned hash tables in parallel. In earlier versions of Arrow C++, this parallelism was implemented on a batch basis — each thread processed a build-side batch concurrently. Since each batch contained arbitrary data that could fall into any partition, threads had to synchronize when accessing shared partitions. This was managed through <a href="https://github.com/apache/arrow/blob/196cde38c112d32a944afe978b6da9c7ce935ef7/cpp/src/arrow/acero/partition_util.h#L93">locks on partitions</a>. Although we introduced some randomness in the locking order to reduce contention, it remained high — clearly visible in the flame graph.</p>
-<p>To mitigate this contention, we restructured the build phase in PR <a href="https://github.com/apache/arrow/issues/45612">GH-45612</a>. Instead of having all threads partition and insert at once — each thread touching every hash table — we split the work into two distinct stages. In the first partition stage, <code>M</code> threads take their assigned batches and only partition them, recording which rows belong to which partition. No insertion happens yet — just classification. Then comes the second, newly separated build stage. Here, <code>N</code> threads take over, and each thread is responsible for building just one of the <code>N</code> partitioned hash tables. Every thread scans all the relevant partitions across all batches but inserts only the rows belonging to its assigned partition. This restructuring eliminates the need for locking between threads during insertion — each thread now has exclusive access to its partitioned hash table. By decoupling the work this way, we turned a highly contentious operation into a clean, embarrassingly parallel one. As a result, we saw performance improve by up to 10x in dedicated build benchmarks. The <a href="https://github.com/apache/arrow/blob/196cde38c112d32a944afe978b6da9c7ce935ef7/cpp/src/arrow/acero/hash_join_benchmark.cc#L302">example</a> below is from a more typical, general-purpose workload — not especially build-heavy — but it still shows a solid 2x speedup. In the chart, the leap of faith — marked by the purple icons 🟣⬇️ — represents results with this improvement applied, while the gray and black ones show earlier runs before the change.</p>
-<img src="/img/recent-improvements-to-hash-join/internal-benchmark.png" width="100%" class="img-responsive" alt="Internal benchmark" aria-hidden="true">
-<p>Also in real-world scenarios like the <a href="https://duckdblabs.github.io/db-benchmark/">DuckDB Labs DB Benchmark</a>, we’ve observed similar gains. The comparison below shows around a 2x improvement in query performance after this change was applied.</p>
-<div style="display: flex; gap: 16px; justify-content: center; align-items: flex-start;">
-  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-perf-baseline.png" width="50%" class="img-responsive" alt="DuckDB benchmark perf before" aria-hidden="true">
-  <img src="/img/recent-improvements-to-hash-join/duckdb-bench-perf-opt.png" width="50%" class="img-responsive" alt="DuckDB benchmark perf after" aria-hidden="true">
-</div>
-<p>Additional improvements include <a href="https://github.com/apache/arrow/pull/43832">GH-43832</a>, which extends AVX2 acceleration to more probing code paths, and <a href="https://github.com/apache/arrow/pull/45918">GH-45918</a>, which introduces parallelism to a previously sequential task phase. These target more specialized scenarios and edge cases.</p>
-<h2>Closing</h2>
-<p>These improvements reflect ongoing investment in Arrow C++’s execution engine and a commitment to delivering fast, robust building blocks for analytic workloads. They are available in recent Arrow C++ releases and exposed through higher-level bindings like PyArrow and the Arrow R package — starting from version 18.0.0, with the most significant improvements landing in 20.0.0. If joins were a blocker for you before — due to memory, scale, or correctness — recent changes may offer a very different experience.</p>
-<p>The Arrow C++ engine is not just alive — it’s improving in meaningful, user-visible ways. We’re also actively monitoring for further issues and open to expanding the design based on user feedback and real-world needs. If you’ve tried joins in the past and run into performance or stability issues, we encourage you to give them another try and file an <a href="https://github.com/apache/arrow/issues">issue on GitHub</a> if you run into any issues.</p>
-<p>If you have any questions about this blog post, please feel free to contact the author, <a href="mailto:zanmato1984@gmail.com">Rossi Sun</a>.</p>]]></content><author><name>zanmato</name></author><category term="application" /><summary type="html"><![CDATA[A deep dive into recent improvements to Apache Arrow’s hash join implementation — enhancing stability, memory efficiency, and parallel performance for modern analytic workloads.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 21.0.0 Release</title><link href="https://arrow.apache.org/blog/2025/07/17/21.0.0-release/" rel="alternate" type="text/html" title="Apache Arrow 21.0.0 Release" /><published>2025-07-17T00:00:00-04:00</published><updated>2025-07-17T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/07/17/21.0.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/07/17/21.0.0-release/"><![CDATA[<!--
-
--->
-<p>The Apache Arrow team is pleased to announce the 21.0.0 release. This release
-covers over 2 months of development work and includes <a href="https://github.com/apache/arrow/milestone/69?closed=1"><strong>339 resolved
-issues</strong></a> on <a href="/release/21.0.0.html#contributors"><strong>400 distinct commits</strong></a> from <a href="/release/21.0.0.html#contributors"><strong>82 distinct
-contributors</strong></a>. See the <a href="https://arrow.apache.org/install/">Install Page</a> to
-learn how to get the libraries for your platform.</p>
-<p>The release notes below are not exhaustive and only expose selected highlights
-of the release. Many other bugfixes and improvements have been made: we refer
-you to the <a href="/release/21.0.0.html#changelog">complete changelog</a>.</p>
-<h2>Community</h2>
-<p>Since the 20.0.0 release, Alenka Frim has been invited to join the Project
-Management Committee (PMC).</p>
-<p>Thanks for your contributions and participation in the project!</p>
-<p>The <a href="https://sessionize.com/arrow-summit-2025/">Call for Speakers</a> for the
-Apache Arrow Summit 2025 is now open! The Summit will take place on October 2nd,
-2025 in Paris, France as part of <a href="https://pydata.org/paris2025">PyData Paris</a>.
-The call will be open until July 26, 2025. Please see the <a href="https://sessionize.com/arrow-summit-2025/">Call for
-Speakers</a> link to submit a talk or
-the <a href="https://lists.apache.org/thread/f0vcbtpzg6rntzbvmjstyd27bd9qfhl0">developer mailing
-list</a> for more
-information.</p>
-<h2>Arrow Flight RPC Notes</h2>
-<p>In C++ and Python, a new IPC reader option was added to force data buffers to be
-aligned based on the data type, making it easier to work with systems that
-expected alignment (<a href="https://github.com/apache/arrow/issues/32276">GH-32276</a>).
-While this is not a Flight-specific option, it tended to occur with Flight due
-to implementation details. Also, C++ and Python are now consistent with other
-Flight implementations in allowing the schema of a <code>FlightInfo</code> to be omitted
-(<a href="https://github.com/apache/arrow/issues/37677">GH-37677</a>).</p>
-<p>We have accepted a donation of an ODBC driver for Flight SQL from Dremio
-(<a href="https://github.com/apache/arrow/issues/46522">GH-46522</a>). Note that the driver
-is not usable in its current state and contributors are working on implementing
-the rest of the driver.</p>
-<h2>C++ Notes</h2>
-<h3>Compute</h3>
-<p>The Cast function is now able to reorder fields when casting from one struct
-type to another; the fields are matched by name, not by index
-(<a href="https://github.com/apache/arrow/issues/45028">GH-45028</a>).</p>
-<p>Many compute kernels have been moved into a separate, optional, shared library
-(<a href="https://github.com/apache/arrow/issues/25025">GH-25025</a>). This improves
-modularity for dependency management in the application and reduces the Arrow
-C++ distribution size when the compute functionality is not being used. Note
-that some compute functions, such as the Cast function, will still be built for
-internal use in various Arrow components.</p>
-<p>Better half-float support has been added to some compute functions: <code>is_nan</code>,
-<code>is_inf</code>, <code>is_finite</code>, <code>negate</code>, <code>negate_checked</code>, <code>sign</code>
-(<a href="https://github.com/apache/arrow/issues/45083">GH-45083</a>); <code>if_else</code>,
-<code>case_when</code>, <code>coalesce</code>, <code>choose</code>, <code>replace_with_mask</code>, <code>fill_null_forward</code>,
-<code>fill_null_backward</code> (<a href="https://github.com/apache/arrow/issues/37027">GH-37027</a>);
-<code>run_end_encode</code>, <code>run_end_decode</code>
-(<a href="https://github.com/apache/arrow/issues/46285">GH-46285</a>).</p>
-<p>Better decimal32 and decimal64 support has been added to some compute functions:
-<code>run_end_encode</code>, <code>run_end_decode</code>
-(<a href="https://github.com/apache/arrow/issues/46285">GH-46285</a>).</p>
-<p>A new function <code>utf8_zero_fill</code> acts like Python's <code>str.zfill</code> method by
-providing a left-padding function that preserves the optional leading plus/minus
-sign (<a href="https://github.com/apache/arrow/issues/46683">GH-46683</a>).</p>
-<p>Decimal sum aggregation now produces a decimal result with an increased
-precision in order to reduce the risk of overflowing the result type
-(<a href="https://github.com/apache/arrow/issues/35166">GH-35166</a>).</p>
-<h3>CSV</h3>
-<p>Reading Duration columns is now supported
-(<a href="https://github.com/apache/arrow/issues/40278">GH-40278</a>).</p>
-<h3>Dataset</h3>
-<p>It is now possible to preserve order when writing a dataset multi-threaded. The
-feature is disabled by default
-(<a href="https://github.com/apache/arrow/issues/26818">GH-26818</a>).</p>
-<h3>Filesystems</h3>
-<p>The S3 filesystem can optionally be built into a separate DLL
-(<a href="https://github.com/apache/arrow/issues/40343">GH-40343</a>).</p>
-<h3>Parquet</h3>
-<h4>Encryption</h4>
-<p>A new <code>SecureString</code> class must now be used to communicate sensitive data (such
-as secret keys) with Parquet encryption APIs. This class automatically wipes its
-contents from memory when destroyed, unlike regular <code>std::string</code>
-(<a href="https://github.com/apache/arrow/issues/31603">GH-31603</a>).</p>
-<h4>Type support</h4>
-<p>The new VARIANT logical type is supported at a low level, and an extension type
-<code>parquet.variant</code> is added to reflect such columns when reading them to Arrow
-(<a href="https://github.com/apache/arrow/issues/45937">GH-45937</a>).</p>
-<p>The UUID logical type is automatically converted to/from the <code>arrow.uuid</code>
-canonical extension type when reading or writing Parquet data, respectively.</p>
-<p>The GEOMETRY and GEOGRAPHY logical types are supported
-(<a href="https://github.com/apache/arrow/issues/45522">GH-45522</a>). They are
-automatically converted to/from the corresponding GeoArrow extension type, if it
-has been registered by GeoArrow. Geospatial column statistics are also
-supported.</p>
-<p>It is now possible to read BYTE_ARRAY columns directly as LargeBinary or
-BinaryView, without any intermediate conversion from Binary. Similarly, those
-types can be written directly to Parquet
-(<a href="https://github.com/apache/arrow/issues/43041">GH-43041</a>). This allows
-bypassing the 2 GiB data per chunk limitation of the Binary type, and can also
-improve performance. This also applies to String types when a Parquet column has
-the STRING logical type.</p>
-<p>Similarly, LIST columns can now be read directly as LargeList rather than List.
-This allows bypassing the 2^31 values per chunk limitation of regular List types
-(<a href="https://github.com/apache/arrow/issues/46676">GH-46676</a>).</p>
-<h4>Other Parquet improvements</h4>
-<p>A new feature named Content-Defined Chunking improves deduplication of Parquet
-files with mostly identical contents, by choosing data page boundaries based on
-actual contents rather than a number of values. For that, it uses a rolling hash
-function, and the min and max chunk size can be chosen. The feature is disabled
-by default and can be enabled on a per-file basis in the Parquet
-<code>WriterProperties</code> (<a href="https://github.com/apache/arrow/issues/45750">GH-45750</a>).</p>
-<p>The <code>EncodedStatistics</code> of a column chunk are publicly exposed in
-<code>ColumnChunkMetaData</code> and can be read faster than if decoded as <code>Statistics</code>
-(<a href="https://github.com/apache/arrow/issues/46462">GH-46462</a>).</p>
-<p>SIMD optimizations for the BYTE_STREAM_SPLIT have been improved
-(<a href="https://github.com/apache/arrow/issues/46788">GH-46788</a>).</p>
-<p>Reading FIXED_LEN_BYTE_ARRAY data has been made significantly faster (up to 3x
-faster on some benchmarks). This benefits logical types such as FLOAT16
-(<a href="https://github.com/apache/arrow/issues/43891">GH-43891</a>).</p>
-<h3>Miscellaneous C++ changes</h3>
-<p>The <code>ARROW_USE_PRECOMPILED_HEADERS</code> build option was removed, as
-<code>CMAKE_UNITY_BUILD</code> usually provides more benefits while requiring less
-maintenance.</p>
-<p>New data creation helpers <code>ArrayFromJSONString</code>, <code>ChunkedArrayFromJSONString</code>,
-<code>DictArrayFromJSONString</code>, <code>ScalarFromJSONString</code> and <code>DictScalarFromJSONString</code>
-are now exposed publicly. While not as high-performing as <code>BufferBuilder</code> and
-the concrete <code>ArrayBuilder</code> subclasses, they allow easy creation of test or
-example data, for example:</p>
-<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="c++">  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span>
-      <span class="k">auto</span> <span class="n">string_array</span><span class="p">,</span>
-      <span class="n">arrow</span><span class="o">::</span><span class="n">ArrayFromJSONString</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">utf8</span><span class="p">(),</span> <span class="s">R"(["Hello", "World", null])"</span><span class="p">));</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span>
-      <span class="k">auto</span> <span class="n">list_array</span><span class="p">,</span>
-      <span class="n">arrow</span><span class="o">::</span><span class="n">ArrayFromJSONString</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">list</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">()),</span>
-                                 <span class="s">"[[1, null, 2], [], [3]]"</span><span class="p">));</span>
-</code></pre></div></div>
-<p>Some APIs were changed to accept <code>std::string_view</code> instead of <code>const std::string&amp;</code>. Most uses of those APIs should not be affected
-(<a href="https://github.com/apache/arrow/issues/46551">GH-46551</a>).</p>
-<p>A new pretty-print option allows limiting element size when printing string or
-binary data (<a href="https://github.com/apache/arrow/issues/46403">GH-46403</a>).</p>
-<p>It is now possible to export <code>Tensor</code> data using
-<a href="https://dmlc.github.io/dlpack/latest/">DLPack</a>
-(<a href="https://github.com/apache/arrow/issues/39294">GH-39294</a>).</p>
-<p>Half-float arrays can be properly diff'ed and pretty-printed
-(<a href="https://github.com/apache/arrow/issues/36753">GH-36753</a>).</p>
-<p>Some header files in <code>arrow/util</code> that were not supposed to be exposed are
-now made internal (<a href="https://github.com/apache/arrow/issues/46459">GH-46459</a>).</p>
-<h2>C# Notes</h2>
-<p>The C# Arrow implementation is being extracted from the <a href="https://github.com/apache/arrow">Arrow
-monorepo</a> into a standalone repository to allow
-it to have its own release cadence. See <a href="https://lists.apache.org/thread/0vj7hlzbzrv0lcrm92tgtfdh9gsj4dqb">the mailing
-list</a> for more
-information. This is the final release of the Arrow monorepo that will include
-the the C# implementation.</p>
-<h2>Java, JavaScript, Go, and Rust Notes</h2>
-<p>The Java, JavaScript, Go, and Rust Go projects have moved to separate
-repositories outside the main Arrow <a href="https://github.com/apache/arrow">monorepo</a>.</p>
-<ul>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-java">Java
-implementation</a>, see the latest <a href="https://github.com/apache/arrow-java/releases">Arrow
-Java changelog</a>.</li>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-js">JavaScript
-implementation</a>, see the latest <a href="https://github.com/apache/arrow-js/releases">Arrow
-JavaScript changelog</a>.</li>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-rs">Rust
-implementation</a> see the latest <a href="https://github.com/apache/arrow-rs/blob/main/CHANGELOG.md">Arrow Rust
-changelog</a>.</li>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-go">Go
-implementation</a>, see the latest <a href="https://github.com/apache/arrow-go/releases">Arrow Go
-changelog</a>.</li>
-</ul>
-<h2>Linux Packaging Notes</h2>
-<p>We added support for AlmaLinux 10. You can use AlmaLinux 10 packages on Red Hat
-Enterprise Linux 10 like distributions too.</p>
-<p>We dropped support for CentOS Stream 8 because it reached EOL on 2024-05-31.</p>
-<h2>MATLAB Notes</h2>
-<h3>New Features</h3>
-<p>Added support for creating an <code>arrow.tabular.Table</code> from a list of
-<code>arrow.tabular.RecordBatch</code> instances
-(<a href="https://github.com/apache/arrow/issues/46877">GH-46877</a>)</p>
-<h3>Packaging</h3>
-<p>The MLTBX available in apache/arrow's GitHub Releases area was built against
-MATLAB R2025a.</p>
-<h2>Python Notes</h2>
-<p>Compatibility notes:</p>
-<ul>
-<li>Deprecated <code>PyExtensionType</code> has been removed
-(<a href="https://github.com/apache/arrow/issues/46198">GH-46198</a>).</li>
-<li>Deprecated <code>use_legacy_format</code>has been removed in favour of setting
-<code>IpcWriteOptions</code> (<a href="https://github.com/apache/arrow/issues/46130">GH-46130</a>).</li>
-<li>Due to SciPy 1.15's stricter sparse code changes are made to
-<code>pa.SparseCXXMatrix</code> constructors and <code>pa.SparseCXXMatrix.to_scipy</code> methods
-with migrating from <code>scipy.spmatrix</code> to <code>scipy.sparray</code>
-(<a href="https://github.com/apache/arrow/issues/45229">GH-45229</a>).</li>
-</ul>
-<p>New features:</p>
-<ul>
-<li>PyArrow does not require NumPy anymore to generate <code>float16</code> scalars and
-arrays (<a href="https://github.com/apache/arrow/issues/46611">GH-46611</a>).</li>
-<li><code>pc.utf8_zero_fill</code> is now available in the compute module imitating
-Python’s `str.zfill`` (<a href="https://github.com/apache/arrow/issues/46683">GH-46683</a>).</li>
-<li><code>pa.arange</code> utility function is now available which creates an array of
-evenly spaced values within a given interval
-(<a href="https://github.com/apache/arrow/issues/46771">GH-46771</a>).</li>
-<li>Scalar subclasses are now implementing Python protocols
-(<a href="https://github.com/apache/arrow/issues/45653">GH-45653</a>).</li>
-<li>It is possible now to specify footer metadata when opening IPC file for
-writing using metadata keyword in <code>pa.ipc.new_file()</code>
-(<a href="https://github.com/apache/arrow/issues/46222">GH-46222</a>).</li>
-<li>DLPack is now implemented (export) on the Tensor class in C++ and available in
-Python (<a href="https://github.com/apache/arrow/issues/39294">GH-39294</a>).</li>
-</ul>
-<p>Other improvements:</p>
-<ul>
-<li>Couple of improvements have been included in the Filesystems module:
-Filesystem operations are more convenient to users by supporting explicit
-<code>fsspec+{protocol}</code> and <code>hf://</code> filesystem URIs
-(<a href="https://github.com/apache/arrow/issues/44900">GH-44900</a>),
-<code>ConfigureManagedIdentityCredential</code> and <code>ConfigureClientSecretCredential</code>
-have been exposed to <code>AzureFileSystem</code>
-(<a href="https://github.com/apache/arrow/issues/46833">GH-46833</a>), <code>allow_delayed_open</code>
-(<a href="https://github.com/apache/arrow/issues/45957">GH-45957</a>) and
-<code>tls_ca_file_path</code> (<a href="https://github.com/apache/arrow/issues/40754">GH-40754</a>)
-have been exposed to <code>S3FileSystem</code>.</li>
-<li>Parquet module improvements include: mapping of logical types to Arrow
-extension types by default
-(<a href="https://github.com/apache/arrow/issues/44500">GH-44500</a>), UUID extension type
-conversion support when writing or reading to/from Parquet
-(<a href="https://github.com/apache/arrow/issues/43807">GH-43807</a>) and support for uniform
-encryption when writing parquet files by exposing
-<code>EncryptionConfiguration.uniform_encryption</code>
-(<a href="https://github.com/apache/arrow/issues/38914">GH-38914</a>).</li>
-<li><code>filter_expression</code> is exposed in <code>Table.join</code> and <code>Dataset.join</code> to
-support filtering rows when performing hash joins with Acero
-(<a href="https://github.com/apache/arrow/issues/46572">GH-46572</a>).</li>
-<li><code>dim_names</code> argument can now be passed to <code>from_numpy_ndarray</code> constructor
-(<a href="https://github.com/apache/arrow/issues/45531">GH-45531</a>).</li>
-</ul>
-<p>Relevant bug fixes:</p>
-<ul>
-<li><code>pyarrow.Table.to_struct_array</code> failure when the table is empty has been
-fixed (<a href="https://github.com/apache/arrow/issues/46355">GH-46355</a>).</li>
-<li>Filtering all rows with <code>RecordBatch.filter</code> using an expression now returns
-empty table with same schema instead of erroring
-(<a href="https://github.com/apache/arrow/issues/44366">GH-44366</a>).</li>
-</ul>
-<h2>Ruby and C GLib Notes</h2>
-<p>A number of changes were made in the 21.0.0 release which affect both Ruby and C GLib:</p>
-<ul>
-<li>Added support for fixed shape tensor extension data type.</li>
-<li>Added support for UUID extension data type.</li>
-<li>Added support for fixed size list data type.</li>
-<li>Added support for <a href="https://arrow.apache.org/docs/format/CDataInterface.html">the Arrow C data
-interface</a> for
-chunked array.</li>
-<li>Added support for distinct count in array statistics.</li>
-</ul>
-<h3>Ruby</h3>
-<p>There were no update only for Ruby.</p>
-<h3>C GLib</h3>
-<p>You must call <code>garrow_compute_initialize()</code> explicitly before you use
-computation related features.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 21.0.0 release. This release covers over 2 months of development work and includes 339 resolved issues on 400 distinct commits from 82 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 20.0.0 release, Alenka Frim has been invited to join the Project Management Committee (PMC). Thanks for your contributions and participation in the project! The Call for Speakers for the Apache Arrow Summit 2025 is now open! The Summit will take place on October 2nd, 2025 in Paris, France as part of PyData Paris. The call will be open until July 26, 2025. Please see the Call for Speakers link to submit a talk or the developer mailing list for more information. Arrow Flight RPC Notes In C++ and Python, a new IPC reader option was added to force data buffers to be aligned based on the data type, making it easier to work with systems that expected alignment (GH-32276). While this is not a Flight-specific option, it tended to occur with Flight due to implementation details. Also, C++ and Python are now consistent with other Flight implementations in allowing the schema of a FlightInfo to be omitted (GH-37677). We have accepted a donation of an ODBC driver for Flight SQL from Dremio (GH-46522). Note that the driver is not usable in its current state and contributors are working on implementing the rest of the driver. C++ Notes Compute The Cast function is now able to reorder fields when casting from one struct type to another; the fields are matched by name, not by index (GH-45028). Many compute kernels have been moved into a separate, optional, shared library (GH-25025). This improves modularity for dependency management in the application and reduces the Arrow C++ distribution size when the compute functionality is not being used. Note that some compute functions, such as the Cast function, will still be built for internal use in various Arrow components. Better half-float support has been added to some compute functions: is_nan, is_inf, is_finite, negate, negate_checked, sign (GH-45083); if_else, case_when, coalesce, choose, replace_with_mask, fill_null_forward, fill_null_backward (GH-37027); run_end_encode, run_end_decode (GH-46285). Better decimal32 and decimal64 support has been added to some compute functions: run_end_encode, run_end_decode (GH-46285). A new function utf8_zero_fill acts like Python's str.zfill method by providing a left-padding function that preserves the optional leading plus/minus sign (GH-46683). Decimal sum aggregation now produces a decimal result with an increased precision in order to reduce the risk of overflowing the result type (GH-35166). CSV Reading Duration columns is now supported (GH-40278). Dataset It is now possible to preserve order when writing a dataset multi-threaded. The feature is disabled by default (GH-26818). Filesystems The S3 filesystem can optionally be built into a separate DLL (GH-40343). Parquet Encryption A new SecureString class must now be used to communicate sensitive data (such as secret keys) with Parquet encryption APIs. This class automatically wipes its contents from memory when destroyed, unlike regular std::string (GH-31603). Type support The new VARIANT logical type is supported at a low level, and an extension type parquet.variant is added to reflect such columns when reading them to Arrow (GH-45937). The UUID logical type is automatically converted to/from the arrow.uuid canonical extension type when reading or writing Parquet data, respectively. The GEOMETRY and GEOGRAPHY logical types are supported (GH-45522). They are automatically converted to/from the corresponding GeoArrow extension type, if it has been registered by GeoArrow. Geospatial column statistics are also supported. It is now possible to read BYTE_ARRAY columns directly as LargeBinary or BinaryView, without any intermediate conversion from Binary. Similarly, those types can be written directly to Parquet (GH-43041). This allows bypassing the 2 GiB data per chunk limitation of the Binary type, and can also improve performance. This also applies to String types when a Parquet column has the STRING logical type. Similarly, LIST columns can now be read directly as LargeList rather than List. This allows bypassing the 2^31 values per chunk limitation of regular List types (GH-46676). Other Parquet improvements A new feature named Content-Defined Chunking improves deduplication of Parquet files with mostly identical contents, by choosing data page boundaries based on actual contents rather than a number of values. For that, it uses a rolling hash function, and the min and max chunk size can be chosen. The feature is disabled by default and can be enabled on a per-file basis in the Parquet WriterProperties (GH-45750). The EncodedStatistics of a column chunk are publicly exposed in ColumnChunkMetaData and can be read faster than if decoded as Statistics (GH-46462). SIMD optimizations for the BYTE_STREAM_SPLIT have been improved (GH-46788). Reading FIXED_LEN_BYTE_ARRAY data has been made significantly faster (up to 3x faster on some benchmarks). This benefits logical types such as FLOAT16 (GH-43891). Miscellaneous C++ changes The ARROW_USE_PRECOMPILED_HEADERS build option was removed, as CMAKE_UNITY_BUILD usually provides more benefits while requiring less maintenance. New data creation helpers ArrayFromJSONString, ChunkedArrayFromJSONString, DictArrayFromJSONString, ScalarFromJSONString and DictScalarFromJSONString are now exposed publicly. While not as high-performing as BufferBuilder and the concrete ArrayBuilder subclasses, they allow easy creation of test or example data, for example: ARROW_ASSIGN_OR_RAISE( auto string_array, arrow::ArrayFromJSONString(arrow::utf8(), R"(["Hello", "World", null])")); ARROW_ASSIGN_OR_RAISE( auto list_array, arrow::ArrayFromJSONString(arrow::list(arrow::int32()), "[[1, null, 2], [], [3]]")); Some APIs were changed to accept std::string_view instead of const std::string&amp;. Most uses of those APIs should not be affected (GH-46551). A new pretty-print option allows limiting element size when printing string or binary data (GH-46403). It is now possible to export Tensor data using DLPack (GH-39294). Half-float arrays can be properly diff'ed and pretty-printed (GH-36753). Some header files in arrow/util that were not supposed to be exposed are now made internal (GH-46459). C# Notes The C# Arrow implementation is being extracted from the Arrow monorepo into a standalone repository to allow it to have its own release cadence. See the mailing list for more information. This is the final release of the Arrow monorepo that will include the the C# implementation. Java, JavaScript, Go, and Rust Notes The Java, JavaScript, Go, and Rust Go projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Java implementation, see the latest Arrow Java changelog. For notes on the latest release of the JavaScript implementation, see the latest Arrow JavaScript changelog. For notes on the latest release of the Rust implementation see the latest Arrow Rust changelog. For notes on the latest release of the Go implementation, see the latest Arrow Go changelog. Linux Packaging Notes We added support for AlmaLinux 10. You can use AlmaLinux 10 packages on Red Hat Enterprise Linux 10 like distributions too. We dropped support for CentOS Stream 8 because it reached EOL on 2024-05-31. MATLAB Notes New Features Added support for creating an arrow.tabular.Table from a list of arrow.tabular.RecordBatch instances (GH-46877) Packaging The MLTBX available in apache/arrow's GitHub Releases area was built against MATLAB R2025a. Python Notes Compatibility notes: Deprecated PyExtensionType has been removed (GH-46198). Deprecated use_legacy_formathas been removed in favour of setting IpcWriteOptions (GH-46130). Due to SciPy 1.15's stricter sparse code changes are made to pa.SparseCXXMatrix constructors and pa.SparseCXXMatrix.to_scipy methods with migrating from scipy.spmatrix to scipy.sparray (GH-45229). New features: PyArrow does not require NumPy anymore to generate float16 scalars and arrays (GH-46611). pc.utf8_zero_fill is now available in the compute module imitating Python’s `str.zfill`` (GH-46683). pa.arange utility function is now available which creates an array of evenly spaced values within a given interval (GH-46771). Scalar subclasses are now implementing Python protocols (GH-45653). It is possible now to specify footer metadata when opening IPC file for writing using metadata keyword in pa.ipc.new_file() (GH-46222). DLPack is now implemented (export) on the Tensor class in C++ and available in Python (GH-39294). Other improvements: Couple of improvements have been included in the Filesystems module: Filesystem operations are more convenient to users by supporting explicit fsspec+{protocol} and hf:// filesystem URIs (GH-44900), ConfigureManagedIdentityCredential and ConfigureClientSecretCredential have been exposed to AzureFileSystem (GH-46833), allow_delayed_open (GH-45957) and tls_ca_file_path (GH-40754) have been exposed to S3FileSystem. Parquet module improvements include: mapping of logical types to Arrow extension types by default (GH-44500), UUID extension type conversion support when writing or reading to/from Parquet (GH-43807) and support for uniform encryption when writing parquet files by exposing EncryptionConfiguration.uniform_encryption (GH-38914). filter_expression is exposed in Table.join and Dataset.join to support filtering rows when performing hash joins with Acero (GH-46572). dim_names argument can now be passed to from_numpy_ndarray constructor (GH-45531). Relevant bug fixes: pyarrow.Table.to_struct_array failure when the table is empty has been fixed (GH-46355). Filtering all rows with RecordBatch.filter using an expression now returns empty table with same schema instead of erroring (GH-44366). Ruby and C GLib Notes A number of changes were made in the 21.0.0 release which affect both Ruby and C GLib: Added support for fixed shape tensor extension data type. Added support for UUID extension data type. Added support for fixed size list data type. Added support for the Arrow C data interface for chunked array. Added support for distinct count in array statistics. Ruby There were no update only for Ruby. C GLib You must call garrow_compute_initialize() explicitly before you use computation related features.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/apache/arrow-go/compare/v18.3.0...v18.4.0">https://github.com/apache/arrow-go/compare/v18.3.0...v18.4.0</a></p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the v18.4.0 release of Apache Arrow Go. This minor release covers 25 commits from 11 distinct contributors. Contributors $ git shortlog -sn v18.3.1..v18.4.0 16 Matt Topol 1 Alvaro Viebrantz 1 Arnold Wakim 1 Daniil Mileev 1 Kristofer Gaudel 1 Marcin Bojanczyk 1 Raúl Cumplido 1 Saurabh Singh 1 Sutou Kouhei 1 Victor Perez 1 Willem Jan Changelog What's Changed feat(arrow/cdata): Add ReleaseCArrowArrayStream function by @karsov in https://github.com/apache/arrow-go/pull/373 fix: TestDeltaByteArray implementation and fix by @MetalBlueberry in https://github.com/apache/arrow-go/pull/369 chore: move .github/ISSUE_TEMPLATE/config.yaml to config.yml as currently does not work by @raulcd in https://github.com/apache/arrow-go/pull/383 fix: list_columns.parquet testing by @MetalBlueberry in https://github.com/apache/arrow-go/pull/378 feat: Extend arrow csv writter by @MetalBlueberry in https://github.com/apache/arrow-go/pull/375 feat(parquet/pqarrow): parallelize SeekToRow by @zeroshade in https://github.com/apache/arrow-go/pull/380 chore: Use apache/arrow-js for JS in integration test by @kou in https://github.com/apache/arrow-go/pull/389 feat(parquet): add variant encoder/decoder by @sfc-gh-mbojanczyk in https://github.com/apache/arrow-go/pull/344 chore: remove extra binary by @zeroshade in https://github.com/apache/arrow-go/pull/391 CI: add benchmark workflow and script by @singh1203 in https://github.com/apache/arrow-go/pull/250 feat(arrow/extensions): Add Variant extension type, array, and builder by @zeroshade in https://github.com/apache/arrow-go/pull/395 fix(parquet/pqarrow): Fix propagation of field-ids for Lists by @zeroshade in https://github.com/apache/arrow-go/pull/397 feat(arrow/_examples): enhance library examples by @kris-gaudel in https://github.com/apache/arrow-go/pull/394 chore: bump Windows GitHub hosted runner to windows-2022 by @raulcd in https://github.com/apache/arrow-go/pull/407 ci(benchmark): Fix benchmark runs by @zeroshade in https://github.com/apache/arrow-go/pull/409 ci: fix flaky test by @zeroshade in https://github.com/apache/arrow-go/pull/411 ci: make additional checks to prevent flaky EOF by @zeroshade in https://github.com/apache/arrow-go/pull/414 refactor: update linter and run it by @zeroshade in https://github.com/apache/arrow-go/pull/419 feat: expose Payload.WritePayload to allow serializing into IPC format by @alvarowolfx in https://github.com/apache/arrow-go/pull/421 feat(parquet/variant): Parse JSON into variant by @zeroshade in https://github.com/apache/arrow-go/pull/426 refactor(parquet/internal/encoding): Refactor parquet logic to use generics by @zeroshade in https://github.com/apache/arrow-go/pull/428 feat(arrrow/compute/expr): support substrait timestamp and decimal properly by @zeroshade in https://github.com/apache/arrow-go/pull/418 feat(parquet/examples): enhance library examples by @milden6 in https://github.com/apache/arrow-go/pull/429 feat(arrow/compute): support some float16 casts by @zeroshade in https://github.com/apache/arrow-go/pull/430 feat(parquet/pqarrow): Correctly handle Variant types in schema by @zeroshade in https://github.com/apache/arrow-go/pull/433 fix(arrow/avro-reader): bunch of types that didn't work by @Willem-J-an in https://github.com/apache/arrow-go/pull/416 feat(parquet/pqarrow): read/write variant by @zeroshade in https://github.com/apache/arrow-go/pull/434 build(deps): update to substrait-go v4.3.0 by @zeroshade in https://github.com/apache/arrow-go/pull/438 fix(arrow/flight/flightsql): drain channel in flightSqlServer.DoGet by @arnoldwakim in https://github.com/apache/arrow-go/pull/437 chore(arrow): Update PkgVersion by @zeroshade in https://github.com/apache/arrow-go/pull/439 New Contributors @karsov made their first contribution in https://github.com/apache/arrow-go/pull/373 @MetalBlueberry made their first contribution in https://github.com/apache/arrow-go/pull/369 @sfc-gh-mbojanczyk made their first contribution in https://github.com/apache/arrow-go/pull/344 @kris-gaudel made their first contribution in https://github.com/apache/arrow-go/pull/394 @alvarowolfx made their first contribution in https://github.com/apache/arrow-go/pull/421 @milden6 made their first contribution in https://github.com/apache/arrow-go/pull/429 @Willem-J-an made their first contribution in https://github.com/apache/arrow-go/pull/416 @arnoldwakim made their first contribution in https://github.com/apache/arrow-go/pull/437 Full Changelog: https://github.com/apache/arrow-go/compare/v18.3.0...v18.4.0]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>

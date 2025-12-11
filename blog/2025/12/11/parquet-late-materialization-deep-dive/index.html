@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    
+    <title>A Practical Dive Into Late Materialization in arrow-rs Parquet Reads | Apache Arrow</title>
+    
+
+    <!-- Begin Jekyll SEO tag v2.8.0 -->
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="A Practical Dive Into Late Materialization in arrow-rs Parquet Reads" />
+<meta name="author" content="<a href="https://github.com/hhhizzz">Qiwei Huang</a> and <a href="https://github.com/alamb">Andrew Lamb</a>" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="How arrow-rs pipelines predicates and projections to minimize work during Parquet scans" />
+<meta property="og:description" content="How arrow-rs pipelines predicates and projections to minimize work during Parquet scans" />
+<link rel="canonical" href="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/" />
+<meta property="og:url" content="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/" />
+<meta property="og:site_name" content="Apache Arrow" />
+<meta property="og:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-12-11T00:00:00-05:00" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:image" content="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" />
+<meta property="twitter:title" content="A Practical Dive Into Late Materialization in arrow-rs Parquet Reads" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"<a href=\"https://github.com/hhhizzz\">Qiwei Huang</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"},"dateModified":"2025-12-11T00:00:00-05:00","datePublished":"2025-12-11T00:00:00-05:00","description":"How arrow-rs pipelines predicates and projections to minimize work during Parquet scans","headline":"A Practical Dive Into Late Materialization in arrow-rs Parquet Reads","image":"https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png","mainEntityOfPage":{"@type":"WebPage","@id":"https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://arrow.apache.org/img/logo.png"},"name":"<a href=\"https://github.com/hhhizzz\">Qiwei Huang</a> and <a href=\"https://github.com/alamb\">Andrew Lamb</a>"},"url":"https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" id="light1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" id="light2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon.png" id="light3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120.png" id="light4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76.png" id="light5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60.png" id="light6">
+    <!-- dark mode favicons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16-dark.png" id="dark1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32-dark.png" id="dark2">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/img/apple-touch-icon-dark.png" id="dark3">
+    <link rel="apple-touch-icon" type="image/png" sizes="120x120" href="/img/apple-touch-icon-120x120-dark.png" id="dark4">
+    <link rel="apple-touch-icon" type="image/png" sizes="76x76" href="/img/apple-touch-icon-76x76-dark.png" id="dark5">
+    <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="/img/apple-touch-icon-60x60-dark.png" id="dark6">
+
+    <script>
+      // Switch to the dark-mode favicons if prefers-color-scheme: dark
+      function onUpdate() {
+        light1 = document.querySelector('link#light1');
+        light2 = document.querySelector('link#light2');
+        light3 = document.querySelector('link#light3');
+        light4 = document.querySelector('link#light4');
+        light5 = document.querySelector('link#light5');
+        light6 = document.querySelector('link#light6');
+
+        dark1 = document.querySelector('link#dark1');
+        dark2 = document.querySelector('link#dark2');
+        dark3 = document.querySelector('link#dark3');
+        dark4 = document.querySelector('link#dark4');
+        dark5 = document.querySelector('link#dark5');
+        dark6 = document.querySelector('link#dark6');
+
+        if (matcher.matches) {
+          light1.remove();
+          light2.remove();
+          light3.remove();
+          light4.remove();
+          light5.remove();
+          light6.remove();
+          document.head.append(dark1);
+          document.head.append(dark2);
+          document.head.append(dark3);
+          document.head.append(dark4);
+          document.head.append(dark5);
+          document.head.append(dark6);
+        } else {
+          dark1.remove();
+          dark2.remove();
+          dark3.remove();
+          dark4.remove();
+          dark5.remove();
+          dark6.remove();
+          document.head.append(light1);
+          document.head.append(light2);
+          document.head.append(light3);
+          document.head.append(light4);
+          document.head.append(light5);
+          document.head.append(light6);
+        }
+      }
+      matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      matcher.addListener(onUpdate);
+      onUpdate();
+    </script>
+
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/css/syntax.css" rel="stylesheet">
+    <script src="/javascript/main.js"></script>
+    
+    <!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  /* We explicitly disable cookie tracking to avoid privacy issues */
+  _paq.push(['disableCookies']);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="https://analytics.apache.org/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '20']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+
+    
+    <link type="application/atom+xml" rel="alternate" href="https://arrow.apache.org/feed.xml" title="Apache Arrow" />
+  </head>
+
+
+<body class="wrap">
+  <header>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+  
+  <a class="navbar-brand no-padding" href="/"><img src="/img/arrow-inverse-300px.png" height="40px"></a>
+  
+   <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#arrow-navbar" aria-controls="arrow-navbar" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse justify-content-end" id="arrow-navbar">
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/overview/" role="button" aria-haspopup="true" aria-expanded="false">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="/faq/" role="button" aria-haspopup="true" aria-expanded="false">FAQ</a></li>
+        <li class="nav-item"><a class="nav-link" href="/blog" role="button" aria-haspopup="true" aria-expanded="false">Blog</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownGetArrow" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Get Arrow
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownGetArrow">
+            <a class="dropdown-item" href="/install/">Install</a>
+            <a class="dropdown-item" href="/release/">Releases</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownDocumentation" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Docs
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownDocumentation">
+            <a class="dropdown-item" href="/docs">Project Docs</a>
+            <a class="dropdown-item" href="/docs/format/Columnar.html">Format</a>
+            <hr>
+            <a class="dropdown-item" href="/docs/c_glib">C GLib</a>
+            <a class="dropdown-item" href="/docs/cpp">C++</a>
+            <a class="dropdown-item" href="https://arrow.apache.org/dotnet/">.NET</a>
+            <a class="dropdown-item" href="https://godoc.org/github.com/apache/arrow/go/arrow" target="_blank" rel="noopener">Go</a>
+            <a class="dropdown-item" href="/java/">Java</a>
+            <a class="dropdown-item" href="/js/">JavaScript</a>
+            <a class="dropdown-item" href="/julia/">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/matlab/README.md" target="_blank" rel="noopener">MATLAB</a>
+            <a class="dropdown-item" href="/docs/python">Python</a>
+            <a class="dropdown-item" href="/docs/r">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/blob/main/ruby/README.md" target="_blank" rel="noopener">Ruby</a>
+            <a class="dropdown-item" href="https://docs.rs/arrow/latest" target="_blank" rel="noopener">Rust</a>
+            <a class="dropdown-item" href="/swift">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSource" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Source
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSource">
+            <a class="dropdown-item" href="https://github.com/apache/arrow" target="_blank" rel="noopener">Main Repo</a>
+            <hr>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/c_glib" target="_blank" rel="noopener">C GLib</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/cpp" target="_blank" rel="noopener">C++</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-dotnet" target="_blank" rel="noopener">.NET</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-go" target="_blank" rel="noopener">Go</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-java" target="_blank" rel="noopener">Java</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-js" target="_blank" rel="noopener">JavaScript</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-julia" target="_blank" rel="noopener">Julia</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/matlab" target="_blank" rel="noopener">MATLAB</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/python" target="_blank" rel="noopener">Python</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/r" target="_blank" rel="noopener">R</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/tree/main/ruby" target="_blank" rel="noopener">Ruby</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-rs" target="_blank" rel="noopener">Rust</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow-swift" target="_blank" rel="noopener">Swift</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSubprojects" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Subprojects
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownSubprojects">
+            <a class="dropdown-item" href="/adbc">ADBC</a>
+            <a class="dropdown-item" href="/docs/format/Flight.html">Arrow Flight</a>
+            <a class="dropdown-item" href="/docs/format/FlightSql.html">Arrow Flight SQL</a>
+            <a class="dropdown-item" href="https://datafusion.apache.org" target="_blank" rel="noopener">DataFusion</a>
+            <a class="dropdown-item" href="/nanoarrow">nanoarrow</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownCommunity" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             Community
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownCommunity">
+            <a class="dropdown-item" href="/community/">Communication</a>
+            <a class="dropdown-item" href="/docs/developers/index.html">Contributing</a>
+            <a class="dropdown-item" href="https://github.com/apache/arrow/issues" target="_blank" rel="noopener">Issue Tracker</a>
+            <a class="dropdown-item" href="/committers/">Governance</a>
+            <a class="dropdown-item" href="/use_cases/">Use Cases</a>
+            <a class="dropdown-item" href="/powered_by/">Powered By</a>
+            <a class="dropdown-item" href="/visual_identity/">Visual Identity</a>
+            <a class="dropdown-item" href="/security/">Security</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/policies/conduct.html" target="_blank" rel="noopener">Code of Conduct</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownASF" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+             ASF Links
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownASF">
+            <a class="dropdown-item" href="https://www.apache.org/" target="_blank" rel="noopener">ASF Website</a>
+            <a class="dropdown-item" href="https://www.apache.org/licenses/" target="_blank" rel="noopener">License</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/sponsorship.html" target="_blank" rel="noopener">Donate</a>
+            <a class="dropdown-item" href="https://www.apache.org/foundation/thanks.html" target="_blank" rel="noopener">Thanks</a>
+            <a class="dropdown-item" href="https://www.apache.org/security/" target="_blank" rel="noopener">Security</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+<!-- /.navbar-collapse -->
+  </nav>
+
+  </header>
+
+  <div class="container p-4 pt-5">
+    <div class="col-md-8 mx-auto">
+      <main role="main" class="pb-5">
+        
+<h1>
+  A Practical Dive Into Late Materialization in arrow-rs Parquet Reads
+</h1>
+<hr class="mt-4 mb-3">
+
+
+
+<p class="mb-4 pb-1">
+  <span class="badge badge-secondary">Published</span>
+  <span class="published mr-3">
+    11 Dec 2025
+  </span>
+  <br>
+  <span class="badge badge-secondary">By</span>
+  
+    <a href="https://github.com/hhhizzz" target="_blank" rel="noopener">Qiwei Huang</a> and <a href="https://github.com/alamb" target="_blank" rel="noopener">Andrew Lamb</a>
+  
+
+  
+    <br>
+    <span class="badge badge-secondary">Translations</span>
+    
+      <a href="/blog/2025/12/11/parquet-late-materialization-deep-dive-zh/">简体中文</a>
+    
+  
+</p>
+
+
+        <!--
+
+-->
+<p>This article dives into the decisions and pitfalls of implementing Late Materialization in the <a href="https://parquet.apache.org/" target="_blank" rel="noopener">Apache Parquet</a> reader from <a href="https://github.com/apache/arrow-rs" target="_blank" rel="noopener"><code>arrow-rs</code></a> (the reader powering <a href="https://datafusion.apache.org/" target="_blank" rel="noopener">Apache DataFusion</a> among other projects). We'll see how a seemingly humble file reader requires complex logic to evaluate predicates—effectively becoming a <strong>tiny query engine</strong> in its own right.</p>
+<h2>1. Why Late Materialization?</h2>
+<p>Columnar reads are a constant battle between <strong>I/O bandwidth</strong> and <strong>CPU decode costs</strong>. While skipping data is generally good, the act of skipping itself carries a computational cost. The goal of the Parquet reader in <code>arrow-rs</code> is <strong>pipeline-style late materialization</strong>: evaluate predicates first, then access projected columns. For predicates that filter many rows, materializing after evaluation minimizes reads and decode work.</p>
+<p>The approach closely mirrors the <strong>LM-pipelined</strong> strategy from <a href="https://www.cs.umd.edu/~abadi/papers/abadiicde2007.pdf" target="_blank" rel="noopener">Materialization Strategies in a Column-Oriented DBMS</a> by Abadi et al.: interleaving predicates and data column access instead of reading all columns at once and trying to <strong>stitch them back together</strong> into rows.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig1.jpg" alt="LM-pipelined late materialization pipeline" width="100%" class="img-responsive">
+</figure>
+<p>To evaluate a query like <code>SELECT B, C FROM table WHERE A &gt; 10 AND B &lt; 5</code> using late materialization, the reader follows these steps:</p>
+<ol>
+<li>Read column <code>A</code> and evaluate <code>A &gt; 10</code> to build a <code>RowSelection</code> (a sparse mask) representing the initial set of surviving rows.</li>
+<li>Use that <code>RowSelection</code> to read surviving values of column <code>B</code> and evaluate <code>B &lt; 5</code> and update the <code>RowSelection</code> to make it even sparser.</li>
+<li>Use the refined <code>RowSelection</code> to read column <code>C</code> (a projection column), decoding only the final surviving rows.</li>
+</ol>
+<p>The rest of this post zooms in on how the code makes this path work.</p>
+<hr>
+<h2>2. Late Materialization in the Rust Parquet Reader</h2>
+<h3>2.1 LM-pipelined</h3>
+<p>"LM-pipelined" might sound like something from a textbook. In <code>arrow-rs</code>, it simply refers to a pipeline that runs sequentially: "read predicate column → generate row selection → read data column". This contrasts with a <strong>parallel</strong> strategy, where all predicate columns are read simultaneously. While parallelism can maximize multi-core CPU usage, the pipelined approach is often superior in columnar storage because each filtering step drastically reduces the amount of data subsequent steps need to read and parse.</p>
+<p>The code is structured into a few core roles:</p>
+<ul>
+<li>
+<strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L302" target="_blank" rel="noopener">ReadPlan</a> / <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L34" target="_blank" rel="noopener">ReadPlanBuilder</a></strong>: Encodes "which columns to read and with what row subset" into a plan. It does not pre-read all predicate columns. It reads one, tightens the selection, and then moves on.</li>
+<li>
+<strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L139" target="_blank" rel="noopener">RowSelection</a></strong>: Two implementations: use <a href="https://en.wikipedia.org/wiki/Run-length_encoding" target="_blank" rel="noopener">Run-length encoding</a> (RLE) (via <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L66" target="_blank" rel="noopener"><code>RowSelector</code></a>) to "skip/select N rows", or use an Arrow <a href="https://github.com/apache/arrow-rs/blob/a67cd19fff65b6c995be9a5eae56845157d95301/arrow-buffer/src/buffer/boolean.rs#L37" target="_blank" rel="noopener"><code>BooleanBuffer</code></a> bitmask to filter rows. This is the core mechanism that carries sparsity through the pipeline.</li>
+<li>
+<strong><a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/array_reader/mod.rs#L85" target="_blank" rel="noopener">ArrayReader</a></strong>: Responsible for decoding. It receives a <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139" target="_blank" rel="noopener"><code>RowSelection</code></a> and decides which pages to read and which values to decode.</li>
+</ul>
+<p><a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139" target="_blank" rel="noopener"><code>RowSelection</code></a> can switch dynamically between RLE and bitmasks. Bitmasks are faster when gaps are tiny and sparsity is high; RLE is friendlier to large, page-level skips. Details on this trade-off appear in section 3.1.</p>
+<p>Consider again the query: <code>SELECT B, C FROM table WHERE A &gt; 10 AND B &lt; 5</code>:</p>
+<ol>
+<li>
+<strong>Initial</strong>: <code>selection = None</code> (equivalent to "select all").</li>
+<li>
+<strong>Read A</strong>: <code>ArrayReader</code> decodes column A in batches; the predicate builds a boolean mask; <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L149" target="_blank" rel="noopener"><code>RowSelection::from_filters</code></a> turns it into a sparse selection.</li>
+<li>
+<strong>Tighten</strong>: <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/read_plan.rs#L143" target="_blank" rel="noopener"><code>ReadPlanBuilder::with_predicate</code></a> chains the new mask via <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345" target="_blank" rel="noopener"><code>RowSelection::and_then</code></a>.</li>
+<li>
+<strong>Read B</strong>: Build column B's reader with the current <code>selection</code>; the reader only performs I/O and decoding for selected rows, producing an even sparser mask.</li>
+<li>
+<strong>Merge</strong>: <code>selection = selection.and_then(selection_b)</code>; projection columns now decode a tiny row set.</li>
+</ol>
+<p><strong>Code locations and sketch</strong>:</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Close to the flow in read_plan.rs (simplified)</span>
+<span class="k">let</span> <span class="k">mut</span> <span class="n">builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">batch_size</span><span class="p">);</span>
+
+<span class="c1">// 1) Inject external pruning (e.g., Page Index):</span>
+<span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_selection</span><span class="p">(</span><span class="n">page_index_selection</span><span class="p">);</span>
+
+<span class="c1">// 2) Append predicates serially:</span>
+<span class="k">for</span> <span class="n">predicate</span> <span class="k">in</span> <span class="n">predicates</span> <span class="p">{</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_predicate</span><span class="p">(</span><span class="n">predicate</span><span class="p">);</span> <span class="c1">// internally uses RowSelection::and_then</span>
+<span class="p">}</span>
+
+<span class="c1">// 3) Build readers; all ArrayReaders share the final selection strategy</span>
+<span class="k">let</span> <span class="n">plan</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.build</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">reader</span> <span class="o">=</span> <span class="nn">ParquetRecordBatchReader</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">array_reader</span><span class="p">,</span> <span class="n">plan</span><span class="p">);</span>
+</code></pre></div></div>
+<p>I've drawn a simple flowchart that illustrates this flow to help you understand:</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig2.jpg" alt="Predicate-first pipeline flow" width="100%" class="img-responsive">
+</figure>
+<p>Now that you understand how this pipeline works, the next question is <strong>how to represent and combine these sparse selections</strong> (the <strong>Row Mask</strong> in the diagram), which is where <code>RowSelection</code> comes in.</p>
+<h3>2.2 Combining row selectors (<code>RowSelection::and_then</code>)</h3>
+<p><a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L139" target="_blank" rel="noopener"><code>RowSelection</code></a> represents the set of rows that will eventually be produced. It currently uses RLE (<code>RowSelector::select/skip(len)</code>) to describe sparse ranges. <a href="https://github.com/apache/arrow-rs/blob/bab30ae3d61509aa8c73db33010844d440226af2/parquet/src/arrow/arrow_reader/selection.rs#L345" target="_blank" rel="noopener"><code>RowSelection::and_then</code></a> is the core operator for "apply one selection to another": the left-hand argument is "rows already passed" and the right-hand argument is "which of the passed rows also pass the second filter." The output is their boolean AND.</p>
+<p><strong>Walkthrough Example</strong>:</p>
+<ul>
+<li>
+<strong>Input Selection A (already filtered)</strong>: <code>[Skip 100, Select 50, Skip 50]</code> (physical rows 100-150 are selected)</li>
+<li>
+<strong>Selection B (filters within A)</strong>: <code>[Select 10, Skip 40]</code> (within the 50 selected rows, only the first 10 survive B)</li>
+<li>
+<strong>Result</strong>: <code>[Skip 100, Select 10, Skip 90]</code>.</li>
+</ul>
+<p><strong>How it runs</strong>:
+Think of it like a zipper: we traverse both lists simultaneously, as shown below:</p>
+<ol>
+<li>
+<strong>First 100 rows</strong>: A is Skip → result is Skip 100.</li>
+<li>
+<strong>Next 50 rows</strong>: A is Select. Look at B:
+<ul>
+<li>B's first 10 are Select → result Select 10.</li>
+<li>B's remaining 40 are Skip → result Skip 40.</li>
+</ul>
+</li>
+<li>
+<strong>Final 50 rows</strong>: A is Skip → result Skip 50.</li>
+</ol>
+<p><strong>Result</strong>: <code>[Skip 100, Select 10, Skip 90]</code>.</p>
+<p>Here is an example in code:</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: Skip 100 rows, then take the next 10</span>
+<span class="k">let</span> <span class="n">a</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">50</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">b</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">result</span> <span class="o">=</span> <span class="n">a</span><span class="nf">.and_then</span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span>
+<span class="c1">// Result should be: Skip 100, Select 10, Skip 40</span>
+<span class="nd">assert_eq!</span><span class="p">(</span>
+    <span class="nn">Vec</span><span class="p">::</span><span class="o">&lt;</span><span class="n">RowSelector</span><span class="o">&gt;</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="n">result</span><span class="p">),</span>
+    <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span>
+<span class="p">);</span>
+</code></pre></div></div>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig3.jpg" alt="RowSelection logical AND walkthrough" width="100%" class="img-responsive">
+</figure>
+<p>This keeps narrowing the filter while touching only lightweight metadata—no data copies. The current implementation of <code>and_then</code> is a two-pointer linear scan; complexity is linear in the number of selector segments. The more predicates shrink the selection, the cheaper later scans become.</p>
+<h2>3. Engineering Challenges</h2>
+<p>Late Materialization sounds simple enough in theory, but implementing it in a production-grade system like <code>arrow-rs</code> is an absolute <strong>engineering nightmare</strong>. Historically, these techniques are so tricky they have been locked away in proprietary engines. In the open source world, we've been grinding away at this for years (just look at <a href="https://github.com/apache/datafusion/issues/3463" target="_blank" rel="noopener">the DataFusion ticket</a>), and finally, we can <strong>flex our muscles</strong> and go toe-to-toe with full materialization. To pull this off, we had to tackle several serious engineering challenges.</p>
+<h3>3.1 Adaptive RowSelection Policy (Bitmask vs. RLE)</h3>
+<p>One major hurdle is choosing the right internal representation for <code>RowSelection</code> because the best choice depends on the sparsity pattern. <a href="https://db.cs.cmu.edu/papers/2021/ngom-damon2021.pdf" target="_blank" rel="noopener">This paper</a> reveals a critical hurdle: there is no 'one-size-fits-all' format for <code>RowSelection</code>. The researchers found that the optimal internal representation is a moving target, shifting constantly depending on the sparsity pattern—essentially, how 'dense' or 'sparse' the surviving data is at any given moment.</p>
+<ul>
+<li>
+<strong>Ultra sparse</strong> (e.g., 1 row every 10,000): Using a bitmask here is just wasteful (1 bit per row adds up), whereas RLE is super clean—just a few selectors and you're done.</li>
+<li>
+<strong>Sparse but with tiny gaps</strong> (e.g., "read 1, skip 1"): RLE creates a fragmented mess that makes the decoder work overtime; here, bitmasks are way more efficient.</li>
+</ul>
+<p>Since both have their pros and cons, we decided to get the <strong>best of both worlds</strong> with an adaptive strategy (see <a href="https://github.com/apache/arrow-rs/pull/8733" target="_blank" rel="noopener">#arrow-rs/8733</a> for more details):</p>
+<ul>
+<li>We look at the average run length of the selectors and compare it to a threshold (currently <code>32</code>). If the average is too small, we switch to bitmasks; otherwise, we stick with selectors (RLE).</li>
+<li>
+<strong>The Safety Net</strong>: Bitmasks look great until you hit Page Pruning, which can cause a nasty "missing page" panic because the mask might blindly try to filter rows from pages that were never even read. The <code>RowSelection</code> logic watches out for this <strong>recipe for disaster</strong> and forces a switch back to RLE to keep things from crashing (see 3.1.2).</li>
+</ul>
+<h4>3.1.1 Where did the threshold of <code>32</code> come from?</h4>
+<p>The number 32 wasn't just pulled out of thin air. It came from a <a href="https://github.com/apache/arrow-rs/pull/8733#issuecomment-3468441165" target="_blank" rel="noopener">data-driven "face-off"</a> using various distributions (even spacing, exponential sparsity, random noise). It does a solid job of distinguishing between "choppy but dense" and "long skip regions." In the future, we might get even fancier with heuristics based on data types.</p>
+<p>The chart below shows an example run from the showdown. Blue lines are <code>read_selector</code> (RLE) and orange lines are <code>read_mask</code> (bitmasks). The vertical axis is time (lower is better), and the horizontal axis is average run length. You can see the performance curves cross around 32.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.1.1.png" alt="Bitmask vs RLE benchmark threshold" width="100%" class="img-responsive">
+</figure>
+<h4>3.1.2 The Bitmask Trap: Missing Pages</h4>
+<p>When implementing the adaptive strategy, bitmasks seem perfect on paper, but they hide a nasty trap when combined with <strong>Page Pruning</strong>.</p>
+<p>Before we get into the weeds, a quick refresher on pages (more in Section 3.2): Parquet files are sliced into pages. If we know a page has no rows in the selection, we <strong>don't even touch it</strong>—no decompression, no decoding. The <code>ArrayReader</code> doesn't even know it exists.</p>
+<p><strong>The Scene of the Crime:</strong></p>
+<p>Imagine reading a chunk of data and the middle four rows<code>[0,1,2,3,4,5,6]</code>, <code>[1,2,3,4]</code>, are filtered out. It just so happens that two of those rows, <code>[2,3]</code> sit in their own page, so that page gets completely pruned.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig1.jpg" alt="Page pruning example with only first and last rows kept" width="100%" class="img-responsive">
+</figure>
+<p>If we use RLE (<code>RowSelector</code>), executing <code>Skip(4)</code> is smooth sailing: we just jump over the gap.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig3.jpg" alt="RLE skipping pruned pages safely" width="100%" class="img-responsive">
+</figure>
+<p><strong>The Problem:</strong></p>
+<p>If we use a bitmask, however, the reader will decode all 6 rows first, intending to filter them later. But that middle page isn't there! As soon as the decoder hits that gap, it panics. The <code>ArrayReader</code> is a stream processing unit—it doesn't handle I/O and thus doesn't know the layer above decided to prune a page, so it can't see the cliff coming.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/3.3.2-fig2.jpg" alt="Bitmask hitting a missing page panic" width="100%" class="img-responsive">
+</figure>
+<p><strong>The Fix:</strong></p>
+<p>Our current solution is conservative but bulletproof: <strong>if we detect Page Pruning, we ban bitmasks and force a fallback to RLE.</strong> In the future, we hope to extend the bitmask logic to be Page Pruning-aware (see <a href="https://github.com/apache/arrow-rs/issues/8845" target="_blank" rel="noopener">#arrow-rs/8845</a>).</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Auto prefers bitmask, but... wait, offset_index says page pruning is on.</span>
+<span class="k">let</span> <span class="n">policy</span> <span class="o">=</span> <span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Auto</span> <span class="p">{</span> <span class="n">threshold</span><span class="p">:</span> <span class="mi">32</span> <span class="p">};</span>
+<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span><span class="nf">.with_row_selection_policy</span><span class="p">(</span><span class="n">policy</span><span class="p">);</span>
+<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nf">override_selector_strategy_if_needed</span><span class="p">(</span>
+    <span class="n">plan_builder</span><span class="p">,</span>
+    <span class="o">&amp;</span><span class="n">projection_mask</span><span class="p">,</span>
+    <span class="nf">Some</span><span class="p">(</span><span class="n">offset_index</span><span class="p">),</span> <span class="c1">// page index enables page pruning</span>
+<span class="p">);</span>
+<span class="c1">// ...so we play it safe and switch to Selectors (RLE).</span>
+<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">plan_builder</span><span class="nf">.row_selection_policy</span><span class="p">(),</span> <span class="o">&amp;</span><span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Selectors</span><span class="p">);</span>
+</code></pre></div></div>
+<h3>3.2 Page Pruning</h3>
+<p>The ultimate performance win is <strong>not doing I/O or decoding at all</strong>. In the real world (especially with object storage), firing off a million tiny read requests is a <strong>performance killer</strong>. <code>arrow-rs</code> uses the Parquet <a href="https://parquet.apache.org/docs/file-format/pageindex/" target="_blank" rel="noopener">PageIndex</a> to calculate exactly which pages contain data we actually need. For very selective predicates, skipping pages can result in substantial I/O savings, even if the underlying storage client merges adjacent range requests. Another major win is reduced CPU: <strong>we completely skip the heavy lifting of decompressing and decoding entirely pruned pages.</strong></p>
+<ul>
+<li>
+<strong>The Catch</strong>: If the <code>RowSelection</code> selects even a <strong>single row</strong> from a page, the whole page must be decompressed. Therefore, the efficiency of this step relies heavily on the correlation between data clustering and the predicates.</li>
+<li>
+<strong>Implementation</strong>: <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204" target="_blank" rel="noopener"><code>RowSelection::scan_ranges</code></a> crunches the numbers using each page's metadata (<code>first_row_index</code> and <code>compressed_page_size</code>) to figure out which ranges are total skips, returning only the required <code>(offset, length)</code> list.</li>
+</ul>
+<p>Page skipping is illustrated in the following code example:</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: two pages; page0 covers 0..100, page1 covers 100..200</span>
+<span class="k">let</span> <span class="n">locations</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
+    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">0</span> <span class="p">},</span>
+    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">100</span> <span class="p">},</span>
+<span class="p">];</span>
+<span class="c1">// RowSelection wants 150..160; page0 is total junk, only read page1</span>
+<span class="k">let</span> <span class="n">sel</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">150</span><span class="p">),</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">),</span>
+<span class="p">]</span><span class="nf">.into</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">ranges</span> <span class="o">=</span> <span class="n">sel</span><span class="nf">.scan_ranges</span><span class="p">(</span><span class="o">&amp;</span><span class="n">locations</span><span class="p">);</span>
+<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">ranges</span><span class="nf">.len</span><span class="p">(),</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// Only request page1</span>
+</code></pre></div></div>
+<p>The following figure illustrates page skipping with RLE selections. The
+first page is neither read nor decoded, as no rows are selected. The second page
+is read and fully decompressed (e.g., zstd), and then only the needed rows are decoded.
+The third page is decompressed and decoded in full, as all rows are selected.</p>
+<figure style="text-align: center;">
+  <img src="/img/late-materialization/fig4.jpg" alt="Page-level scan range calculation" width="100%" class="img-responsive">
+</figure>
+<p>This mechanism acts as the bridge between logical row filtering and physical byte fetching. While we cannot slice the file thinner than a single page (due to compression boundaries), Page Pruning ensures that we never pay the decompression cost for a page unless it contributes at least one row to the result. It strikes a pragmatic balance: utilizing the coarse-grained Page Index to skip large swathes of data, while leaving the fine-grained <code>RowSelection</code> to handle the specific rows within the surviving pages.</p>
+<h3>3.3 Smart Caching</h3>
+<p>Late materialization introduces a structural Catch-22: to efficiently skip data, we must first read it. Consider a query like <code>SELECT A FROM table WHERE A &gt; 10</code>. The reader must decode column <code>A</code> to evaluate the filter. In a traditional "read-everything" approach, this wouldn't be an issue: column A would simply sit in memory, waiting to be projected. However, in a strict pipeline, the "Predicate" stage and the "Projection" stage are decoupled. Once the filter produces a RowSelection, the projection stage sees that it needs column <code>A</code> and triggers a second read of the same data.</p>
+<p>Without intervention, we pay a "double tax": decoding once to decide what to keep, and decoding again to actually keep it.<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/cached_array_reader.rs#L40-L68" target="_blank" rel="noopener"><code>CachedArrayReader</code></a>, introduced in <a href="https://github.com/apache/arrow-rs/pull/7850" target="_blank" rel="noopener">#arrow-rs/7850</a>, solves this dilemma using a <strong>Dual-Layer</strong> Cache architecture. It allows us to stash the decoded batch the first time we see it (during filtering) and reuse it later (during projection).</p>
+<p>But why two layers? Why not just one big cache?</p>
+<ul>
+<li>
+<strong>The Shared Cache (Optimistic Reuse):</strong> This is a global cache shared across all columns and readers. It has a user-configurable memory limit (capacity). When a page is decoded for a predicate, it is placed here. If the projection step runs soon after, it can "hit" this cache and avoid I/O. However, because memory is finite, <strong>cache eviction</strong> can happen at any moment. If we relied solely on this, a heavy workload could evict our data right before we need it again.</li>
+<li>
+<strong>The Local Cache (Deterministic Guarantee):</strong> This is a private cache specific to a single column's reader. It acts as a <strong>safety net</strong>. When a column is being actively read, the data is "pinned" in the Local Cache. This guarantees that the data remains available for the duration of the current operation, immune to eviction from the global Shared Cache.</li>
+</ul>
+<p>The reader follows a strict hierarchy when fetching a page:</p>
+<ol>
+<li>
+<strong>Check Local:</strong> Do I already have it pinned?</li>
+<li>
+<strong>Check Shared:</strong> Did another part of the pipeline decode this recently? If yes, <strong>promote</strong> it to Local (pin it).</li>
+<li>
+<strong>Read from Source:</strong> Perform the I/O and decoding, then insert into both Local and Shared.</li>
+</ol>
+<p>This dual strategy gives us the best of both worlds: the <strong>efficiency</strong> of sharing data between filter and projection steps, and the <strong>stability</strong> of knowing that necessary data won't vanish mid-query due to memory pressure.</p>
+<h3>3.4 Minimizing Copies and Allocations</h3>
+<p>Another area where arrow-rs has significant optimization is <strong>avoiding unnecessary copies</strong>. Rust's <a href="https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html" target="_blank" rel="noopener">memory safe</a> design makes it easy to copy, but every extra allocation wastes CPU cycles and memory bandwidth. A naive implementation often pays an <strong>"unnecessary tax"</strong> by decompressing data into a temporary <code>Vec</code> and then <code>memcpy</code>-ing it into an Arrow Buffer.</p>
+<p>For fixed-width types (like integers or floats), this is completely redundant because their memory layouts are identical. <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/array_reader/primitive_array.rs#L102" target="_blank" rel="noopener"><code>PrimitiveArrayReader</code></a> eliminates this overhead via <a href="https://docs.rs/arrow/latest/arrow/array/struct.PrimitiveArray.html#example-from-a-vec" target="_blank" rel="noopener">zero-copy conversions</a>: instead of copying bytes, it simply <strong>hands over ownership</strong> of the decoded <code>Vec&lt;T&gt;</code> directly to the underlying Arrow <code>Buffer</code>.</p>
+<h3>3.5 The Alignment Gauntlet</h3>
+<p>Chained filtering is a <strong>hair-pulling</strong> exercise in coordinate systems. "Row 1" in filter N might actually be "Row 10,001" in the file due to prior filters.</p>
+<ul>
+<li>
+<strong>How do we keep the train on the rails?</strong>: We <a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L1309" target="_blank" rel="noopener">fuzz test</a> every <code>RowSelection</code> operation (<code>split_off</code>, <code>and_then</code>, <code>trim</code>). We need absolute certainty that our translation between relative and absolute offsets is pixel-perfect. This correctness is the bedrock that keeps the Reader stable under the triple threat of batch boundaries, sparse selections, and page pruning.</li>
+</ul>
+<h2>4. Conclusion</h2>
+<p>The Parquet reader in <code>arrow-rs</code> isn't just a humble file reader—it's a <strong>mini query engine</strong> in disguise. We've baked in high-end features like predicate pushdown and late materialization. The reader reads only what's needed and decodes only what's necessary, saving resources while maintaining correctness. Previously, these features were restricted to proprietary or tightly integrated systems. Now, thanks to the community's efforts, <code>arrow-rs</code> brings the benefits of advanced query processing techniques to even lightweight applications.</p>
+<p>We invite you to <a href="https://github.com/apache/arrow-rs?tab=readme-ov-file#arrow-rust-community" target="_blank" rel="noopener">join the community</a>, explore the code, experiment with it, and contribute to its ongoing evolution. The journey of optimizing data access is never-ending, and together, we can push the boundaries of what's possible in open-source data processing.</p>
+
+      </main>
+    </div>
+
+    <hr>
+<footer class="footer">
+  <div class="row">
+    <div class="col-md-9">
+      <p>Apache Arrow, Arrow, Apache, the Apache logo, and the Apache Arrow project logo are either registered trademarks or trademarks of The Apache Software Foundation in the United States and other countries.</p>
+      <p>© 2016-2025 The Apache Software Foundation</p>
+    </div>
+    <div class="col-md-3">
+      <a class="d-sm-none d-md-inline pr-2" href="https://www.apache.org/events/current-event.html" target="_blank" rel="noopener">
+        <img src="https://www.apache.org/events/current-event-234x60.png">
+      </a>
+    </div>
+  </div>
+</footer>
+
+  </div>
+</body>
+</html>
