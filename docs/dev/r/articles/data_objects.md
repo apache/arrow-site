@@ -806,9 +806,9 @@ ds |>
     ## # A tibble: 6 x 3
     ##      id subset new_value
     ##   <int> <chr>      <dbl>
-    ## 1     6 b            115
-    ## 2     2 a             26
-    ## 3     5 a             62
+    ## 1     2 a             26
+    ## 2     5 a             62
+    ## 3     6 b            115
     ## 4    12 c             63
     ## 5    13 c            207
     ## 6    15 c             51
