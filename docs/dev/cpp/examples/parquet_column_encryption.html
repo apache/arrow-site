@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Parquet column encryption &#8212; Apache Arrow v23.0.0.dev206</title>
+    <title>Parquet column encryption &#8212; Apache Arrow v23.0.0.dev218</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
 
-    <script src="../../_static/documentation_options.js?v=304b7f1a"></script>
+    <script src="../../_static/documentation_options.js?v=18e68885"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="23.0.0.dev206" />
+  <meta name="docsearch:version" content="23.0.0.dev218" />
 
   <!-- Matomo -->
   <script>
@@ -149,8 +149,8 @@
       
     
     
-    <img src="../../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v23.0.0.dev206 - Home"/>
-    <img src="../../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v23.0.0.dev206 - Home"/>
+    <img src="../../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v23.0.0.dev218 - Home"/>
+    <img src="../../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v23.0.0.dev218 - Home"/>
   
   
 </a></div>
@@ -1574,6 +1574,7 @@ different encryption keys.</p>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/dataset/file_parquet.h&quot;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/dataset/parquet_encryption_config.h&quot;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/filesystem/localfs.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/json/from_string.h&quot;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;arrow/util/secure_string.h&quot;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/encryption/crypto_factory.h&quot;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;parquet/encryption/test_in_memory_kms.h&quot;</span>
@@ -1585,73 +1586,28 @@ different encryption keys.</p>
 <span class="k">namespace</span><span class="w"> </span><span class="nn">ds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nn">arrow</span><span class="o">::</span><span class="nn">dataset</span><span class="p">;</span>
 
 <span class="n">arrow</span><span class="o">::</span><span class="n">Result</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">GetTable</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">int_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">Int32Builder</span><span class="p">();</span>
-
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Array</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arr_i</span><span class="p">;</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">int_builder</span><span class="p">.</span><span class="n">AppendValues</span><span class="p">({</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">int_builder</span><span class="p">.</span><span class="n">Finish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">arr_i</span><span class="p">));</span>
-
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">int_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">();</span>
 <span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">struct_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">struct_</span><span class="p">({{</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">()},</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">int64</span><span class="p">()}});</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">pool</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">default_memory_pool</span><span class="p">();</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">a_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Int32Builder</span><span class="o">&gt;</span><span class="p">();</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">b_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Int64Builder</span><span class="o">&gt;</span><span class="p">();</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">struct_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">StructBuilder</span><span class="p">(</span><span class="n">struct_type</span><span class="p">,</span><span class="w"> </span><span class="n">pool</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="n">a_builder</span><span class="p">,</span><span class="w"> </span><span class="n">b_builder</span><span class="p">});</span>
-
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Array</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arr_struct</span><span class="p">;</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">struct_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">a_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">b_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">20</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">struct_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">a_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">4</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">b_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">40</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">struct_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">a_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">6</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">b_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">60</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">struct_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">a_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">8</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">b_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">80</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">struct_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">a_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">10</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">b_builder</span><span class="o">-&gt;</span><span class="n">Append</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">struct_builder</span><span class="p">.</span><span class="n">Finish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">arr_struct</span><span class="p">));</span>
-
 <span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">map_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">map</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">(),</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">utf8</span><span class="p">());</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">key_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Int32Builder</span><span class="o">&gt;</span><span class="p">();</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">item_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">StringBuilder</span><span class="o">&gt;</span><span class="p">();</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">map_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">MapBuilder</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span><span class="w"> </span><span class="n">key_builder</span><span class="p">,</span><span class="w"> </span><span class="n">item_builder</span><span class="p">,</span><span class="w"> </span><span class="n">map_type</span><span class="p">);</span>
-
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Array</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arr_map</span><span class="p">;</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">map_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">key_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">item_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="s">&quot;2&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;4&quot;</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">map_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">key_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="mi">6</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">item_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="s">&quot;6&quot;</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">map_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">map_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">key_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">item_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="s">&quot;8&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;10&quot;</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">map_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">map_builder</span><span class="p">.</span><span class="n">Finish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">arr_map</span><span class="p">));</span>
-
 <span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">list_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">list</span><span class="p">(</span><span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">());</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">value_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Int32Builder</span><span class="o">&gt;</span><span class="p">();</span>
-<span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">list_builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">ListBuilder</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span><span class="w"> </span><span class="n">value_builder</span><span class="p">,</span><span class="w"> </span><span class="n">list_type</span><span class="p">);</span>
 
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Array</span><span class="o">&gt;</span><span class="w"> </span><span class="n">arr_list</span><span class="p">;</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">list_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">value_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">list_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">value_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">list_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">value_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="mi">7</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">list_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">value_builder</span><span class="o">-&gt;</span><span class="n">AppendValues</span><span class="p">({</span><span class="mi">8</span><span class="p">}));</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">list_builder</span><span class="p">.</span><span class="n">Append</span><span class="p">());</span>
-<span class="w">  </span><span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">list_builder</span><span class="p">.</span><span class="n">Finish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">arr_list</span><span class="p">));</span>
+<span class="w">  </span><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">arr_i</span><span class="p">,</span>
+<span class="w">                        </span><span class="n">arrow</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">ArrayFromJSONString</span><span class="p">(</span><span class="n">int_type</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[1, 3, 5, 7, 1]&quot;</span><span class="p">));</span>
+<span class="w">  </span><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span>
+<span class="w">      </span><span class="k">auto</span><span class="w"> </span><span class="n">arr_struct</span><span class="p">,</span>
+<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">ArrayFromJSONString</span><span class="p">(</span>
+<span class="w">          </span><span class="n">struct_type</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[[2, 20], [4, 40], [6, 60], [8, 80], [10, 100]]&quot;</span><span class="p">));</span>
+<span class="w">  </span><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span>
+<span class="w">      </span><span class="k">auto</span><span class="w"> </span><span class="n">arr_map</span><span class="p">,</span>
+<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">ArrayFromJSONString</span><span class="p">(</span>
+<span class="w">          </span><span class="n">map_type</span><span class="p">,</span>
+<span class="w">          </span><span class="sa">R</span><span class="s">&quot;</span><span class="dl">(</span><span class="s">[[[2, &quot;2&quot;], [4, &quot;4&quot;]], [[6, &quot;6&quot;]], [], [[8, &quot;8&quot;], [10, &quot;10&quot;]], null]</span><span class="dl">)</span><span class="s">&quot;</span><span class="p">));</span>
+<span class="w">  </span><span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span><span class="w"> </span><span class="n">arr_list</span><span class="p">,</span>
+<span class="w">                        </span><span class="n">arrow</span><span class="o">::</span><span class="n">json</span><span class="o">::</span><span class="n">ArrayFromJSONString</span><span class="p">(</span>
+<span class="w">                            </span><span class="n">list_type</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[[1, 2, 3], [4, 5, 6], [7], [8], null]&quot;</span><span class="p">));</span>
 
 <span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">schema</span><span class="p">({</span>
-<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">&quot;i&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">()),</span>
+<span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">&quot;i&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">int_type</span><span class="p">),</span>
 <span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">&quot;s&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">struct_type</span><span class="p">),</span>
 <span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">&quot;m&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">map_type</span><span class="p">),</span>
 <span class="w">      </span><span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">&quot;l&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">list_type</span><span class="p">),</span>
@@ -1686,8 +1642,7 @@ different encryption keys.</p>
 <span class="w">  </span><span class="c1">// Set write options with encryption configuration.</span>
 <span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">encryption_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">parquet</span><span class="o">::</span><span class="n">encryption</span><span class="o">::</span><span class="n">EncryptionConfiguration</span><span class="o">&gt;</span><span class="p">(</span>
 <span class="w">      </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="s">&quot;footerKeyId&quot;</span><span class="p">));</span>
-<span class="w">  </span><span class="n">encryption_config</span><span class="o">-&gt;</span><span class="n">column_keys</span><span class="w"> </span><span class="o">=</span>
-<span class="w">      </span><span class="s">&quot;columnKeyId: i, s.a, s.b, m.key_value.key, m.key_value.value, l.list.element&quot;</span><span class="p">;</span>
+<span class="w">  </span><span class="n">encryption_config</span><span class="o">-&gt;</span><span class="n">column_keys</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;columnKeyId: i, s, m, l&quot;</span><span class="p">;</span>
 
 <span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">parquet_encryption_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">ds</span><span class="o">::</span><span class="n">ParquetEncryptionConfig</span><span class="o">&gt;</span><span class="p">();</span>
 <span class="w">  </span><span class="c1">// Directly assign shared_ptr objects to ParquetEncryptionConfig members.</span>
