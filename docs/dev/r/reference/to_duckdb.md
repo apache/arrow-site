@@ -94,15 +94,15 @@ ds |>
   to_duckdb() |>
   slice_min(disp)
 #> # Source:   SQL [?? x 11]
-#> # Database: DuckDB 1.4.2 [unknown@Linux 6.11.0-1018-azure:R 4.5.2/:memory:]
+#> # Database: DuckDB 1.4.3 [unknown@Linux 6.11.0-1018-azure:R 4.5.2/:memory:]
 #> # Groups:   cyl
 #>     mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
 #>   <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
 #> 1  16.4     8  276.   180  3.07  4.07  17.4     0     0     3     3
 #> 2  17.3     8  276.   180  3.07  3.73  17.6     0     0     3     3
 #> 3  15.2     8  276.   180  3.07  3.78  18       0     0     3     3
-#> 4  27.3     4   79     66  4.08  1.94  18.9     1     1     4     1
-#> 5  19.7     6  145    175  3.62  2.77  15.5     0     1     5     6
+#> 4  19.7     6  145    175  3.62  2.77  15.5     0     1     5     6
+#> 5  27.3     4   79     66  4.08  1.94  18.9     1     1     4     1
 ```
 
 </div>
