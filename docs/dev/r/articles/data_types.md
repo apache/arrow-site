@@ -225,7 +225,8 @@ chunked_array(c(10L, 3L, 200L), type = int8())
 
 </div>
 
-    ## Error: Invalid: value outside of range
+    ## Error:
+    ## ! Invalid: value outside of range
 
 When translating from Arrow to R, integer types alway translate to R
 integers unless one of the following exceptions applies:

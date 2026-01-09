@@ -105,10 +105,10 @@ There are some special cases to note:
 ## What can the arrow package do?
 
 The Arrow C++ library is comprised of different parts, each of which
-serves a specific purpose. The arrow package provides binding to the C++
-functionality for a wide range of data analysis tasks.
+serves a specific purpose. The arrow package provides bindings to the
+C++ functionality for a wide range of data analysis tasks.
 
-It allows users to read and write data in a variety formats:
+It allows users to read and write data in a variety of formats:
 
 -   Read and write Parquet files, an efficient and widely used columnar
     format

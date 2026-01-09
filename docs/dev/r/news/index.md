@@ -10,6 +10,27 @@
 
 <div class="section level2">
 
+## arrow 22.0.0.1
+
+CRAN release: 2025-12-23
+
+<div class="section level3">
+
+### Minor improvements and fixes
+
+-   Turn off GCS support by default; bundle if enabled
+    ([\#48343](https://github.com/apache/arrow/issues/48343))
+-   Ensure `MAKEFLAGS` being passed during compilation
+    ([\#48341](https://github.com/apache/arrow/issues/48341))
+-   Update bundled RE2 to enable Alpine Linux builds
+    ([\#48011](https://github.com/apache/arrow/issues/48011))
+
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## arrow 22.0.0
 
 CRAN release: 2025-10-29
