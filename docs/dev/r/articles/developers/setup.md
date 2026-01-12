@@ -278,14 +278,16 @@ cmake --build . --target install -j8
 
 Once you’ve built libarrow, you can install the R package and its
 dependencies, along with additional dev dependencies, from the git
-checkout:
+checkout like below. You might need to either pick and set a repository
+interactively or you could add a repository to the `install.packages()`
+command with `repos="https://cloud.r-project.org"`.
 
 <div id="cb9" class="sourceCode">
 
 ``` bash
 popd # To go back to the root directory of the project, from cpp/build
 pushd r
-R -e "install.packages('remotes'); remotes::install_deps(dependencies = TRUE)"
+R -e 'install.packages("remotes"); remotes::install_deps(dependencies = TRUE)'
 R CMD INSTALL --no-multiarch .
 ```
 
