@@ -85,11 +85,11 @@ There are some special cases to note:
     guide](https://arrow.apache.org/docs/r/articles/install.html).
 
 -   If you are compiling arrow from source, please note that as of
-    version 10.0.0, arrow requires C++17 to build. This has implications
+    version 23.0.0, arrow requires C++20 to build. This has implications
     on Windows and CentOS 7. For Windows users it means you need to be
-    running an R version of 4.0 or later. On CentOS 7, it means you need
-    to install a newer compiler than the default system compiler gcc.
-    See the [installation details
+    running an R version of 4.3 or later (though R 4.2 has incomplete
+    support and might work with special configuration). See the
+    [installation details
     article](https://arrow.apache.org/docs/r/articles/developers/install_details.html)
     for guidance.
 
