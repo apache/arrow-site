@@ -49,13 +49,13 @@ Source:
 Richardson N, Cook I, Crane N, Dunnington D, Fran\<U+00E7\>ois R, Keane
 J, Mecum B, Moldovan-Gr\<U+00FC\>nfeld D, Ooms J, Wujciak-Jens J, Apache
 Arrow (2026). *arrow: Integration to 'Apache' 'Arrow'*. R package
-version 22.0.0.9000, <https://github.com/apache/arrow/>.
+version 23.0.0.9000, <https://github.com/apache/arrow/>.
 
     @Manual{,
       title = {arrow: Integration to 'Apache' 'Arrow'},
       author = {Neal Richardson and Ian Cook and Nic Crane and Dewey Dunnington and Romain François and Jonathan Keane and Bryce Mecum and Dragoș Moldovan-Grünfeld and Jeroen Ooms and Jacob Wujciak-Jens and {Apache Arrow}},
       year = {2026},
-      note = {R package version 22.0.0.9000},
+      note = {R package version 23.0.0.9000},
       url = {https://github.com/apache/arrow/},
     }
 

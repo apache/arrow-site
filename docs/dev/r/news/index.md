@@ -4,7 +4,13 @@
 
 <div class="section level2">
 
-## arrow 22.0.0.9000
+## arrow 23.0.0.9000
+
+</div>
+
+<div class="section level2">
+
+## arrow 23.0.0
 
 </div>
 
@@ -24,6 +30,16 @@ CRAN release: 2025-12-23
     ([\#48341](https://github.com/apache/arrow/issues/48341))
 -   Update bundled RE2 to enable Alpine Linux builds
     ([\#48011](https://github.com/apache/arrow/issues/48011))
+
+</div>
+
+<div class="section level3">
+
+### New features
+
+-   `nchar()` supports the `keepNA = FALSE` argument to replace `NA`
+    values with `2` ([@HyukjinKwon](https://github.com/HyukjinKwon),
+    [\#48665](https://github.com/apache/arrow/issues/48665)).
 
 </div>
 
