@@ -414,18 +414,18 @@ sw |>
 </div>
 
     ## # A tibble: 28 x 4
-    ##    name         height  mass hair_color
-    ##    <chr>         <int> <dbl> <chr>     
-    ##  1 Yoda             66    17 white     
-    ##  2 R4-P17           96    NA none      
-    ##  3 Lobot           175    79 none      
-    ##  4 Ackbar          180    83 none      
-    ##  5 Nien Nunb       160    68 none      
-    ##  6 Sebulba         112    40 none      
-    ##  7 Bib Fortuna     180    NA none      
-    ##  8 Ayla Secura     178    55 none      
-    ##  9 Ratts Tyerel     79    15 none      
-    ## 10 Dud Bolt         94    45 none      
+    ##    name                    height  mass hair_color
+    ##    <chr>                    <int> <dbl> <chr>     
+    ##  1 "Luke Skywalker"           172    77 blond     
+    ##  2 "Finis Valorum"            170    NA blond     
+    ##  3 "Leia Organa"              150    49 brown     
+    ##  4 "Beru Whitesun Lars"       165    75 brown     
+    ##  5 "Wedge Antilles"           170    77 brown     
+    ##  6 "Wicket Systri Warrick"     88    20 brown     
+    ##  7 "Cord\u00e9"               157    NA brown     
+    ##  8 "Dorm\u00e9"               165    NA brown     
+    ##  9 "Yoda"                      66    17 white     
+    ## 10 "Watto"                    137    NA black     
     ## # i 18 more rows
 
 </div>
