@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Internal structure of Arrow objects
 
 This article describes the internal structure of Arrow data objects.
@@ -16,29 +14,24 @@ using the arrow package.
 
 We begin by describing two key concepts:
 
--   Values in an array are stored in one or more **buffers**. A buffer
-    is a sequential virtual address space (i.e., block of memory) with a
-    given length. Given a pointer specifying the memory address where
-    the buffer starts, you can reach any byte in the buffer with an
-    “offset” value that specifies a location relative to the start of
-    the buffer.
--   The **physical layout** of an array is a term used to describe how
-    data in an array is laid out in memory, without taking into account
-    how that information is interpreted. As an example: a 32-bit signed
-    integer and 32-bit floating point number have the same layout: they
-    are both 32 bits, represented as 4 contiguous bytes in memory. The
-    meaning is different, but the layout is the same.
+- Values in an array are stored in one or more **buffers**. A buffer is
+  a sequential virtual address space (i.e., block of memory) with a
+  given length. Given a pointer specifying the memory address where the
+  buffer starts, you can reach any byte in the buffer with an “offset”
+  value that specifies a location relative to the start of the buffer.
+- The **physical layout** of an array is a term used to describe how
+  data in an array is laid out in memory, without taking into account
+  how that information is interpreted. As an example: a 32-bit signed
+  integer and 32-bit floating point number have the same layout: they
+  are both 32 bits, represented as 4 contiguous bytes in memory. The
+  meaning is different, but the layout is the same.
 
 We can unpack these ideas using a simple array of integer values:
-
-<div id="cb1" class="sourceCode">
 
 ``` r
 integer_array <- Array$create(c(1L, NA, 2L, 4L, 8L))
 integer_array
 ```
-
-</div>
 
     ## Array
     ## <int32>
@@ -70,8 +63,6 @@ we’ve unpacked the contents of the buffers for you, showing the contents
 of the two buffers in the area enclosed in a dotted line. At the very
 bottom of the figure, you can see the contents of specific bytes.
 
-<div class="section level2">
-
 ## Validity bitmap buffer
 
 The validity bitmap is binary-valued, and contains a 1 whenever the
@@ -99,21 +90,9 @@ efficient use of modern hardware, as discussed in the [Arrow
 specification](https://arrow.apache.org/docs/format/Columnar.html#buffer-alignment-and-padding).
 This is what the buffer looks like this in memory:
 
-<div class="grid">
-
-<div class="g-col-6">
-
 | Byte 0 (validity bitmap) | Bytes 1-63    |
 |--------------------------|---------------|
 | `00011101`               | `0` (padding) |
-
-</div>
-
-</div>
-
-</div>
-
-<div class="section level2">
 
 ## Data buffer
 
@@ -121,26 +100,14 @@ The data buffer, like the validity bitmap, is padded out to a length of
 64 bytes to preserve natural alignment. Here’s the diagram showing the
 physical layout:
 
-<div class="grid">
-
-<div class="g-col-12">
-
 | Bytes 0-3 | Bytes 4-7   | Bytes 8-11 | Bytes 12-15 | Bytes 16-19 | Bytes 20-63 |
 |-----------|-------------|------------|-------------|-------------|-------------|
 | `1`       | unspecified | `2`        | `4`         | `8`         | unspecified |
-
-</div>
-
-</div>
 
 Each integer occupies 4 bytes, as per the requirements of a 32-bit
 signed integer. Notice that the bytes associated with the missing value
 are left unspecified: space is allocated for the value but those bytes
 are not filled.
-
-</div>
-
-<div class="section level2">
 
 ## Offset buffer
 
@@ -148,14 +115,10 @@ Some types of Arrow array include a third buffer known as the offset
 buffer. This is most frequently encountered in the context of string
 arrays, such as this one:
 
-<div id="cb4" class="sourceCode">
-
 ``` r
 string_array <- Array$create(c("hello", "amazing", "and", "cruel", "world"))
 string_array
 ```
-
-</div>
 
     ## Array
     ## <string>
@@ -196,13 +159,15 @@ these break point locations. For `string_array` it might look like this:
 
     0 5 12 15 20 25
 
-The difference between the `utf8()` data type and the `large_utf8()`
-data type is that these the `utf8()` data type stores these as 32-bit
-integers whereas the `large_utf8()` type stores them as 64-bit integers.
-
-</div>
-
-<div class="section level2">
+The difference between the
+[`utf8()`](https://arrow.apache.org/docs/r/reference/data-type.md) data
+type and the
+[`large_utf8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+data type is that these the
+[`utf8()`](https://arrow.apache.org/docs/r/reference/data-type.md) data
+type stores these as 32-bit integers whereas the
+[`large_utf8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+type stores them as 64-bit integers.
 
 ## Chunked arrays
 
@@ -231,9 +196,9 @@ have to be adjacent to each other in memory – but the chunked array
 provides us will a layer of abstraction that allows us to pretend that
 they are all one thing.
 
-To illustrate, let’s use the `chunked_array()` function:
-
-<div id="cb8" class="sourceCode">
+To illustrate, let’s use the
+[`chunked_array()`](https://arrow.apache.org/docs/r/reference/chunked_array.md)
+function:
 
 ``` r
 chunked_string_array <- chunked_array(
@@ -242,19 +207,14 @@ chunked_string_array <- chunked_array(
 )
 ```
 
-</div>
-
-The `chunked_array()` function is just a wrapper around the
-functionality that `ChunkedArray$create()` provides. Let’s take a look
-at the object:
-
-<div id="cb9" class="sourceCode">
+The
+[`chunked_array()`](https://arrow.apache.org/docs/r/reference/chunked_array.md)
+function is just a wrapper around the functionality that
+`ChunkedArray$create()` provides. Let’s take a look at the object:
 
 ``` r
 chunked_string_array
 ```
-
-</div>
 
     ## ChunkedArray
     ## <string>
@@ -284,10 +244,6 @@ structure. Schematically it looks like this:
 As this figure illustrates, there really are three arrays here, each
 with its own validity bitmap, offset buffer, and data buffer.
 
-</div>
-
-<div class="section level2">
-
 ## Record batches
 
 A record batch is table-like data structure comprised of a sequence of
@@ -302,8 +258,6 @@ own validity bitmap.
 
 Here is a record batch containing 5 rows and 3 columns:
 
-<div id="cb11" class="sourceCode">
-
 ``` r
 rb <- record_batch(
   strs = c("hello", "amazing", "and", "cruel", "world"),
@@ -312,8 +266,6 @@ rb <- record_batch(
 )
 rb
 ```
-
-</div>
 
     ## RecordBatch
     ## 5 rows x 3 columns
@@ -327,10 +279,6 @@ in memory it is fundamentally a list of arrays as shown below:
 
 ![](record_batch_layout.png)
 
-</div>
-
-<div class="section level2">
-
 ## Tables
 
 To deal with situations where a rectangular data set can grow over time
@@ -341,8 +289,6 @@ what the `Table` class in **arrow** does.
 
 To illustrate, suppose we have a second set of data that arrives as a
 record batch:
-
-<div id="cb13" class="sourceCode">
 
 ``` r
 new_rb <- record_batch(
@@ -355,8 +301,6 @@ df <- concat_tables(arrow_table(rb), arrow_table(new_rb))
 df
 ```
 
-</div>
-
     ## Table
     ## 8 rows x 3 columns
     ## $strs <string>
@@ -366,7 +310,3 @@ df
 Here is the underlying structure of this Table:
 
 ![](table_layout.png)
-
-</div>
-
-</div>

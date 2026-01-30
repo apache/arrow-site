@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Working with multi-file data sets
 
 Apache Arrow lets you work efficiently with single and multi-file data
@@ -9,16 +7,10 @@ using familiar [dplyr](https://dplyr.tidyverse.org/) syntax. This
 article introduces Datasets and shows you how to analyze them with dplyr
 and arrow: we’ll start by ensuring both packages are loaded
 
-<div id="cb1" class="sourceCode">
-
 ``` r
 library(arrow, warn.conflicts = FALSE)
 library(dplyr, warn.conflicts = FALSE)
 ```
-
-</div>
-
-<div class="section level2">
 
 ## Example: NYC taxi data
 
@@ -50,24 +42,16 @@ links at the end of this article if you need to troubleshoot this), you
 can connect to a copy of the “tiny taxi data” stored on S3 with this
 command:
 
-<div id="cb2" class="sourceCode">
-
 ``` r
 bucket <- s3_bucket("arrow-datasets/nyc-taxi-tiny")
 ```
 
-</div>
-
 Alternatively you could connect to a copy of the data on Google Cloud
 Storage (GCS) using the following command:
-
-<div id="cb3" class="sourceCode">
 
 ``` r
 bucket <- gs_bucket("arrow-datasets/nyc-taxi-tiny", anonymous = TRUE)
 ```
-
-</div>
 
 If you want to use the full data set, replace `nyc-taxi-tiny` with
 `nyc-taxi` in the code above. Apart from size – and with it the cost in
@@ -76,36 +60,26 @@ two versions of the data: you can test your code using the tiny taxi
 data and then check how it scales using the full data set.
 
 To make a local copy of the data set stored in the `bucket` to a folder
-called `"nyc-taxi"`, use the `copy_files()` function:
-
-<div id="cb4" class="sourceCode">
+called `"nyc-taxi"`, use the
+[`copy_files()`](https://arrow.apache.org/docs/r/reference/copy_files.md)
+function:
 
 ``` r
 copy_files(from = bucket, to = "nyc-taxi")
 ```
 
-</div>
-
 For the purposes of this article, we assume that the NYC taxi dataset
 (either the full data or the tiny version) has been downloaded locally
 and exists in an `"nyc-taxi"` directory.
-
-</div>
-
-<div class="section level2">
 
 ## Opening Datasets
 
 The first step in the process is to create a Dataset object that points
 at the data directory:
 
-<div id="cb5" class="sourceCode">
-
 ``` r
 ds <- open_dataset("nyc-taxi")
 ```
-
-</div>
 
 It is important to note that when we do this, the data values are not
 loaded into memory. Instead, Arrow scans the data directory to find
@@ -116,66 +90,80 @@ the data. For more information about Schemas see the [metadata
 article](https://arrow.apache.org/docs/r/articles/metadata.md).
 
 Two questions naturally follow from this: what kind of files does
-`open_dataset()` look for, and what structure does it expect to find in
-the file paths? Let’s start by looking at the file types.
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+look for, and what structure does it expect to find in the file paths?
+Let’s start by looking at the file types.
 
-By default `open_dataset()` looks for Parquet files but you can override
-this using the `format` argument. For example if the data were encoded
-as CSV files we could set `format = "csv"` to connect to the data. The
-Arrow Dataset interface supports several file formats including:
+By default
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+looks for Parquet files but you can override this using the `format`
+argument. For example if the data were encoded as CSV files we could set
+`format = "csv"` to connect to the data. The Arrow Dataset interface
+supports several file formats including:
 
--   `"parquet"` (the default)
--   `"feather"` or `"ipc"` (aliases for `"arrow"`; as Feather version 2
-    is the Arrow file format)
--   `"csv"` (comma-delimited files) and `"tsv"` (tab-delimited files)
--   `"text"` (generic text-delimited files - use the `delimiter`
-    argument to specify which to use)
+- `"parquet"` (the default)
+- `"feather"` or `"ipc"` (aliases for `"arrow"`; as Feather version 2 is
+  the Arrow file format)
+- `"csv"` (comma-delimited files) and `"tsv"` (tab-delimited files)
+- `"text"` (generic text-delimited files - use the `delimiter` argument
+  to specify which to use)
 
 In the case of text files, you can pass the following parsing options to
-`open_dataset()` to ensure that files are read correctly:
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+to ensure that files are read correctly:
 
--   `delim`
--   `quote`
--   `escape_double`
--   `escape_backslash`
--   `skip_empty_rows`
+- `delim`
+- `quote`
+- `escape_double`
+- `escape_backslash`
+- `skip_empty_rows`
 
 An alternative when working with text files is to use
-`open_delim_dataset()`, `open_csv_dataset()`, or `open_tsv_dataset()`.
-These functions are wrappers around `open_dataset()` but with parameters
-that mirror `read_csv_arrow()`, `read_delim_arrow()`, and
-`read_tsv_arrow()` to allow for easy switching between functions for
-opening single files and functions for opening datasets.
+[`open_delim_dataset()`](https://arrow.apache.org/docs/r/reference/open_delim_dataset.md),
+[`open_csv_dataset()`](https://arrow.apache.org/docs/r/reference/open_delim_dataset.md),
+or
+[`open_tsv_dataset()`](https://arrow.apache.org/docs/r/reference/open_delim_dataset.md).
+These functions are wrappers around
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+but with parameters that mirror
+[`read_csv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md),
+[`read_delim_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md),
+and
+[`read_tsv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
+to allow for easy switching between functions for opening single files
+and functions for opening datasets.
 
 For example:
-
-<div id="cb6" class="sourceCode">
 
 ``` r
 ds <- open_csv_dataset("nyc-taxi/csv/")
 ```
 
-</div>
-
 For more information on these arguments and on parsing delimited text
-files generally, see the help documentation for `read_delim_arrow()` and
-`open_delim_dataset()`.
+files generally, see the help documentation for
+[`read_delim_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
+and
+[`open_delim_dataset()`](https://arrow.apache.org/docs/r/reference/open_delim_dataset.md).
 
-Next, what information does `open_dataset()` expect to find in the file
-paths? By default, the Dataset interface looks for
-[Hive](https://hive.apache.org/)-style partitioning structure in which
-folders are named using a “key=value” convention, and data files in a
-folder contain the subset of the data for which the key has the relevant
-value. For example, in the NYC taxi data file paths look like this:
+Next, what information does
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+expect to find in the file paths? By default, the Dataset interface
+looks for [Hive](https://hive.apache.org/)-style partitioning structure
+in which folders are named using a “key=value” convention, and data
+files in a folder contain the subset of the data for which the key has
+the relevant value. For example, in the NYC taxi data file paths look
+like this:
 
     year=2009/month=1/part-0.parquet
     year=2009/month=2/part-0.parquet
     ...
 
-From this, `open_dataset()` infers that the first listed Parquet file
-contains the data for January 2009. In that sense, a hive-style
-partitioning is self-describing: the folder names state explicitly how
-the Dataset has been split across files.
+From this,
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+infers that the first listed Parquet file contains the data for January
+2009. In that sense, a hive-style partitioning is self-describing: the
+folder names state explicitly how the Dataset has been split across
+files.
 
 Sometimes the directory partitioning isn’t self describing; that is, it
 doesn’t contain field names. For example, suppose the NYC taxi data used
@@ -185,34 +173,28 @@ file paths like these:
     2009/02/part-0.parquet
     ...
 
-In that case, `open_dataset()` would need some hints as to how to use
-the file paths. In this case, you could provide `c("year", "month")` to
-the `partitioning` argument, saying that the first path segment gives
-the value for `year`, and the second segment is `month`. Every row in
-`2009/01/part-0.parquet` has a value of 2009 for `year` and 1 for
-`month`, even though those columns may not be present in the file. In
-other words, we would open the data like this:
-
-<div id="cb9" class="sourceCode">
+In that case,
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+would need some hints as to how to use the file paths. In this case, you
+could provide `c("year", "month")` to the `partitioning` argument,
+saying that the first path segment gives the value for `year`, and the
+second segment is `month`. Every row in `2009/01/part-0.parquet` has a
+value of 2009 for `year` and 1 for `month`, even though those columns
+may not be present in the file. In other words, we would open the data
+like this:
 
 ``` r
 ds <- open_dataset("nyc-taxi", partitioning = c("year", "month"))
 ```
-
-</div>
 
 Either way, when you look at the Dataset, you can see that in addition
 to the columns present in every file, there are also columns `year` and
 `month`. These columns are not present in the files themselves: they are
 inferred from the partitioning structure.
 
-<div id="cb10" class="sourceCode">
-
 ``` r
 ds
 ```
-
-</div>
 
     ## 
     ## FileSystemDataset with 158 Parquet files
@@ -241,10 +223,6 @@ ds
     ## year: int32
     ## month: int32
 
-</div>
-
-<div class="section level2">
-
 ## Querying Datasets
 
 Now that we have a Dataset object that refers to our data, we can
@@ -252,10 +230,8 @@ construct dplyr-style queries. This is possible because arrow supplies a
 back end that allows users to manipulate tabular Arrow data using dplyr
 verbs. Here’s an example: suppose you are curious about tipping behavior
 in the longest taxi rides. Let’s find the median tip percentage for
-rides with fares greater than $100 in 2015, broken down by the number of
-passengers:
-
-<div id="cb12" class="sourceCode">
+rides with fares greater than \$100 in 2015, broken down by the number
+of passengers:
 
 ``` r
 system.time(ds |>
@@ -270,8 +246,6 @@ system.time(ds |>
   collect() |>
   print())
 ```
-
-</div>
 
     ## 
     ## # A tibble: 10 x 3
@@ -299,10 +273,10 @@ There are three reasons arrow can accomplish this task so quickly:
 
 First, arrow adopts a lazy evaluation approach to queries: when dplyr
 verbs are called on the Dataset, they record their actions but do not
-evaluate those actions on the data until you run `collect()`. We can see
-this by taking the same code as before and leaving off the final step:
-
-<div id="cb14" class="sourceCode">
+evaluate those actions on the data until you run
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html). We
+can see this by taking the same code as before and leaving off the final
+step:
 
 ``` r
 ds |>
@@ -315,8 +289,6 @@ ds |>
     n = n()
   )
 ```
-
-</div>
 
     ## 
     ## FileSystemDataset (query)
@@ -350,14 +322,11 @@ One final thing to note about querying Datasets. Suppose you attempt to
 call unsupported dplyr verbs or unimplemented functions in your query on
 an Arrow Dataset. In that case, the arrow package raises an error.
 However, for dplyr queries on Arrow Table objects (which are already
-in-memory), the package automatically calls `collect()` before
+in-memory), the package automatically calls
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) before
 processing that dplyr verb. To learn more about the dplyr back end, see
 the [data wrangling
 article](https://arrow.apache.org/docs/r/articles/data_wrangling.md).
-
-</div>
-
-<div class="section level2">
 
 ## Batch processing (experimental)
 
@@ -371,8 +340,6 @@ production use.
 As an example, to randomly sample a Dataset, use `map_batches` to sample
 a percentage of rows from each batch:
 
-<div id="cb16" class="sourceCode">
-
 ``` r
 sampled_data <- ds |>
   filter(year == 2015) |>
@@ -383,8 +350,6 @@ sampled_data <- ds |>
 
 str(sampled_data)
 ```
-
-</div>
 
     ## 
     ## tibble [10,918 <U+00D7> 4] (S3: tbl_df/tbl/data.frame)
@@ -398,8 +363,6 @@ Dataset by computing partial results for each batch and then aggregating
 those partial results. Extending the example above, you could fit a
 model to the sample data and then use `map_batches` to compute the MSE
 on the full Dataset.
-
-<div id="cb18" class="sourceCode">
 
 ``` r
 model <- lm(tip_pct ~ total_amount + passenger_count, data = sampled_data)
@@ -420,65 +383,50 @@ ds |>
   pull(mse)
 ```
 
-</div>
-
     ## 
     ## [1] 0.1304284
-
-</div>
-
-<div class="section level2">
 
 ## Dataset options
 
 There are a few ways you can control the Dataset creation to adapt to
 special use cases.
 
-<div class="section level3">
-
 ### Work with files in a directory
 
 If you are working with a single file or a set of files that are not all
 in the same directory, you can provide a file path or a vector of
-multiple file paths to `open_dataset()`. This is useful if, for example,
-you have a single CSV file that is too big to read into memory. You
-could pass the file path to `open_dataset()`, use `group_by()` to
-partition the Dataset into manageable chunks, then use `write_dataset()`
+multiple file paths to
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md).
+This is useful if, for example, you have a single CSV file that is too
+big to read into memory. You could pass the file path to
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md),
+use [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
+to partition the Dataset into manageable chunks, then use
+[`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
 to write each chunk to a separate Parquet file—all without needing to
 read the full CSV file into R.
 
-</div>
-
-<div class="section level3">
-
 ### Explicitly declare column names and data types
 
-You can specify the `schema` argument to `open_dataset()` to declare the
-columns and their data types. This is useful if you have data files that
-have different storage schema (for example, a column could be `int32` in
-one and `int8` in another) and you want to ensure that the resulting
-Dataset has a specific type.
+You can specify the `schema` argument to
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+to declare the columns and their data types. This is useful if you have
+data files that have different storage schema (for example, a column
+could be `int32` in one and `int8` in another) and you want to ensure
+that the resulting Dataset has a specific type.
 
 To be clear, it’s not necessary to specify a schema, even in this
 example of mixed integer types, because the Dataset constructor will
 reconcile differences like these. The schema specification just lets you
 declare what you want the result to be.
 
-</div>
-
-<div class="section level3">
-
 ### Explicitly declare partition format
 
 Similarly, you can provide a Schema in the `partitioning` argument of
-`open_dataset()` in order to declare the types of the virtual columns
-that define the partitions. This would be useful, in the NYC taxi data
-example, if you wanted to keep `month` as a string instead of an
-integer.
-
-</div>
-
-<div class="section level3">
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+in order to declare the types of the virtual columns that define the
+partitions. This would be useful, in the NYC taxi data example, if you
+wanted to keep `month` as a string instead of an integer.
 
 ### Work with multiple data sources
 
@@ -488,14 +436,10 @@ files in one location, and in another directory, files that haven’t been
 partitioned. Or, you could point to an S3 bucket of Parquet data and a
 directory of CSVs on the local file system and query them together as a
 single Dataset. To create a multi-source Dataset, provide a list of
-Datasets to `open_dataset()` instead of a file path, or concatenate them
-with a command like `big_dataset <- c(ds1, ds2)`.
-
-</div>
-
-</div>
-
-<div class="section level2">
+Datasets to
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+instead of a file path, or concatenate them with a command like
+`big_dataset <- c(ds1, ds2)`.
 
 ## Writing Datasets
 
@@ -506,31 +450,26 @@ data isn’t always stored that way. Sometimes you might start with one
 giant CSV. The first step in analyzing data is cleaning is up and
 reshaping it into a more usable form.
 
-The `write_dataset()` function allows you to take a Dataset or another
-tabular data object—an Arrow Table or RecordBatch, or an R data
-frame—and write it to a different file format, partitioned into multiple
-files.
+The
+[`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
+function allows you to take a Dataset or another tabular data object—an
+Arrow Table or RecordBatch, or an R data frame—and write it to a
+different file format, partitioned into multiple files.
 
 Assume that you have a version of the NYC Taxi data as CSV:
-
-<div id="cb20" class="sourceCode">
 
 ``` r
 ds <- open_dataset("nyc-taxi/csv/", format = "csv")
 ```
 
-</div>
-
 You can write it to a new location and translate the files to the
-Feather format by calling `write_dataset()` on it:
-
-<div id="cb21" class="sourceCode">
+Feather format by calling
+[`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
+on it:
 
 ``` r
 write_dataset(ds, "nyc-taxi/feather", format = "feather")
 ```
-
-</div>
 
 Next, let’s imagine that the `payment_type` column is something you
 often filter on, so you want to partition the data by that variable. By
@@ -538,9 +477,9 @@ doing so you ensure that a filter like `payment_type == "Cash"` will
 touch only a subset of files where `payment_type` is always `"Cash"`.
 
 One natural way to express the columns you want to partition on is to
-use the `group_by()` method:
-
-<div id="cb22" class="sourceCode">
+use the
+[`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
+method:
 
 ``` r
 ds |>
@@ -548,17 +487,11 @@ ds |>
   write_dataset("nyc-taxi/feather", format = "feather")
 ```
 
-</div>
-
 This will write files to a directory tree that looks like this:
-
-<div id="cb23" class="sourceCode">
 
 ``` r
 system("tree nyc-taxi/feather")
 ```
-
-</div>
 
     ## feather
     ## ├── payment_type=1
@@ -573,17 +506,20 @@ system("tree nyc-taxi/feather")
 
 Note that the directory names are `payment_type=Cash` and similar: this
 is the Hive-style partitioning described above. This means that when you
-call `open_dataset()` on this directory, you don’t have to declare what
-the partitions are because they can be read from the file paths. (To
-instead write bare values for partition segments, i.e. `Cash` rather
-than `payment_type=Cash`, call `write_dataset()` with
-`hive_style = FALSE`.)
+call
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+on this directory, you don’t have to declare what the partitions are
+because they can be read from the file paths. (To instead write bare
+values for partition segments, i.e. `Cash` rather than
+`payment_type=Cash`, call
+[`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
+with `hive_style = FALSE`.)
 
 Perhaps, though, `payment_type == "Cash"` is the only data you ever care
 about, and you just want to drop the rest and have a smaller working
-set. For this, you can `filter()` them out when writing:
-
-<div id="cb25" class="sourceCode">
+set. For this, you can
+[`filter()`](https://dplyr.tidyverse.org/reference/filter.html) them out
+when writing:
 
 ``` r
 ds |>
@@ -591,14 +527,10 @@ ds |>
   write_dataset("nyc-taxi/feather", format = "feather")
 ```
 
-</div>
-
 The other thing you can do when writing Datasets is select a subset of
 columns or reorder them. Suppose you never care about `vendor_id`, and
 being a string column, it can take up a lot of space when you read it
 in, so let’s drop it:
-
-<div id="cb26" class="sourceCode">
 
 ``` r
 ds |>
@@ -607,14 +539,8 @@ ds |>
   write_dataset("nyc-taxi/feather", format = "feather")
 ```
 
-</div>
-
 Note that while you can select a subset of columns, you cannot currently
 rename columns when writing a Dataset.
-
-</div>
-
-<div class="section level2">
 
 ## Partitioning performance considerations
 
@@ -650,9 +576,8 @@ including Arrow, should work across a range of file sizes and
 partitioning layouts, but there are extremes you should avoid. These
 guidelines can help avoid some known worst cases:
 
--   Avoid files smaller than 20MB and larger than 2GB.
--   Avoid partitioning layouts with more than 10,000 distinct
-    partitions.
+- Avoid files smaller than 20MB and larger than 2GB.
+- Avoid partitioning layouts with more than 10,000 distinct partitions.
 
 For file formats that have a notion of groups within a file, such as
 Parquet, similar guidelines apply. Row groups can provide parallelism
@@ -660,10 +585,6 @@ when reading and allow data skipping based on statistics, but very small
 groups can cause metadata to be a significant portion of file size.
 Arrow’s file writer provides sensible defaults for group sizing in most
 cases.
-
-</div>
-
-<div class="section level2">
 
 ## Transactions / ACID guarantees
 
@@ -687,27 +608,19 @@ means a partial file write can safely be detected and discarded. The CSV
 file format does not have any such concept and a partially written CSV
 file may be detected as valid.
 
-</div>
-
-<div class="section level2">
-
 ## Further reading
 
--   To learn about cloud storage, see the [cloud storage
-    article](https://arrow.apache.org/docs/r/articles/fs.md).
--   To learn about dplyr with arrow, see the [data wrangling
-    article](https://arrow.apache.org/docs/r/articles/data_wrangling.md).
--   To learn about reading and writing data, see the [read/write
-    article](https://arrow.apache.org/docs/r/articles/read_write.md).
--   For specific recipes on reading and writing multi-file Datasets, see
-    this [Arrow R cookbook
-    chapter](https://arrow.apache.org/cookbook/r/reading-and-writing-data---multiple-files.html).
--   To manually enable cloud support on Linux, see the article on
-    [installation on
-    Linux](https://arrow.apache.org/docs/r/articles/install.md).
--   To learn about schemas and metadata, see the [metadata
-    article](https://arrow.apache.org/docs/r/articles/metadata.md).
-
-</div>
-
-</div>
+- To learn about cloud storage, see the [cloud storage
+  article](https://arrow.apache.org/docs/r/articles/fs.md).
+- To learn about dplyr with arrow, see the [data wrangling
+  article](https://arrow.apache.org/docs/r/articles/data_wrangling.md).
+- To learn about reading and writing data, see the [read/write
+  article](https://arrow.apache.org/docs/r/articles/read_write.md).
+- For specific recipes on reading and writing multi-file Datasets, see
+  this [Arrow R cookbook
+  chapter](https://arrow.apache.org/cookbook/r/reading-and-writing-data---multiple-files.html).
+- To manually enable cloud support on Linux, see the article on
+  [installation on
+  Linux](https://arrow.apache.org/docs/r/articles/install.md).
+- To learn about schemas and metadata, see the [metadata
+  article](https://arrow.apache.org/docs/r/articles/metadata.md).

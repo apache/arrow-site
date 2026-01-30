@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Data objects
 
 This article describes the various data object types supplied by arrow,
@@ -31,10 +29,10 @@ same name in the underlying Arrow C++ library.
 In addition to these data objects, arrow defines the following classes
 for representing metadata:
 
--   A `Schema` is a list of `Field` objects used to describe the
-    structure of a tabular data object; where
--   A `Field` specifies a character string name and a `DataType`; and
--   A `DataType` is an attribute controlling how values are represented
+- A `Schema` is a list of `Field` objects used to describe the structure
+  of a tabular data object; where
+- A `Field` specifies a character string name and a `DataType`; and
+- A `DataType` is an attribute controlling how values are represented
 
 These metadata objects play an important role in making sure data are
 represented correctly, and all three of the tabular data object types
@@ -42,8 +40,6 @@ represented correctly, and all three of the tabular data object types
 to represent metadata. To learn more about these metadata classes, see
 the [metadata
 article](https://arrow.apache.org/docs/r/articles/metadata.md).
-
-<div class="section level2">
 
 ## Scalars
 
@@ -53,20 +49,12 @@ might be an integer, a string, a timestamp, or any of the different
 package are unlikely to create Scalars directly, but should there be a
 need you can do this by calling the `Scalar$create()` method:
 
-<div id="cb1" class="sourceCode">
-
 ``` r
 Scalar$create("hello")
 ```
 
-</div>
-
     ## Scalar
     ## hello
-
-</div>
-
-<div class="section level2">
 
 ## Arrays
 
@@ -75,14 +63,10 @@ users will not need to create Arrays directly, but if the need arises
 there is an `Array$create()` method that allows you to create new
 Arrays:
 
-<div id="cb3" class="sourceCode">
-
 ``` r
 integer_array <- Array$create(c(1L, NA, 2L, 4L, 8L))
 integer_array
 ```
-
-</div>
 
     ## Array
     ## <int32>
@@ -94,14 +78,10 @@ integer_array
     ##   8
     ## ]
 
-<div id="cb5" class="sourceCode">
-
 ``` r
 string_array <- Array$create(c("hello", "amazing", "and", "cruel", "world"))
 string_array
 ```
-
-</div>
 
     ## Array
     ## <string>
@@ -115,13 +95,9 @@ string_array
 
 An Array can be subset using square brackets as shown below:
 
-<div id="cb7" class="sourceCode">
-
 ``` r
 string_array[4:5]
 ```
-
-</div>
 
     ## Array
     ## <string>
@@ -132,10 +108,6 @@ string_array[4:5]
 
 Arrays are immutable objects: once an Array has been created it cannot
 be modified or extended.
-
-</div>
-
-<div class="section level2">
 
 ## Chunked Arrays
 
@@ -148,9 +120,9 @@ article](https://arrow.apache.org/docs/r/articles/developers/data_object_layout.
 but for the present purposes it is sufficient to notice that Chunked
 Arrays behave like Arrays in regular data analysis.
 
-To illustrate, let’s use the `chunked_array()` function:
-
-<div id="cb9" class="sourceCode">
+To illustrate, let’s use the
+[`chunked_array()`](https://arrow.apache.org/docs/r/reference/chunked_array.md)
+function:
 
 ``` r
 chunked_string_array <- chunked_array(
@@ -159,19 +131,14 @@ chunked_string_array <- chunked_array(
 )
 ```
 
-</div>
-
-The `chunked_array()` function is just a wrapper around the
-functionality that `ChunkedArray$create()` provides. Let’s print the
-object:
-
-<div id="cb10" class="sourceCode">
+The
+[`chunked_array()`](https://arrow.apache.org/docs/r/reference/chunked_array.md)
+function is just a wrapper around the functionality that
+`ChunkedArray$create()` provides. Let’s print the object:
 
 ``` r
 chunked_string_array
 ```
-
-</div>
 
     ## ChunkedArray
     ## <string>
@@ -200,13 +167,9 @@ object. This is illustrated below:
 
 We can use `chunked_string_array` to illustrate this:
 
-<div id="cb12" class="sourceCode">
-
 ``` r
 chunked_string_array[4:7]
 ```
-
-</div>
 
     ## ChunkedArray
     ## <string>
@@ -231,14 +194,10 @@ we can create a Chunked Array that contains the same four same four
 values as `chunked_string_array[4:7]`, but organized into one chunk
 rather than split into two:
 
-<div id="cb14" class="sourceCode">
-
 ``` r
 cruel_world <- chunked_array(c("cruel", "world", "I", "love"))
 cruel_world
 ```
-
-</div>
 
     ## ChunkedArray
     ## <string>
@@ -254,13 +213,9 @@ cruel_world
 Testing for equality using `==` produces an element-wise comparison, and
 the result is a new Chunked Array of four (boolean type) `true` values:
 
-<div id="cb16" class="sourceCode">
-
 ``` r
 cruel_world == chunked_string_array[4:7]
 ```
-
-</div>
 
     ## ChunkedArray
     ## <bool>
@@ -280,10 +235,6 @@ think much about the underlying chunking arrangement.
 Chunked Arrays are mutable, in a specific sense: Arrays can be added and
 removed from a Chunked Array.
 
-</div>
-
-<div class="section level2">
-
 ## Record Batches
 
 A Record Batch is tabular data structure comprised of named Arrays, and
@@ -294,13 +245,12 @@ Tables and Datasets are usually more convenient in analytic contexts.
 
 These Arrays can be of different types but must all be the same length.
 Each Array is referred to as one of the “fields” or “columns” of the
-Record Batch. You can create a Record Batch using the `record_batch()`
+Record Batch. You can create a Record Batch using the
+[`record_batch()`](https://arrow.apache.org/docs/r/reference/record_batch.md)
 function or by using the `RecordBatch$create()` method. These functions
 are flexible and can accept inputs in several formats: you can pass a
 data frame, one or more named vectors, an input stream, or even a raw
 vector containing appropriate binary data. For example:
-
-<div id="cb18" class="sourceCode">
 
 ``` r
 rb <- record_batch(
@@ -310,8 +260,6 @@ rb <- record_batch(
 )
 rb
 ```
-
-</div>
 
     ## RecordBatch
     ## 5 rows x 3 columns
@@ -327,13 +275,9 @@ conceptual structure is shown below:
 The arrow package supplies a `$` method for Record Batch objects, used
 to extract a single column by name:
 
-<div id="cb20" class="sourceCode">
-
 ``` r
 rb$strs
 ```
-
-</div>
 
     ## Array
     ## <string>
@@ -349,13 +293,9 @@ You can use double brackets `[[` to refer to columns by position. The
 `rb$ints` array is the second column in our Record Batch so we can
 extract it with this:
 
-<div id="cb22" class="sourceCode">
-
 ``` r
 rb[[2]]
 ```
-
-</div>
 
     ## Array
     ## <int32>
@@ -371,13 +311,9 @@ There is also `[` method that allows you to extract subsets of a record
 batch in the same way you would for a data frame. The command
 `rb[1:3, 1:2]` extracts the first three rows and the first two columns:
 
-<div id="cb24" class="sourceCode">
-
 ``` r
 rb[1:3, 1:2]
 ```
-
-</div>
 
     ## RecordBatch
     ## 3 rows x 2 columns
@@ -387,10 +323,6 @@ rb[1:3, 1:2]
 Record Batches cannot be concatenated: because they are comprised of
 Arrays, and Arrays are immutable objects, new rows cannot be added to
 Record Batch once created.
-
-</div>
-
-<div class="section level2">
 
 ## Tables
 
@@ -404,8 +336,6 @@ Record Batches. Unlike Record Batches, Tables can be concatenated
 (because they are comprised of Chunked Arrays). Suppose a second Record
 Batch arrives:
 
-<div id="cb26" class="sourceCode">
-
 ``` r
 new_rb <- record_batch(
   strs = c("I", "love", "you"),
@@ -414,20 +344,14 @@ new_rb <- record_batch(
 )
 ```
 
-</div>
-
 It is not possible to create a Record Batch that appends the data from
 `new_rb` to the data in `rb`, not without creating entirely new objects
 in memory. With Tables, however, we can:
-
-<div id="cb27" class="sourceCode">
 
 ``` r
 df <- arrow_table(rb)
 new_df <- arrow_table(new_rb)
 ```
-
-</div>
 
 We now have the two fragments of the data set represented as Tables. The
 difference between the Table and the Record Batch is that the columns
@@ -435,13 +359,9 @@ are all represented as Chunked Arrays. Each Array from the original
 Record Batch is one chunk in the corresponding Chunked Array in the
 Table:
 
-<div id="cb28" class="sourceCode">
-
 ``` r
 rb$strs
 ```
-
-</div>
 
     ## Array
     ## <string>
@@ -453,13 +373,9 @@ rb$strs
     ##   "world"
     ## ]
 
-<div id="cb30" class="sourceCode">
-
 ``` r
 df$strs
 ```
-
-</div>
 
     ## ChunkedArray
     ## <string>
@@ -478,13 +394,9 @@ referenced by both – just enclosed by a new, flexible Chunked Array
 wrapper. However, it is this wrapper that allows us to concatenate
 Tables:
 
-<div id="cb32" class="sourceCode">
-
 ``` r
 concat_tables(df, new_df)
 ```
-
-</div>
 
     ## Table
     ## 8 rows x 3 columns
@@ -499,14 +411,10 @@ The resulting object is shown schematically below:
 Notice that the Chunked Arrays within the new Table retain this chunking
 structure, because none of the original Arrays have been moved:
 
-<div id="cb34" class="sourceCode">
-
 ``` r
 df_both <- concat_tables(df, new_df)
 df_both$strs
 ```
-
-</div>
 
     ## ChunkedArray
     ## <string>
@@ -524,10 +432,6 @@ df_both$strs
     ##     "you"
     ##   ]
     ## ]
-
-</div>
-
-<div class="section level2">
 
 ## Datasets
 
@@ -549,8 +453,6 @@ structured. If you want to learn more about the practical details of
 analyzing Datasets, see the article on [analyzing multi-file
 datasets](https://arrow.apache.org/docs/r/articles/dataset.md).
 
-<div class="section level3">
-
 ### The on-disk data files
 
 Reduced to its simplest form, the on-disk structure of a Dataset is
@@ -558,22 +460,20 @@ simply a collection of data files, each storing one subset of the data.
 These subsets are sometimes referred to as “fragments”, and the
 partitioning process is sometimes referred to as “sharding”. By
 convention, these files are organized into a folder structure called a
-Hive-style partition: see `hive_partition()` for details.
+Hive-style partition: see
+[`hive_partition()`](https://arrow.apache.org/docs/r/reference/hive_partition.md)
+for details.
 
 To illustrate how this works, let’s write a multi-file dataset to disk
 manually, without using any of the Arrow Dataset functionality to do the
 work. We’ll start with three small data frames, each of which contains
 one subset of the data we want to store:
 
-<div id="cb36" class="sourceCode">
-
 ``` r
 df_a <- data.frame(id = 1:5, value = rnorm(5), subset = "a")
 df_b <- data.frame(id = 6:10, value = rnorm(5), subset = "b")
 df_c <- data.frame(id = 11:15, value = rnorm(5), subset = "c")
 ```
-
-</div>
 
 Our intention is that each of the data frames should be stored in a
 separate data file. As you can see, this is a quite structured
@@ -584,18 +484,12 @@ where `subset = "b"` belong to another file, and all data where
 The first step is to define and create a folder that will hold all the
 files:
 
-<div id="cb37" class="sourceCode">
-
 ``` r
 ds_dir <- "mini-dataset"
 dir.create(ds_dir)
 ```
 
-</div>
-
 The next step is to manually create the Hive-style folder structure:
-
-<div id="cb38" class="sourceCode">
 
 ``` r
 ds_dir_a <- file.path(ds_dir, "subset=a")
@@ -607,24 +501,19 @@ dir.create(ds_dir_b)
 dir.create(ds_dir_c)
 ```
 
-</div>
-
 Notice that we have named each folder in a “key=value” format that
 exactly describes the subset of data that will be written into that
 folder. This naming structure is the essence of Hive-style partitions.
 
-Now that we have the folders, we’ll use `write_parquet()` to create a
-single parquet file for each of the three subsets:
-
-<div id="cb39" class="sourceCode">
+Now that we have the folders, we’ll use
+[`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md)
+to create a single parquet file for each of the three subsets:
 
 ``` r
 write_parquet(df_a, file.path(ds_dir_a, "part-0.parquet"))
 write_parquet(df_b, file.path(ds_dir_b, "part-0.parquet"))
 write_parquet(df_c, file.path(ds_dir_c, "part-0.parquet"))
 ```
-
-</div>
 
 If we had wanted to, we could have further subdivided the dataset. A
 folder could contain multiple files (`part-0.parquet`, `part-1.parquet`,
@@ -634,34 +523,30 @@ to call these files `subset-a.parquet`, `subset-b.parquet`, and
 `subset-c.parquet` if we had wished. We could have written other file
 formats if we wanted, and we don’t necessarily have to use Hive-style
 folders. You can learn more about the supported formats by reading the
-help documentation for `open_dataset()`, and learn about how to exercise
-fine-grained control with `help("Dataset", package = "arrow")`.
+help documentation for
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md),
+and learn about how to exercise fine-grained control with
+[`help("Dataset", package = "arrow")`](https://arrow.apache.org/docs/r/reference/Dataset.md).
 
 In any case, we have created an on-disk parquet Dataset using Hive-style
 partitioning. Our Dataset is defined by these files:
-
-<div id="cb40" class="sourceCode">
 
 ``` r
 list.files(ds_dir, recursive = TRUE)
 ```
 
-</div>
-
     ## [1] "subset=a/part-0.parquet" "subset=b/part-0.parquet"
     ## [3] "subset=c/part-0.parquet"
 
 To verify that everything has worked, let’s open the data with
-`open_dataset()` and call `glimpse()` to inspect its contents:
-
-<div id="cb42" class="sourceCode">
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+and call [`glimpse()`](https://pillar.r-lib.org/reference/glimpse.html)
+to inspect its contents:
 
 ``` r
 ds <- open_dataset(ds_dir)
 glimpse(ds)
 ```
-
-</div>
 
     ## FileSystemDataset with 3 Parquet files
     ## 15 rows x 3 columns
@@ -672,14 +557,13 @@ glimpse(ds)
 
 As you can see, the `ds` Dataset object aggregates the three separate
 data files. In fact, in this particular case the Dataset is so small
-that values from all three files appear in the output of `glimpse()`.
+that values from all three files appear in the output of
+[`glimpse()`](https://pillar.r-lib.org/reference/glimpse.html).
 
 It should be noted that in everyday data analysis work, you wouldn’t
 need to do write the data files manually in this fashion. The example
 above is entirely for illustrative purposes. The exact same dataset
 could be created with the following command:
-
-<div id="cb44" class="sourceCode">
 
 ``` r
 ds |>
@@ -687,16 +571,10 @@ ds |>
   write_dataset("mini-dataset")
 ```
 
-</div>
-
 In fact, even if `ds` happens to refer to a data source that is larger
 than memory, this command should still work because the Dataset
 functionality is written to ensure that during a pipeline such as this
 the data is loaded piecewise in order to avoid exhausting memory.
-
-</div>
-
-<div class="section level3">
 
 ### The Dataset object
 
@@ -707,29 +585,22 @@ created, arrow searches the dataset folder looking for appropriate
 files, but does not load the contents of those files. Paths to these
 files are stored in an active binding `ds$files`:
 
-<div id="cb45" class="sourceCode">
-
 ``` r
 ds$files
 ```
-
-</div>
 
     ## [1] "/build/r/vignettes/mini-dataset/subset=a/part-0.parquet"
     ## [2] "/build/r/vignettes/mini-dataset/subset=b/part-0.parquet"
     ## [3] "/build/r/vignettes/mini-dataset/subset=c/part-0.parquet"
 
-The other thing that happens when `open_dataset()` is called is that an
-explicit Schema for the Dataset is constructed and stored as
-`ds$schema`:
-
-<div id="cb47" class="sourceCode">
+The other thing that happens when
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+is called is that an explicit Schema for the Dataset is constructed and
+stored as `ds$schema`:
 
 ``` r
 ds$schema
 ```
-
-</div>
 
     ## Schema
     ## id: int32
@@ -741,8 +612,11 @@ ds$schema
 By default this Schema is inferred by inspecting the first file only,
 though it is possible to construct a unified schema after inspecting all
 files. To do this, set `unify_schemas = TRUE` when calling
-`open_dataset()`. It is also possible to use the `schema` argument to
-`open_dataset()` to specify the Schema explicitly (see the `schema()`
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md).
+It is also possible to use the `schema` argument to
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+to specify the Schema explicitly (see the
+[`schema()`](https://arrow.apache.org/docs/r/reference/schema.md)
 function for details).
 
 The act of reading the data is performed by a Scanner object. When
@@ -750,24 +624,16 @@ analyzing a Dataset using the dplyr interface you never need to
 construct a Scanner manually, but for explanatory purposes we’ll do it
 here:
 
-<div id="cb49" class="sourceCode">
-
 ``` r
 scan <- Scanner$create(dataset = ds)
 ```
 
-</div>
-
 Calling the `ToTable()` method will materialize the Dataset (on-disk) as
 a Table (in-memory):
-
-<div id="cb50" class="sourceCode">
 
 ``` r
 scan$ToTable()
 ```
-
-</div>
 
     ## Table
     ## 15 rows x 3 columns
@@ -781,17 +647,11 @@ This scanning process is multi-threaded by default, but if necessary
 threading can be disabled by setting `use_threads = FALSE` when calling
 `Scanner$create()`.
 
-</div>
-
-<div class="section level3">
-
 ### Querying a Dataset
 
 When a query is executed against a Dataset a new scan is initiated and
 the results pulled back into R. As an example, consider the following
 dplyr expression:
-
-<div id="cb52" class="sourceCode">
 
 ``` r
 ds |>
@@ -800,8 +660,6 @@ ds |>
   select(id, subset, new_value) |>
   collect()
 ```
-
-</div>
 
     ## # A tibble: 6 x 3
     ##      id subset new_value
@@ -817,11 +675,10 @@ We can replicate this using the low-level Dataset interface by creating
 a new scan by specifying the `filter` and `projection` arguments to
 `Scanner$create()`. To use these arguments you need to know a little
 about Arrow Expressions, for which you may find it helpful to read the
-help documentation in `help("Expression", package = "arrow")`.
+help documentation in
+[`help("Expression", package = "arrow")`](https://arrow.apache.org/docs/r/reference/Expression.md).
 
 The scanner defined below mimics the dplyr pipeline shown above,
-
-<div id="cb54" class="sourceCode">
 
 ``` r
 scan <- Scanner$create(
@@ -835,8 +692,6 @@ scan <- Scanner$create(
 )
 ```
 
-</div>
-
 and if we were to call `as.data.frame(scan$ToTable())` it would produce
 the same result as the dplyr version, though the rows may not appear in
 the same order.
@@ -848,13 +703,9 @@ each of the files, but it returns a list of Record Batches, one for each
 file. In addition, we’ll convert these Record Batches to data frames
 individually:
 
-<div id="cb55" class="sourceCode">
-
 ``` r
 lapply(scan$ScanBatches(), as.data.frame)
 ```
-
-</div>
 
     ## [[1]]
     ##   id subset new_value
@@ -871,15 +722,15 @@ lapply(scan$ScanBatches(), as.data.frame)
     ## 2 13      c       207
     ## 3 15      c        51
 
-If we return to the dplyr query we made earlier, and use `compute()` to
-return a Table rather use `collect()` to return a data frame, we can see
-the evidence of this process at work. The Table object is created by
-concatenating the three Record Batches produced when the query executes
-against three data files, and as a consequence of this the Chunked Array
-that defines a column of the Table mirrors the partitioning structure
-present in the data files:
-
-<div id="cb57" class="sourceCode">
+If we return to the dplyr query we made earlier, and use
+[`compute()`](https://dplyr.tidyverse.org/reference/compute.html) to
+return a Table rather use
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) to
+return a data frame, we can see the evidence of this process at work.
+The Table object is created by concatenating the three Record Batches
+produced when the query executes against three data files, and as a
+consequence of this the Chunked Array that defines a column of the Table
+mirrors the partitioning structure present in the data files:
 
 ``` r
 tbl <- ds |>
@@ -890,8 +741,6 @@ tbl <- ds |>
 
 tbl$subset
 ```
-
-</div>
 
     ## ChunkedArray
     ## <string>
@@ -910,47 +759,32 @@ tbl$subset
     ##   ]
     ## ]
 
-</div>
-
-<div class="section level3">
-
 ### Additional notes
 
--   A distinction ignored in the previous discussion is between
-    `FileSystemDataset` and `InMemoryDataset` objects. In the usual
-    case, the data that comprise a Dataset are stored in files on-disk.
-    That is, after all, the primary advantage of Datasets over Tables.
-    However, there are cases where it may be useful to make a Dataset
-    from data that are already stored in-memory. In such cases the
-    object created will have type `InMemoryDataset`.
+- A distinction ignored in the previous discussion is between
+  `FileSystemDataset` and `InMemoryDataset` objects. In the usual case,
+  the data that comprise a Dataset are stored in files on-disk. That is,
+  after all, the primary advantage of Datasets over Tables. However,
+  there are cases where it may be useful to make a Dataset from data
+  that are already stored in-memory. In such cases the object created
+  will have type `InMemoryDataset`.
 
--   The previous discussion assumes that all files stored in the Dataset
-    have the same Schema. In the usual case this will be true, because
-    each file is conceptually a subset of a single rectangular table.
-    But this is not strictly required.
+- The previous discussion assumes that all files stored in the Dataset
+  have the same Schema. In the usual case this will be true, because
+  each file is conceptually a subset of a single rectangular table. But
+  this is not strictly required.
 
 For more information about these topics, see
-`help("Dataset", package = "arrow")`.
-
-</div>
-
-</div>
-
-<div class="section level2">
+[`help("Dataset", package = "arrow")`](https://arrow.apache.org/docs/r/reference/Dataset.md).
 
 ## Further reading
 
--   To learn more about the internal structure of Arrays, see the
-    article on [data object
-    layout](https://arrow.apache.org/docs/r/articles/developers/data_object_layout.md).
--   To learn more about the different data types used by Arrow, see the
-    article on [data
-    types](https://arrow.apache.org/docs/r/articles/data_types.md).
--   To learn more about how Arrow objects are implemented, see the
-    [Arrow
-    specification](https://arrow.apache.org/docs/format/Columnar.html)
-    page.
-
-</div>
-
-</div>
+- To learn more about the internal structure of Arrays, see the article
+  on [data object
+  layout](https://arrow.apache.org/docs/r/articles/developers/data_object_layout.md).
+- To learn more about the different data types used by Arrow, see the
+  article on [data
+  types](https://arrow.apache.org/docs/r/articles/data_types.md).
+- To learn more about how Arrow objects are implemented, see the [Arrow
+  specification](https://arrow.apache.org/docs/format/Columnar.html)
+  page.

@@ -1,23 +1,16 @@
-<div id="main" class="col-md-9" role="main">
-
 # Debugging strategies
 
 If you are a developer working with Arrow code, the package’s use of
 tidy eval and C++ necessitates a solid debugging strategy. In this
 article, we recommend a few approaches.
 
-<div class="section level2">
-
 ## Debugging R code
 
 In general, we have found that using interactive debugging (e.g. calls
-to `browser()`), where you can inspect objects in a particular
-environment, is more efficient than simpler techniques such as `print()`
-statements.
-
-</div>
-
-<div class="section level2">
+to [`browser()`](https://rdrr.io/r/base/browser.html)), where you can
+inspect objects in a particular environment, is more efficient than
+simpler techniques such as
+[`print()`](https://rdrr.io/r/base/print.html) statements.
 
 ## Getting more descriptive C++ error messages after a segfault
 
@@ -43,8 +36,6 @@ This output provides the R traceback; however, it doesn’t provide any
 information about the exact line of C++ code from which the segfault
 originated. For this, you will need to run R with the C++ debugger
 attached.
-
-<div class="section level3">
 
 ### Running R code with the C++ debugger attached
 
@@ -99,8 +90,6 @@ Thread 1 "R" received signal SIGSEGV, Segmentation fault.
 318       operator++() noexcept
 ```
 
-<div class="section level4">
-
 #### Getting debugger output if your session hangs
 
 The instructions above can provide valuable additional context when a
@@ -119,22 +108,14 @@ thread apply all bt
 This will generate a large amount of output, but this information is
 useful when identifying the cause of the issue.
 
-</div>
-
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Further reading
 
 The following resources provide detailed guides to debugging R code:
 
--   [The chapter on debugging in ‘Advanced R’ by Hadley
-    Wickham](https://adv-r.hadley.nz/debugging.html)
--   [The RStudio debugging
-    documentation](https://support.rstudio.com/hc/en-us/articles/205612627-Debugging-with-RStudio)
+- [The chapter on debugging in ‘Advanced R’ by Hadley
+  Wickham](https://adv-r.hadley.nz/debugging.html)
+- [The RStudio debugging
+  documentation](https://support.rstudio.com/hc/en-us/articles/205612627-Debugging-with-RStudio)
 
 For an excellent in-depth guide to using the C++ debugger in R, see
 [this blog post by David
@@ -142,7 +123,3 @@ Vaughan.](https://blog.davisvaughan.com/2019/04/05/debug-r-package-with-cpp/)
 
 You can find a list of equivalent [gdb and lldb commands on the LLDB
 website.](https://lldb.llvm.org/use/map.html)
-
-</div>
-
-</div>

@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # Concatenate one or more Tables
-
-<div class="ref-description section level2">
 
 Concatenate one or more
 [Table](https://arrow.apache.org/docs/r/reference/Table-class.md)
@@ -10,48 +6,30 @@ objects into a single table. This operation does not copy array data,
 but instead creates new chunked arrays for each column that point at
 existing array data.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 concat_tables(..., unify_schemas = TRUE)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   ...:
+- ...:
 
-    One or more
-    [Table](https://arrow.apache.org/docs/r/reference/Table-class.md) or
-    [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md)
-    objects. RecordBatch objects will be automatically converted to
-    Tables.
+  One or more
+  [Table](https://arrow.apache.org/docs/r/reference/Table-class.md) or
+  [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md)
+  objects. RecordBatch objects will be automatically converted to
+  Tables.
 
--   unify_schemas:
+- unify_schemas:
 
-    If TRUE, the schemas of the tables will be first unified with fields
-    of the same name being merged, then each table will be promoted to
-    the unified schema before being concatenated. Otherwise, all tables
-    should have the same schema.
-
-</div>
-
-<div class="section level2">
+  If TRUE, the schemas of the tables will be first unified with fields
+  of the same name being merged, then each table will be promoted to the
+  unified schema before being concatenated. Otherwise, all tables should
+  have the same schema.
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 tbl <- arrow_table(name = rownames(mtcars), mtcars)
@@ -72,9 +50,3 @@ tail(combined)$to_data_frame()
 batch <- record_batch(name = "Volt", mpg = 53, cyl = 4, disp = 1.5)
 combined2 <- concat_tables(tbl, batch)
 ```
-
-</div>
-
-</div>
-
-</div>

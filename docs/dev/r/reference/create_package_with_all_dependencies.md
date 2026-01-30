@@ -1,46 +1,26 @@
-<div id="main" class="col-md-9" role="main">
-
 # Create a source bundle that includes all thirdparty dependencies
-
-<div class="ref-description section level2">
 
 Create a source bundle that includes all thirdparty dependencies
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 create_package_with_all_dependencies(dest_file = NULL, source_file = NULL)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   dest_file:
+- dest_file:
 
-    File path for the new tar.gz package. Defaults to
-    `arrow_V.V.V_with_deps.tar.gz` in the current directory (`V.V.V` is
-    the version)
+  File path for the new tar.gz package. Defaults to
+  `arrow_V.V.V_with_deps.tar.gz` in the current directory (`V.V.V` is
+  the version)
 
--   source_file:
+- source_file:
 
-    File path for the input tar.gz package. Defaults to downloading the
-    package from CRAN (or whatever you have set as the first in
-    `getOption("repos")`)
-
-</div>
-
-<div class="section level2">
+  File path for the input tar.gz package. Defaults to downloading the
+  package from CRAN (or whatever you have set as the first in
+  `getOption("repos")`)
 
 ## Value
 
@@ -64,48 +44,32 @@ to make a source bundle with this function, make sure to set the first
 repo in `options("repos")` to be a mirror that contains source packages
 (that is: something other than the RSPM binary mirror URLs).
 
-<div class="section">
-
 ### Steps for an offline install with optional dependencies:
-
-<div class="section">
 
 #### Using a computer with internet access, pre-download the dependencies:
 
--   Install the `arrow` package *or* run
-    `source("https://raw.githubusercontent.com/apache/arrow/main/r/R/install-arrow.R")`
+- Install the `arrow` package *or* run
+  `source("https://raw.githubusercontent.com/apache/arrow/main/r/R/install-arrow.R")`
 
--   Run `create_package_with_all_dependencies("my_arrow_pkg.tar.gz")`
+- Run `create_package_with_all_dependencies("my_arrow_pkg.tar.gz")`
 
--   Copy the newly created `my_arrow_pkg.tar.gz` to the computer without
-    internet access
-
-</div>
-
-<div class="section">
+- Copy the newly created `my_arrow_pkg.tar.gz` to the computer without
+  internet access
 
 #### On the computer without internet access, install the prepared package:
 
--   Install the `arrow` package from the copied file
+- Install the `arrow` package from the copied file
 
-    -   `install.packages("my_arrow_pkg.tar.gz", dependencies = c("Depends", "Imports", "LinkingTo"))`
+  - `install.packages("my_arrow_pkg.tar.gz", dependencies = c("Depends", "Imports", "LinkingTo"))`
 
-    -   This installation will build from source, so `cmake` must be
-        available
+  - This installation will build from source, so `cmake` must be
+    available
 
--   Run `arrow_info()` to check installed capabilities
-
-</div>
-
-</div>
-
-</div>
-
-<div class="section level2">
+- Run
+  [`arrow_info()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  to check installed capabilities
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 if (FALSE) { # \dontrun{
@@ -115,9 +79,3 @@ new_pkg <- create_package_with_all_dependencies()
 install.packages(new_pkg, dependencies = c("Depends", "Imports", "LinkingTo"))
 } # }
 ```
-
-</div>
-
-</div>
-
-</div>

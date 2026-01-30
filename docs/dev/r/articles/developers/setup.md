@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Configuring a developer environment
 
 The Arrow R package is unique compared to other R packages that you may
@@ -8,8 +6,6 @@ feature-rich Arrow C++ implementation. Because the R package integrates
 tightly with Arrow C++, it typically requires a dedicated copy of the
 library (i.e., it is usually not possible to link to a system version of
 libarrow during development).
-
-<div class="section level3">
 
 ### Option 1: Using nightly libarrow binaries
 
@@ -31,10 +27,6 @@ terminal with `R CMD INSTALL . --preclean`, from RStudio using the
 “Clean and Install” option from “Build” tab, or using `make clean` if
 you are using the `Makefile` located in the root of the R package.
 
-</div>
-
-<div class="section level3">
-
 ### Option 2: Use a local Arrow C++ development build
 
 If you need to alter both libarrow and the R package code, or if you
@@ -45,8 +37,6 @@ resources, see the [Arrow C++ developer
 guide](https://arrow.apache.org/docs/developers/cpp/building.html).
 
 There are five major steps to the process.
-
-<div class="section level4">
 
 #### Step 1 - Install dependencies
 
@@ -62,37 +52,17 @@ dependencies (such as [lz4](http://lz4.github.io/lz4/),
 [zstd](https://facebook.github.io/zstd/), etc.) on the system so that
 they don’t need to be built from source in the libarrow build.
 
-<div class="section level5">
-
 ##### Ubuntu
-
-<div id="cb1" class="sourceCode">
 
 ``` bash
 sudo apt install -y cmake libcurl4-openssl-dev libssl-dev
 ```
 
-</div>
-
-</div>
-
-<div class="section level5">
-
 ##### macOS
-
-<div id="cb2" class="sourceCode">
 
 ``` bash
 brew install cmake openssl
 ```
-
-</div>
-
-</div>
-
-</div>
-
-<div class="section level4">
 
 #### Step 2 - Configure the libarrow build
 
@@ -109,14 +79,10 @@ installation of the Arrow R package can point to any directory with any
 name, though we recommend *not* placing it inside of the arrow git
 checkout directory as unwanted changes could stop it working properly.
 
-<div id="cb3" class="sourceCode">
-
 ``` bash
 export ARROW_HOME=$(pwd)/dist
 mkdir $ARROW_HOME
 ```
-
-</div>
 
 *Special instructions on Linux:* You will need to set `LD_LIBRARY_PATH`
 to the `lib` directory that is under where you set `$ARROW_HOME`, before
@@ -127,14 +93,10 @@ other than `bash`). On macOS you do not need to do this because the
 macOS shared library paths are hardcoded to their locations during build
 time.
 
-<div id="cb4" class="sourceCode">
-
 ``` bash
 export LD_LIBRARY_PATH=$ARROW_HOME/lib:$LD_LIBRARY_PATH
 echo "export LD_LIBRARY_PATH=$ARROW_HOME/lib:$LD_LIBRARY_PATH" >> ~/.bash_profile
 ```
-
-</div>
 
 Start by navigating in a terminal to the arrow repository. You will need
 to create a directory into which the C++ build will put its contents. We
@@ -143,29 +105,19 @@ directory of the Arrow git repository (it is git-ignored, so you won’t
 accidentally check it in). Next, change directories to be inside
 `cpp/build`:
 
-<div id="cb5" class="sourceCode">
-
 ``` bash
 pushd arrow
 mkdir -p cpp/build
 pushd cpp/build
 ```
 
-</div>
-
 You’ll first call `cmake` to configure the build and then
 `make install`. For the R package, you’ll need to enable several
 features in libarrow using `-D` flags:
 
-<div class="section level5">
-
 ##### 
 
-<div class="section level6">
-
 ###### Linux / Mac OS
-
-<div id="cb6" class="sourceCode">
 
 ``` bash
 cmake \
@@ -185,22 +137,10 @@ cmake \
   ..
 ```
 
-</div>
-
-</div>
-
-</div>
-
-<div class="section level5">
-
 ##### 
 
 `..` refers to the C++ source directory: you’re in `cpp/build` and the
 source is in `cpp`.
-
-</div>
-
-<div class="section level5">
 
 ##### Enabling more Arrow features
 
@@ -208,8 +148,6 @@ To enable optional features including: S3 support, an alternative memory
 allocator, and additional compression libraries, add some or all of
 these flags to your call to `cmake` (the trailing `\` makes them easier
 to paste into a bash shell on a new line):
-
-<div id="cb7" class="sourceCode">
 
 ``` bash
   -DARROW_GCS=ON \
@@ -222,39 +160,31 @@ to paste into a bash shell on a new line):
   -DARROW_WITH_ZSTD=ON \
 ```
 
-</div>
-
 Other flags that may be useful:
 
--   `-DBoost_SOURCE=BUNDLED` and `-DThrift_SOURCE=BUNDLED`, for example,
-    or any other dependency `*_SOURCE`, if you have a system version of
-    a C++ dependency that doesn’t work correctly with Arrow. This tells
-    the build to compile its own version of the dependency from source.
+- `-DBoost_SOURCE=BUNDLED` and `-DThrift_SOURCE=BUNDLED`, for example,
+  or any other dependency `*_SOURCE`, if you have a system version of a
+  C++ dependency that doesn’t work correctly with Arrow. This tells the
+  build to compile its own version of the dependency from source.
 
--   `-DCMAKE_BUILD_TYPE=debug` or `-DCMAKE_BUILD_TYPE=relwithdebinfo`
-    can be useful for debugging. You probably don’t want to do this
-    generally because a debug build is much slower at runtime than the
-    default `release` build.
+- `-DCMAKE_BUILD_TYPE=debug` or `-DCMAKE_BUILD_TYPE=relwithdebinfo` can
+  be useful for debugging. You probably don’t want to do this generally
+  because a debug build is much slower at runtime than the default
+  `release` build.
 
--   `-DARROW_BUILD_STATIC=ON` and `-DARROW_BUILD_SHARED=OFF` if you want
-    to use static libraries instead of dynamic libraries. With static
-    libraries there isn’t a risk of the R package linking to the wrong
-    library, but it does mean if you change the C++ code you have to
-    recompile both the C++ libraries and the R package. Compilers
-    typically will link to static libraries only if the dynamic ones are
-    not present, which is why we need to set `-DARROW_BUILD_SHARED=OFF`.
-    If you are switching after compiling and installing previously, you
-    may need to remove the `.dll` or `.so` files from
-    `$ARROW_HOME/dist/bin`.
+- `-DARROW_BUILD_STATIC=ON` and `-DARROW_BUILD_SHARED=OFF` if you want
+  to use static libraries instead of dynamic libraries. With static
+  libraries there isn’t a risk of the R package linking to the wrong
+  library, but it does mean if you change the C++ code you have to
+  recompile both the C++ libraries and the R package. Compilers
+  typically will link to static libraries only if the dynamic ones are
+  not present, which is why we need to set `-DARROW_BUILD_SHARED=OFF`.
+  If you are switching after compiling and installing previously, you
+  may need to remove the `.dll` or `.so` files from
+  `$ARROW_HOME/dist/bin`.
 
 *Note* `cmake` is particularly sensitive to whitespacing, if you see
 errors, check that you don’t have any errant whitespace.
-
-</div>
-
-</div>
-
-<div class="section level4">
 
 #### Step 3 - Building libarrow
 
@@ -262,27 +192,18 @@ You can add `-j#` at the end of the command here too to speed up
 compilation by running in parallel (where `#` is the number of cores you
 have available).
 
-<div id="cb8" class="sourceCode">
-
 ``` bash
 cmake --build . --target install -j8
 ```
-
-</div>
-
-</div>
-
-<div class="section level4">
 
 #### Step 4 - Build the Arrow R package
 
 Once you’ve built libarrow, you can install the R package and its
 dependencies, along with additional dev dependencies, from the git
 checkout like below. You might need to either pick and set a repository
-interactively or you could add a repository to the `install.packages()`
+interactively or you could add a repository to the
+[`install.packages()`](https://rdrr.io/r/utils/install.packages.html)
 command with `repos="https://cloud.r-project.org"`.
-
-<div id="cb9" class="sourceCode">
 
 ``` bash
 popd # To go back to the root directory of the project, from cpp/build
@@ -290,8 +211,6 @@ pushd r
 R -e 'install.packages("remotes"); remotes::install_deps(dependencies = TRUE)'
 R CMD INSTALL --no-multiarch .
 ```
-
-</div>
 
 The `--no-multiarch` flag makes it only compile on the “main”
 architecture. This will compile for the architecture that the R in your
@@ -301,8 +220,6 @@ package code is recompiled for the new architecture. Otherwise, you may
 see errors like
 `LoadLibrary failure: %1 is not a valid Win32 application`.
 
-<div class="section level5">
-
 ##### Compilation flags
 
 If you need to set any compilation flags while building the C++
@@ -310,17 +227,9 @@ extensions, you can use the `ARROW_R_CXXFLAGS` environment variable. For
 example, if you are using `perf` to profile the R extensions, you may
 need to set
 
-<div id="cb10" class="sourceCode">
-
 ``` bash
 export ARROW_R_CXXFLAGS=-fno-omit-frame-pointer
 ```
-
-</div>
-
-</div>
-
-<div class="section level5">
 
 ##### Recompiling the C++ code
 
@@ -340,8 +249,6 @@ different flags as well. For example, to develop Python, you would need
 to also add `-DARROW_PYTHON=ON` (though all of the other flags used for
 Python are already included here).
 
-<div id="cb11" class="sourceCode">
-
 ``` bash
 cmake \
   -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
@@ -367,28 +274,14 @@ cmake \
   ..
 ```
 
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="section level3">
-
 ### Installing a version of the R package with a specific git reference
 
 If you need an arrow installation from a specific repository or git
 reference, on most platforms except Windows, you can run:
 
-<div id="cb12" class="sourceCode">
-
 ``` r
 remotes::install_github("apache/arrow/r", build = FALSE)
 ```
-
-</div>
 
 The `build = FALSE` argument is important so that the installation can
 access the C++ source in the `cpp/` directory in `apache/arrow`.
@@ -401,14 +294,10 @@ respectively.
 For example, to install from the (fictional) branch `bugfix` from
 `apache/arrow` you could run:
 
-<div id="cb13" class="sourceCode">
-
 ``` r
 Sys.setenv(LIBARROW_MINIMAL="false")
 remotes::install_github("apache/arrow/r@bugfix", build = FALSE)
 ```
-
-</div>
 
 Developers may wish to use this method of installing a specific commit
 separate from another Arrow development environment or system
@@ -419,44 +308,34 @@ you already have libarrow installed system-wide, you may need to set
 some additional variables in order to isolate this build from your
 system libraries:
 
--   Setting the environment variable `FORCE_BUNDLED_BUILD` to `true`
-    will skip the `pkg-config` search for libarrow and attempt to build
-    from the same source at the repository+ref given.
+- Setting the environment variable `FORCE_BUNDLED_BUILD` to `true` will
+  skip the `pkg-config` search for libarrow and attempt to build from
+  the same source at the repository+ref given.
 
--   You may also need to set the Makevars `CPPFLAGS` and `LDFLAGS` to
-    `""` in order to prevent the installation process from attempting to
-    link to already installed system versions of libarrow. One way to do
-    this temporarily is wrapping your `remotes::install_github()` call
-    like so:
-
-<div id="cb14" class="sourceCode">
+- You may also need to set the Makevars `CPPFLAGS` and `LDFLAGS` to `""`
+  in order to prevent the installation process from attempting to link
+  to already installed system versions of libarrow. One way to do this
+  temporarily is wrapping your
+  [`remotes::install_github()`](https://remotes.r-lib.org/reference/install_github.html)
+  call like so:
 
 ``` r
 withr::with_makevars(list(CPPFLAGS = "", LDFLAGS = ""), remotes::install_github(...))
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Summary of environment variables
 
--   See the user-facing [article on
-    installation](https://arrow.apache.org/docs/r/articles/install.md)
-    for a large number of environment variables that determine how the
-    build works and what features get built.
--   `ARROW_OFFLINE_BUILD`: When set to `true`, the build script will not
-    download prebuilt the C++ library binary or, if needed, `cmake`. It
-    will turn off any features that require a download, unless they’re
-    available in `ARROW_THIRDPARTY_DEPENDENCY_DIR` or the
-    `tools/thirdparty_download/` subfolder.
-    `create_package_with_all_dependencies()` creates that subfolder.
-
-</div>
-
-<div class="section level2">
+- See the user-facing [article on
+  installation](https://arrow.apache.org/docs/r/articles/install.md) for
+  a large number of environment variables that determine how the build
+  works and what features get built.
+- `ARROW_OFFLINE_BUILD`: When set to `true`, the build script will not
+  download prebuilt the C++ library binary or, if needed, `cmake`. It
+  will turn off any features that require a download, unless they’re
+  available in `ARROW_THIRDPARTY_DEPENDENCY_DIR` or the
+  `tools/thirdparty_download/` subfolder.
+  [`create_package_with_all_dependencies()`](https://arrow.apache.org/docs/r/reference/create_package_with_all_dependencies.md)
+  creates that subfolder.
 
 ## Troubleshooting
 
@@ -466,8 +345,6 @@ the `r/src/` directory before reinstalling the R package. This is only
 necessary if you make changes to libarrow source; you do not need to
 manually purge object files if you are only editing R or C++ code inside
 `r/`.
-
-<div class="section level3">
 
 ### Arrow library - R package mismatches
 
@@ -486,10 +363,6 @@ If libarrow and the R package have diverged, you will see errors like:
 To resolve this, try [rebuilding the Arrow
 library](#step-3-building-arrow).
 
-</div>
-
-<div class="section level3">
-
 ### Multiple versions of libarrow
 
 If you are installing from a user-level directory, and you already have
@@ -506,24 +379,15 @@ If this happens, you need to make sure that you don’t let R link to your
 system library when building arrow. You can do this a number of
 different ways:
 
--   Setting the `MAKEFLAGS` environment variable to `"LDFLAGS="` (see
-    below for an example) this is the recommended way to accomplish this
--   Using {withr}’s `with_makevars(list(LDFLAGS = ""), ...)`
--   adding `LDFLAGS=` to your `~/.R/Makevars` file (the least
-    recommended way, though it is a common debugging approach suggested
-    online)
-
-<div id="cb17" class="sourceCode">
+- Setting the `MAKEFLAGS` environment variable to `"LDFLAGS="` (see
+  below for an example) this is the recommended way to accomplish this
+- Using {withr}’s `with_makevars(list(LDFLAGS = ""), ...)`
+- adding `LDFLAGS=` to your `~/.R/Makevars` file (the least recommended
+  way, though it is a common debugging approach suggested online)
 
 ``` bash
 MAKEFLAGS="LDFLAGS=" R CMD INSTALL .
 ```
-
-</div>
-
-</div>
-
-<div class="section level3">
 
 ### `rpath` issues
 
@@ -549,10 +413,6 @@ Arrow C++ library first.
 For any other build/configuration challenges, see the [C++ developer
 guide](https://arrow.apache.org/docs/developers/cpp/building.html).
 
-</div>
-
-<div class="section level3">
-
 ### Other installation issues
 
 There are a number of scripts that are triggered when the arrow R
@@ -564,9 +424,3 @@ troubleshoot if things go wrong in them or things go wrong in an
 install. See [the article on R package
 installation](https://arrow.apache.org/docs/r/articles/developers/install_details.md)
 for more information.
-
-</div>
-
-</div>
-
-</div>

@@ -1,432 +1,432 @@
-<div id="main" class="col-md-9" role="main">
-
 # Package index
-
-<div class="section level2">
 
 ## Read datasets
 
-<div class="section-desc">
-
 Open multi-file datasets as Arrow Dataset objects.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `open_dataset()` : Open a multi-file dataset
--   `open_delim_dataset()` `open_csv_dataset()` `open_tsv_dataset()` :
-    Open a multi-file dataset of CSV or other delimiter-separated format
--   `csv_read_options()` : CSV Reading Options
--   `csv_parse_options()` : CSV Parsing Options
--   `csv_convert_options()` : CSV Convert Options
-
-</div>
-
-<div class="section level2">
+- [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+  : Open a multi-file dataset
+- [`open_delim_dataset()`](https://arrow.apache.org/docs/r/reference/open_delim_dataset.md)
+  [`open_csv_dataset()`](https://arrow.apache.org/docs/r/reference/open_delim_dataset.md)
+  [`open_tsv_dataset()`](https://arrow.apache.org/docs/r/reference/open_delim_dataset.md)
+  : Open a multi-file dataset of CSV or other delimiter-separated format
+- [`csv_read_options()`](https://arrow.apache.org/docs/r/reference/csv_read_options.md)
+  : CSV Reading Options
+- [`csv_parse_options()`](https://arrow.apache.org/docs/r/reference/csv_parse_options.md)
+  : CSV Parsing Options
+- [`csv_convert_options()`](https://arrow.apache.org/docs/r/reference/csv_convert_options.md)
+  : CSV Convert Options
 
 ## Write datasets
 
-<div class="section-desc">
-
 Write multi-file datasets to disk.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `write_dataset()` : Write a dataset
--   `write_delim_dataset()` `write_csv_dataset()` `write_tsv_dataset()`
-    : Write a dataset into partitioned flat files.
--   `csv_write_options()` : CSV Writing Options
-
-</div>
-
-<div class="section level2">
+- [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
+  : Write a dataset
+- [`write_delim_dataset()`](https://arrow.apache.org/docs/r/reference/write_delim_dataset.md)
+  [`write_csv_dataset()`](https://arrow.apache.org/docs/r/reference/write_delim_dataset.md)
+  [`write_tsv_dataset()`](https://arrow.apache.org/docs/r/reference/write_delim_dataset.md)
+  : Write a dataset into partitioned flat files.
+- [`csv_write_options()`](https://arrow.apache.org/docs/r/reference/csv_write_options.md)
+  : CSV Writing Options
 
 ## Read files
 
-<div class="section-desc">
-
 Read files in a variety of formats in as tibbles or Arrow Tables.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `read_delim_arrow()` `read_csv_arrow()` `read_csv2_arrow()`
-    `read_tsv_arrow()` : Read a CSV or other delimited file with Arrow
--   `read_parquet()` : Read a Parquet file
--   `read_feather()` `read_ipc_file()` : Read a Feather file (an Arrow
-    IPC file)
--   `read_ipc_stream()` : Read Arrow IPC stream format
--   `read_json_arrow()` : Read a JSON file
-
-</div>
-
-<div class="section level2">
+- [`read_delim_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
+  [`read_csv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
+  [`read_csv2_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
+  [`read_tsv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
+  : Read a CSV or other delimited file with Arrow
+- [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md)
+  : Read a Parquet file
+- [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  : Read a Feather file (an Arrow IPC file)
+- [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
+  : Read Arrow IPC stream format
+- [`read_json_arrow()`](https://arrow.apache.org/docs/r/reference/read_json_arrow.md)
+  : Read a JSON file
 
 ## Write files
 
-<div class="section-desc">
-
 Write to files in a variety of formats.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `write_csv_arrow()` : Write CSV file to disk
--   `write_parquet()` : Write Parquet file to disk
--   `write_feather()` `write_ipc_file()` : Write a Feather file (an
-    Arrow IPC file)
--   `write_ipc_stream()` : Write Arrow IPC stream format
--   `write_to_raw()` : Write Arrow data to a raw vector
-
-</div>
-
-<div class="section level2">
+- [`write_csv_arrow()`](https://arrow.apache.org/docs/r/reference/write_csv_arrow.md)
+  : Write CSV file to disk
+- [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md)
+  : Write Parquet file to disk
+- [`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+  : Write a Feather file (an Arrow IPC file)
+- [`write_ipc_stream()`](https://arrow.apache.org/docs/r/reference/write_ipc_stream.md)
+  : Write Arrow IPC stream format
+- [`write_to_raw()`](https://arrow.apache.org/docs/r/reference/write_to_raw.md)
+  : Write Arrow data to a raw vector
 
 ## Creating Arrow data containers
 
-<div class="section-desc">
-
 Classes and functions for creating Arrow data containers.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `scalar()` : Create an Arrow Scalar
--   `arrow_array()` : Create an Arrow Array
--   `chunked_array()` : Create a Chunked Array
--   `record_batch()` : Create a RecordBatch
--   `arrow_table()` : Create an Arrow Table
--   `buffer()` : Create a Buffer
--   `vctrs_extension_array()` `vctrs_extension_type()` : Extension type
-    for generic typed vectors
-
-</div>
-
-<div class="section level2">
+- [`scalar()`](https://arrow.apache.org/docs/r/reference/scalar.md) :
+  Create an Arrow Scalar
+- [`arrow_array()`](https://arrow.apache.org/docs/r/reference/arrow_array.md)
+  : Create an Arrow Array
+- [`chunked_array()`](https://arrow.apache.org/docs/r/reference/chunked_array.md)
+  : Create a Chunked Array
+- [`record_batch()`](https://arrow.apache.org/docs/r/reference/record_batch.md)
+  : Create a RecordBatch
+- [`arrow_table()`](https://arrow.apache.org/docs/r/reference/table.md)
+  : Create an Arrow Table
+- [`buffer()`](https://arrow.apache.org/docs/r/reference/buffer.md) :
+  Create a Buffer
+- [`vctrs_extension_array()`](https://arrow.apache.org/docs/r/reference/vctrs_extension_array.md)
+  [`vctrs_extension_type()`](https://arrow.apache.org/docs/r/reference/vctrs_extension_array.md)
+  : Extension type for generic typed vectors
 
 ## Working with Arrow data containers
-
-<div class="section-desc">
 
 Functions for converting R objects to Arrow data containers and
 combining Arrow data containers.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `as_arrow_array()` : Convert an object to an Arrow Array
--   `as_chunked_array()` : Convert an object to an Arrow ChunkedArray
--   `as_record_batch()` : Convert an object to an Arrow RecordBatch
--   `as_arrow_table()` : Convert an object to an Arrow Table
--   `concat_arrays()` `c(<Array>)` : Concatenate zero or more Arrays
--   `concat_tables()` : Concatenate one or more Tables
-
-</div>
-
-<div class="section level2">
+- [`as_arrow_array()`](https://arrow.apache.org/docs/r/reference/as_arrow_array.md)
+  : Convert an object to an Arrow Array
+- [`as_chunked_array()`](https://arrow.apache.org/docs/r/reference/as_chunked_array.md)
+  : Convert an object to an Arrow ChunkedArray
+- [`as_record_batch()`](https://arrow.apache.org/docs/r/reference/as_record_batch.md)
+  : Convert an object to an Arrow RecordBatch
+- [`as_arrow_table()`](https://arrow.apache.org/docs/r/reference/as_arrow_table.md)
+  : Convert an object to an Arrow Table
+- [`concat_arrays()`](https://arrow.apache.org/docs/r/reference/concat_arrays.md)
+  [`c(`*`<Array>`*`)`](https://arrow.apache.org/docs/r/reference/concat_arrays.md)
+  : Concatenate zero or more Arrays
+- [`concat_tables()`](https://arrow.apache.org/docs/r/reference/concat_tables.md)
+  : Concatenate one or more Tables
 
 ## Arrow data types
 
-</div>
-
-<div class="section level2">
-
--   `int8()` `int16()` `int32()` `int64()` `uint8()` `uint16()`
-    `uint32()` `uint64()` `float16()` `halffloat()` `float32()`
-    `float()` `float64()` `boolean()` `bool()` `utf8()` `large_utf8()`
-    `binary()` `large_binary()` `fixed_size_binary()` `string()`
-    `date32()` `date64()` `time32()` `time64()` `duration()` `null()`
-    `timestamp()` `decimal()` `decimal32()` `decimal64()` `decimal128()`
-    `decimal256()` `struct()` `list_of()` `large_list_of()`
-    `fixed_size_list_of()` `map_of()` : Create Arrow data types
--   `dictionary()` : Create a dictionary type
--   `new_extension_type()` `new_extension_array()`
-    `register_extension_type()` `reregister_extension_type()`
-    `unregister_extension_type()` : Extension types
--   `vctrs_extension_array()` `vctrs_extension_type()` : Extension type
-    for generic typed vectors
--   `as_data_type()` : Convert an object to an Arrow DataType
--   `infer_type()` `type()` : Infer the arrow Array type from an R
-    object
-
-</div>
-
-<div class="section level2">
+- [`int8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`int16()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`int32()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`int64()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`uint8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`uint16()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`uint32()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`uint64()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`float16()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`halffloat()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`float32()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`float()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`float64()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`boolean()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`bool()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`utf8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`large_utf8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`binary()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`large_binary()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`fixed_size_binary()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`string()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`date32()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`date64()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`time32()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`time64()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`duration()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`null()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`timestamp()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`decimal()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`decimal32()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`decimal64()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`decimal128()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`decimal256()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`struct()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`list_of()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`large_list_of()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`fixed_size_list_of()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  [`map_of()`](https://arrow.apache.org/docs/r/reference/data-type.md) :
+  Create Arrow data types
+- [`dictionary()`](https://arrow.apache.org/docs/r/reference/dictionary.md)
+  : Create a dictionary type
+- [`new_extension_type()`](https://arrow.apache.org/docs/r/reference/new_extension_type.md)
+  [`new_extension_array()`](https://arrow.apache.org/docs/r/reference/new_extension_type.md)
+  [`register_extension_type()`](https://arrow.apache.org/docs/r/reference/new_extension_type.md)
+  [`reregister_extension_type()`](https://arrow.apache.org/docs/r/reference/new_extension_type.md)
+  [`unregister_extension_type()`](https://arrow.apache.org/docs/r/reference/new_extension_type.md)
+  : Extension types
+- [`vctrs_extension_array()`](https://arrow.apache.org/docs/r/reference/vctrs_extension_array.md)
+  [`vctrs_extension_type()`](https://arrow.apache.org/docs/r/reference/vctrs_extension_array.md)
+  : Extension type for generic typed vectors
+- [`as_data_type()`](https://arrow.apache.org/docs/r/reference/as_data_type.md)
+  : Convert an object to an Arrow DataType
+- [`infer_type()`](https://arrow.apache.org/docs/r/reference/infer_type.md)
+  [`type()`](https://arrow.apache.org/docs/r/reference/infer_type.md) :
+  Infer the arrow Array type from an R object
 
 ## Fields and schemas
 
-</div>
-
-<div class="section level2">
-
--   `field()` : Create a Field
--   `schema()` : Create a schema or extract one from an object.
--   `unify_schemas()` : Combine and harmonize schemas
--   `as_schema()` : Convert an object to an Arrow Schema
--   `infer_schema()` : Extract a schema from an object
--   `read_schema()` : Read a Schema from a stream
-
-</div>
-
-<div class="section level2">
+- [`field()`](https://arrow.apache.org/docs/r/reference/Field.md) :
+  Create a Field
+- [`schema()`](https://arrow.apache.org/docs/r/reference/schema.md) :
+  Create a schema or extract one from an object.
+- [`unify_schemas()`](https://arrow.apache.org/docs/r/reference/unify_schemas.md)
+  : Combine and harmonize schemas
+- [`as_schema()`](https://arrow.apache.org/docs/r/reference/as_schema.md)
+  : Convert an object to an Arrow Schema
+- [`infer_schema()`](https://arrow.apache.org/docs/r/reference/infer_schema.md)
+  : Extract a schema from an object
+- [`read_schema()`](https://arrow.apache.org/docs/r/reference/read_schema.md)
+  : Read a Schema from a stream
 
 ## Computation
 
-<div class="section-desc">
-
 Functionality for computing values on Arrow data objects.
 
-</div>
+- [`acero`](https://arrow.apache.org/docs/r/reference/acero.md)
+  [`arrow-functions`](https://arrow.apache.org/docs/r/reference/acero.md)
+  [`arrow-verbs`](https://arrow.apache.org/docs/r/reference/acero.md)
+  [`arrow-dplyr`](https://arrow.apache.org/docs/r/reference/acero.md) :
+  Functions available in Arrow dplyr queries
 
-</div>
+- [`call_function()`](https://arrow.apache.org/docs/r/reference/call_function.md)
+  : Call an Arrow compute function
 
-<div class="section level2">
+- [`match_arrow()`](https://arrow.apache.org/docs/r/reference/match_arrow.md)
+  [`is_in()`](https://arrow.apache.org/docs/r/reference/match_arrow.md)
+  : Value matching for Arrow objects
 
--   `acero` `arrow-functions` `arrow-verbs` `arrow-dplyr` : Functions
-    available in Arrow dplyr queries
+- [`value_counts()`](https://arrow.apache.org/docs/r/reference/value_counts.md)
+  :
 
--   `call_function()` : Call an Arrow compute function
+  `table` for Arrow objects
 
--   `match_arrow()` `is_in()` : Value matching for Arrow objects
+- [`list_compute_functions()`](https://arrow.apache.org/docs/r/reference/list_compute_functions.md)
+  : List available Arrow C++ compute functions
 
--   `value_counts()` :
+- [`register_scalar_function()`](https://arrow.apache.org/docs/r/reference/register_scalar_function.md)
+  : Register user-defined functions
 
-    `table` for Arrow objects
-
--   `list_compute_functions()` : List available Arrow C++ compute
-    functions
-
--   `register_scalar_function()` : Register user-defined functions
-
--   `show_exec_plan()` : Show the details of an Arrow Execution Plan
-
-</div>
-
-<div class="section level2">
+- [`show_exec_plan()`](https://arrow.apache.org/docs/r/reference/show_exec_plan.md)
+  : Show the details of an Arrow Execution Plan
 
 ## DuckDB
 
-<div class="section-desc">
-
 Pass data to and from DuckDB
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `to_arrow()` : Create an Arrow object from a DuckDB connection
--   `to_duckdb()` : Create a (virtual) DuckDB table from an Arrow object
-
-</div>
-
-<div class="section level2">
+- [`to_arrow()`](https://arrow.apache.org/docs/r/reference/to_arrow.md)
+  : Create an Arrow object from a DuckDB connection
+- [`to_duckdb()`](https://arrow.apache.org/docs/r/reference/to_duckdb.md)
+  : Create a (virtual) DuckDB table from an Arrow object
 
 ## File systems
 
-<div class="section-desc">
-
 Functions for working with files on S3 and GCS
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `s3_bucket()` : Connect to an AWS S3 bucket
--   `gs_bucket()` : Connect to a Google Cloud Storage (GCS) bucket
--   `copy_files()` : Copy files between FileSystems
-
-</div>
-
-<div class="section level2">
+- [`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md)
+  : Connect to an AWS S3 bucket
+- [`gs_bucket()`](https://arrow.apache.org/docs/r/reference/gs_bucket.md)
+  : Connect to a Google Cloud Storage (GCS) bucket
+- [`copy_files()`](https://arrow.apache.org/docs/r/reference/copy_files.md)
+  : Copy files between FileSystems
 
 ## Flight
 
-</div>
-
-<div class="section level2">
-
--   `load_flight_server()` : Load a Python Flight server
--   `flight_connect()` : Connect to a Flight server
--   `flight_disconnect()` : Explicitly close a Flight client
--   `flight_get()` : Get data from a Flight server
--   `flight_put()` : Send data to a Flight server
--   `list_flights()` `flight_path_exists()` : See available resources on
-    a Flight server
-
-</div>
-
-<div class="section level2">
+- [`load_flight_server()`](https://arrow.apache.org/docs/r/reference/load_flight_server.md)
+  : Load a Python Flight server
+- [`flight_connect()`](https://arrow.apache.org/docs/r/reference/flight_connect.md)
+  : Connect to a Flight server
+- [`flight_disconnect()`](https://arrow.apache.org/docs/r/reference/flight_disconnect.md)
+  : Explicitly close a Flight client
+- [`flight_get()`](https://arrow.apache.org/docs/r/reference/flight_get.md)
+  : Get data from a Flight server
+- [`flight_put()`](https://arrow.apache.org/docs/r/reference/flight_put.md)
+  : Send data to a Flight server
+- [`list_flights()`](https://arrow.apache.org/docs/r/reference/list_flights.md)
+  [`flight_path_exists()`](https://arrow.apache.org/docs/r/reference/list_flights.md)
+  : See available resources on a Flight server
 
 ## Arrow Configuration
 
-</div>
-
-<div class="section level2">
-
--   `arrow_info()` `arrow_available()` `arrow_with_acero()`
-    `arrow_with_dataset()` `arrow_with_substrait()`
-    `arrow_with_parquet()` `arrow_with_s3()` `arrow_with_gcs()`
-    `arrow_with_json()` : Report information on the package's
-    capabilities
--   `cpu_count()` `set_cpu_count()` : Manage the global CPU thread pool
-    in libarrow
--   `io_thread_count()` `set_io_thread_count()` : Manage the global I/O
-    thread pool in libarrow
--   `install_arrow()` : Install or upgrade the Arrow library
--   `install_pyarrow()` : Install pyarrow for use with reticulate
--   `create_package_with_all_dependencies()` : Create a source bundle
-    that includes all thirdparty dependencies
-
-</div>
-
-<div class="section level2">
+- [`arrow_info()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_available()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_acero()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_dataset()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_substrait()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_parquet()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_s3()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_gcs()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_json()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  : Report information on the package's capabilities
+- [`cpu_count()`](https://arrow.apache.org/docs/r/reference/cpu_count.md)
+  [`set_cpu_count()`](https://arrow.apache.org/docs/r/reference/cpu_count.md)
+  : Manage the global CPU thread pool in libarrow
+- [`io_thread_count()`](https://arrow.apache.org/docs/r/reference/io_thread_count.md)
+  [`set_io_thread_count()`](https://arrow.apache.org/docs/r/reference/io_thread_count.md)
+  : Manage the global I/O thread pool in libarrow
+- [`install_arrow()`](https://arrow.apache.org/docs/r/reference/install_arrow.md)
+  : Install or upgrade the Arrow library
+- [`install_pyarrow()`](https://arrow.apache.org/docs/r/reference/install_pyarrow.md)
+  : Install pyarrow for use with reticulate
+- [`create_package_with_all_dependencies()`](https://arrow.apache.org/docs/r/reference/create_package_with_all_dependencies.md)
+  : Create a source bundle that includes all thirdparty dependencies
 
 ## Input/Output
 
-</div>
-
-<div class="section level2">
-
--   `InputStream` `RandomAccessFile` `MemoryMappedFile` `ReadableFile`
-    `BufferReader` : InputStream classes
--   `read_message()` : Read a Message from a stream
--   `mmap_open()` : Open a memory mapped file
--   `mmap_create()` : Create a new read/write memory mapped file of a
-    given size
--   `OutputStream` `FileOutputStream` `BufferOutputStream` :
-    OutputStream classes
--   `Message` : Message class
--   `MessageReader` : MessageReader class
--   `compression` `CompressedOutputStream` `CompressedInputStream` :
-    Compressed stream classes
--   `Codec` : Compression Codec class
--   `codec_is_available()` : Check whether a compression codec is
-    available
-
-</div>
-
-<div class="section level2">
+- [`InputStream`](https://arrow.apache.org/docs/r/reference/InputStream.md)
+  [`RandomAccessFile`](https://arrow.apache.org/docs/r/reference/InputStream.md)
+  [`MemoryMappedFile`](https://arrow.apache.org/docs/r/reference/InputStream.md)
+  [`ReadableFile`](https://arrow.apache.org/docs/r/reference/InputStream.md)
+  [`BufferReader`](https://arrow.apache.org/docs/r/reference/InputStream.md)
+  : InputStream classes
+- [`read_message()`](https://arrow.apache.org/docs/r/reference/read_message.md)
+  : Read a Message from a stream
+- [`mmap_open()`](https://arrow.apache.org/docs/r/reference/mmap_open.md)
+  : Open a memory mapped file
+- [`mmap_create()`](https://arrow.apache.org/docs/r/reference/mmap_create.md)
+  : Create a new read/write memory mapped file of a given size
+- [`OutputStream`](https://arrow.apache.org/docs/r/reference/OutputStream.md)
+  [`FileOutputStream`](https://arrow.apache.org/docs/r/reference/OutputStream.md)
+  [`BufferOutputStream`](https://arrow.apache.org/docs/r/reference/OutputStream.md)
+  : OutputStream classes
+- [`Message`](https://arrow.apache.org/docs/r/reference/Message.md) :
+  Message class
+- [`MessageReader`](https://arrow.apache.org/docs/r/reference/MessageReader.md)
+  : MessageReader class
+- [`compression`](https://arrow.apache.org/docs/r/reference/compression.md)
+  [`CompressedOutputStream`](https://arrow.apache.org/docs/r/reference/compression.md)
+  [`CompressedInputStream`](https://arrow.apache.org/docs/r/reference/compression.md)
+  : Compressed stream classes
+- [`Codec`](https://arrow.apache.org/docs/r/reference/Codec.md) :
+  Compression Codec class
+- [`codec_is_available()`](https://arrow.apache.org/docs/r/reference/codec_is_available.md)
+  : Check whether a compression codec is available
 
 ## File read/writer interface
 
-</div>
-
-<div class="section level2">
-
--   `ParquetFileReader` : ParquetFileReader class
--   `ParquetReaderProperties` : ParquetReaderProperties class
--   `ParquetArrowReaderProperties` : ParquetArrowReaderProperties class
--   `ParquetFileWriter` : ParquetFileWriter class
--   `ParquetWriterProperties` : ParquetWriterProperties class
--   `FeatherReader` : FeatherReader class
--   `CsvTableReader` `JsonTableReader` : Arrow CSV and JSON table reader
-    classes
--   `CsvReadOptions` `CsvWriteOptions` `CsvParseOptions`
-    `TimestampParser` `CsvConvertOptions` `JsonReadOptions`
-    `JsonParseOptions` : File reader options
--   `RecordBatchReader` `RecordBatchStreamReader`
-    `RecordBatchFileReader` : RecordBatchReader classes
--   `RecordBatchWriter` `RecordBatchStreamWriter`
-    `RecordBatchFileWriter` : RecordBatchWriter classes
--   `as_record_batch_reader()` : Convert an object to an Arrow
-    RecordBatchReader
-
-</div>
-
-<div class="section level2">
+- [`ParquetFileReader`](https://arrow.apache.org/docs/r/reference/ParquetFileReader.md)
+  : ParquetFileReader class
+- [`ParquetReaderProperties`](https://arrow.apache.org/docs/r/reference/ParquetReaderProperties.md)
+  : ParquetReaderProperties class
+- [`ParquetArrowReaderProperties`](https://arrow.apache.org/docs/r/reference/ParquetArrowReaderProperties.md)
+  : ParquetArrowReaderProperties class
+- [`ParquetFileWriter`](https://arrow.apache.org/docs/r/reference/ParquetFileWriter.md)
+  : ParquetFileWriter class
+- [`ParquetWriterProperties`](https://arrow.apache.org/docs/r/reference/ParquetWriterProperties.md)
+  : ParquetWriterProperties class
+- [`FeatherReader`](https://arrow.apache.org/docs/r/reference/FeatherReader.md)
+  : FeatherReader class
+- [`CsvTableReader`](https://arrow.apache.org/docs/r/reference/CsvTableReader.md)
+  [`JsonTableReader`](https://arrow.apache.org/docs/r/reference/CsvTableReader.md)
+  : Arrow CSV and JSON table reader classes
+- [`CsvReadOptions`](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+  [`CsvWriteOptions`](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+  [`CsvParseOptions`](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+  [`TimestampParser`](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+  [`CsvConvertOptions`](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+  [`JsonReadOptions`](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+  [`JsonParseOptions`](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+  : File reader options
+- [`RecordBatchReader`](https://arrow.apache.org/docs/r/reference/RecordBatchReader.md)
+  [`RecordBatchStreamReader`](https://arrow.apache.org/docs/r/reference/RecordBatchReader.md)
+  [`RecordBatchFileReader`](https://arrow.apache.org/docs/r/reference/RecordBatchReader.md)
+  : RecordBatchReader classes
+- [`RecordBatchWriter`](https://arrow.apache.org/docs/r/reference/RecordBatchWriter.md)
+  [`RecordBatchStreamWriter`](https://arrow.apache.org/docs/r/reference/RecordBatchWriter.md)
+  [`RecordBatchFileWriter`](https://arrow.apache.org/docs/r/reference/RecordBatchWriter.md)
+  : RecordBatchWriter classes
+- [`as_record_batch_reader()`](https://arrow.apache.org/docs/r/reference/as_record_batch_reader.md)
+  : Convert an object to an Arrow RecordBatchReader
 
 ## Low-level C++ wrappers
-
-<div class="section-desc">
 
 Low-level R6 class representations of Arrow C++ objects intended for
 advanced users.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `Buffer` : Buffer class
--   `Scalar` : Arrow scalars
--   `Array` `DictionaryArray` `StructArray` `ListArray` `LargeListArray`
-    `FixedSizeListArray` `MapArray` : Array Classes
--   `ChunkedArray` : ChunkedArray class
--   `RecordBatch` : RecordBatch class
--   `Schema` : Schema class
--   `Field` : Field class
--   `Table` : Table class
--   `DataType` : DataType class
--   `ArrayData` : ArrayData class
--   `DictionaryType` : class DictionaryType
--   `FixedWidthType` : FixedWidthType class
--   `ExtensionType` : ExtensionType class
--   `ExtensionArray` : ExtensionArray class
-
-</div>
-
-<div class="section level2">
+- [`Buffer`](https://arrow.apache.org/docs/r/reference/Buffer-class.md)
+  : Buffer class
+- [`Scalar`](https://arrow.apache.org/docs/r/reference/Scalar-class.md)
+  : Arrow scalars
+- [`Array`](https://arrow.apache.org/docs/r/reference/array-class.md)
+  [`DictionaryArray`](https://arrow.apache.org/docs/r/reference/array-class.md)
+  [`StructArray`](https://arrow.apache.org/docs/r/reference/array-class.md)
+  [`ListArray`](https://arrow.apache.org/docs/r/reference/array-class.md)
+  [`LargeListArray`](https://arrow.apache.org/docs/r/reference/array-class.md)
+  [`FixedSizeListArray`](https://arrow.apache.org/docs/r/reference/array-class.md)
+  [`MapArray`](https://arrow.apache.org/docs/r/reference/array-class.md)
+  : Array Classes
+- [`ChunkedArray`](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md)
+  : ChunkedArray class
+- [`RecordBatch`](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md)
+  : RecordBatch class
+- [`Schema`](https://arrow.apache.org/docs/r/reference/Schema-class.md)
+  : Schema class
+- [`Field`](https://arrow.apache.org/docs/r/reference/Field-class.md) :
+  Field class
+- [`Table`](https://arrow.apache.org/docs/r/reference/Table-class.md) :
+  Table class
+- [`DataType`](https://arrow.apache.org/docs/r/reference/DataType-class.md)
+  : DataType class
+- [`ArrayData`](https://arrow.apache.org/docs/r/reference/ArrayData.md)
+  : ArrayData class
+- [`DictionaryType`](https://arrow.apache.org/docs/r/reference/DictionaryType.md)
+  : class DictionaryType
+- [`FixedWidthType`](https://arrow.apache.org/docs/r/reference/FixedWidthType.md)
+  : FixedWidthType class
+- [`ExtensionType`](https://arrow.apache.org/docs/r/reference/ExtensionType.md)
+  : ExtensionType class
+- [`ExtensionArray`](https://arrow.apache.org/docs/r/reference/ExtensionArray.md)
+  : ExtensionArray class
 
 ## Dataset and Filesystem R6 classes and helper functions
-
-<div class="section-desc">
 
 R6 classes and helper functions useful for when working with multi-file
 datases in Arrow.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
--   `Dataset` `FileSystemDataset` `UnionDataset` `InMemoryDataset`
-    `DatasetFactory` `FileSystemDatasetFactory` : Multi-file datasets
--   `dataset_factory()` : Create a DatasetFactory
--   `Partitioning` `DirectoryPartitioning` `HivePartitioning`
-    `DirectoryPartitioningFactory` `HivePartitioningFactory` : Define
-    Partitioning for a Dataset
--   `Expression` : Arrow expressions
--   `Scanner` `ScannerBuilder` : Scan the contents of a dataset
--   `FileFormat` `ParquetFileFormat` `IpcFileFormat` : Dataset file
-    formats
--   `CsvFileFormat` : CSV dataset file format
--   `JsonFileFormat` : JSON dataset file format
--   `FileWriteOptions` : Format-specific write options
--   `FragmentScanOptions` `CsvFragmentScanOptions`
-    `ParquetFragmentScanOptions` `JsonFragmentScanOptions` :
-    Format-specific scan options
--   `hive_partition()` : Construct Hive partitioning
--   `map_batches()` : Apply a function to a stream of RecordBatches
--   `FileSystem` `LocalFileSystem` `S3FileSystem` `GcsFileSystem`
-    `SubTreeFileSystem` : FileSystem classes
--   `FileInfo` : FileSystem entry info
--   `FileSelector` : file selector
-
-</div>
-
-</div>
+- [`Dataset`](https://arrow.apache.org/docs/r/reference/Dataset.md)
+  [`FileSystemDataset`](https://arrow.apache.org/docs/r/reference/Dataset.md)
+  [`UnionDataset`](https://arrow.apache.org/docs/r/reference/Dataset.md)
+  [`InMemoryDataset`](https://arrow.apache.org/docs/r/reference/Dataset.md)
+  [`DatasetFactory`](https://arrow.apache.org/docs/r/reference/Dataset.md)
+  [`FileSystemDatasetFactory`](https://arrow.apache.org/docs/r/reference/Dataset.md)
+  : Multi-file datasets
+- [`dataset_factory()`](https://arrow.apache.org/docs/r/reference/dataset_factory.md)
+  : Create a DatasetFactory
+- [`Partitioning`](https://arrow.apache.org/docs/r/reference/Partitioning.md)
+  [`DirectoryPartitioning`](https://arrow.apache.org/docs/r/reference/Partitioning.md)
+  [`HivePartitioning`](https://arrow.apache.org/docs/r/reference/Partitioning.md)
+  [`DirectoryPartitioningFactory`](https://arrow.apache.org/docs/r/reference/Partitioning.md)
+  [`HivePartitioningFactory`](https://arrow.apache.org/docs/r/reference/Partitioning.md)
+  : Define Partitioning for a Dataset
+- [`Expression`](https://arrow.apache.org/docs/r/reference/Expression.md)
+  : Arrow expressions
+- [`Scanner`](https://arrow.apache.org/docs/r/reference/Scanner.md)
+  [`ScannerBuilder`](https://arrow.apache.org/docs/r/reference/Scanner.md)
+  : Scan the contents of a dataset
+- [`FileFormat`](https://arrow.apache.org/docs/r/reference/FileFormat.md)
+  [`ParquetFileFormat`](https://arrow.apache.org/docs/r/reference/FileFormat.md)
+  [`IpcFileFormat`](https://arrow.apache.org/docs/r/reference/FileFormat.md)
+  : Dataset file formats
+- [`CsvFileFormat`](https://arrow.apache.org/docs/r/reference/CsvFileFormat.md)
+  : CSV dataset file format
+- [`JsonFileFormat`](https://arrow.apache.org/docs/r/reference/JsonFileFormat.md)
+  : JSON dataset file format
+- [`FileWriteOptions`](https://arrow.apache.org/docs/r/reference/FileWriteOptions.md)
+  : Format-specific write options
+- [`FragmentScanOptions`](https://arrow.apache.org/docs/r/reference/FragmentScanOptions.md)
+  [`CsvFragmentScanOptions`](https://arrow.apache.org/docs/r/reference/FragmentScanOptions.md)
+  [`ParquetFragmentScanOptions`](https://arrow.apache.org/docs/r/reference/FragmentScanOptions.md)
+  [`JsonFragmentScanOptions`](https://arrow.apache.org/docs/r/reference/FragmentScanOptions.md)
+  : Format-specific scan options
+- [`hive_partition()`](https://arrow.apache.org/docs/r/reference/hive_partition.md)
+  : Construct Hive partitioning
+- [`map_batches()`](https://arrow.apache.org/docs/r/reference/map_batches.md)
+  : Apply a function to a stream of RecordBatches
+- [`FileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+  [`LocalFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+  [`S3FileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+  [`GcsFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+  [`SubTreeFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+  : FileSystem classes
+- [`FileInfo`](https://arrow.apache.org/docs/r/reference/FileInfo.md) :
+  FileSystem entry info
+- [`FileSelector`](https://arrow.apache.org/docs/r/reference/FileSelector.md)
+  : file selector

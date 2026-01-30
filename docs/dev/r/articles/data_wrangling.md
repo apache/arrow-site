@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Data analysis with dplyr syntax
 
 The arrow package provides functionality allowing users to manipulate
@@ -14,8 +12,6 @@ differences in behavior (documented later in the article).
 
 To get started let’s load the packages and create the data:
 
-<div id="cb1" class="sourceCode">
-
 ``` r
 library(dplyr, warn.conflicts = FALSE)
 library(arrow, warn.conflicts = FALSE)
@@ -23,18 +19,16 @@ library(arrow, warn.conflicts = FALSE)
 sw <- arrow_table(starwars, as_data_frame = FALSE)
 ```
 
-</div>
-
-<div class="section level2">
-
 ## One-table dplyr verbs
 
 The arrow package provides support for the dplyr one-table verbs,
 allowing users to construct data analysis pipelines in a familiar way.
-The example below shows the use of `filter()`, `rename()`, `mutate()`,
-`arrange()` and `select()`:
-
-<div id="cb2" class="sourceCode">
+The example below shows the use of
+[`filter()`](https://dplyr.tidyverse.org/reference/filter.html),
+[`rename()`](https://dplyr.tidyverse.org/reference/rename.html),
+[`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html),
+[`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html) and
+[`select()`](https://dplyr.tidyverse.org/reference/select.html):
 
 ``` r
 result <- sw |>
@@ -45,8 +39,6 @@ result <- sw |>
   select(name, height_in, mass_lbs)
 ```
 
-</div>
-
 It is important to note that arrow uses lazy evaluation to delay
 computation until the result is explicitly requested. This speeds up
 processing by enabling the Arrow C++ library to perform multiple
@@ -55,13 +47,9 @@ we have not yet performed computations on the `sw` data. The `result`
 variable is an object with class `arrow_dplyr_query` that represents all
 the computations to be performed:
 
-<div id="cb3" class="sourceCode">
-
 ``` r
 result
 ```
-
-</div>
 
     ## Table (query)
     ## name: string
@@ -73,17 +61,17 @@ result
     ## See $.data for the source Arrow object
 
 To perform these computations and materialize the result, we call
-`compute()` or `collect()`. The difference between the two determines
-what kind of object will be returned. Calling `compute()` returns an
-Arrow Table, suitable for passing to other arrow or dplyr functions:
-
-<div id="cb5" class="sourceCode">
+[`compute()`](https://dplyr.tidyverse.org/reference/compute.html) or
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html). The
+difference between the two determines what kind of object will be
+returned. Calling
+[`compute()`](https://dplyr.tidyverse.org/reference/compute.html)
+returns an Arrow Table, suitable for passing to other arrow or dplyr
+functions:
 
 ``` r
 compute(result)
 ```
-
-</div>
 
     ## Table
     ## 10 rows x 3 columns
@@ -91,16 +79,14 @@ compute(result)
     ## $height_in <double>
     ## $mass_lbs <double>
 
-In contrast, `collect()` returns an R data frame, suitable for viewing
-or passing to other R functions for analysis or visualization:
-
-<div id="cb7" class="sourceCode">
+In contrast,
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html)
+returns an R data frame, suitable for viewing or passing to other R
+functions for analysis or visualization:
 
 ``` r
 collect(result)
 ```
-
-</div>
 
     ## # A tibble: 10 x 3
     ##    name               height_in mass_lbs
@@ -118,10 +104,10 @@ collect(result)
 
 The arrow package has broad support for single-table dplyr verbs,
 including those that compute aggregates. For example, it supports
-`group_by()` and `summarize()`, as well as commonly-used convenience
-functions such as `count()`:
-
-<div id="cb9" class="sourceCode">
+[`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html) and
+[`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html),
+as well as commonly-used convenience functions such as
+[`count()`](https://dplyr.tidyverse.org/reference/count.html):
 
 ``` r
 sw |>
@@ -129,8 +115,6 @@ sw |>
   summarize(mean_height = mean(height, na.rm = TRUE)) |>
   collect()
 ```
-
-</div>
 
     ## # A tibble: 38 x 2
     ##    species        mean_height
@@ -147,15 +131,11 @@ sw |>
     ## 10 Ewok                   88 
     ## # i 28 more rows
 
-<div id="cb11" class="sourceCode">
-
 ``` r
 sw |>
   count(gender) |>
   collect()
 ```
-
-</div>
 
     ## # A tibble: 3 x 2
     ##   gender        n
@@ -164,19 +144,16 @@ sw |>
     ## 2 feminine     17
     ## 3 NA            4
 
-Note, however, that window functions such as `ntile()` are not yet
-supported.
-
-</div>
-
-<div class="section level2">
+Note, however, that window functions such as
+[`ntile()`](https://dplyr.tidyverse.org/reference/ntile.html) are not
+yet supported.
 
 ## Two-table dplyr verbs
 
-Equality joins (e.g. `left_join()`, `inner_join()`) are supported for
-joining multiple tables. This is illustrated below:
-
-<div id="cb13" class="sourceCode">
+Equality joins
+(e.g. [`left_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html),
+[`inner_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html))
+are supported for joining multiple tables. This is illustrated below:
 
 ``` r
 jedi <- data.frame(
@@ -190,18 +167,12 @@ sw |>
   collect()
 ```
 
-</div>
-
     ## # A tibble: 3 x 4
     ##   name           height  mass jedi 
     ##   <chr>           <int> <dbl> <lgl>
     ## 1 Luke Skywalker    172    77 TRUE 
     ## 2 C-3PO             167    75 FALSE
     ## 3 Obi-Wan Kenobi    182    77 TRUE
-
-</div>
-
-<div class="section level2">
 
 ## Expressions within dplyr verbs
 
@@ -213,22 +184,17 @@ function documentation. If there are additional functions you would like
 to see implemented, please file an issue as described in the [Getting
 help](https://arrow.apache.org/docs/r/#getting-help) guidelines.
 
-</div>
-
-<div class="section level2">
-
 ## Registering custom bindings
 
 The arrow package makes it possible for users to supply bindings for
-custom functions in some situations using `register_scalar_function()`.
+custom functions in some situations using
+[`register_scalar_function()`](https://arrow.apache.org/docs/r/reference/register_scalar_function.md).
 To operate correctly, the to-be-registered function must have `context`
 as its first argument, as required by the query engine. For example,
 suppose we wanted to implement a function that converts a string to
 snake case (a greatly simplified version of
 `janitor::make_clean_names()`). The function could be written as
 follows:
-
-<div id="cb15" class="sourceCode">
 
 ``` r
 to_snake_name <- function(context, string) {
@@ -240,11 +206,7 @@ to_snake_name <- function(context, string) {
 }
 ```
 
-</div>
-
 To call this within an arrow/dplyr pipeline, it needs to be registered:
-
-<div id="cb16" class="sourceCode">
 
 ``` r
 register_scalar_function(
@@ -256,8 +218,6 @@ register_scalar_function(
 )
 ```
 
-</div>
-
 In this expression, the `name` argument specifies the name by which it
 will be recognized in the context of the arrow/dplyr pipeline and `fun`
 is the function itself. The `in_type` and `out_type` arguments are used
@@ -267,15 +227,11 @@ R inputs to their Arrow equivalents.
 
 Once registered, the following works:
 
-<div id="cb17" class="sourceCode">
-
 ``` r
 sw |>
   mutate(name, snake_name = to_snake_name(name), .keep = "none") |>
   collect()
 ```
-
-</div>
 
     ## # A tibble: 87 x 2
     ##    name               snake_name        
@@ -293,31 +249,25 @@ sw |>
     ## # i 77 more rows
 
 To learn more, see
-`help("register_scalar_function", package = "arrow")`.
-
-</div>
-
-<div class="section level2">
+[`help("register_scalar_function", package = "arrow")`](https://arrow.apache.org/docs/r/reference/register_scalar_function.md).
 
 ## Handling unsupported expressions
 
 For dplyr queries on Table objects, which are held in memory and should
 usually be representable as data frames, if the arrow package detects an
 unimplemented function within a dplyr verb, it automatically calls
-`collect()` to return the data as an R data frame before processing that
-dplyr verb. As an example, neither `lm()` nor `residuals()` are
-implemented, so if we write code that computes the residuals for a
-linear regression model, this automatic collection takes place:
-
-<div id="cb19" class="sourceCode">
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) to
+return the data as an R data frame before processing that dplyr verb. As
+an example, neither [`lm()`](https://rdrr.io/r/stats/lm.html) nor
+[`residuals()`](https://rdrr.io/r/stats/residuals.html) are implemented,
+so if we write code that computes the residuals for a linear regression
+model, this automatic collection takes place:
 
 ``` r
 sw |>
   filter(!is.na(height), !is.na(mass)) |>
   transmute(name, height, mass, res = residuals(lm(mass ~ height)))
 ```
-
-</div>
 
     ## Warning: In residuals(lm(mass ~ height)): 
     ## i Expression not supported in Arrow
@@ -344,8 +294,6 @@ unsupported expression. To illustrate this behavior, we can write the
 `starwars` data to disk and then open it as a Dataset. When we use the
 same pipeline on the Dataset, we obtain an error:
 
-<div id="cb22" class="sourceCode">
-
 ``` r
 # write and open starwars dataset
 dataset_path <- tempfile()
@@ -358,15 +306,13 @@ sw2 |>
   transmute(name, height, mass, res = residuals(lm(mass ~ height)))
 ```
 
-</div>
-
     ## Error in `residuals()`:
     ## ! Expression not supported in Arrow
     ## > Call collect() first to pull data into R.
 
-Calling `collect()` in the middle of the pipeline fixes the issue:
-
-<div id="cb24" class="sourceCode">
+Calling
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) in the
+middle of the pipeline fixes the issue:
 
 ``` r
 sw2 |>
@@ -374,8 +320,6 @@ sw2 |>
   collect() |>
   transmute(name, height, mass, res = residuals(lm(mass ~ height)))
 ```
-
-</div>
 
     ## # A tibble: 59 x 4
     ##    name               height  mass   res
@@ -395,9 +339,9 @@ sw2 |>
 For some operations, you can use [DuckDB](https://www.duckdb.org). It
 supports Arrow natively, so you can pass the `Dataset` or query object
 to DuckDB without paying a performance penalty using the helper function
-`to_duckdb()` and pass the object back to Arrow with `to_arrow()`:
-
-<div id="cb26" class="sourceCode">
+[`to_duckdb()`](https://arrow.apache.org/docs/r/reference/to_duckdb.md)
+and pass the object back to Arrow with
+[`to_arrow()`](https://arrow.apache.org/docs/r/reference/to_arrow.md):
 
 ``` r
 sw |>
@@ -410,8 +354,6 @@ sw |>
   # perform other arrow operations...
   collect()
 ```
-
-</div>
 
     ## # A tibble: 28 x 4
     ##    name         height  mass hair_color
@@ -428,20 +370,12 @@ sw |>
     ## 10 Gasgano         122    NA none      
     ## # i 18 more rows
 
-</div>
-
-<div class="section level2">
-
 ## Further reading
 
--   To learn more about multi-file datasets, see the [dataset
-    article](https://arrow.apache.org/docs/r/articles/dataset.md).
--   To learn more about user-registered functions, see
-    `help("register_scalar_function", package = "arrow")`.
--   To learn more about writing dplyr bindings as an arrow developer,
-    see the [article on writing
-    bindings](https://arrow.apache.org/docs/r/articles/developers/writing_bindings.md).
-
-</div>
-
-</div>
+- To learn more about multi-file datasets, see the [dataset
+  article](https://arrow.apache.org/docs/r/articles/dataset.md).
+- To learn more about user-registered functions, see
+  [`help("register_scalar_function", package = "arrow")`](https://arrow.apache.org/docs/r/reference/register_scalar_function.md).
+- To learn more about writing dplyr bindings as an arrow developer, see
+  the [article on writing
+  bindings](https://arrow.apache.org/docs/r/articles/developers/writing_bindings.md).

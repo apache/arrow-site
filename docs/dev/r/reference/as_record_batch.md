@@ -1,22 +1,14 @@
-<div id="main" class="col-md-9" role="main">
-
 # Convert an object to an Arrow RecordBatch
 
-<div class="ref-description section level2">
-
-Whereas `record_batch()` constructs a
+Whereas
+[`record_batch()`](https://arrow.apache.org/docs/r/reference/record_batch.md)
+constructs a
 [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md)
 from one or more columns, `as_record_batch()` converts a single object
 to an Arrow
 [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md).
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 as_record_batch(x, ..., schema = NULL)
@@ -34,45 +26,28 @@ as_record_batch(x, ...)
 as_record_batch(x, ..., schema = NULL)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   x:
+- x:
 
-    An object to convert to an Arrow RecordBatch
+  An object to convert to an Arrow RecordBatch
 
--   ...:
+- ...:
 
-    Passed to S3 methods
+  Passed to S3 methods
 
--   schema:
+- schema:
 
-    a
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md),
-    or `NULL` (the default) to infer the schema from the data in `...`.
-    When providing an Arrow IPC buffer, `schema` is required.
-
-</div>
-
-<div class="section level2">
+  a [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md),
+  or `NULL` (the default) to infer the schema from the data in `...`.
+  When providing an Arrow IPC buffer, `schema` is required.
 
 ## Value
 
 A
 [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md)
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # use as_record_batch() for a single object
@@ -91,9 +66,3 @@ record_batch(col1 = 1, col2 = "two")
 #> $col1 <double>
 #> $col2 <string>
 ```
-
-</div>
-
-</div>
-
-</div>

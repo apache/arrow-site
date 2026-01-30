@@ -1,21 +1,11 @@
-<div id="main" class="col-md-9" role="main">
-
 # Read a JSON file
-
-<div class="ref-description section level2">
 
 Wrapper around
 [JsonTableReader](https://arrow.apache.org/docs/r/reference/CsvTableReader.md)
 to read a newline-delimited JSON (ndjson) file into a data frame or
 Arrow Table.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 read_json_arrow(
@@ -27,62 +17,48 @@ read_json_arrow(
 )
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   file:
+- file:
 
-    A character file name or URI, connection, literal data (either a
-    single string or a [raw](https://rdrr.io/r/base/raw.html) vector),
-    an Arrow input stream, or a `FileSystem` with path
-    (`SubTreeFileSystem`).
+  A character file name or URI, connection, literal data (either a
+  single string or a [raw](https://rdrr.io/r/base/raw.html) vector), an
+  Arrow input stream, or a `FileSystem` with path (`SubTreeFileSystem`).
 
-    If a file name, a memory-mapped Arrow
-    [InputStream](https://arrow.apache.org/docs/r/reference/InputStream.md)
-    will be opened and closed when finished; compression will be
-    detected from the file extension and handled automatically. If an
-    input stream is provided, it will be left open.
+  If a file name, a memory-mapped Arrow
+  [InputStream](https://arrow.apache.org/docs/r/reference/InputStream.md)
+  will be opened and closed when finished; compression will be detected
+  from the file extension and handled automatically. If an input stream
+  is provided, it will be left open.
 
-    To be recognised as literal data, the input must be wrapped with
-    `I()`.
+  To be recognised as literal data, the input must be wrapped with
+  [`I()`](https://rdrr.io/r/base/AsIs.html).
 
--   col_select:
+- col_select:
 
-    A character vector of column names to keep, as in the "select"
-    argument to `data.table::fread()`, or a [tidy selection
-    specification](https://tidyselect.r-lib.org/reference/eval_select.html)
-    of columns, as used in `dplyr::select()`.
+  A character vector of column names to keep, as in the "select"
+  argument to `data.table::fread()`, or a [tidy selection
+  specification](https://tidyselect.r-lib.org/reference/eval_select.html)
+  of columns, as used in
+  [`dplyr::select()`](https://dplyr.tidyverse.org/reference/select.html).
 
--   as_data_frame:
+- as_data_frame:
 
-    Should the function return a `tibble` (default) or an Arrow
-    [Table](https://arrow.apache.org/docs/r/reference/Table-class.md)?
+  Should the function return a `tibble` (default) or an Arrow
+  [Table](https://arrow.apache.org/docs/r/reference/Table-class.md)?
 
--   schema:
+- schema:
 
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
-    that describes the table.
+  [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
+  that describes the table.
 
--   ...:
+- ...:
 
-    Additional options passed to `JsonTableReader$create()`
-
-</div>
-
-<div class="section level2">
+  Additional options passed to `JsonTableReader$create()`
 
 ## Value
 
 A `tibble`, or a Table if `as_data_frame = FALSE`.
-
-</div>
-
-<div class="section level2">
 
 ## Details
 
@@ -92,34 +68,38 @@ extension (e.g. `.json.gz`).
 If `schema` is not provided, Arrow data types are inferred from the
 data:
 
--   JSON null values convert to the `null()` type, but can fall back to
-    any other type.
+- JSON null values convert to the
+  [`null()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  type, but can fall back to any other type.
 
--   JSON booleans convert to `boolean()`.
+- JSON booleans convert to
+  [`boolean()`](https://arrow.apache.org/docs/r/reference/data-type.md).
 
--   JSON numbers convert to `int64()`, falling back to `float64()` if a
-    non-integer is encountered.
+- JSON numbers convert to
+  [`int64()`](https://arrow.apache.org/docs/r/reference/data-type.md),
+  falling back to
+  [`float64()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  if a non-integer is encountered.
 
--   JSON strings of the kind "YYYY-MM-DD" and "YYYY-MM-DD hh:mm:ss"
-    convert to `timestamp(unit = "s")`, falling back to `utf8()` if a
-    conversion error occurs.
+- JSON strings of the kind "YYYY-MM-DD" and "YYYY-MM-DD hh:mm:ss"
+  convert to
+  [`timestamp(unit = "s")`](https://arrow.apache.org/docs/r/reference/data-type.md),
+  falling back to
+  [`utf8()`](https://arrow.apache.org/docs/r/reference/data-type.md) if
+  a conversion error occurs.
 
--   JSON arrays convert to a `list_of()` type, and inference proceeds
-    recursively on the JSON arrays' values.
+- JSON arrays convert to a
+  [`list_of()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  type, and inference proceeds recursively on the JSON arrays' values.
 
--   Nested JSON objects convert to a `struct()` type, and inference
-    proceeds recursively on the JSON objects' values.
+- Nested JSON objects convert to a
+  [`struct()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+  type, and inference proceeds recursively on the JSON objects' values.
 
 When `as_data_frame = TRUE`, Arrow types are further converted to R
 types.
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 tf <- tempfile()
@@ -146,9 +126,3 @@ read_json_arrow(I(c('{"x": 1, "y": 2}', '{"x": 3, "y": 4}')))
 #> 1     1     2
 #> 2     3     4
 ```
-
-</div>
-
-</div>
-
-</div>

@@ -1,12 +1,8 @@
-<div id="main" class="col-md-9" role="main">
-
 # Introduction for developers
 
 If you’re interested in contributing to arrow, this article explains our
 approach at a high-level. At the end of the article there we have
 included links to articles that expand on this in various ways.
-
-<div class="section level2">
 
 ## Package structure and conventions
 
@@ -43,14 +39,11 @@ be more familiar for contemporary R users. So
 The typical user of the arrow R package may never deal directly with the
 R6 objects. We provide more R-friendly wrapper functions as a
 higher-level interface to the C++ library. An R user can call
-`read_parquet()` without knowing or caring that they’re instantiating a
+[`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md)
+without knowing or caring that they’re instantiating a
 `ParquetFileReader` object and calling the `$ReadFile()` method on it.
 The classes are there and available to the advanced programmer who wants
 fine-grained control over how the C++ library is used.
-
-</div>
-
-<div class="section level2">
 
 ## Approach to implementing functionality
 
@@ -62,40 +55,31 @@ changes, or new code or approaches to learn.
 
 There are a number of ways in which we do this:
 
--   When implementing a function with an R equivalent, support the
-    arguments available in R version as much as possible - use the
-    original parameter names and translate to the arrow parameter name
-    inside the function
+- When implementing a function with an R equivalent, support the
+  arguments available in R version as much as possible - use the
+  original parameter names and translate to the arrow parameter name
+  inside the function
 
--   If there are arrow parameters which do not exist in the R function,
-    allow the user to pass in those options through too
+- If there are arrow parameters which do not exist in the R function,
+  allow the user to pass in those options through too
 
--   Where necessary add extra arguments to the function signature for a
-    feature that doesn’t exist in R but does in Arrow (e.g., passing in
-    a schema when reading a CSV dataset)
-
-</div>
-
-<div class="section level2">
+- Where necessary add extra arguments to the function signature for a
+  feature that doesn’t exist in R but does in Arrow (e.g., passing in a
+  schema when reading a CSV dataset)
 
 ## Further Reading
 
--   [In-depth guide to contributing to Arrow, including step-by-step
-    examples](https://arrow.apache.org/docs/developers/guide/index.html)
--   [R package architectural
-    overview](https://arrow.apache.org/docs/developers/guide/architectural_overview.html#r-package-architectural-overview)
--   [Setting up a development environment, and building the R package
-    and
-    components](https://arrow.apache.org/docs/r/articles/developers/setup.html)
--   [Common Arrow developer workflow
-    tasks](https://arrow.apache.org/docs/r/articles/developers/workflow.html)
--   [Running R with the C++ debugger
-    attached](https://arrow.apache.org/docs/r/articles/developers/debugging.html)
--   [In-depth guide to how the package installation
-    works](https://arrow.apache.org/docs/r/articles/developers/install_details.html)
--   [Using Docker to diagnose a bug or test a feature on a specific
-    OS](https://arrow.apache.org/docs/r/articles/developers/docker.html)
-
-</div>
-
-</div>
+- [In-depth guide to contributing to Arrow, including step-by-step
+  examples](https://arrow.apache.org/docs/developers/guide/index.html)
+- [R package architectural
+  overview](https://arrow.apache.org/docs/developers/guide/architectural_overview.html#r-package-architectural-overview)
+- [Setting up a development environment, and building the R package and
+  components](https://arrow.apache.org/docs/r/articles/developers/setup.html)
+- [Common Arrow developer workflow
+  tasks](https://arrow.apache.org/docs/r/articles/developers/workflow.html)
+- [Running R with the C++ debugger
+  attached](https://arrow.apache.org/docs/r/articles/developers/debugging.html)
+- [In-depth guide to how the package installation
+  works](https://arrow.apache.org/docs/r/articles/developers/install_details.html)
+- [Using Docker to diagnose a bug or test a feature on a specific
+  OS](https://arrow.apache.org/docs/r/articles/developers/docker.html)

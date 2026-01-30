@@ -1,18 +1,8 @@
-<div id="main" class="col-md-9" role="main">
-
 # Arrow enums
-
-<div class="ref-description section level2">
 
 Arrow enums
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 TimeUnit
@@ -45,12 +35,6 @@ RoundMode
 
 JoinType
 ```
-
-</div>
-
-</div>
-
-<div class="section level2">
 
 ## Format
 
@@ -94,7 +78,3 @@ An object of class `RoundMode` (inherits from `arrow-enum`) of length
 10.
 
 An object of class `JoinType` (inherits from `arrow-enum`) of length 8.
-
-</div>
-
-</div>

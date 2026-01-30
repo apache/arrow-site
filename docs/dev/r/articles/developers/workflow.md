@@ -1,43 +1,31 @@
-<div id="main" class="col-md-9" role="main">
-
 # Developer workflows
 
 The Arrow R package uses several additional development tools:
 
--   [`air`](https://posit-dev.github.io/air/) for code styling
--   [`lintr`](https://github.com/r-lib/lintr) for code analysis
--   [`pkgdown`](https://pkgdown.r-lib.org) for building the website
--   [`roxygen2`](https://roxygen2.r-lib.org) for documenting the package
-    -   the R documentation uses the
-        [`@examplesIf`](https://roxygen2.r-lib.org/articles/rd.html#functions)
-        tag introduced in `roxygen2` version 7.1.2
+- [`air`](https://posit-dev.github.io/air/) for code styling
+- [`lintr`](https://github.com/r-lib/lintr) for code analysis
+- [`pkgdown`](https://pkgdown.r-lib.org) for building the website
+- [`roxygen2`](https://roxygen2.r-lib.org) for documenting the package
+  - the R documentation uses the
+    [`@examplesIf`](https://roxygen2.r-lib.org/articles/rd.html#functions)
+    tag introduced in `roxygen2` version 7.1.2
 
 Instructions for installing `air` can be found at
 <https://posit-dev.github.io/air/cli.html>.
 
 You can install all the other additional dependencies by running:
 
-<div id="cb1" class="sourceCode">
-
 ``` r
 install.packages(c("lintr", "pkgdown", "roxygen2"))
 ```
-
-</div>
 
 The `arrow/r` directory contains a `Makefile` to help with some common
 tasks from the command line (e.g. `make test`, `make doc`, `make clean`,
 etc.).
 
-<div class="section level2">
-
 ## Loading arrow
 
 You can load the R package via `devtools::load_all()`.
-
-</div>
-
-<div class="section level2">
 
 ## Rebuilding the documentation
 
@@ -45,18 +33,13 @@ The R documentation uses the
 [`@examplesIf`](https://roxygen2.r-lib.org/articles/rd.html#functions)
 tag introduced in [roxygen2](https://roxygen2.r-lib.org/) version 7.1.2.
 
-<div id="cb2" class="sourceCode">
-
 ``` r
 remotes::install_github("r-lib/roxygen2")
 ```
 
-</div>
-
-You can use `devtools::document()` and `pkgdown::build_site()` to
-rebuild the documentation and preview the results.
-
-<div id="cb3" class="sourceCode">
+You can use `devtools::document()` and
+[`pkgdown::build_site()`](https://pkgdown.r-lib.org/reference/build_site.html)
+to rebuild the documentation and preview the results.
 
 ``` r
 # Update roxygen documentation
@@ -66,29 +49,17 @@ devtools::document()
 pkgdown::build_site(preview=TRUE)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Styling and linting
 
 Styling and linting can be set up and performed entirely with the
 [pre-commit](https://pre-commit.com/) tool:
 
-<div id="cb4" class="sourceCode">
-
 ``` bash
 pre-commit run --show-diff-on-failure --color=always --all-files r
 ```
 
-</div>
-
 See also the following subsections our styling and lint details for R
 and C++ codes.
-
-<div class="section level3">
 
 ### R code
 
@@ -115,20 +86,12 @@ From the command line, run `air`:
 
 In R, run `lintr`:
 
-<div id="cb6" class="sourceCode">
-
 ``` r
 lintr::lint_package()
 ```
 
-</div>
-
 Note: To run lintr, we require the `cyclocomp` package to be installed
 first.
-
-</div>
-
-<div class="section level3">
 
 ### C++ code
 
@@ -147,69 +110,49 @@ editors/IDEs have support for running `clang-format` on C++ files when
 you save them. Installing/enabling the appropriate plugin may save you
 much frustration.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Running tests
 
 Tests can be run either using `devtools::test()` or the Makefile
 alternative.
-
-<div id="cb7" class="sourceCode">
 
 ``` r
 # Run the test suite, optionally filtering file names
 devtools::test(filter="^regexp$")
 ```
 
-</div>
-
-<div id="cb8" class="sourceCode">
-
 ``` bash
 # or the Makefile alternative from the arrow/r directory in a shell:
 make test file=regexp
 ```
-
-</div>
 
 Some tests are conditionally enabled based on the availability of
 certain features in the package build (S3 support, compression
 libraries, etc.). Others are generally skipped by default but can be
 enabled with environment variables or other settings:
 
--   All tests are skipped on Linux if the package builds without the C++
-    libarrow. To make the build fail if libarrow is not available (as
-    in, to test that the C++ build was successful), set
-    `TEST_R_WITH_ARROW=true`
+- All tests are skipped on Linux if the package builds without the C++
+  libarrow. To make the build fail if libarrow is not available (as in,
+  to test that the C++ build was successful), set
+  `TEST_R_WITH_ARROW=true`
 
--   Some tests are disabled unless `ARROW_R_DEV=true`
+- Some tests are disabled unless `ARROW_R_DEV=true`
 
--   Tests that require allocating \>2GB of memory to test Large types
-    are disabled unless `ARROW_LARGE_MEMORY_TESTS=true`
+- Tests that require allocating \>2GB of memory to test Large types are
+  disabled unless `ARROW_LARGE_MEMORY_TESTS=true`
 
--   Integration tests against a real S3 bucket are disabled unless
-    credentials are set in `AWS_ACCESS_KEY_ID` and
-    `AWS_SECRET_ACCESS_KEY`; these are available on request
+- Integration tests against a real S3 bucket are disabled unless
+  credentials are set in `AWS_ACCESS_KEY_ID` and
+  `AWS_SECRET_ACCESS_KEY`; these are available on request
 
--   S3 tests using [MinIO](https://min.io/) locally are enabled if the
-    `minio server` process is found running. If you’re running MinIO
-    with custom settings, you can set `MINIO_ACCESS_KEY`,
-    `MINIO_SECRET_KEY`, and `MINIO_PORT` to override the defaults.
-
-</div>
-
-<div class="section level2">
+- S3 tests using [MinIO](https://min.io/) locally are enabled if the
+  `minio server` process is found running. If you’re running MinIO with
+  custom settings, you can set `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`,
+  and `MINIO_PORT` to override the defaults.
 
 ## Running checks
 
 You can run package checks by using `devtools::check()` and check test
 coverage with `covr::package_coverage()`.
-
-<div id="cb9" class="sourceCode">
 
 ``` r
 # All package checks
@@ -220,23 +163,13 @@ covr::report()
 covr::package_coverage()
 ```
 
-</div>
-
 For full package validation, you can run the following commands from a
 terminal.
-
-<div id="cb10" class="sourceCode">
 
 ``` bash
 R CMD build .
 R CMD check arrow_*.tar.gz --as-cran
 ```
-
-</div>
-
-</div>
-
-<div class="section level2">
 
 ## Running extended CI checks
 
@@ -246,17 +179,11 @@ requested on-demand using an internal tool called
 [crossbow](https://arrow.apache.org/docs/developers/continuous_integration/crossbow.html).
 A few important GitHub comment commands are shown below.
 
-<div class="section level4">
-
 #### Run all extended R CI tasks
 
     @github-actions crossbow submit -g r
 
 This runs each of the R-related CI tasks.
-
-</div>
-
-<div class="section level4">
 
 #### Run a specific task
 
@@ -266,9 +193,3 @@ See the `r:` group definition near the beginning of the [crossbow
 configuration](https://github.com/apache/arrow/blob/main/dev/tasks/tasks.yml)
 for a list of glob expression patterns that match names of items in the
 `tasks:` list below it.
-
-</div>
-
-</div>
-
-</div>
