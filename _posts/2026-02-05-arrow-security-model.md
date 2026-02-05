@@ -42,5 +42,5 @@ Arrow maintainers and have informed decisions for years, but they were left
 undocumented until now.
 
 Implementation-specific security considerations, such as proper API usage and
-runtime safety guarantees, will later be covered in these implementations'
-respective documentations.
+runtime safety guarantees, will later be covered in the documentation of the
+respective implementations.
