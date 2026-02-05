@@ -6,7 +6,7 @@ description: Security
 
 # Reporting Security Issues
 
-We take security seriously and would like usage our project to be as robust and
+We take security seriously and would like our project to be as robust and
 dependable as possible. If you believe to have found a security bug, please do
 not file a public issue.
 
