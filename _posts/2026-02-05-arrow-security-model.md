@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Introducing the Arrow security model"
+title: "Introducing a Security Model for Arrow"
 date: "2026-02-05 00:00:00"
 author: pmc
 categories: [arrow, security]
