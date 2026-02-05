@@ -28,7 +28,7 @@ We are thrilled to announce the official publication of a
 [Security model](https://arrow.apache.org/docs/dev/format/Security.html) for Apache Arrow.
 
 The Arrow security model covers a core subset of the Arrow specifications:
-the [Arrow columnar format](https://arrow.apache.org/docs/dev/format/Columnar.html),
+the [Arrow Columnar Format](https://arrow.apache.org/docs/dev/format/Columnar.html),
 the [Arrow C Data Interface](https://arrow.apache.org/docs/dev/format/CDataInterface.html) and the
 [Arrow IPC format](https://arrow.apache.org/docs/dev/format/Columnar.html#serialization-and-interprocess-communication-ipc).
 It sets expectations and gives guidelines for handling data coming from
