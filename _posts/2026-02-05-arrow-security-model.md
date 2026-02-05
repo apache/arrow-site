@@ -25,7 +25,7 @@ limitations under the License.
 -->
 
 We are thrilled to announce the official publication of a
-[Security model](https://arrow.apache.org/docs/dev/format/Security.html) for Apache Arrow.
+[Security Model](https://arrow.apache.org/docs/dev/format/Security.html) for Apache Arrow.
 
 The Arrow security model covers a core subset of the Arrow specifications:
 the [Arrow Columnar Format](https://arrow.apache.org/docs/dev/format/Columnar.html),
