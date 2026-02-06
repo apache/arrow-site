@@ -106,3 +106,8 @@
   objects](https://arrow.apache.org/docs/r/articles/developers/data_object_layout.md):
 
   Learn about the internal structure of Arrow data objects.
+
+- [Libarrow binary
+  features](https://arrow.apache.org/docs/r/articles/developers/binary_features.md):
+
+  Understanding which C++ features are enabled in Arrow R package builds

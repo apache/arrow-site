@@ -24,12 +24,11 @@ Storage provided by `GcsFileSystem`.
 This article provides an overview of working with both S3 and GCS data
 using the Arrow toolkit.
 
-## S3 and GCS support on Linux
+## S3 and GCS support
 
-Before you start, make sure that your arrow install has support for S3
-and/or GCS enabled. For most users this will be true by default, because
-the Windows and macOS binary packages hosted on CRAN include S3 and GCS
-support. You can check whether support is enabled via helper functions:
+Before you start, make sure that your arrow installation has support for
+S3 and/or GCS enabled. You can check whether support is enabled via
+helper functions:
 
 ``` r
 arrow_with_s3()
@@ -38,13 +37,26 @@ arrow_with_gcs()
 
 If these return `TRUE` then the relevant support is enabled.
 
-In some cases you may find that your system does not have support
-enabled. The most common case for this occurs on Linux when installing
-arrow from source. In this situation S3 and GCS support is not always
-enabled by default, and there are additional system requirements
+CRAN builds of arrow include S3 support but not GCS support. If you need
+GCS support, you can install arrow with full features using one of the
+following methods:
+
+``` r
+# Option 1: Install from R-universe
+install.packages("arrow", repos = "https://apache.r-universe.dev")
+```
+
+``` r
+# Option 2: Reinstall from source with full features
+Sys.setenv("NOT_CRAN" = "true")
+install.packages("arrow", type = "source")
+```
+
+On Linux, S3 and GCS support is not always enabled by default when
+installing from source, and there are additional system requirements
 involved. See the [installation
 article](https://arrow.apache.org/docs/r/articles/install.md) for
-details on how to resolve this.
+details.
 
 ## Connecting to cloud storage
 

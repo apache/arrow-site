@@ -6,6 +6,13 @@ article. If for some reason installation does not work, set the
 environment variable `ARROW_R_DEV=true`, retry, and share the logs with
 us.
 
+Note that CRAN builds of arrow have some optional features disabled,
+including Google Cloud Storage (GCS) support. If you need these
+features, see the information below on [building with a libarrow
+binary](#r-source-package-with-libarrow-binary), or the [cloud storage
+article](https://arrow.apache.org/docs/r/articles/fs.html#s3-and-gcs-support)
+for alternative installation options.
+
 ## Background
 
 The Apache Arrow project is implemented in multiple languages, and the R

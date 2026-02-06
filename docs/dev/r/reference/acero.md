@@ -366,7 +366,7 @@ as `arrow_ascii_is_decimal`.
 
 - [`between()`](https://dplyr.tidyverse.org/reference/between.html)
 
-- [`case_when()`](https://dplyr.tidyverse.org/reference/case_when.html):
+- [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html):
   `.ptype` and `.size` arguments not supported
 
 - [`coalesce()`](https://dplyr.tidyverse.org/reference/coalesce.html)

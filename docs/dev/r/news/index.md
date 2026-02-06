@@ -102,7 +102,7 @@ CRAN release: 2025-07-24
   `S3FileSystem` to reduce I/O calls on cloud storage
   ([@HaochengLIU](https://github.com/HaochengLIU),
   [\#41998](https://github.com/apache/arrow/issues/41998)).
-- [`case_when()`](https://dplyr.tidyverse.org/reference/case_when.html)
+- [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
   now correctly detects objects that are not in the global environment
   ([@etiennebacher](https://github.com/etiennebacher),
   [\#46667](https://github.com/apache/arrow/issues/46667)).
@@ -496,7 +496,7 @@ CRAN release: 2023-08-30
   dplyr verbs ([@eitsupi](https://github.com/eitsupi),
   [\#35667](https://github.com/apache/arrow/issues/35667))
 - Binding for
-  [`dplyr::case_when()`](https://dplyr.tidyverse.org/reference/case_when.html)
+  [`dplyr::case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
   now accepts `.default` parameter to match the update in dplyr 1.1.0
   ([\#35502](https://github.com/apache/arrow/issues/35502))
 
@@ -1539,7 +1539,7 @@ DuckDB, then evaluate the rest in Arrow.
   an error
 - [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md)
   no longer errors when used with a grouped data.frame
-- [`case_when()`](https://dplyr.tidyverse.org/reference/case_when.html)
+- [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
   now errors cleanly if an expression is not supported in Arrow
 - [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
   now works on CSVs without header rows
@@ -1600,7 +1600,7 @@ CRAN release: 2021-07-29
     release: [`ifelse()`](https://rdrr.io/r/base/ifelse.html) and
     [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html)
     for all but `Decimal` types;
-    [`case_when()`](https://dplyr.tidyverse.org/reference/case_when.html)
+    [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
     for logical, numeric, and temporal types only;
     [`coalesce()`](https://dplyr.tidyverse.org/reference/coalesce.html)
     for all but lists/structs. Note also that in this release,
