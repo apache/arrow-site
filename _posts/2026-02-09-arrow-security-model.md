@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Introducing the Arrow security model"
+title: "Introducing a Security Model for Arrow"
 date: "2026-02-09 00:00:00"
 author: pmc
 categories: [arrow, security]
@@ -25,12 +25,12 @@ limitations under the License.
 -->
 
 We are thrilled to announce the official publication of a
-[Security model](https://arrow.apache.org/docs/dev/format/Security.html) for Apache Arrow.
+[Security Model](https://arrow.apache.org/docs/dev/format/Security.html) for Apache Arrow.
 
 The Arrow security model covers a core subset of the Arrow specifications:
-the [Arrow columnar format](https://arrow.apache.org/docs/dev/format/Columnar.html),
+the [Arrow Columnar Format](https://arrow.apache.org/docs/dev/format/Columnar.html),
 the [Arrow C Data Interface](https://arrow.apache.org/docs/dev/format/CDataInterface.html) and the
-[Arrow IPC format](https://arrow.apache.org/docs/dev/format/Columnar.html#serialization-and-interprocess-communication-ipc).
+[Arrow IPC Format](https://arrow.apache.org/docs/dev/format/Columnar.html#serialization-and-interprocess-communication-ipc).
 It sets expectations and gives guidelines for handling data coming from
 untrusted sources.
 
@@ -42,5 +42,5 @@ Arrow maintainers and have informed decisions for years, but they were left
 undocumented until now.
 
 Implementation-specific security considerations, such as proper API usage and
-runtime safety guarantees, will later be covered in these implementations'
-respective documentations.
+runtime safety guarantees, will later be covered in the documentation of the
+respective implementations.
