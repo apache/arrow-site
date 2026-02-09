@@ -6,9 +6,19 @@ description: Security
 
 # Reporting Security Issues
 
-Apache Arrow uses the standard process outlined by the [Apache Security Team](https://www.apache.org/security/) for reporting vulnerabilities. Note that vulnerabilities should not be publicly disclosed until the project has responded.
+We take security seriously and would like our project to be as robust and
+dependable as possible. If you believe to have found a security bug, please do
+not file a public issue.
 
-To report a possible security vulnerability, please email [private@arrow.apache.org](mailto:private@arrow.apache.org).
+First, please carefully read the Apache Arrow
+[Security Model](https://arrow.apache.org/docs/dev/format/Security.html)
+and understand its implications for untrusted data, as some apparent security
+issues can actually be usage issues.
+
+Second, please follow the standard [vulnerability reporting process](https://apache.org/security/#reporting-a-vulnerability)
+outlined by the Apache Software Foundation. We will assess your report, follow
+up with our evaluation of the issue, and fix it as soon as possible if we deem
+it to be an actual security vulnerability.
 
 <hr class="my-5">
 
