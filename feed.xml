@@ -1,4 +1,145 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2026-02-09T03:33:22-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Introducing a Security Model for Arrow</title><link href="https://arrow.apache.org/blog/2026/02/09/arrow-security-model/" rel="alternate" type="text/html" title="Introducing a Security Model for Arrow" /><published>2026-02-09T00:00:00-05:00</published><updated>2026-02-09T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2026/02/09/arrow-security-model</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/02/09/arrow-security-model/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2026-02-12T04:16:26-05:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow is 10 years old 🎉</title><link href="https://arrow.apache.org/blog/2026/02/12/arrow-anniversary/" rel="alternate" type="text/html" title="Apache Arrow is 10 years old 🎉" /><published>2026-02-12T00:00:00-05:00</published><updated>2026-02-12T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2026/02/12/arrow-anniversary</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/02/12/arrow-anniversary/"><![CDATA[<!--
+
+-->
+<p>The Apache Arrow project was officially established and had its
+<a href="https://github.com/apache/arrow/commit/d5aa7c46692474376a3c31704cfc4783c86338f2">first git commit</a>
+on February 5th 2016, and we are therefore enthusiastic to announce its 10-year
+anniversary!</p>
+<p>Looking back over these 10 years, the project has developed in many unforeseen
+ways and we believe to have delivered on our objective of providing agnostic,
+efficient, durable standards for the exchange of columnar data.</p>
+<h2>How it started</h2>
+<p>From the start, Arrow has been a joint effort between practitioners of various
+horizons looking to build common grounds to efficiently exchange columnar data
+between different libraries and systems.
+In <a href="https://sympathetic.ink/2024/02/06/Chapter-2-From-Parquet-to-Arrow.html">this blog post</a>,
+Julien Le Dem recalls how some of the founders of the <a href="https://parquet.apache.org/">Apache Parquet</a>
+project participated in the early days of the Arrow design phase. The idea of Arrow
+as an in-memory format was meant to address the other half of the interoperability
+problem, the natural complement to Parquet as a persistent storage format.</p>
+<h2>Apache Arrow 0.1.0</h2>
+<p>The first Arrow release, numbered 0.1.0, was tagged on October 7th 2016. It already
+featured the main data types that are still the bread-and-butter of most Arrow datasets,
+as evidenced in this <a href="https://github.com/apache/arrow/blob/e7080ef9f1bd91505996edd4e4b7643cc54f6b5f/format/Message.fbs#L96-L115">Flatbuffers declaration</a>:</p>
+<div class="language-flatbuffers highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="flatbuffers">
+/// ----------------------------------------------------------------------
+/// Top-level Type value, enabling extensible type-specific metadata. We can
+/// add new logical types to Type without breaking backwards compatibility
+
+union Type {
+  Null,
+  Int,
+  FloatingPoint,
+  Binary,
+  Utf8,
+  Bool,
+  Decimal,
+  Date,
+  Time,
+  Timestamp,
+  Interval,
+  List,
+  Struct_,
+  Union
+}
+</code></pre></div></div>
+<p>The <a href="https://lists.apache.org/thread/6ow4r2kq1qw1rxp36nql8gokgoczozgw">release announcement</a>
+made the bold claim that <strong>&quot;the metadata and physical data representation should
+be fairly stable as we have spent time finalizing the details&quot;</strong>. Does that promise
+hold? The short answer is: yes, almost! But let us analyse that in a bit more detail:</p>
+<ul>
+<li>
+<p>the <a href="https://arrow.apache.org/docs/format/Columnar.html">Columnar format</a>, for
+the most part, has only seen additions of new datatypes since 2016.
+<strong>One single breaking change</strong> occurred: Union types cannot have a
+top-level validity bitmap anymore.</p>
+</li>
+<li>
+<p>the <a href="https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc">IPC format</a>
+has seen several minor evolutions of its framing and metadata format; these
+evolutions are encoded in the <code>MetadataVersion</code> field which ensures that new
+readers can read data produced by old writers. The single breaking change is
+related to the same Union validity change mentioned above.</p>
+</li>
+</ul>
+<h2>First cross-language integration tests</h2>
+<p>Arrow 0.1.0 had two implementations: C++ and Java, with bindings of the former
+to Python. There were also no integration tests to speak of, that is, no automated
+assessment that the two implementations were in sync (what could go wrong?).</p>
+<p>Integration tests had to wait for <a href="https://issues.apache.org/jira/browse/ARROW-372">November 2016</a>
+to be designed, and the first <a href="https://github.com/apache/arrow/commit/45ed7e7a36fb2a69de468c41132b6b3bbd270c92">automated CI run</a>
+probably occurred in December of the same year. Its results cannot be fetched anymore,
+so we can only assume the tests passed successfully. 🙂</p>
+<p>From that moment, integration tests have grown to follow additions to the Arrow format,
+while ensuring that older data can still be read successfully.  For example, the
+integration tests that are routinely checked against multiple implementations of
+Arrow have data files <a href="https://github.com/apache/arrow-testing/tree/master/data/arrow-ipc-stream/integration/0.14.1">generated in 2019 by Arrow 0.14.1</a>.</p>
+<h2>No breaking changes... almost</h2>
+<p>As mentioned above, at some point the Union type lost its top-level validity bitmap,
+breaking compatibility for the workloads that made use of this feature.</p>
+<p>This change was <a href="https://lists.apache.org/thread/przo99rtpv4rp66g1h4gn0zyxdq56m27">proposed back in June 2020</a>
+and enacted shortly thereafter. It elicited no controversy and doesn't seem to have
+caused any significant discontent among users, signaling that the feature was
+probably not widely used (if at all).</p>
+<p>Since then, there has been precisely zero breaking change in the Arrow Columnar and IPC
+formats.</p>
+<h2>Apache Arrow 1.0.0</h2>
+<p>We have been extremely cautious with version numbering and waited
+<a href="https://arrow.apache.org/blog/2020/07/24/1.0.0-release/">until July 2020</a>
+before finally switching away from 0.x version numbers. This was signalling
+to the world that Arrow had reached its &quot;adult phase&quot; of making formal compatibility
+promises, and that the Arrow formats were ready for wide consumption amongst
+the data ecosystem.</p>
+<h2>Apache Arrow, today</h2>
+<p>Describing the breadth of the Arrow ecosystem today would take a full-fledged
+article of its own, or perhaps even multiple Wikipedia pages. Our
+<a href="https://arrow.apache.org/powered_by/">&quot;powered by&quot;</a> page can give a small taste.</p>
+<p>As for the Arrow project, we will merely refer you to our official documentation:</p>
+<ol>
+<li>
+<p><a href="https://arrow.apache.org/docs/format/index.html#">The various specifications</a>
+that cater to multiple aspects of sharing Arrow data, such as
+<a href="https://arrow.apache.org/docs/format/CDataInterface.html">in-process zero-copy sharing</a>
+between producers and consumers that know nothing about each other, or
+<a href="https://arrow.apache.org/docs/format/ADBC.html">executing database queries</a>
+that efficiently return their results in the Arrow format.</p>
+</li>
+<li>
+<p><a href="https://arrow.apache.org/docs/status.html">The implementation status page</a>
+that lists the implementations developed officially under the Apache Arrow
+umbrella (native software libraries for C, C++, C#, Go, Java, JavaScript,
+Julia, MATLAB, Python, R, Ruby, and Rust). But keep in mind that multiple
+third-party implementations exist in non-Apache projects, either open source
+or proprietary.</p>
+</li>
+</ol>
+<p>However, that is only a small part of the landscape. The Arrow project hosts
+several official subprojects, such as <a href="https://arrow.apache.org/adbc">ADBC</a>
+and <a href="https://arrow.apache.org/nanoarrow">nanoarrow</a>. A notable success story is
+<a href="https://datafusion.apache.org/">Apache DataFusion</a>, which began as an Arrow
+subproject and later <a href="https://arrow.apache.org/blog/2024/05/07/datafusion-tlp">graduated to become an independent top-level project</a>
+in the Apache Software Foundation, reflecting the maturity and impact of the technology.</p>
+<p>Beyond these subprojects, many third-party efforts have adopted the Arrow formats
+for efficient interoperability. <a href="https://geoarrow.org/">GeoArrow</a> is an impressive
+example of how building on top of existing Arrow formats and implementations can
+enable groundbreaking efficiency improvements in a very non-trivial problem space.</p>
+<p>It should also be noted that Arrow, as an in-memory columnar format, is often used
+hand in hand with Parquet for persistent storage; as a matter of fact, most official
+Parquet implementations are nowadays being developed within Arrow repositories
+(C++, Rust, Go).</p>
+<h2>Tomorrow</h2>
+<p>The Apache Arrow community is primarily driven by consensus, and the project does
+not have a formal roadmap. We will continue to welcome everyone who wishes to
+participate constructively. While the specifications are stable, they still
+welcome additions to cater for new use cases, as they have done in the past.</p>
+<p>The Arrow implementations are actively maintained, gaining new features, bug fixes,
+and performance improvements. We encourage people to contribute to their implementation
+of choice, and to <a href="https://arrow.apache.org/community/">engage with us and the community</a>.</p>
+<p>Now and going forward, a large amount of Arrow-related progress is happening
+in the broader ecosystem of third-party tools and libraries. It is no longer
+possible for us to keep track of all the work being done in those areas, but
+we are proud to see that they are building on the same stable foundations that
+have been laid 10 years ago.</p>]]></content><author><name>pmc</name></author><category term="arrow" /><summary type="html"><![CDATA[The Apache Arrow project was officially established and had its first git commit on February 5th 2016, and we are therefore enthusiastic to announce its 10-year anniversary! Looking back over these 10 years, the project has developed in many unforeseen ways and we believe to have delivered on our objective of providing agnostic, efficient, durable standards for the exchange of columnar data. How it started From the start, Arrow has been a joint effort between practitioners of various horizons looking to build common grounds to efficiently exchange columnar data between different libraries and systems. In this blog post, Julien Le Dem recalls how some of the founders of the Apache Parquet project participated in the early days of the Arrow design phase. The idea of Arrow as an in-memory format was meant to address the other half of the interoperability problem, the natural complement to Parquet as a persistent storage format. Apache Arrow 0.1.0 The first Arrow release, numbered 0.1.0, was tagged on October 7th 2016. It already featured the main data types that are still the bread-and-butter of most Arrow datasets, as evidenced in this Flatbuffers declaration: /// ---------------------------------------------------------------------- /// Top-level Type value, enabling extensible type-specific metadata. We can /// add new logical types to Type without breaking backwards compatibility union Type { Null, Int, FloatingPoint, Binary, Utf8, Bool, Decimal, Date, Time, Timestamp, Interval, List, Struct_, Union } The release announcement made the bold claim that &quot;the metadata and physical data representation should be fairly stable as we have spent time finalizing the details&quot;. Does that promise hold? The short answer is: yes, almost! But let us analyse that in a bit more detail: the Columnar format, for the most part, has only seen additions of new datatypes since 2016. One single breaking change occurred: Union types cannot have a top-level validity bitmap anymore. the IPC format has seen several minor evolutions of its framing and metadata format; these evolutions are encoded in the MetadataVersion field which ensures that new readers can read data produced by old writers. The single breaking change is related to the same Union validity change mentioned above. First cross-language integration tests Arrow 0.1.0 had two implementations: C++ and Java, with bindings of the former to Python. There were also no integration tests to speak of, that is, no automated assessment that the two implementations were in sync (what could go wrong?). Integration tests had to wait for November 2016 to be designed, and the first automated CI run probably occurred in December of the same year. Its results cannot be fetched anymore, so we can only assume the tests passed successfully. 🙂 From that moment, integration tests have grown to follow additions to the Arrow format, while ensuring that older data can still be read successfully. For example, the integration tests that are routinely checked against multiple implementations of Arrow have data files generated in 2019 by Arrow 0.14.1. No breaking changes... almost As mentioned above, at some point the Union type lost its top-level validity bitmap, breaking compatibility for the workloads that made use of this feature. This change was proposed back in June 2020 and enacted shortly thereafter. It elicited no controversy and doesn't seem to have caused any significant discontent among users, signaling that the feature was probably not widely used (if at all). Since then, there has been precisely zero breaking change in the Arrow Columnar and IPC formats. Apache Arrow 1.0.0 We have been extremely cautious with version numbering and waited until July 2020 before finally switching away from 0.x version numbers. This was signalling to the world that Arrow had reached its &quot;adult phase&quot; of making formal compatibility promises, and that the Arrow formats were ready for wide consumption amongst the data ecosystem. Apache Arrow, today Describing the breadth of the Arrow ecosystem today would take a full-fledged article of its own, or perhaps even multiple Wikipedia pages. Our &quot;powered by&quot; page can give a small taste. As for the Arrow project, we will merely refer you to our official documentation: The various specifications that cater to multiple aspects of sharing Arrow data, such as in-process zero-copy sharing between producers and consumers that know nothing about each other, or executing database queries that efficiently return their results in the Arrow format. The implementation status page that lists the implementations developed officially under the Apache Arrow umbrella (native software libraries for C, C++, C#, Go, Java, JavaScript, Julia, MATLAB, Python, R, Ruby, and Rust). But keep in mind that multiple third-party implementations exist in non-Apache projects, either open source or proprietary. However, that is only a small part of the landscape. The Arrow project hosts several official subprojects, such as ADBC and nanoarrow. A notable success story is Apache DataFusion, which began as an Arrow subproject and later graduated to become an independent top-level project in the Apache Software Foundation, reflecting the maturity and impact of the technology. Beyond these subprojects, many third-party efforts have adopted the Arrow formats for efficient interoperability. GeoArrow is an impressive example of how building on top of existing Arrow formats and implementations can enable groundbreaking efficiency improvements in a very non-trivial problem space. It should also be noted that Arrow, as an in-memory columnar format, is often used hand in hand with Parquet for persistent storage; as a matter of fact, most official Parquet implementations are nowadays being developed within Arrow repositories (C++, Rust, Go). Tomorrow The Apache Arrow community is primarily driven by consensus, and the project does not have a formal roadmap. We will continue to welcome everyone who wishes to participate constructively. While the specifications are stable, they still welcome additions to cater for new use cases, as they have done in the past. The Arrow implementations are actively maintained, gaining new features, bug fixes, and performance improvements. We encourage people to contribute to their implementation of choice, and to engage with us and the community. Now and going forward, a large amount of Arrow-related progress is happening in the broader ecosystem of third-party tools and libraries. It is no longer possible for us to keep track of all the work being done in those areas, but we are proud to see that they are building on the same stable foundations that have been laid 10 years ago.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Introducing a Security Model for Arrow</title><link href="https://arrow.apache.org/blog/2026/02/09/arrow-security-model/" rel="alternate" type="text/html" title="Introducing a Security Model for Arrow" /><published>2026-02-09T00:00:00-05:00</published><updated>2026-02-09T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2026/02/09/arrow-security-model</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/02/09/arrow-security-model/"><![CDATA[<!--
 
 -->
 <p>We are thrilled to announce the official publication of a
@@ -1025,112 +1166,4 @@ Kaushik Srinivasan (<a href="https://github.com/kaushiksrini">@kaushiksrini</a>)
      1  ding-young
      1  kosiew
      1  张林伟
-</span></code></pre></div></div>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce that the v57.0.0 release of Apache Arrow Rust is now available on crates.io (arrow and parquet) and as source download. See the 57.0.0 changelog for a full list of changes. New Features Note: Arrow Rust hosts the development of the parquet crate, a high performance Rust implementation of Apache Parquet. Performance: 4x Faster Parquet Metadata Parsing 🚀 Ed Seidl (@etseidl) and Jörn Horstmann (@jhorstmann) contributed a rewritten thrift metadata parser for Parquet files which is almost 4x faster than the previous parser based on the thrift crate. This is especially exciting for low latency use cases and reading Parquet files with large amounts of metadata (e.g. many row groups or columns). See the blog post about the new Parquet metadata parser for more details. Figure 1: Performance improvements of Apache Parquet metadata parsing between version 56.2.0 and 57.0.0. New arrow-avro Crate The 57.0.0 release introduces a new arrow-avro crate contributed by @jecsand838 and @nathaniel-d-ef that provides much more efficient conversion between Apache Avro and Arrow RecordBatches, as well as broader feature support. Previously, Arrow‑based systems that read or wrote Avro data typically used the general‑purpose apache-avro crate. While mature and feature‑complete, its row-oriented API does not support features such as projection pushdown or vectorized execution. The new arrow-avro crate supports these features efficiently by converting Avro data directly into Arrow's columnar format. See the blog post about adding arrow-avro for more details. Figure 2: Architecture of the arrow-avro crate. Parquet Variant Support 🧬 The Apache Parquet project recently added a new Variant type for representing semi-structured data. The 57.0.0 release includes support for reading and writing both normal and shredded Variant values to and from Parquet files. It also includes parquet-variant, a complete library for working with Variant values, VariantArray for working with arrays of Variant values in Apache Arrow, computation kernels for converting to/from JSON and Arrow types, extracting paths, and shredding values. // Use the VariantArrayBuilder to build a VariantArray let mut builder = VariantArrayBuilder::new(3); builder.new_object().with_field("name", "Alice").finish(); // row 1: {"name": "Alice"} builder.append_value("such wow"); // row 2: "such wow" (a string) let array = builder.build(); // Since VariantArray is an ExtensionType, it needs to be converted // to an ArrayRef and Field with the appropriate metadata // before it can be written to a Parquet file let field = array.field("data"); let array = ArrayRef::from(array); // create a RecordBatch with the VariantArray let schema = Schema::new(vec![field]); let batch = RecordBatch::try_new(Arc::new(schema), vec![array])?; // Now you can write the RecordBatch to the Parquet file, as normal let file = std::fs::File::create("variant.parquet")?; let mut writer = ArrowWriter::try_new(file, batch.schema(), None)?; writer.write(&amp;batch)?; writer.close()?; This support is being integrated into query engines, such as @friendlymatthew's datafusion-variant crate to integrate into DataFusion and delta-rs. While this support is still experimental, we believe the APIs are mostly complete and do not expect major changes. Please consider trying it out and providing feedback and improvements. Thanks to the many contributors who made this possible, including: Ryan Johnson (@scovich), Congxian Qiu (@klion26), and Liam Bao (@liamzwbao) for completing the implementation Li Jiaying (@PinkCrow007), Aditya Bhatnagar (@carpecodeum), and Malthe Karbo (@mkarbo) for initiating the work Everyone else who has contributed, including @superserious-dev, @friendlymatthew, @micoo227, @Weijun-H, @harshmotw-db, @odysa, @viirya, @adriangb, @kosiew, @codephage2020, @ding-young, @mbrobbel, @petern48, @sdf-jkl, @abacef, and @mprammer. See the ticket Variant type support in Parquet #6736 for more details Parquet Geometry Support 🗺️ The 57.0.0 release also includes support for reading and writing Parquet Geometry types, GEOMETRY and GEOGRAPHY, including GeospatialStatistics contributed by Kyle Barron (@kylebarron), Dewey Dunnington (@paleolimbot), Kaushik Srinivasan (@kaushiksrini), and Blake Orth (@BlakeOrth). Please see the Implement Geometry and Geography type support in Parquet tracking ticket for more details. Thanks to Our Contributors $ git shortlog -sn 56.0.0..57.0.0 36 Matthijs Brobbel 20 Andrew Lamb 13 Ryan Johnson 11 Ed Seidl 10 Connor Sanders 8 Alex Huang 5 Emil Ernerfeldt 5 Liam Bao 5 Matthew Kim 4 nathaniel-d-ef 3 Raz Luvaton 3 albertlockett 3 dependabot[bot] 3 mwish 2 Ben Ye 2 Congxian Qiu 2 Dewey Dunnington 2 Kyle Barron 2 Lilian Maurel 2 Mark Nash 2 Nuno Faria 2 Pepijn Van Eeckhoudt 2 Tobias Schwarzinger 2 lichuang 1 Adam Gutglick 1 Adam Reeve 1 Alex Stephen 1 Chen Chongchen 1 Jack 1 Jeffrey Vo 1 Jörn Horstmann 1 Kaushik Srinivasan 1 Li Jiaying 1 Lin Yihai 1 Marco Neumann 1 Piotr Findeisen 1 Piotr Srebrny 1 Samuele Resca 1 Van De Bio 1 Yan Tingwang 1 ding-young 1 kosiew 1 张林伟]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 22.0.0 Release</title><link href="https://arrow.apache.org/blog/2025/10/24/22.0.0-release/" rel="alternate" type="text/html" title="Apache Arrow 22.0.0 Release" /><published>2025-10-24T00:00:00-04:00</published><updated>2025-10-24T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2025/10/24/22.0.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2025/10/24/22.0.0-release/"><![CDATA[<!--
-
--->
-<p>The Apache Arrow team is pleased to announce the 22.0.0 release. This release
-covers over 3 months of development work and includes <a href="https://github.com/apache/arrow/milestone/70?closed=1"><strong>213 resolved
-issues</strong></a> on <a href="/release/22.0.0.html#contributors"><strong>255 distinct commits</strong></a> from <a href="/release/22.0.0.html#contributors"><strong>60 distinct
-contributors</strong></a>. See the <a href="https://arrow.apache.org/install/">Install Page</a> to
-learn how to get the libraries for your platform.</p>
-<p>The release notes below are not exhaustive and only expose selected highlights
-of the release. Many other bugfixes and improvements have been made: we refer
-you to the <a href="/release/22.0.0.html#changelog">complete changelog</a>.</p>
-<h2>Community</h2>
-<p>Since the 21.0.0 release, Kyle Barron has been invited to be committer.</p>
-<p>Matthijs Brobbel, Adam Reeve and Rossi Sun have been joined the
-Project Management Committee (PMC).</p>
-<p>Thanks for your contributions and participation in the project!</p>
-<p>The first Apache Arrow Summit was held on October 2nd 2025 in Paris, France
-as part of <a href="https://pydata.org/paris2025">PyData Paris</a>.
-Program details and agenda can be found here: <a href="https://www.meetup.com/pydata-paris/events/310646396/">https://www.meetup.com/pydata-paris/events/310646396/</a></p>
-<p>There were around 35 attendees, of which ~20 were existing core developers or PMC members.
-The Summit was overwhelmingly described as a success, with a friendly atmosphere between all participants.
-Unfortunately, no Audio / Video recording system was available for this event.</p>
-<h2>Arrow Flight RPC Notes</h2>
-<p>Support for dictionary replacement and dictionary encoding has been added to the DoGet and DoExchange methods. (<a href="https://github.com/apache/arrow/issues/45056">GH-45056</a>, <a href="https://github.com/apache/arrow/issues/45055">GH-45055</a> and <a href="https://github.com/apache/arrow/issues/26727">GH-26727</a>).</p>
-<p>As part of supporting dictionary replacement we have also exposed the <code>ipc::ReadStats</code> on the <code>FlightStreamReader</code> in order to facilitate debugging. (<a href="https://github.com/apache/arrow/issues/47422">GH-47422</a>)</p>
-<h2>C++ Notes</h2>
-<h3>Compute</h3>
-<p>Timezone aware kernels can now handle timezone offset strings. (<a href="https://github.com/apache/arrow/issues/30036">GH-30036</a>)</p>
-<p>Better decimal support has been added introducing a structure <code>MatchConstraint</code> for applying extra (and optional) matching constraint for kernel signature matching. (<a href="https://github.com/apache/arrow/issues/47287">GH-47287</a>, <a href="https://github.com/apache/arrow/issues/41336">GH-41336</a>)</p>
-<p>The scatter function has been moved to Arrow core from Arrow Compute. (<a href="https://github.com/apache/arrow/issues/47375">GH-47375</a>)</p>
-<h3>Filesystems</h3>
-<p>The Request ID has been added when the AWS client raises an error. (<a href="https://github.com/apache/arrow/issues/47349">GH-47349</a>)</p>
-<h3>Format</h3>
-<p>Several improvements around Half Float (Float16) support. (<a href="https://github.com/apache/arrow/issues/46860">GH-46860</a>, <a href="https://github.com/apache/arrow/issues/46739">GH-46739</a>)</p>
-<h3>Parquet</h3>
-<p>Better Fuzzing support for Parquet and several related fixes. (<a href="https://github.com/apache/arrow/issues/47803">GH-47803</a>, <a href="https://github.com/apache/arrow/issues/47740">GH-47740</a>, <a href="https://github.com/apache/arrow/issues/47655">GH-47655</a>, <a href="https://github.com/apache/arrow/issues/47597">GH-47597</a>, <a href="https://github.com/apache/arrow/issues/47184">GH-47184</a>)</p>
-<p>Rework around the RLE decoder in order to extract a RLE parser to drive further optimisations. (<a href="https://github.com/apache/arrow/issues/47112">GH-47112</a>)</p>
-<p>Dynamic dispatch support has been added to Byte Stream Split. (<a href="https://github.com/apache/arrow/issues/46962">GH-46962</a>)</p>
-<p>Now some statistics, i.e. null count. will not be discarded when the sort order of the column is unknown. (<a href="https://github.com/apache/arrow/issues/47449">GH-47449</a>)</p>
-<p><code>is_min_value_exact</code> and <code>is_max_value_exact</code> now are exposed in Parquet Statistics if present when reading. (<a href="https://github.com/apache/arrow/issues/46905">GH-46905</a>)</p>
-<p>We now reserve values correctly when reading <code>BYTE_ARRAY</code> and <code>FLBA</code>. (<a href="https://github.com/apache/arrow/issues/47012">GH-47012</a>)</p>
-<h4>Encryption</h4>
-<p>String based Parquet encrption methods have been deprecated. (<a href="https://github.com/apache/arrow/issues/47338">GH-47338</a>)</p>
-<p>Memory usage required by decryption buffers when reading encrypted Parquet has been reduced. (<a href="https://github.com/apache/arrow/issues/46971">GH-46971</a>)</p>
-<h4>Type support</h4>
-<p>Improvements on the Parquet Variant type support. (<a href="https://github.com/apache/arrow/issues/47241">GH-47241</a>, <a href="https://github.com/apache/arrow/issues/47838">GH-47838</a>)</p>
-<p>Better support for Decimal32 and Decimal64. (<a href="https://github.com/apache/arrow/issues/44345">GH-44345</a>)</p>
-<h3>Gandiva</h3>
-<p>Support for LLVM 21.1.0 has been added. (<a href="https://github.com/apache/arrow/issues/47469">GH-47469</a>)</p>
-<h3>Miscellaneous C++ changes</h3>
-<p>Add support for further Arrow Statistics. (<a href="https://github.com/apache/arrow/issues/47102">GH-47102</a>, <a href="https://github.com/apache/arrow/issues/47101">GH-47101</a>)</p>
-<p>Support for shared memory comparison in <code>arrow::RecordBatch</code> has been added. (<a href="https://github.com/apache/arrow/pull/47149">GH-47149</a>)</p>
-<p><code>arrow::Table::Equals</code> now allows an optional <code>arrow::EqualOptions</code> argument. (<a href="https://github.com/apache/arrow/issues/46937">GH-46937</a>)</p>
-<p>Skyhook integration has been removed from the main repository and has been moved to its own repository. (<a href="https://github.com/apache/arrow/issues/47225">GH-47225</a>)</p>
-<h2>Linux Packaging Notes</h2>
-<p>Support for Debian forky has been added. (<a href="https://github.com/apache/arrow/issues/47312">GH-47312</a>)</p>
-<h2>MATLAB Notes</h2>
-<ul>
-<li><code>NumNulls</code> property was added to <code>arrow.array.Array</code> and <code>arrow.arrray.ChunkedArray</code>. (<a href="https://github.com/apache/arrow/issues/47263">GH-47263</a>, <a href="https://github.com/apache/arrow/issues/38422">GH-38422</a>)</li>
-</ul>
-<h2>Python Notes</h2>
-<p>Compatibility notes:</p>
-<ul>
-<li>Support for Python 3.9 has been dropped (<a href="https://github.com/apache/arrow/issues/47443">GH-47443</a>) and support for Python 3.14, regular and free-threaded has been added, (<a href="https://github.com/apache/arrow/issues/47438">GH-47438</a>).</li>
-<li>Cython 3.1 is now required build-time dependency (<a href="https://github.com/apache/arrow/issues/47370">GH-47370</a>).</li>
-<li><code>project.optional-dependencies</code> has been replaced with <code>dependency-groups</code> (<a href="https://github.com/apache/arrow/issues/47137">GH-47137</a>).</li>
-</ul>
-<p>New features:</p>
-<ul>
-<li>CSV writer option <code>quoting_header</code> is now exposed (<a href="https://github.com/apache/arrow/issues/47575">GH-47575</a>).</li>
-</ul>
-<p>Other improvements:</p>
-<ul>
-<li>Support for pandas <code>DataFrame.attrs</code> during conversion between a dataframe and a Parquet file has been added (<a href="https://github.com/apache/arrow/issues/45382">GH-45382</a>).</li>
-<li>A utility function to create Arrow table instead of pandas dataframe has been added (<a href="https://github.com/apache/arrow/issues/47172">GH-47172</a>).</li>
-<li>IPC and Flight options now have a nice repr/str methods (<a href="https://github.com/apache/arrow/issues/47358">GH-47358</a>).</li>
-<li>Access to Request ID in AWS client error is now available from Python (<a href="https://github.com/apache/arrow/issues/47349">GH-47349</a>).</li>
-<li>Public Type Enums are added (<a href="https://github.com/apache/arrow/issues/47123">GH-47123</a>).</li>
-<li>Python Development documentation section has been restructured in order to make it easier for contributors to build and develop PyArrow (<a href="https://github.com/apache/arrow/issues/20125">GH-20125</a>.</li>
-</ul>
-<p>Relevant bug fixes:</p>
-<ul>
-<li>Schema is now hashable when metadata is set (<a href="https://github.com/apache/arrow/issues/47602">GH-47602</a>).</li>
-<li><code>MapScalar.as_py(maps_as_pydicts=&quot;strict&quot;)</code> option now works for nested maps (<a href="https://github.com/apache/arrow/issues/47380">GH-47380</a>).</li>
-<li><code>FileFragment.open()</code> no longer segfaults on file-like objects (<a href="https://github.com/apache/arrow/issues/47301">GH-47301</a>).</li>
-<li><code>pa.compute.fill_null</code> regression on Windows due to a compiler bug has been fixed (<a href="https://github.com/apache/arrow/issues/47234">GH-47234</a>).</li>
-<li>Integer dictionary bitwidth preservation no longer breaks multi-file read behaviour as <code>DatasetFactory.inspect</code> method now accepts <code>promote_options</code> and <code>fragments</code> parameters (<a href="https://github.com/apache/arrow/issues/46629">GH-46629</a>).</li>
-<li><code>FileSystem.from_uri</code> is reverted to be a staticmethod again (<a href="https://github.com/apache/arrow/issues/47179">GH-47179</a>).</li>
-</ul>
-<h2>Java, JavaScript, Go, .NET, Swift and Rust Notes</h2>
-<p>The Java, JavaScript, Go, .NET, Swift and Rust projects have moved to separate
-repositories outside the main Arrow <a href="https://github.com/apache/arrow">monorepo</a>.</p>
-<ul>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-java">Java
-implementation</a>, see the latest <a href="https://github.com/apache/arrow-java/releases">Arrow
-Java changelog</a>.</li>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-js">JavaScript
-implementation</a>, see the latest <a href="https://github.com/apache/arrow-js/releases">Arrow
-JavaScript changelog</a>.</li>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-rs">Rust
-implementation</a> see the latest <a href="https://github.com/apache/arrow-rs/blob/main/CHANGELOG.md">Arrow Rust
-changelog</a>.</li>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-go">Go
-implementation</a>, see the latest <a href="https://github.com/apache/arrow-go/releases">Arrow Go
-changelog</a>.</li>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-dotnet">.NET
-implementation</a>, see the latest <a href="https://github.com/apache/arrow-dotnet/releases">Arrow  .NET changelog</a>.</li>
-<li>For notes on the latest release of the <a href="https://github.com/apache/arrow-swift">Swift implementation</a>, see the latest <a href="https://github.com/apache/arrow-swift/releases">Arrow Swift changelog</a>.</li>
-</ul>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 22.0.0 release. This release covers over 3 months of development work and includes 213 resolved issues on 255 distinct commits from 60 distinct contributors. See the Install Page to learn how to get the libraries for your platform. The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Community Since the 21.0.0 release, Kyle Barron has been invited to be committer. Matthijs Brobbel, Adam Reeve and Rossi Sun have been joined the Project Management Committee (PMC). Thanks for your contributions and participation in the project! The first Apache Arrow Summit was held on October 2nd 2025 in Paris, France as part of PyData Paris. Program details and agenda can be found here: https://www.meetup.com/pydata-paris/events/310646396/ There were around 35 attendees, of which ~20 were existing core developers or PMC members. The Summit was overwhelmingly described as a success, with a friendly atmosphere between all participants. Unfortunately, no Audio / Video recording system was available for this event. Arrow Flight RPC Notes Support for dictionary replacement and dictionary encoding has been added to the DoGet and DoExchange methods. (GH-45056, GH-45055 and GH-26727). As part of supporting dictionary replacement we have also exposed the ipc::ReadStats on the FlightStreamReader in order to facilitate debugging. (GH-47422) C++ Notes Compute Timezone aware kernels can now handle timezone offset strings. (GH-30036) Better decimal support has been added introducing a structure MatchConstraint for applying extra (and optional) matching constraint for kernel signature matching. (GH-47287, GH-41336) The scatter function has been moved to Arrow core from Arrow Compute. (GH-47375) Filesystems The Request ID has been added when the AWS client raises an error. (GH-47349) Format Several improvements around Half Float (Float16) support. (GH-46860, GH-46739) Parquet Better Fuzzing support for Parquet and several related fixes. (GH-47803, GH-47740, GH-47655, GH-47597, GH-47184) Rework around the RLE decoder in order to extract a RLE parser to drive further optimisations. (GH-47112) Dynamic dispatch support has been added to Byte Stream Split. (GH-46962) Now some statistics, i.e. null count. will not be discarded when the sort order of the column is unknown. (GH-47449) is_min_value_exact and is_max_value_exact now are exposed in Parquet Statistics if present when reading. (GH-46905) We now reserve values correctly when reading BYTE_ARRAY and FLBA. (GH-47012) Encryption String based Parquet encrption methods have been deprecated. (GH-47338) Memory usage required by decryption buffers when reading encrypted Parquet has been reduced. (GH-46971) Type support Improvements on the Parquet Variant type support. (GH-47241, GH-47838) Better support for Decimal32 and Decimal64. (GH-44345) Gandiva Support for LLVM 21.1.0 has been added. (GH-47469) Miscellaneous C++ changes Add support for further Arrow Statistics. (GH-47102, GH-47101) Support for shared memory comparison in arrow::RecordBatch has been added. (GH-47149) arrow::Table::Equals now allows an optional arrow::EqualOptions argument. (GH-46937) Skyhook integration has been removed from the main repository and has been moved to its own repository. (GH-47225) Linux Packaging Notes Support for Debian forky has been added. (GH-47312) MATLAB Notes NumNulls property was added to arrow.array.Array and arrow.arrray.ChunkedArray. (GH-47263, GH-38422) Python Notes Compatibility notes: Support for Python 3.9 has been dropped (GH-47443) and support for Python 3.14, regular and free-threaded has been added, (GH-47438). Cython 3.1 is now required build-time dependency (GH-47370). project.optional-dependencies has been replaced with dependency-groups (GH-47137). New features: CSV writer option quoting_header is now exposed (GH-47575). Other improvements: Support for pandas DataFrame.attrs during conversion between a dataframe and a Parquet file has been added (GH-45382). A utility function to create Arrow table instead of pandas dataframe has been added (GH-47172). IPC and Flight options now have a nice repr/str methods (GH-47358). Access to Request ID in AWS client error is now available from Python (GH-47349). Public Type Enums are added (GH-47123). Python Development documentation section has been restructured in order to make it easier for contributors to build and develop PyArrow (GH-20125. Relevant bug fixes: Schema is now hashable when metadata is set (GH-47602). MapScalar.as_py(maps_as_pydicts=&quot;strict&quot;) option now works for nested maps (GH-47380). FileFragment.open() no longer segfaults on file-like objects (GH-47301). pa.compute.fill_null regression on Windows due to a compiler bug has been fixed (GH-47234). Integer dictionary bitwidth preservation no longer breaks multi-file read behaviour as DatasetFactory.inspect method now accepts promote_options and fragments parameters (GH-46629). FileSystem.from_uri is reverted to be a staticmethod again (GH-47179). Java, JavaScript, Go, .NET, Swift and Rust Notes The Java, JavaScript, Go, .NET, Swift and Rust projects have moved to separate repositories outside the main Arrow monorepo. For notes on the latest release of the Java implementation, see the latest Arrow Java changelog. For notes on the latest release of the JavaScript implementation, see the latest Arrow JavaScript changelog. For notes on the latest release of the Rust implementation see the latest Arrow Rust changelog. For notes on the latest release of the Go implementation, see the latest Arrow Go changelog. For notes on the latest release of the .NET implementation, see the latest Arrow .NET changelog. For notes on the latest release of the Swift implementation, see the latest Arrow Swift changelog.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+</span></code></pre></div></div>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce that the v57.0.0 release of Apache Arrow Rust is now available on crates.io (arrow and parquet) and as source download. See the 57.0.0 changelog for a full list of changes. New Features Note: Arrow Rust hosts the development of the parquet crate, a high performance Rust implementation of Apache Parquet. Performance: 4x Faster Parquet Metadata Parsing 🚀 Ed Seidl (@etseidl) and Jörn Horstmann (@jhorstmann) contributed a rewritten thrift metadata parser for Parquet files which is almost 4x faster than the previous parser based on the thrift crate. This is especially exciting for low latency use cases and reading Parquet files with large amounts of metadata (e.g. many row groups or columns). See the blog post about the new Parquet metadata parser for more details. Figure 1: Performance improvements of Apache Parquet metadata parsing between version 56.2.0 and 57.0.0. New arrow-avro Crate The 57.0.0 release introduces a new arrow-avro crate contributed by @jecsand838 and @nathaniel-d-ef that provides much more efficient conversion between Apache Avro and Arrow RecordBatches, as well as broader feature support. Previously, Arrow‑based systems that read or wrote Avro data typically used the general‑purpose apache-avro crate. While mature and feature‑complete, its row-oriented API does not support features such as projection pushdown or vectorized execution. The new arrow-avro crate supports these features efficiently by converting Avro data directly into Arrow's columnar format. See the blog post about adding arrow-avro for more details. Figure 2: Architecture of the arrow-avro crate. Parquet Variant Support 🧬 The Apache Parquet project recently added a new Variant type for representing semi-structured data. The 57.0.0 release includes support for reading and writing both normal and shredded Variant values to and from Parquet files. It also includes parquet-variant, a complete library for working with Variant values, VariantArray for working with arrays of Variant values in Apache Arrow, computation kernels for converting to/from JSON and Arrow types, extracting paths, and shredding values. // Use the VariantArrayBuilder to build a VariantArray let mut builder = VariantArrayBuilder::new(3); builder.new_object().with_field("name", "Alice").finish(); // row 1: {"name": "Alice"} builder.append_value("such wow"); // row 2: "such wow" (a string) let array = builder.build(); // Since VariantArray is an ExtensionType, it needs to be converted // to an ArrayRef and Field with the appropriate metadata // before it can be written to a Parquet file let field = array.field("data"); let array = ArrayRef::from(array); // create a RecordBatch with the VariantArray let schema = Schema::new(vec![field]); let batch = RecordBatch::try_new(Arc::new(schema), vec![array])?; // Now you can write the RecordBatch to the Parquet file, as normal let file = std::fs::File::create("variant.parquet")?; let mut writer = ArrowWriter::try_new(file, batch.schema(), None)?; writer.write(&amp;batch)?; writer.close()?; This support is being integrated into query engines, such as @friendlymatthew's datafusion-variant crate to integrate into DataFusion and delta-rs. While this support is still experimental, we believe the APIs are mostly complete and do not expect major changes. Please consider trying it out and providing feedback and improvements. Thanks to the many contributors who made this possible, including: Ryan Johnson (@scovich), Congxian Qiu (@klion26), and Liam Bao (@liamzwbao) for completing the implementation Li Jiaying (@PinkCrow007), Aditya Bhatnagar (@carpecodeum), and Malthe Karbo (@mkarbo) for initiating the work Everyone else who has contributed, including @superserious-dev, @friendlymatthew, @micoo227, @Weijun-H, @harshmotw-db, @odysa, @viirya, @adriangb, @kosiew, @codephage2020, @ding-young, @mbrobbel, @petern48, @sdf-jkl, @abacef, and @mprammer. See the ticket Variant type support in Parquet #6736 for more details Parquet Geometry Support 🗺️ The 57.0.0 release also includes support for reading and writing Parquet Geometry types, GEOMETRY and GEOGRAPHY, including GeospatialStatistics contributed by Kyle Barron (@kylebarron), Dewey Dunnington (@paleolimbot), Kaushik Srinivasan (@kaushiksrini), and Blake Orth (@BlakeOrth). Please see the Implement Geometry and Geography type support in Parquet tracking ticket for more details. Thanks to Our Contributors $ git shortlog -sn 56.0.0..57.0.0 36 Matthijs Brobbel 20 Andrew Lamb 13 Ryan Johnson 11 Ed Seidl 10 Connor Sanders 8 Alex Huang 5 Emil Ernerfeldt 5 Liam Bao 5 Matthew Kim 4 nathaniel-d-ef 3 Raz Luvaton 3 albertlockett 3 dependabot[bot] 3 mwish 2 Ben Ye 2 Congxian Qiu 2 Dewey Dunnington 2 Kyle Barron 2 Lilian Maurel 2 Mark Nash 2 Nuno Faria 2 Pepijn Van Eeckhoudt 2 Tobias Schwarzinger 2 lichuang 1 Adam Gutglick 1 Adam Reeve 1 Alex Stephen 1 Chen Chongchen 1 Jack 1 Jeffrey Vo 1 Jörn Horstmann 1 Kaushik Srinivasan 1 Li Jiaying 1 Lin Yihai 1 Marco Neumann 1 Piotr Findeisen 1 Piotr Srebrny 1 Samuele Resca 1 Van De Bio 1 Yan Tingwang 1 ding-young 1 kosiew 1 张林伟]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
