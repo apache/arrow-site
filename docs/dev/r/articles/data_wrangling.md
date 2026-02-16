@@ -359,15 +359,15 @@ sw |>
     ##    name                    height  mass hair_color
     ##    <chr>                    <int> <dbl> <chr>     
     ##  1 "Yoda"                      66    17 white     
-    ##  2 "Leia Organa"              150    49 brown     
-    ##  3 "Beru Whitesun Lars"       165    75 brown     
-    ##  4 "Wedge Antilles"           170    77 brown     
-    ##  5 "Wicket Systri Warrick"     88    20 brown     
-    ##  6 "Cord\u00e9"               157    NA brown     
-    ##  7 "Dorm\u00e9"               165    NA brown     
-    ##  8 "R4-P17"                    96    NA none      
-    ##  9 "Lobot"                    175    79 none      
-    ## 10 "Ackbar"                   180    83 none      
+    ##  2 "Luke Skywalker"           172    77 blond     
+    ##  3 "Finis Valorum"            170    NA blond     
+    ##  4 "Leia Organa"              150    49 brown     
+    ##  5 "Beru Whitesun Lars"       165    75 brown     
+    ##  6 "Wedge Antilles"           170    77 brown     
+    ##  7 "Wicket Systri Warrick"     88    20 brown     
+    ##  8 "Cord\u00e9"               157    NA brown     
+    ##  9 "Dorm\u00e9"               165    NA brown     
+    ## 10 "Watto"                    137    NA black     
     ## # i 18 more rows
 
 ## Further reading
