@@ -1,18 +1,8 @@
-<div id="main" class="col-md-9" role="main">
-
 # Infer the arrow Array type from an R object
-
-<div class="ref-description section level2">
 
 `type()` is deprecated in favor of `infer_type()`.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 infer_type(x, ...)
@@ -20,40 +10,24 @@ infer_type(x, ...)
 type(x)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   x:
+- x:
 
-    an R object (usually a vector) to be converted to an
-    [Array](https://arrow.apache.org/docs/r/reference/array-class.md) or
-    [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md).
+  an R object (usually a vector) to be converted to an
+  [Array](https://arrow.apache.org/docs/r/reference/array-class.md) or
+  [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md).
 
--   ...:
+- ...:
 
-    Passed to S3 methods
-
-</div>
-
-<div class="section level2">
+  Passed to S3 methods
 
 ## Value
 
 An arrow [data
 type](https://arrow.apache.org/docs/r/reference/data-type.md)
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 infer_type(1:10)
@@ -81,9 +55,3 @@ infer_type(vctrs::new_vctr(1:5, class = "my_custom_vctr_class"))
 #> VctrsExtensionType
 #> <my_custom_vctr_class[0]>
 ```
-
-</div>
-
-</div>
-
-</div>

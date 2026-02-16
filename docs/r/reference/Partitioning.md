@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # Define Partitioning for a Dataset
-
-<div class="ref-description section level2">
 
 Pass a `Partitioning` object to a
 [FileSystemDatasetFactory](https://arrow.apache.org/docs/r/reference/Dataset.md)'s
@@ -31,26 +27,19 @@ appropriate.
 `PartitioningFactory` subclasses instruct the `DatasetFactory` to detect
 partition features from the file paths.
 
-</div>
-
-<div class="section level2">
-
 ## Factory
 
 Both `DirectoryPartitioning$create()` and `HivePartitioning$create()`
 methods take a
 [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md) as a
-single input argument. The helper function `hive_partition(...)` is
-shorthand for `HivePartitioning$create(schema(...))`.
+single input argument. The helper function
+[`hive_partition(...)`](https://arrow.apache.org/docs/r/reference/hive_partition.md)
+is shorthand for `HivePartitioning$create(schema(...))`.
 
 With `DirectoryPartitioningFactory$create()`, you can provide just the
 names of the path segments (in our example, `c("year", "month")`), and
 the `DatasetFactory` will infer the data types for those partition
 variables. `HivePartitioningFactory$create()` takes no arguments: both
 variable names and their types can be inferred from the file paths.
-`hive_partition()` with no arguments returns a
-`HivePartitioningFactory`.
-
-</div>
-
-</div>
+[`hive_partition()`](https://arrow.apache.org/docs/r/reference/hive_partition.md)
+with no arguments returns a `HivePartitioningFactory`.

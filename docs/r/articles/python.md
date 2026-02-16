@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Integrating Arrow, Python, and R
 
 The arrow package provides
@@ -9,27 +7,22 @@ a brief overview.
 
 Code in this article assumes arrow and reticulate are both loaded:
 
-<div id="cb1" class="sourceCode">
-
 ``` r
 library(arrow, warn.conflicts = FALSE)
 library(reticulate, warn.conflicts = FALSE)
 ```
-
-</div>
-
-<div class="section level2">
 
 ## Motivation
 
 One reason you might want to use PyArrow in R is to take advantage of
 functionality that is better supported in Python than in R at the
 current state of development. For example, at one point in time the R
-arrow package didn’t support `concat_arrays()` but PyArrow did, so this
-would have been a good use case at that time. At the time of current
-writing PyArrow has more comprehensive support for [Arrow
-Flight](https://arrow.apache.org/docs/format/Flight.html) than the R
-package – but see [the article on Flight support in
+arrow package didn’t support
+[`concat_arrays()`](https://arrow.apache.org/docs/r/reference/concat_arrays.md)
+but PyArrow did, so this would have been a good use case at that time.
+At the time of current writing PyArrow has more comprehensive support
+for [Arrow Flight](https://arrow.apache.org/docs/format/Flight.html)
+than the R package – but see [the article on Flight support in
 arrow](https://arrow.apache.org/docs/r/articles/flight.md) – so that
 would be another instance in which PyArrow would be of benefit to R
 users.
@@ -45,10 +38,6 @@ perform “zero-copy” data transfers, in which only the metadata needs to
 be passed between languages. As illustrated later, this drastically
 improves performance.
 
-</div>
-
-<div class="section level2">
-
 ## Installing PyArrow
 
 To use Arrow in Python, the `pyarrow` library needs to be installed. For
@@ -63,48 +52,34 @@ You can perform the set up from within R. Let’s suppose you want to call
 your virtual environment something like `my-pyarrow-env`. Your setup
 code would look like this:
 
-<div id="cb2" class="sourceCode">
-
 ``` r
 virtualenv_create("my-pyarrow-env")
 install_pyarrow("my-pyarrow-env")
 ```
 
-</div>
-
 If you want to install a development version of `pyarrow` to the virtual
-environment, add `nightly = TRUE` to the `install_pyarrow()` command:
-
-<div id="cb3" class="sourceCode">
+environment, add `nightly = TRUE` to the
+[`install_pyarrow()`](https://arrow.apache.org/docs/r/reference/install_pyarrow.md)
+command:
 
 ``` r
 install_pyarrow("my-pyarrow-env", nightly = TRUE)
 ```
-
-</div>
 
 Note that you don’t have to use virtual environments. If you prefer
 [conda
 environments](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html),
 you can use this setup code:
 
-<div id="cb4" class="sourceCode">
-
 ``` r
 conda_create("my-pyarrow-env")
 install_pyarrow("my-pyarrow-env")
 ```
 
-</div>
-
 To learn more about installing and configuring Python from R, see the
 [reticulate
 documentation](https://rstudio.github.io/reticulate/articles/python_packages.html),
 which discusses the topic in more detail.
-
-</div>
-
-<div class="section level2">
 
 ## Importing PyArrow
 
@@ -112,75 +87,52 @@ Assuming that arrow and reticulate are both loaded in R, your first step
 is to make sure that the correct Python environment is being used. To do
 that with a virtual environment, use a command like this:
 
-<div id="cb5" class="sourceCode">
-
 ``` r
 use_virtualenv("my-pyarrow-env")
 ```
 
-</div>
-
 For a conda environment use the following:
-
-<div id="cb6" class="sourceCode">
 
 ``` r
 use_condaenv("my-pyarrow-env")
 ```
 
-</div>
-
 Once you have done this, the next step is to import `pyarrow` into the
 Python session as shown below:
-
-<div id="cb7" class="sourceCode">
 
 ``` r
 pa <- import("pyarrow")
 ```
 
-</div>
-
 Executing this command in R is the equivalent of the following import in
 Python:
-
-<div id="cb8" class="sourceCode">
 
 ``` python
 import pyarrow as pa
 ```
 
-</div>
-
 It may be a good idea to check your `pyarrow` version too, as shown
 below:
-
-<div id="cb9" class="sourceCode">
 
 ``` r
 pa$`__version__`
 ```
-
-</div>
 
     ## [1] "8.0.0"
 
 Support for passing data to and from R is included in `pyarrow` versions
 0.17 and greater.
 
-</div>
-
-<div class="section level2">
-
 ## Using PyArrow
 
-You can use the reticulate function `r_to_py()` to pass objects from R
-to Python, and similarly you can use `py_to_r()` to pull objects from
-the Python session into R. To illustrate this, let’s create two objects
-in R: `df_random` is an R data frame containing 100 million rows of
-random data, and `tb_random` is the same data stored as an Arrow Table:
-
-<div id="cb11" class="sourceCode">
+You can use the reticulate function
+[`r_to_py()`](https://rstudio.github.io/reticulate/reference/r-py-conversion.html)
+to pass objects from R to Python, and similarly you can use
+[`py_to_r()`](https://rstudio.github.io/reticulate/reference/r-py-conversion.html)
+to pull objects from the Python session into R. To illustrate this,
+let’s create two objects in R: `df_random` is an R data frame containing
+100 million rows of random data, and `tb_random` is the same data stored
+as an Arrow Table:
 
 ``` r
 set.seed(1234)
@@ -193,13 +145,9 @@ df_random <- data.frame(
 tb_random <- arrow_table(df_random)
 ```
 
-</div>
-
 Transferring the data from R to Python without Arrow is a time-consuming
 process because the underlying object has to be copied and converted to
 a Python data structure:
-
-<div id="cb12" class="sourceCode">
 
 ``` r
 system.time({
@@ -207,23 +155,17 @@ system.time({
 })
 ```
 
-</div>
-
     ##   user  system elapsed 
     ##  0.307   5.172   5.529 
 
 In contrast, sending the Arrow Table across happens almost
 instantaneously:
 
-<div id="cb14" class="sourceCode">
-
 ``` r
 system.time({
   tb_py <- r_to_py(tb_random)
 })
 ```
-
-</div>
 
     ##   user  system elapsed 
     ##  0.004   0.000   0.003 
@@ -237,14 +179,10 @@ memory buffers.
 It’s possible to send data the other direction also. For example let’s
 create an `Array` in pyarrow.
 
-<div id="cb16" class="sourceCode">
-
 ``` r
 a <- pa$array(c(1, 2, 3))
 a
 ```
-
-</div>
 
     ## Array
     ## <double>
@@ -257,13 +195,9 @@ a
 Notice that `a` is now an `Array` object in your R session – even though
 you created it in Python – and you can apply R methods on it:
 
-<div id="cb18" class="sourceCode">
-
 ``` r
 a[a > 1]
 ```
-
-</div>
 
     ## Array
     ## <double>
@@ -275,15 +209,11 @@ a[a > 1]
 Similarly, you can combine this object with Arrow objects created in R,
 and you can use PyArrow methods like `pa$concat_arrays()` to do so:
 
-<div id="cb20" class="sourceCode">
-
 ``` r
 b <- Array$create(c(5, 6, 7, 8, 9))
 a_and_b <- pa$concat_arrays(list(a, b))
 a_and_b
 ```
-
-</div>
 
     ## Array
     ## <double>
@@ -300,29 +230,21 @@ a_and_b
 
 Now you have a single Array in R.
 
-</div>
-
-<div class="section level2">
-
 ## Further reading
 
--   To learn more about installing and configuring Python from R, see
-    the [reticulate
-    documentation](https://rstudio.github.io/reticulate/articles/python_packages.html).
--   To learn PyArrow, see the official [PyArrow
-    Documentation](https://arrow.apache.org/docs/python/) and [Apache
-    Arrow Python Cookbook](https://arrow.apache.org/cookbook/py/).
--   R/Python integration in Arrow is also discussed in the [PyArrow
-    Integrations
-    Documentation](https://arrow.apache.org/docs/python/integration/python_r.html),
-    and in this [blog post about reticulate integration in
-    Arrow](https://blog.djnavarro.net/posts/2022-09-09_reticulated-arrow/).
--   The integration between R Arrow and PyArrow is supported through the
-    [Arrow C data
-    interface](https://arrow.apache.org/docs/format/CDataInterface.html#c-data-interface).
--   To learn more about Arrow data objects, see the [data objects
-    article](https://arrow.apache.org/docs/r/articles/data_objects.md).
-
-</div>
-
-</div>
+- To learn more about installing and configuring Python from R, see the
+  [reticulate
+  documentation](https://rstudio.github.io/reticulate/articles/python_packages.html).
+- To learn PyArrow, see the official [PyArrow
+  Documentation](https://arrow.apache.org/docs/python/) and [Apache
+  Arrow Python Cookbook](https://arrow.apache.org/cookbook/py/).
+- R/Python integration in Arrow is also discussed in the [PyArrow
+  Integrations
+  Documentation](https://arrow.apache.org/docs/python/integration/python_r.html),
+  and in this [blog post about reticulate integration in
+  Arrow](https://blog.djnavarro.net/posts/2022-09-09_reticulated-arrow/).
+- The integration between R Arrow and PyArrow is supported through the
+  [Arrow C data
+  interface](https://arrow.apache.org/docs/format/CDataInterface.html#c-data-interface).
+- To learn more about Arrow data objects, see the [data objects
+  article](https://arrow.apache.org/docs/r/articles/data_objects.md).

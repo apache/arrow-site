@@ -1,77 +1,60 @@
-<div id="main" class="col-md-9" role="main">
-
 # ParquetFileReader class
 
-<div class="ref-description section level2">
-
 This class enables you to interact with Parquet files.
-
-</div>
-
-<div class="section level2">
 
 ## Factory
 
 The `ParquetFileReader$create()` factory method instantiates the object
 and takes the following arguments:
 
--   `file` A character file name, raw vector, or Arrow file connection
-    object (e.g. `RandomAccessFile`).
+- `file` A character file name, raw vector, or Arrow file connection
+  object (e.g. `RandomAccessFile`).
 
--   `props` Optional
-    [ParquetArrowReaderProperties](https://arrow.apache.org/docs/r/reference/ParquetArrowReaderProperties.md)
+- `props` Optional
+  [ParquetArrowReaderProperties](https://arrow.apache.org/docs/r/reference/ParquetArrowReaderProperties.md)
 
--   `mmap` Logical: whether to memory-map the file (default `TRUE`)
+- `mmap` Logical: whether to memory-map the file (default `TRUE`)
 
--   `reader_props` Optional
-    [ParquetReaderProperties](https://arrow.apache.org/docs/r/reference/ParquetReaderProperties.md)
+- `reader_props` Optional
+  [ParquetReaderProperties](https://arrow.apache.org/docs/r/reference/ParquetReaderProperties.md)
 
--   `...` Additional arguments, currently ignored
-
-</div>
-
-<div class="section level2">
+- `...` Additional arguments, currently ignored
 
 ## Methods
 
--   `$ReadTable(column_indices)`: get an `arrow::Table` from the file.
-    The optional `column_indices=` argument is a 0-based integer vector
-    indicating which columns to retain.
+- `$ReadTable(column_indices)`: get an
+  [`arrow::Table`](https://arrow.apache.org/docs/r/reference/Table-class.md)
+  from the file. The optional `column_indices=` argument is a 0-based
+  integer vector indicating which columns to retain.
 
--   `$ReadRowGroup(i, column_indices)`: get an `arrow::Table` by reading
-    the `i`th row group (0-based). The optional `column_indices=`
-    argument is a 0-based integer vector indicating which columns to
-    retain.
+- `$ReadRowGroup(i, column_indices)`: get an
+  [`arrow::Table`](https://arrow.apache.org/docs/r/reference/Table-class.md)
+  by reading the `i`th row group (0-based). The optional
+  `column_indices=` argument is a 0-based integer vector indicating
+  which columns to retain.
 
--   `$ReadRowGroups(row_groups, column_indices)`: get an `arrow::Table`
-    by reading several row groups (0-based integers). The optional
-    `column_indices=` argument is a 0-based integer vector indicating
-    which columns to retain.
+- `$ReadRowGroups(row_groups, column_indices)`: get an
+  [`arrow::Table`](https://arrow.apache.org/docs/r/reference/Table-class.md)
+  by reading several row groups (0-based integers). The optional
+  `column_indices=` argument is a 0-based integer vector indicating
+  which columns to retain.
 
--   `$GetSchema()`: get the `arrow::Schema` of the data in the file
+- `$GetSchema()`: get the
+  [`arrow::Schema`](https://arrow.apache.org/docs/r/reference/Schema-class.md)
+  of the data in the file
 
--   `$ReadColumn(i)`: read the `i`th column (0-based) as a
-    [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md).
-
-</div>
-
-<div class="section level2">
+- `$ReadColumn(i)`: read the `i`th column (0-based) as a
+  [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md).
 
 ## Active bindings
 
--   `$num_rows`: number of rows.
+- `$num_rows`: number of rows.
 
--   `$num_columns`: number of columns.
+- `$num_columns`: number of columns.
 
--   `$num_row_groups`: number of row groups.
-
-</div>
-
-<div class="section level2">
+- `$num_row_groups`: number of row groups.
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 f <- system.file("v0.7.1.parquet", package = "arrow")
@@ -111,9 +94,3 @@ if (codec_is_available("snappy")) {
 #> 
 #> See $metadata for additional Schema metadata
 ```
-
-</div>
-
-</div>
-
-</div>

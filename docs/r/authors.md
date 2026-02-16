@@ -1,45 +1,36 @@
-<div id="main" class="col-md-9" role="main">
-
 # Authors and Citation
-
-<div class="section level2">
 
 ## Authors
 
--   **Neal Richardson**. Author.
+- **Neal Richardson**. Author.
 
--   **Ian Cook**. Author.
+- **Ian Cook**. Author.
 
--   **Nic Crane**. Author.
+- **Nic Crane**. Author.
 
--   **Dewey Dunnington**. Author.
-    [](https://orcid.org/0000-0002-9415-4582)
+- **Dewey Dunnington**. Author.
+  [](https://orcid.org/0000-0002-9415-4582)
 
--   **Romain François**. Author.
-    [](https://orcid.org/0000-0002-2444-4226)
+- **Romain François**. Author. [](https://orcid.org/0000-0002-2444-4226)
 
--   **Jonathan Keane**. Author, maintainer.
+- **Jonathan Keane**. Author, maintainer.
 
--   **Bryce Mecum**. Author.
+- **Bryce Mecum**. Author.
 
--   **Dragoș Moldovan-Grünfeld**. Author.
+- **Dragoș Moldovan-Grünfeld**. Author.
 
--   **Jeroen Ooms**. Author.
+- **Jeroen Ooms**. Author.
 
--   **Jacob Wujciak-Jens**. Author.
+- **Jacob Wujciak-Jens**. Author.
 
--   **Javier Luraschi**. Contributor.
+- **Javier Luraschi**. Contributor.
 
--   **Karl Dunkle Werner**. Contributor.
-    [](https://orcid.org/0000-0003-0523-7309)
+- **Karl Dunkle Werner**. Contributor.
+  [](https://orcid.org/0000-0003-0523-7309)
 
--   **Jeffrey Wong**. Contributor.
+- **Jeffrey Wong**. Contributor.
 
--   **Apache Arrow**. Author, copyright holder.
-
-</div>
-
-<div class="section level2">
+- **Apache Arrow**. Author, copyright holder.
 
 ## Citation
 
@@ -49,16 +40,12 @@ Source:
 Richardson N, Cook I, Crane N, Dunnington D, Fran\<U+00E7\>ois R, Keane
 J, Mecum B, Moldovan-Gr\<U+00FC\>nfeld D, Ooms J, Wujciak-Jens J, Apache
 Arrow (2026). *arrow: Integration to 'Apache' 'Arrow'*. R package
-version 23.0.0, <https://github.com/apache/arrow/>.
+version 23.0.1, <https://github.com/apache/arrow/>.
 
     @Manual{,
       title = {arrow: Integration to 'Apache' 'Arrow'},
       author = {Neal Richardson and Ian Cook and Nic Crane and Dewey Dunnington and Romain François and Jonathan Keane and Bryce Mecum and Dragoș Moldovan-Grünfeld and Jeroen Ooms and Jacob Wujciak-Jens and {Apache Arrow}},
       year = {2026},
-      note = {R package version 23.0.0},
+      note = {R package version 23.0.1},
       url = {https://github.com/apache/arrow/},
     }
-
-</div>
-
-</div>

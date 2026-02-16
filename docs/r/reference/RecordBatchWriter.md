@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # RecordBatchWriter classes
-
-<div class="ref-description section level2">
 
 Apache Arrow defines two formats for [serializing data for interprocess
 communication
@@ -13,73 +9,54 @@ writing record batches to those formats, respectively.
 
 For guidance on how to use these classes, see the examples section.
 
-</div>
-
-<div class="section level2">
-
 ## Factory
 
 The `RecordBatchFileWriter$create()` and
 `RecordBatchStreamWriter$create()` factory methods instantiate the
 object and take the following arguments:
 
--   `sink` An `OutputStream`
+- `sink` An `OutputStream`
 
--   `schema` A
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
-    for the data to be written
+- `schema` A
+  [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
+  for the data to be written
 
--   `use_legacy_format` logical: write data formatted so that Arrow
-    libraries versions 0.14 and lower can read it. Default is `FALSE`.
-    You can also enable this by setting the environment variable
-    `ARROW_PRE_0_15_IPC_FORMAT=1`.
+- `use_legacy_format` logical: write data formatted so that Arrow
+  libraries versions 0.14 and lower can read it. Default is `FALSE`. You
+  can also enable this by setting the environment variable
+  `ARROW_PRE_0_15_IPC_FORMAT=1`.
 
--   `metadata_version`: A string like "V5" or the equivalent integer
-    indicating the Arrow IPC MetadataVersion. Default (NULL) will use
-    the latest version, unless the environment variable
-    `ARROW_PRE_1_0_METADATA_VERSION=1`, in which case it will be V4.
-
-</div>
-
-<div class="section level2">
+- `metadata_version`: A string like "V5" or the equivalent integer
+  indicating the Arrow IPC MetadataVersion. Default (NULL) will use the
+  latest version, unless the environment variable
+  `ARROW_PRE_1_0_METADATA_VERSION=1`, in which case it will be V4.
 
 ## Methods
 
--   `$write(x)`: Write a
-    [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md),
-    [Table](https://arrow.apache.org/docs/r/reference/Table-class.md),
-    or `data.frame`, dispatching to the methods below appropriately
+- `$write(x)`: Write a
+  [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md),
+  [Table](https://arrow.apache.org/docs/r/reference/Table-class.md), or
+  `data.frame`, dispatching to the methods below appropriately
 
--   `$write_batch(batch)`: Write a `RecordBatch` to stream
+- `$write_batch(batch)`: Write a `RecordBatch` to stream
 
--   `$write_table(table)`: Write a `Table` to stream
+- `$write_table(table)`: Write a `Table` to stream
 
--   `$close()`: close stream. Note that this indicates end-of-file or
-    end-of-stream–it does not close the connection to the `sink`. That
-    needs to be closed separately.
-
-</div>
-
-<div class="section level2">
+- `$close()`: close stream. Note that this indicates end-of-file or
+  end-of-stream–it does not close the connection to the `sink`. That
+  needs to be closed separately.
 
 ## See also
 
-<div class="dont-index">
-
-`write_ipc_stream()` and `write_feather()` provide a much simpler
-interface for writing data to these formats and are sufficient for many
-use cases. `write_to_raw()` is a version that serializes data to a
-buffer.
-
-</div>
-
-</div>
-
-<div class="section level2">
+[`write_ipc_stream()`](https://arrow.apache.org/docs/r/reference/write_ipc_stream.md)
+and
+[`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+provide a much simpler interface for writing data to these formats and
+are sufficient for many use cases.
+[`write_to_raw()`](https://arrow.apache.org/docs/r/reference/write_to_raw.md)
+is a version that serializes data to a buffer.
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 tf <- tempfile()
@@ -118,9 +95,3 @@ all.equal(df, chickwts, check.attributes = FALSE)
 # but we do still need to close the file connection
 read_file_obj$close()
 ```
-
-</div>
-
-</div>
-
-</div>

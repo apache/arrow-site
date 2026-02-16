@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # Call an Arrow compute function
-
-<div class="ref-description section level2">
 
 This function provides a lower-level API for calling Arrow functions by
 their string function name. You won't use it directly for most
@@ -11,13 +7,7 @@ in a `dplyr` evaluation context, [all Arrow
 functions](https://arrow.apache.org/docs/r/reference/list_compute_functions.md)
 are callable with an `arrow_` prefix.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 call_function(
@@ -28,70 +18,42 @@ call_function(
 )
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   function_name:
+- function_name:
 
-    string Arrow compute function name
+  string Arrow compute function name
 
--   ...:
+- ...:
 
-    Function arguments, which may include `Array`, `ChunkedArray`,
-    `Scalar`, `RecordBatch`, or `Table`.
+  Function arguments, which may include `Array`, `ChunkedArray`,
+  `Scalar`, `RecordBatch`, or `Table`.
 
--   args:
+- args:
 
-    list arguments as an alternative to specifying in `...`
+  list arguments as an alternative to specifying in `...`
 
--   options:
+- options:
 
-    named list of C++ function options.
-
-</div>
-
-<div class="section level2">
+  named list of C++ function options.
 
 ## Value
 
 An `Array`, `ChunkedArray`, `Scalar`, `RecordBatch`, or `Table`,
 whatever the compute function results in.
 
-</div>
-
-<div class="section level2">
-
 ## Details
 
 When passing indices in `...`, `args`, or `options`, express them as
 0-based integers (consistent with C++).
 
-</div>
-
-<div class="section level2">
-
 ## See also
-
-<div class="dont-index">
 
 [Arrow C++
 documentation](https://arrow.apache.org/docs/cpp/compute.html) for the
 functions and their respective options.
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 a <- Array$create(c(1L, 2L, 3L, NA, 5L))
@@ -119,9 +81,3 @@ call_function("quantile", a, options = list(q = seq(0, 1, 0.25)))
 #>   3.5889486327287328
 #> ]
 ```
-
-</div>
-
-</div>
-
-</div>

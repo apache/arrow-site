@@ -1,23 +1,16 @@
-<div id="main" class="col-md-9" role="main">
-
 # Open a multi-file dataset of CSV or other delimiter-separated format
-
-<div class="ref-description section level2">
 
 A wrapper around
 [open_dataset](https://arrow.apache.org/docs/r/reference/open_dataset.md)
-which explicitly includes parameters mirroring `read_csv_arrow()`,
-`read_delim_arrow()`, and `read_tsv_arrow()` to allow for easy switching
-between functions for opening single files and functions for opening
-datasets.
-
-</div>
-
-<div class="section level2">
+which explicitly includes parameters mirroring
+[`read_csv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md),
+[`read_delim_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md),
+and
+[`read_tsv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
+to allow for easy switching between functions for opening single files
+and functions for opening datasets.
 
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 open_delim_dataset(
@@ -88,231 +81,203 @@ open_tsv_dataset(
 )
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   sources:
+- sources:
 
-    One of:
+  One of:
 
-    -   a string path or URI to a directory containing data files
+  - a string path or URI to a directory containing data files
 
-    -   a
-        [FileSystem](https://arrow.apache.org/docs/r/reference/FileSystem.md)
-        that references a directory containing data files (such as what
-        is returned by `s3_bucket()`)
+  - a
+    [FileSystem](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+    that references a directory containing data files (such as what is
+    returned by
+    [`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md))
 
-    -   a string path or URI to a single file
+  - a string path or URI to a single file
 
-    -   a character vector of paths or URIs to individual data files
+  - a character vector of paths or URIs to individual data files
 
-    -   a list of `Dataset` objects as created by this function
+  - a list of `Dataset` objects as created by this function
 
-    -   a list of `DatasetFactory` objects as created by
-        `dataset_factory()`.
+  - a list of `DatasetFactory` objects as created by
+    [`dataset_factory()`](https://arrow.apache.org/docs/r/reference/dataset_factory.md).
 
-    When `sources` is a vector of file URIs, they must all use the same
-    protocol and point to files located in the same file system and
-    having the same format.
+  When `sources` is a vector of file URIs, they must all use the same
+  protocol and point to files located in the same file system and having
+  the same format.
 
--   schema:
+- schema:
 
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
-    for the `Dataset`. If `NULL` (the default), the schema will be
-    inferred from the data sources.
+  [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
+  for the `Dataset`. If `NULL` (the default), the schema will be
+  inferred from the data sources.
 
--   partitioning:
+- partitioning:
 
-    When `sources` is a directory path/URI, one of:
+  When `sources` is a directory path/URI, one of:
 
-    -   a `Schema`, in which case the file paths relative to `sources`
-        will be parsed, and path segments will be matched with the
-        schema fields.
+  - a `Schema`, in which case the file paths relative to `sources` will
+    be parsed, and path segments will be matched with the schema fields.
 
-    -   a character vector that defines the field names corresponding to
-        those path segments (that is, you're providing the names that
-        would correspond to a `Schema` but the types will be
-        autodetected)
+  - a character vector that defines the field names corresponding to
+    those path segments (that is, you're providing the names that would
+    correspond to a `Schema` but the types will be autodetected)
 
-    -   a `Partitioning` or `PartitioningFactory`, such as returned by
-        `hive_partition()`
+  - a `Partitioning` or `PartitioningFactory`, such as returned by
+    [`hive_partition()`](https://arrow.apache.org/docs/r/reference/hive_partition.md)
 
-    -   `NULL` for no partitioning
+  - `NULL` for no partitioning
 
-    The default is to autodetect Hive-style partitions unless
-    `hive_style = FALSE`. See the "Partitioning" section for details.
-    When `sources` is not a directory path/URI, `partitioning` is
-    ignored.
+  The default is to autodetect Hive-style partitions unless
+  `hive_style = FALSE`. See the "Partitioning" section for details. When
+  `sources` is not a directory path/URI, `partitioning` is ignored.
 
--   hive_style:
+- hive_style:
 
-    Logical: should `partitioning` be interpreted as Hive-style? Default
-    is `NA`, which means to inspect the file paths for Hive-style
-    partitioning and behave accordingly.
+  Logical: should `partitioning` be interpreted as Hive-style? Default
+  is `NA`, which means to inspect the file paths for Hive-style
+  partitioning and behave accordingly.
 
--   unify_schemas:
+- unify_schemas:
 
-    logical: should all data fragments (files, `Dataset`s) be scanned in
-    order to create a unified schema from them? If `FALSE`, only the
-    first fragment will be inspected for its schema. Use this fast path
-    when you know and trust that all fragments have an identical schema.
-    The default is `FALSE` when creating a dataset from a directory
-    path/URI or vector of file paths/URIs (because there may be many
-    files and scanning may be slow) but `TRUE` when `sources` is a list
-    of `Dataset`s (because there should be few `Dataset`s in the list
-    and their `Schema`s are already in memory).
+  logical: should all data fragments (files, `Dataset`s) be scanned in
+  order to create a unified schema from them? If `FALSE`, only the first
+  fragment will be inspected for its schema. Use this fast path when you
+  know and trust that all fragments have an identical schema. The
+  default is `FALSE` when creating a dataset from a directory path/URI
+  or vector of file paths/URIs (because there may be many files and
+  scanning may be slow) but `TRUE` when `sources` is a list of
+  `Dataset`s (because there should be few `Dataset`s in the list and
+  their `Schema`s are already in memory).
 
--   factory_options:
+- factory_options:
 
-    list of optional FileSystemFactoryOptions:
+  list of optional FileSystemFactoryOptions:
 
-    -   `partition_base_dir`: string path segment prefix to ignore when
-        discovering partition information with DirectoryPartitioning.
-        Not meaningful (ignored with a warning) for HivePartitioning,
-        nor is it valid when providing a vector of file paths.
+  - `partition_base_dir`: string path segment prefix to ignore when
+    discovering partition information with DirectoryPartitioning. Not
+    meaningful (ignored with a warning) for HivePartitioning, nor is it
+    valid when providing a vector of file paths.
 
-    -   `exclude_invalid_files`: logical: should files that are not
-        valid data files be excluded? Default is `FALSE` because
-        checking all files up front incurs I/O and thus will be slower,
-        especially on remote filesystems. If false and there are invalid
-        files, there will be an error at scan time. This is the only
-        FileSystemFactoryOption that is valid for both when providing a
-        directory path in which to discover files and when providing a
-        vector of file paths.
+  - `exclude_invalid_files`: logical: should files that are not valid
+    data files be excluded? Default is `FALSE` because checking all
+    files up front incurs I/O and thus will be slower, especially on
+    remote filesystems. If false and there are invalid files, there will
+    be an error at scan time. This is the only FileSystemFactoryOption
+    that is valid for both when providing a directory path in which to
+    discover files and when providing a vector of file paths.
 
-    -   `selector_ignore_prefixes`: character vector of file prefixes to
-        ignore when discovering files in a directory. If invalid files
-        can be excluded by a common filename prefix this way, you can
-        avoid the I/O cost of `exclude_invalid_files`. Not valid when
-        providing a vector of file paths (but if you're providing the
-        file list, you can filter invalid files yourself).
+  - `selector_ignore_prefixes`: character vector of file prefixes to
+    ignore when discovering files in a directory. If invalid files can
+    be excluded by a common filename prefix this way, you can avoid the
+    I/O cost of `exclude_invalid_files`. Not valid when providing a
+    vector of file paths (but if you're providing the file list, you can
+    filter invalid files yourself).
 
--   delim:
+- delim:
 
-    Single character used to separate fields within a record.
+  Single character used to separate fields within a record.
 
--   quote:
+- quote:
 
-    Single character used to quote strings.
+  Single character used to quote strings.
 
--   escape_double:
+- escape_double:
 
-    Does the file escape quotes by doubling them? i.e. If this option is
-    `TRUE`, the value `""""` represents a single quote, `\"`.
+  Does the file escape quotes by doubling them? i.e. If this option is
+  `TRUE`, the value `""""` represents a single quote, `\"`.
 
--   escape_backslash:
+- escape_backslash:
 
-    Does the file use backslashes to escape special characters? This is
-    more general than `escape_double` as backslashes can be used to
-    escape the delimiter character, the quote character, or to add
-    special characters like `\\n`.
+  Does the file use backslashes to escape special characters? This is
+  more general than `escape_double` as backslashes can be used to escape
+  the delimiter character, the quote character, or to add special
+  characters like `\\n`.
 
--   col_names:
+- col_names:
 
-    If `TRUE`, the first row of the input will be used as the column
-    names and will not be included in the data frame. If `FALSE`, column
-    names will be generated by Arrow, starting with "f0", "f1", ...,
-    "fN". Alternatively, you can specify a character vector of column
-    names.
+  If `TRUE`, the first row of the input will be used as the column names
+  and will not be included in the data frame. If `FALSE`, column names
+  will be generated by Arrow, starting with "f0", "f1", ..., "fN".
+  Alternatively, you can specify a character vector of column names.
 
--   col_types:
+- col_types:
 
-    A compact string representation of the column types, an Arrow
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md),
-    or `NULL` (the default) to infer types from the data.
+  A compact string representation of the column types, an Arrow
+  [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md),
+  or `NULL` (the default) to infer types from the data.
 
--   na:
+- na:
 
-    A character vector of strings to interpret as missing values.
+  A character vector of strings to interpret as missing values.
 
--   skip_empty_rows:
+- skip_empty_rows:
 
-    Should blank rows be ignored altogether? If `TRUE`, blank rows will
-    not be represented at all. If `FALSE`, they will be filled with
-    missings.
+  Should blank rows be ignored altogether? If `TRUE`, blank rows will
+  not be represented at all. If `FALSE`, they will be filled with
+  missings.
 
--   skip:
+- skip:
 
-    Number of lines to skip before reading data.
+  Number of lines to skip before reading data.
 
--   convert_options:
+- convert_options:
 
-    see [CSV conversion
-    options](https://arrow.apache.org/docs/r/reference/csv_convert_options.md)
+  see [CSV conversion
+  options](https://arrow.apache.org/docs/r/reference/csv_convert_options.md)
 
--   read_options:
+- read_options:
 
-    see [CSV reading
-    options](https://arrow.apache.org/docs/r/reference/csv_read_options.md)
+  see [CSV reading
+  options](https://arrow.apache.org/docs/r/reference/csv_read_options.md)
 
--   timestamp_parsers:
+- timestamp_parsers:
 
-    User-defined timestamp parsers. If more than one parser is
-    specified, the CSV conversion logic will try parsing values starting
-    from the beginning of this vector. Possible values are:
+  User-defined timestamp parsers. If more than one parser is specified,
+  the CSV conversion logic will try parsing values starting from the
+  beginning of this vector. Possible values are:
 
-    -   `NULL`: the default, which uses the ISO-8601 parser
+  - `NULL`: the default, which uses the ISO-8601 parser
 
-    -   a character vector of
-        [strptime](https://rdrr.io/r/base/strptime.html) parse strings
+  - a character vector of
+    [strptime](https://rdrr.io/r/base/strptime.html) parse strings
 
-    -   a list of
-        [TimestampParser](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
-        objects
+  - a list of
+    [TimestampParser](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+    objects
 
--   quoted_na:
+- quoted_na:
 
-    Should missing values inside quotes be treated as missing values
-    (the default) or strings. (Note that this is different from the the
-    Arrow C++ default for the corresponding convert option,
-    `strings_can_be_null`.)
+  Should missing values inside quotes be treated as missing values (the
+  default) or strings. (Note that this is different from the the Arrow
+  C++ default for the corresponding convert option,
+  `strings_can_be_null`.)
 
--   parse_options:
+- parse_options:
 
-    see [CSV parsing
-    options](https://arrow.apache.org/docs/r/reference/csv_parse_options.md).
-    If given, this overrides any parsing options provided in other
-    arguments (e.g. `delim`, `quote`, etc.).
+  see [CSV parsing
+  options](https://arrow.apache.org/docs/r/reference/csv_parse_options.md).
+  If given, this overrides any parsing options provided in other
+  arguments (e.g. `delim`, `quote`, etc.).
 
-</div>
+## Options currently supported by [`read_delim_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md) which are not supported here
 
-<div class="section level2">
+- `file` (instead, please specify files in `sources`)
 
-## Options currently supported by `read_delim_arrow()` which are not supported here
+- `col_select` (instead, subset columns after dataset creation)
 
--   `file` (instead, please specify files in `sources`)
+- `as_data_frame` (instead, convert to data frame after dataset
+  creation)
 
--   `col_select` (instead, subset columns after dataset creation)
-
--   `as_data_frame` (instead, convert to data frame after dataset
-    creation)
-
--   `parse_options`
-
-</div>
-
-<div class="section level2">
+- `parse_options`
 
 ## See also
 
-<div class="dont-index">
-
-`open_dataset()`
-
-</div>
-
-</div>
-
-<div class="section level2">
+[`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # Set up directory for examples
@@ -356,9 +321,3 @@ open_csv_dataset(tf2, col_types = "ii", col_names = c("speed", "dist"), skip = 1
 #> speed: int32
 #> dist: int32
 ```
-
-</div>
-
-</div>
-
-</div>

@@ -1,91 +1,67 @@
-<div id="main" class="col-md-9" role="main">
-
 # ChunkedArray class
-
-<div class="ref-description section level2">
 
 A `ChunkedArray` is a data structure managing a list of primitive Arrow
 [Arrays](https://arrow.apache.org/docs/r/reference/array-class.md)
 logically as one large array. Chunked arrays may be grouped together in
 a [Table](https://arrow.apache.org/docs/r/reference/Table-class.md).
 
-</div>
-
-<div class="section level2">
-
 ## Factory
 
 The `ChunkedArray$create()` factory method instantiates the object from
-various Arrays or R vectors. `chunked_array()` is an alias for it.
-
-</div>
-
-<div class="section level2">
+various Arrays or R vectors.
+[`chunked_array()`](https://arrow.apache.org/docs/r/reference/chunked_array.md)
+is an alias for it.
 
 ## Methods
 
--   `$length()`: Size in the number of elements this array contains
+- `$length()`: Size in the number of elements this array contains
 
--   `$chunk(i)`: Extract an `Array` chunk by integer position
+- `$chunk(i)`: Extract an `Array` chunk by integer position
 
--   \`$nbytes() : Total number of bytes consumed by the elements of the
-    array
+- \`\$nbytes() : Total number of bytes consumed by the elements of the
+  array
 
--   `$as_vector()`: convert to an R vector
+- `$as_vector()`: convert to an R vector
 
--   `$Slice(offset, length = NULL)`: Construct a zero-copy slice of the
-    array with the indicated offset and length. If length is `NULL`, the
-    slice goes until the end of the array.
+- `$Slice(offset, length = NULL)`: Construct a zero-copy slice of the
+  array with the indicated offset and length. If length is `NULL`, the
+  slice goes until the end of the array.
 
--   `$Take(i)`: return a `ChunkedArray` with values at positions given
-    by integers `i`. If `i` is an Arrow `Array` or `ChunkedArray`, it
-    will be coerced to an R vector before taking.
+- `$Take(i)`: return a `ChunkedArray` with values at positions given by
+  integers `i`. If `i` is an Arrow `Array` or `ChunkedArray`, it will be
+  coerced to an R vector before taking.
 
--   `$Filter(i, keep_na = TRUE)`: return a `ChunkedArray` with values at
-    positions where logical vector or Arrow boolean-type
-    `(Chunked)Array` `i` is `TRUE`.
+- `$Filter(i, keep_na = TRUE)`: return a `ChunkedArray` with values at
+  positions where logical vector or Arrow boolean-type `(Chunked)Array`
+  `i` is `TRUE`.
 
--   `$SortIndices(descending = FALSE)`: return an `Array` of integer
-    positions that can be used to rearrange the `ChunkedArray` in
-    ascending or descending order
+- `$SortIndices(descending = FALSE)`: return an `Array` of integer
+  positions that can be used to rearrange the `ChunkedArray` in
+  ascending or descending order
 
--   `$cast(target_type, safe = TRUE, options = cast_options(safe))`:
-    Alter the data in the array to change its type.
+- `$cast(target_type, safe = TRUE, options = cast_options(safe))`: Alter
+  the data in the array to change its type.
 
--   `$null_count`: The number of null entries in the array
+- `$null_count`: The number of null entries in the array
 
--   `$chunks`: return a list of `Array`s
+- `$chunks`: return a list of `Array`s
 
--   `$num_chunks`: integer number of chunks in the `ChunkedArray`
+- `$num_chunks`: integer number of chunks in the `ChunkedArray`
 
--   `$type`: logical type of data
+- `$type`: logical type of data
 
--   `$View(type)`: Construct a zero-copy view of this `ChunkedArray`
-    with the given type.
+- `$View(type)`: Construct a zero-copy view of this `ChunkedArray` with
+  the given type.
 
--   `$Validate()`: Perform any validation checks to determine obvious
-    inconsistencies within the array's internal data. This can be an
-    expensive check, potentially `O(length)`
-
-</div>
-
-<div class="section level2">
+- `$Validate()`: Perform any validation checks to determine obvious
+  inconsistencies within the array's internal data. This can be an
+  expensive check, potentially `O(length)`
 
 ## See also
 
-<div class="dont-index">
-
 [Array](https://arrow.apache.org/docs/r/reference/array-class.md)
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # Pass items into chunked_array as separate objects to create chunks
@@ -164,9 +140,3 @@ c(a, b)
 #>   ]
 #> ]
 ```
-
-</div>
-
-</div>
-
-</div>

@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Installation details
 
 This document is intended specifically for arrow *developers* who wish
@@ -11,14 +9,12 @@ The arrow R package requires that Arrow C++ library (also known as
 libarrow) to be installed in order to work properly. There are a number
 of different ways in which libarrow could be installed:
 
--   as part of the R package installation process
--   a system package
--   a library you’ve built yourself outside of the context of installing
-    the R package
+- as part of the R package installation process
+- a system package
+- a library you’ve built yourself outside of the context of installing
+  the R package
 
 Below, we discuss each of these setups in turn.
-
-<div class="section level2">
 
 ## Installing libarrow during R package installation
 
@@ -30,37 +26,32 @@ if libarrow is installed, and if not, install it.
 
 An overview of these scripts is shown below:
 
--   `configure` and `configure.win` - these scripts are triggered during
-    `R CMD INSTALL .` on non-Windows and Windows platforms,
-    respectively. They handle finding the libarrow, setting up the build
-    variables necessary, and writing the package Makevars file that is
-    used to compile the C++ code in the R package.
+- `configure` and `configure.win` - these scripts are triggered during
+  `R CMD INSTALL .` on non-Windows and Windows platforms, respectively.
+  They handle finding the libarrow, setting up the build variables
+  necessary, and writing the package Makevars file that is used to
+  compile the C++ code in the R package.
 
--   `tools/nixlibs.R` - this script is called by `configure` on Linux
-    and macOS (or on any non-windows OS with the environment variable
-    `FORCE_BUNDLED_BUILD=true`). On windows this script is called by
-    `configure.win` when environment variable `ARROW_HOME` is not set.
-    It looks for an existing libarrow installation, and if it can’t find
-    one downloads an appropriate libarrow binary. On non-windows if no
-    binary could be found, the script sets up the build process for our
-    bundled builds (which is the default on linux) and checks for
-    dependencies.
+- `tools/nixlibs.R` - this script is called by `configure` on Linux and
+  macOS (or on any non-windows OS with the environment variable
+  `FORCE_BUNDLED_BUILD=true`). On windows this script is called by
+  `configure.win` when environment variable `ARROW_HOME` is not set. It
+  looks for an existing libarrow installation, and if it can’t find one
+  downloads an appropriate libarrow binary. On non-windows if no binary
+  could be found, the script sets up the build process for our bundled
+  builds (which is the default on linux) and checks for dependencies.
 
--   `inst/build_arrow_static.sh` - called by `tools/nixlibs.R` when
-    libarrow needs to be built. It builds libarrow for a bundled, static
-    build, and mirrors the steps described in the [Arrow R developer
-    guide](https://arrow.apache.org/docs/r/articles/developers/setup.md)
-    This build script is also what is used to generate our prebuilt
-    binaries.
+- `inst/build_arrow_static.sh` - called by `tools/nixlibs.R` when
+  libarrow needs to be built. It builds libarrow for a bundled, static
+  build, and mirrors the steps described in the [Arrow R developer
+  guide](https://arrow.apache.org/docs/r/articles/developers/setup.md)
+  This build script is also what is used to generate our prebuilt
+  binaries.
 
 The actions taken by these scripts to resolve dependencies and install
 the correct components are described below.
 
-<div class="section level3">
-
 ### How the R package finds libarrow
-
-<div class="section level4">
 
 #### Windows
 
@@ -71,8 +62,6 @@ on Windows.
 descriptions in sections 'Checking for existing libarrow installations'
 and 'Downloading libarrow' below](install_diagram_windows.png)
 
-<div class="section level5">
-
 ##### Checking for existing libarrow installations
 
 When you install the arrow R package on Windows, if the `ARROW_HOME`
@@ -80,10 +69,6 @@ environment variable has not been set, the install script looks for an
 existing libarrow installation. If this cannot be find, it then checks
 whether the `R_WINLIB_LOCAL` environment variable has been set to point
 to a local installation.
-
-</div>
-
-<div class="section level5">
 
 ##### Downloading libarrow
 
@@ -94,12 +79,6 @@ to find a version of libarrow which is matches the most components
 according to semantic versioning, and in the case of a failure becomes
 less specific (i.e. if there are no binaries found for version 0.14.1.1,
 then try to find one for 0.14.1).
-
-</div>
-
-</div>
-
-<div class="section level4">
 
 #### Non-Windows
 
@@ -113,8 +92,6 @@ On Linux and macOS, the core logic is:
 4.  Determine what features this libarrow has and what other flags it
     requires, and set them in `src/Makevars` for use when compiling the
     bindings.
-
-<div class="section level5">
 
 ##### Finding libarrow on the system
 
@@ -134,10 +111,6 @@ have trouble, you should ensure that the C++ library was built from the
 same commit as the R package, as development version numbers do not
 change with every commit.
 
-</div>
-
-<div class="section level5">
-
 ##### Prebuilt binaries
 
 If libarrow is not found on the system, the R package installation
@@ -149,12 +122,10 @@ These are used automatically on many Linux distributions (x86_64
 architecture only), according to the
 [allowlist](https://github.com/apache/arrow/blob/main/r/tools/nixlibs-allowlist.txt).
 If your distribution isn’t in the list, you can opt-in by setting the
-`NOT_CRAN` environment variable before you call `install.packages()`. If
-found, they will be downloaded and bundled when your R package compiles.
-
-</div>
-
-<div class="section level5">
+`NOT_CRAN` environment variable before you call
+[`install.packages()`](https://rdrr.io/r/utils/install.packages.html).
+If found, they will be downloaded and bundled when your R package
+compiles.
 
 ##### Building from source
 
@@ -165,16 +136,6 @@ there. Otherwise, it builds from the source files included in the
 package. Depending on your system, building libarrow from source may be
 slow. If libarrow is built from source, `inst/build_arrow_static.sh` is
 executed.
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="section level2">
 
 ## Using the R package with libarrow installed as a system package
 
@@ -192,10 +153,6 @@ and CentOS.
 If you are a developer contributing to the R package, system libarrow
 packages won’t be useful because the versions will not match.
 
-</div>
-
-<div class="section level2">
-
 ## Using the R package with an existing libarrow build
 
 This setup is much more common for arrow developers, who may be needing
@@ -203,7 +160,3 @@ to make changes to both the R package and libarrow source code. See the
 [developer setup
 docs](https://arrow.apache.org/docs/r/articles/developers/setup.md) for
 more information.
-
-</div>
-
-</div>
