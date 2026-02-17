@@ -1,20 +1,10 @@
-<div id="main" class="col-md-9" role="main">
-
 # Value matching for Arrow objects
 
-<div class="ref-description section level2">
-
-`base::match()` and `base::%in%` are not generics, so we can't just
-define Arrow methods for them. These functions expose the analogous
-functions in the Arrow C++ library.
-
-</div>
-
-<div class="section level2">
+[`base::match()`](https://rdrr.io/r/base/match.html) and `base::%in%`
+are not generics, so we can't just define Arrow methods for them. These
+functions expose the analogous functions in the Arrow C++ library.
 
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 match_arrow(x, table, ...)
@@ -22,29 +12,19 @@ match_arrow(x, table, ...)
 is_in(x, table, ...)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   x:
+- x:
 
-    `Scalar`, `Array` or `ChunkedArray`
+  `Scalar`, `Array` or `ChunkedArray`
 
--   table:
+- table:
 
-    `Scalar`, Array`, `ChunkedArray\`, or R vector lookup table.
+  `Scalar`, Array`, `ChunkedArray\`, or R vector lookup table.
 
--   ...:
+- ...:
 
-    additional arguments, ignored
-
-</div>
-
-<div class="section level2">
+  additional arguments, ignored
 
 ## Value
 
@@ -53,13 +33,7 @@ and type as `x` with the (0-based) indexes into `table`. `is_in()`
 returns a `boolean`-type Arrow object of the same length and type as `x`
 with values indicating per element of `x` it it is present in `table`.
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # note that the returned value is 0-indexed
@@ -127,9 +101,3 @@ is_in(ChunkedArray$create(c(4, 6), 8), cars_tbl$cyl) # returns ChunkedArray
 #>   ]
 #> ]
 ```
-
-</div>
-
-</div>
-
-</div>

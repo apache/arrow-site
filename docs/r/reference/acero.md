@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # Functions available in Arrow dplyr queries
-
-<div class="ref-description section level2">
 
 The `arrow` package contains methods for 37 `dplyr` table functions,
 many of which are "verbs" that do transformations to one or more tables.
@@ -13,113 +9,124 @@ packages like `stringr` and `lubridate`, and they will get translated to
 Arrow and run on the Arrow query engine (Acero). This document lists all
 of the mapped functions.
 
-</div>
-
-<div class="section level2">
-
 ## `dplyr` verbs
 
 Most verb functions return an `arrow_dplyr_query` object, similar in
-spirit to a `dbplyr::tbl_lazy`. This means that the verbs do not eagerly
-evaluate the query on the data. To run the query, call either
-`compute()`, which returns an `arrow`
+spirit to a
+[`dbplyr::tbl_lazy`](https://dbplyr.tidyverse.org/reference/tbl_lazy.html).
+This means that the verbs do not eagerly evaluate the query on the data.
+To run the query, call either `compute()`, which returns an `arrow`
 [Table](https://arrow.apache.org/docs/r/reference/Table-class.md), or
 `collect()`, which pulls the resulting Table into an R `tibble`.
 
--   `anti_join()`: the `copy` argument is ignored
+- [`anti_join()`](https://dplyr.tidyverse.org/reference/filter-joins.html):
+  the `copy` argument is ignored
 
--   `arrange()`
+- [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html)
 
--   `collapse()`
+- [`collapse()`](https://dplyr.tidyverse.org/reference/compute.html)
 
--   `collect()`
+- [`collect()`](https://dplyr.tidyverse.org/reference/compute.html)
 
--   `compute()`
+- [`compute()`](https://dplyr.tidyverse.org/reference/compute.html)
 
--   `count()`
+- [`count()`](https://dplyr.tidyverse.org/reference/count.html)
 
--   `distinct()`: `.keep_all = TRUE` returns a non-missing value if
-    present, only returning missing values if all are missing.
+- [`distinct()`](https://dplyr.tidyverse.org/reference/distinct.html):
+  `.keep_all = TRUE` returns a non-missing value if present, only
+  returning missing values if all are missing.
 
--   `explain()`
+- [`explain()`](https://dplyr.tidyverse.org/reference/explain.html)
 
--   `filter()`
+- [`filter()`](https://dplyr.tidyverse.org/reference/filter.html)
 
--   `full_join()`: the `copy` argument is ignored
+- [`full_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
+  the `copy` argument is ignored
 
--   `glimpse()`
+- [`glimpse()`](https://pillar.r-lib.org/reference/glimpse.html)
 
--   `group_by()`
+- [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
 
--   `group_by_drop_default()`
+- [`group_by_drop_default()`](https://dplyr.tidyverse.org/reference/group_by_drop_default.html)
 
--   `group_vars()`
+- [`group_vars()`](https://dplyr.tidyverse.org/reference/group_data.html)
 
--   `groups()`
+- [`groups()`](https://dplyr.tidyverse.org/reference/group_data.html)
 
--   `inner_join()`: the `copy` argument is ignored
+- [`inner_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
+  the `copy` argument is ignored
 
--   `left_join()`: the `copy` argument is ignored
+- [`left_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
+  the `copy` argument is ignored
 
--   `mutate()`
+- [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
 
--   `pull()`: the `name` argument is not supported; returns an R vector
-    by default but this behavior is deprecated and will return an Arrow
-    [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md)
-    in a future release. Provide `as_vector = TRUE/FALSE` to control
-    this behavior, or set `options(arrow.pull_as_vector)` globally.
+- [`pull()`](https://dplyr.tidyverse.org/reference/pull.html): the
+  `name` argument is not supported; returns an R vector by default but
+  this behavior is deprecated and will return an Arrow
+  [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md)
+  in a future release. Provide `as_vector = TRUE/FALSE` to control this
+  behavior, or set `options(arrow.pull_as_vector)` globally.
 
--   `relocate()`
+- [`relocate()`](https://dplyr.tidyverse.org/reference/relocate.html)
 
--   `rename()`
+- [`rename()`](https://dplyr.tidyverse.org/reference/rename.html)
 
--   `rename_with()`
+- [`rename_with()`](https://dplyr.tidyverse.org/reference/rename.html)
 
--   `right_join()`: the `copy` argument is ignored
+- [`right_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
+  the `copy` argument is ignored
 
--   `select()`
+- [`select()`](https://dplyr.tidyverse.org/reference/select.html)
 
--   `semi_join()`: the `copy` argument is ignored
+- [`semi_join()`](https://dplyr.tidyverse.org/reference/filter-joins.html):
+  the `copy` argument is ignored
 
--   `show_query()`
+- [`show_query()`](https://dplyr.tidyverse.org/reference/explain.html)
 
--   `slice_head()`: slicing within groups not supported; Arrow datasets
-    do not have row order, so head is non-deterministic; `prop` only
-    supported on queries where `nrow()` is knowable without evaluating
+- [`slice_head()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; Arrow datasets do not have row
+  order, so head is non-deterministic; `prop` only supported on queries
+  where [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
+  evaluating
 
--   `slice_max()`: slicing within groups not supported;
-    `with_ties = TRUE` (dplyr default) is not supported; `prop` only
-    supported on queries where `nrow()` is knowable without evaluating
+- [`slice_max()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; `with_ties = TRUE` (dplyr
+  default) is not supported; `prop` only supported on queries where
+  [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
+  evaluating
 
--   `slice_min()`: slicing within groups not supported;
-    `with_ties = TRUE` (dplyr default) is not supported; `prop` only
-    supported on queries where `nrow()` is knowable without evaluating
+- [`slice_min()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; `with_ties = TRUE` (dplyr
+  default) is not supported; `prop` only supported on queries where
+  [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
+  evaluating
 
--   `slice_sample()`: slicing within groups not supported;
-    `replace = TRUE` and the `weight_by` argument not supported; `n`
-    only supported on queries where `nrow()` is knowable without
-    evaluating
+- [`slice_sample()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; `replace = TRUE` and the
+  `weight_by` argument not supported; `n` only supported on queries
+  where [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
+  evaluating
 
--   `slice_tail()`: slicing within groups not supported; Arrow datasets
-    do not have row order, so tail is non-deterministic; `prop` only
-    supported on queries where `nrow()` is knowable without evaluating
+- [`slice_tail()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; Arrow datasets do not have row
+  order, so tail is non-deterministic; `prop` only supported on queries
+  where [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
+  evaluating
 
--   `summarise()`: window functions not currently supported; arguments
-    `.drop = FALSE` and `.groups = "rowwise"` not supported
+- [`summarise()`](https://dplyr.tidyverse.org/reference/summarise.html):
+  window functions not currently supported; arguments `.drop = FALSE`
+  and `.groups = "rowwise"` not supported
 
--   `tally()`
+- [`tally()`](https://dplyr.tidyverse.org/reference/count.html)
 
--   `transmute()`
+- [`transmute()`](https://dplyr.tidyverse.org/reference/transmute.html)
 
--   `ungroup()`
+- [`ungroup()`](https://dplyr.tidyverse.org/reference/group_by.html)
 
--   `union()`
+- [`union()`](https://dplyr.tidyverse.org/reference/setops.html)
 
--   `union_all()`
-
-</div>
-
-<div class="section level2">
+- [`union_all()`](https://dplyr.tidyverse.org/reference/setops.html)
 
 ## Function mappings
 
@@ -129,7 +136,9 @@ then you can assume that the function works in Acero just as it does in
 R.
 
 Functions can be called either as `pkg::fun()` or just `fun()`, i.e.
-both `str_sub()` and `stringr::str_sub()` work.
+both `str_sub()` and
+[`stringr::str_sub()`](https://stringr.tidyverse.org/reference/str_sub.html)
+work.
 
 In addition to these functions, you can call any of Arrow's 281 compute
 functions directly. Arrow has many functions that don't map to an
@@ -141,549 +150,534 @@ documentation](https://arrow.apache.org/docs/cpp/compute.html), and in
 the function registry in R, they are named with an `arrow_` prefix, such
 as `arrow_ascii_is_decimal`.
 
-<div class="section">
-
 ### arrow
 
--   `add_filename()`
+- [`add_filename()`](https://arrow.apache.org/docs/r/reference/add_filename.md)
 
--   `cast()`
-
-</div>
-
-<div class="section">
+- [`cast()`](https://arrow.apache.org/docs/r/reference/cast.md)
 
 ### base
 
--   `!`
+- [`!`](https://rdrr.io/r/base/Logic.html)
 
--   `!=`
+- [`!=`](https://rdrr.io/r/base/Comparison.html)
 
--   `%%`
+- [`%%`](https://rdrr.io/r/base/Arithmetic.html)
 
--   `%/%`
+- [`%/%`](https://rdrr.io/r/base/Arithmetic.html)
 
--   `%in%`
+- [`%in%`](https://rdrr.io/r/base/match.html)
 
--   `&`
+- [`&`](https://rdrr.io/r/base/Logic.html)
 
--   `*`
+- [`*`](https://rdrr.io/r/base/Arithmetic.html)
 
--   `+`
+- [`+`](https://rdrr.io/r/base/Arithmetic.html)
 
--   `-`
+- [`-`](https://rdrr.io/r/base/Arithmetic.html)
 
--   `/`
+- [`/`](https://rdrr.io/r/base/Arithmetic.html)
 
--   `<`
+- [`<`](https://rdrr.io/r/base/Comparison.html)
 
--   `<=`
+- [`<=`](https://rdrr.io/r/base/Comparison.html)
 
--   `==`
+- [`==`](https://rdrr.io/r/base/Comparison.html)
 
--   `>`
+- [`>`](https://rdrr.io/r/base/Comparison.html)
 
--   `>=`
+- [`>=`](https://rdrr.io/r/base/Comparison.html)
 
--   `ISOdate()`
+- [`ISOdate()`](https://rdrr.io/r/base/ISOdatetime.html)
 
--   `ISOdatetime()`
+- [`ISOdatetime()`](https://rdrr.io/r/base/ISOdatetime.html)
 
--   `^`
+- [`^`](https://rdrr.io/r/base/Arithmetic.html)
 
--   `abs()`
+- [`abs()`](https://rdrr.io/r/base/MathFun.html)
 
--   `acos()`
+- [`acos()`](https://rdrr.io/r/base/Trig.html)
 
--   `acosh()`
+- [`acosh()`](https://rdrr.io/r/base/Hyperbolic.html)
 
--   `all()`
+- [`all()`](https://rdrr.io/r/base/all.html)
 
--   `any()`
+- [`any()`](https://rdrr.io/r/base/any.html)
 
--   `as.Date()`: Multiple `tryFormats` not supported in Arrow. Consider
-    using the lubridate specialised parsing functions `ymd()`, `ymd()`,
-    etc.
+- [`as.Date()`](https://rdrr.io/r/base/as.Date.html): Multiple
+  `tryFormats` not supported in Arrow. Consider using the lubridate
+  specialised parsing functions `ymd()`, `ymd()`, etc.
 
--   `as.character()`
+- [`as.character()`](https://rdrr.io/r/base/character.html)
 
--   `as.difftime()`: only supports `units = "secs"` (the default)
+- [`as.difftime()`](https://rdrr.io/r/base/difftime.html): only supports
+  `units = "secs"` (the default)
 
--   `as.double()`
+- [`as.double()`](https://rdrr.io/r/base/double.html)
 
--   `as.integer()`
+- [`as.integer()`](https://rdrr.io/r/base/integer.html)
 
--   `as.logical()`
+- [`as.logical()`](https://rdrr.io/r/base/logical.html)
 
--   `as.numeric()`
+- [`as.numeric()`](https://rdrr.io/r/base/numeric.html)
 
--   `asin()`
+- [`asin()`](https://rdrr.io/r/base/Trig.html)
 
--   `asinh()`
+- [`asinh()`](https://rdrr.io/r/base/Hyperbolic.html)
 
--   `atan()`
+- [`atan()`](https://rdrr.io/r/base/Trig.html)
 
--   `atanh()`
+- [`atanh()`](https://rdrr.io/r/base/Hyperbolic.html)
 
--   `ceiling()`
+- [`ceiling()`](https://rdrr.io/r/base/Round.html)
 
--   `cos()`
+- [`cos()`](https://rdrr.io/r/base/Trig.html)
 
--   `cosh()`
+- [`cosh()`](https://rdrr.io/r/base/Hyperbolic.html)
 
--   `data.frame()`: `row.names` and `check.rows` arguments not
-    supported; `stringsAsFactors` must be `FALSE`
+- [`data.frame()`](https://rdrr.io/r/base/data.frame.html): `row.names`
+  and `check.rows` arguments not supported; `stringsAsFactors` must be
+  `FALSE`
 
--   `difftime()`: only supports `units = "secs"` (the default); `tz`
-    argument not supported
+- [`difftime()`](https://rdrr.io/r/base/difftime.html): only supports
+  `units = "secs"` (the default); `tz` argument not supported
 
--   `endsWith()`
+- [`endsWith()`](https://rdrr.io/r/base/startsWith.html)
 
--   `exp()`
+- [`exp()`](https://rdrr.io/r/base/Log.html)
 
--   `expm1()`
+- [`expm1()`](https://rdrr.io/r/base/Log.html)
 
--   `floor()`
+- [`floor()`](https://rdrr.io/r/base/Round.html)
 
--   `format()`
+- [`format()`](https://rdrr.io/r/base/format.html)
 
--   `grepl()`
+- [`grepl()`](https://rdrr.io/r/base/grep.html)
 
--   `gsub()`
+- [`gsub()`](https://rdrr.io/r/base/grep.html)
 
--   `ifelse()`
+- [`ifelse()`](https://rdrr.io/r/base/ifelse.html)
 
--   `is.character()`
+- [`is.character()`](https://rdrr.io/r/base/character.html)
 
--   `is.double()`
+- [`is.double()`](https://rdrr.io/r/base/double.html)
 
--   `is.factor()`
+- [`is.factor()`](https://rdrr.io/r/base/factor.html)
 
--   `is.finite()`
+- [`is.finite()`](https://rdrr.io/r/base/is.finite.html)
 
--   `is.infinite()`
+- [`is.infinite()`](https://rdrr.io/r/base/is.finite.html)
 
--   `is.integer()`
+- [`is.integer()`](https://rdrr.io/r/base/integer.html)
 
--   `is.list()`
+- [`is.list()`](https://rdrr.io/r/base/list.html)
 
--   `is.logical()`
+- [`is.logical()`](https://rdrr.io/r/base/logical.html)
 
--   `is.na()`
+- [`is.na()`](https://rdrr.io/r/base/NA.html)
 
--   `is.nan()`
+- [`is.nan()`](https://rdrr.io/r/base/is.finite.html)
 
--   `is.numeric()`
+- [`is.numeric()`](https://rdrr.io/r/base/numeric.html)
 
--   `log()`
+- [`log()`](https://rdrr.io/r/base/Log.html)
 
--   `log10()`
+- [`log10()`](https://rdrr.io/r/base/Log.html)
 
--   `log1p()`
+- [`log1p()`](https://rdrr.io/r/base/Log.html)
 
--   `log2()`
+- [`log2()`](https://rdrr.io/r/base/Log.html)
 
--   `logb()`
+- [`logb()`](https://rdrr.io/r/base/Log.html)
 
--   `max()`
+- [`max()`](https://rdrr.io/r/base/Extremes.html)
 
--   `mean()`
+- [`mean()`](https://rdrr.io/r/base/mean.html)
 
--   `min()`
+- [`min()`](https://rdrr.io/r/base/Extremes.html)
 
--   `nchar()`: `allowNA = TRUE` and `keepNA = TRUE` not supported
+- [`nchar()`](https://rdrr.io/r/base/nchar.html): `allowNA = TRUE` and
+  `keepNA = TRUE` not supported
 
--   `paste()`: the `collapse` argument is not yet supported
+- [`paste()`](https://rdrr.io/r/base/paste.html): the `collapse`
+  argument is not yet supported
 
--   `paste0()`: the `collapse` argument is not yet supported
+- [`paste0()`](https://rdrr.io/r/base/paste.html): the `collapse`
+  argument is not yet supported
 
--   `pmax()`
+- [`pmax()`](https://rdrr.io/r/base/Extremes.html)
 
--   `pmin()`
+- [`pmin()`](https://rdrr.io/r/base/Extremes.html)
 
--   `prod()`
+- [`prod()`](https://rdrr.io/r/base/prod.html)
 
--   `round()`
+- [`round()`](https://rdrr.io/r/base/Round.html)
 
--   `sign()`
+- [`sign()`](https://rdrr.io/r/base/sign.html)
 
--   `sin()`
+- [`sin()`](https://rdrr.io/r/base/Trig.html)
 
--   `sinh()`
+- [`sinh()`](https://rdrr.io/r/base/Hyperbolic.html)
 
--   `sqrt()`
+- [`sqrt()`](https://rdrr.io/r/base/MathFun.html)
 
--   `startsWith()`
+- [`startsWith()`](https://rdrr.io/r/base/startsWith.html)
 
--   `strftime()`
+- [`strftime()`](https://rdrr.io/r/base/strptime.html)
 
--   `strptime()`: accepts a `unit` argument not present in the `base`
-    function. Valid values are "s", "ms" (default), "us", "ns".
+- [`strptime()`](https://rdrr.io/r/base/strptime.html): accepts a `unit`
+  argument not present in the `base` function. Valid values are "s",
+  "ms" (default), "us", "ns".
 
--   `strrep()`
+- [`strrep()`](https://rdrr.io/r/base/strrep.html)
 
--   `strsplit()`
+- [`strsplit()`](https://rdrr.io/r/base/strsplit.html)
 
--   `sub()`
+- [`sub()`](https://rdrr.io/r/base/grep.html)
 
--   `substr()`: `start` and `stop` must be length 1
+- [`substr()`](https://rdrr.io/r/base/substr.html): `start` and `stop`
+  must be length 1
 
--   `substring()`
+- [`substring()`](https://rdrr.io/r/base/substr.html)
 
--   `sum()`
+- [`sum()`](https://rdrr.io/r/base/sum.html)
 
--   `tan()`
+- [`tan()`](https://rdrr.io/r/base/Trig.html)
 
--   `tanh()`
+- [`tanh()`](https://rdrr.io/r/base/Hyperbolic.html)
 
--   `tolower()`
+- [`tolower()`](https://rdrr.io/r/base/chartr.html)
 
--   `toupper()`
+- [`toupper()`](https://rdrr.io/r/base/chartr.html)
 
--   `trunc()`
+- [`trunc()`](https://rdrr.io/r/base/Round.html)
 
--   `|`
-
-</div>
-
-<div class="section">
+- [`|`](https://rdrr.io/r/base/Logic.html)
 
 ### bit64
 
--   `as.integer64()`
+- [`as.integer64()`](https://rdrr.io/pkg/bit64/man/as.integer64.character.html)
 
--   `is.integer64()`
-
-</div>
-
-<div class="section">
+- [`is.integer64()`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
 
 ### dplyr
 
--   `across()`
+- [`across()`](https://dplyr.tidyverse.org/reference/across.html)
 
--   `between()`
+- [`between()`](https://dplyr.tidyverse.org/reference/between.html)
 
--   `case_when()`: `.ptype` and `.size` arguments not supported
+- [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html):
+  `.ptype` and `.size` arguments not supported
 
--   `coalesce()`
+- [`coalesce()`](https://dplyr.tidyverse.org/reference/coalesce.html)
 
--   `desc()`
+- [`desc()`](https://dplyr.tidyverse.org/reference/desc.html)
 
--   `if_all()`
+- [`if_all()`](https://dplyr.tidyverse.org/reference/across.html)
 
--   `if_any()`
+- [`if_any()`](https://dplyr.tidyverse.org/reference/across.html)
 
--   `if_else()`
+- [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html)
 
--   `n()`
+- [`n()`](https://dplyr.tidyverse.org/reference/context.html)
 
--   `n_distinct()`
-
-</div>
-
-<div class="section">
+- [`n_distinct()`](https://dplyr.tidyverse.org/reference/n_distinct.html)
 
 ### hms
 
--   `as_hms()`: subsecond precision not supported for character input
+- [`as_hms()`](https://hms.tidyverse.org/reference/hms.html): subsecond
+  precision not supported for character input
 
--   `hms()`: nanosecond times not supported
-
-</div>
-
-<div class="section">
+- [`hms()`](https://hms.tidyverse.org/reference/hms.html): nanosecond
+  times not supported
 
 ### lubridate
 
--   `am()`
+- [`am()`](https://lubridate.tidyverse.org/reference/am.html)
 
--   `as_date()`
+- [`as_date()`](https://lubridate.tidyverse.org/reference/as_date.html)
 
--   `as_datetime()`
+- [`as_datetime()`](https://lubridate.tidyverse.org/reference/as_date.html)
 
--   `ceiling_date()`
+- [`ceiling_date()`](https://lubridate.tidyverse.org/reference/round_date.html)
 
--   `date()`
+- [`date()`](https://lubridate.tidyverse.org/reference/date.html)
 
--   `date_decimal()`
+- [`date_decimal()`](https://lubridate.tidyverse.org/reference/date_decimal.html)
 
--   `day()`
+- [`day()`](https://lubridate.tidyverse.org/reference/day.html)
 
--   `ddays()`
+- [`ddays()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `decimal_date()`
+- [`decimal_date()`](https://lubridate.tidyverse.org/reference/decimal_date.html)
 
--   `dhours()`
+- [`dhours()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dmicroseconds()`
+- [`dmicroseconds()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dmilliseconds()`
+- [`dmilliseconds()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dminutes()`
+- [`dminutes()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dmonths()`
+- [`dmonths()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dmy()`: `locale` argument not supported
+- [`dmy()`](https://lubridate.tidyverse.org/reference/ymd.html):
+  `locale` argument not supported
 
--   `dmy_h()`: `locale` argument not supported
+- [`dmy_h()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `dmy_hm()`: `locale` argument not supported
+- [`dmy_hm()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `dmy_hms()`: `locale` argument not supported
+- [`dmy_hms()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `dnanoseconds()`
+- [`dnanoseconds()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dpicoseconds()`: not supported
+- [`dpicoseconds()`](https://lubridate.tidyverse.org/reference/duration.html):
+  not supported
 
--   `dseconds()`
+- [`dseconds()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dst()`
+- [`dst()`](https://lubridate.tidyverse.org/reference/dst.html)
 
--   `dweeks()`
+- [`dweeks()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dyears()`
+- [`dyears()`](https://lubridate.tidyverse.org/reference/duration.html)
 
--   `dym()`: `locale` argument not supported
+- [`dym()`](https://lubridate.tidyverse.org/reference/ymd.html):
+  `locale` argument not supported
 
--   `epiweek()`
+- [`epiweek()`](https://lubridate.tidyverse.org/reference/week.html)
 
--   `epiyear()`
+- [`epiyear()`](https://lubridate.tidyverse.org/reference/year.html)
 
--   `fast_strptime()`: non-default values of `lt` and `cutoff_2000` not
-    supported
+- [`fast_strptime()`](https://lubridate.tidyverse.org/reference/parse_date_time.html):
+  non-default values of `lt` and `cutoff_2000` not supported
 
--   `floor_date()`
+- [`floor_date()`](https://lubridate.tidyverse.org/reference/round_date.html)
 
--   `force_tz()`: Timezone conversion from non-UTC timezone not
-    supported; `roll_dst` values of 'error' and 'boundary' are supported
-    for nonexistent times, `roll_dst` values of 'error', 'pre', and
-    'post' are supported for ambiguous times.
+- [`force_tz()`](https://lubridate.tidyverse.org/reference/force_tz.html):
+  Timezone conversion from non-UTC timezone not supported; `roll_dst`
+  values of 'error' and 'boundary' are supported for nonexistent times,
+  `roll_dst` values of 'error', 'pre', and 'post' are supported for
+  ambiguous times.
 
--   `format_ISO8601()`
+- [`format_ISO8601()`](https://lubridate.tidyverse.org/reference/format_ISO8601.html)
 
--   `hour()`
+- [`hour()`](https://lubridate.tidyverse.org/reference/hour.html)
 
--   `is.Date()`
+- `is.Date()`
 
--   `is.POSIXct()`
+- `is.POSIXct()`
 
--   `is.instant()`
+- [`is.instant()`](https://lubridate.tidyverse.org/reference/is.instant.html)
 
--   `is.timepoint()`
+- [`is.timepoint()`](https://lubridate.tidyverse.org/reference/is.instant.html)
 
--   `isoweek()`
+- [`isoweek()`](https://lubridate.tidyverse.org/reference/week.html)
 
--   `isoyear()`
+- [`isoyear()`](https://lubridate.tidyverse.org/reference/year.html)
 
--   `leap_year()`
+- [`leap_year()`](https://lubridate.tidyverse.org/reference/leap_year.html)
 
--   `make_date()`
+- [`make_date()`](https://lubridate.tidyverse.org/reference/make_datetime.html)
 
--   `make_datetime()`: only supports UTC (default) timezone
+- [`make_datetime()`](https://lubridate.tidyverse.org/reference/make_datetime.html):
+  only supports UTC (default) timezone
 
--   `make_difftime()`: only supports `units = "secs"` (the default);
-    providing both `num` and `...` is not supported
+- [`make_difftime()`](https://lubridate.tidyverse.org/reference/make_difftime.html):
+  only supports `units = "secs"` (the default); providing both `num` and
+  `...` is not supported
 
--   `mday()`
+- [`mday()`](https://lubridate.tidyverse.org/reference/day.html)
 
--   `mdy()`: `locale` argument not supported
+- [`mdy()`](https://lubridate.tidyverse.org/reference/ymd.html):
+  `locale` argument not supported
 
--   `mdy_h()`: `locale` argument not supported
+- [`mdy_h()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `mdy_hm()`: `locale` argument not supported
+- [`mdy_hm()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `mdy_hms()`: `locale` argument not supported
+- [`mdy_hms()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `minute()`
+- [`minute()`](https://lubridate.tidyverse.org/reference/minute.html)
 
--   `month()`
+- [`month()`](https://lubridate.tidyverse.org/reference/month.html)
 
--   `my()`: `locale` argument not supported
+- [`my()`](https://lubridate.tidyverse.org/reference/ymd.html): `locale`
+  argument not supported
 
--   `myd()`: `locale` argument not supported
+- [`myd()`](https://lubridate.tidyverse.org/reference/ymd.html):
+  `locale` argument not supported
 
--   `parse_date_time()`: `quiet = FALSE` is not supported Available
-    formats are H, I, j, M, S, U, w, W, y, Y, R, T. On Linux and OS X
-    additionally a, A, b, B, Om, p, r are available.
+- [`parse_date_time()`](https://lubridate.tidyverse.org/reference/parse_date_time.html):
+  `quiet = FALSE` is not supported Available formats are H, I, j, M, S,
+  U, w, W, y, Y, R, T. On Linux and OS X additionally a, A, b, B, Om, p,
+  r are available.
 
--   `pm()`
+- [`pm()`](https://lubridate.tidyverse.org/reference/am.html)
 
--   `qday()`
+- [`qday()`](https://lubridate.tidyverse.org/reference/day.html)
 
--   `quarter()`
+- [`quarter()`](https://lubridate.tidyverse.org/reference/quarter.html)
 
--   `round_date()`
+- [`round_date()`](https://lubridate.tidyverse.org/reference/round_date.html)
 
--   `second()`
+- [`second()`](https://lubridate.tidyverse.org/reference/second.html)
 
--   `semester()`
+- [`semester()`](https://lubridate.tidyverse.org/reference/quarter.html)
 
--   `tz()`
+- [`tz()`](https://lubridate.tidyverse.org/reference/tz.html)
 
--   `wday()`
+- [`wday()`](https://lubridate.tidyverse.org/reference/day.html)
 
--   `week()`
+- [`week()`](https://lubridate.tidyverse.org/reference/week.html)
 
--   `with_tz()`
+- [`with_tz()`](https://lubridate.tidyverse.org/reference/with_tz.html)
 
--   `yday()`
+- [`yday()`](https://lubridate.tidyverse.org/reference/day.html)
 
--   `ydm()`: `locale` argument not supported
+- [`ydm()`](https://lubridate.tidyverse.org/reference/ymd.html):
+  `locale` argument not supported
 
--   `ydm_h()`: `locale` argument not supported
+- [`ydm_h()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `ydm_hm()`: `locale` argument not supported
+- [`ydm_hm()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `ydm_hms()`: `locale` argument not supported
+- [`ydm_hms()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `year()`
+- [`year()`](https://lubridate.tidyverse.org/reference/year.html)
 
--   `ym()`: `locale` argument not supported
+- [`ym()`](https://lubridate.tidyverse.org/reference/ymd.html): `locale`
+  argument not supported
 
--   `ymd()`: `locale` argument not supported
+- [`ymd()`](https://lubridate.tidyverse.org/reference/ymd.html):
+  `locale` argument not supported
 
--   `ymd_h()`: `locale` argument not supported
+- [`ymd_h()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `ymd_hm()`: `locale` argument not supported
+- [`ymd_hm()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `ymd_hms()`: `locale` argument not supported
+- [`ymd_hms()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
+  `locale` argument not supported
 
--   `yq()`: `locale` argument not supported
-
-</div>
-
-<div class="section">
+- [`yq()`](https://lubridate.tidyverse.org/reference/ymd.html): `locale`
+  argument not supported
 
 ### methods
 
--   `is()`
-
-</div>
-
-<div class="section">
+- [`is()`](https://rdrr.io/r/methods/is.html)
 
 ### rlang
 
--   `is_character()`
+- [`is_character()`](https://rlang.r-lib.org/reference/type-predicates.html)
 
--   `is_double()`
+- [`is_double()`](https://rlang.r-lib.org/reference/type-predicates.html)
 
--   `is_integer()`
+- [`is_integer()`](https://rlang.r-lib.org/reference/type-predicates.html)
 
--   `is_list()`
+- [`is_list()`](https://rlang.r-lib.org/reference/type-predicates.html)
 
--   `is_logical()`
-
-</div>
-
-<div class="section">
+- [`is_logical()`](https://rlang.r-lib.org/reference/type-predicates.html)
 
 ### stats
 
--   `median()`: approximate median (t-digest) is computed
+- [`median()`](https://rdrr.io/r/stats/median.html): approximate median
+  (t-digest) is computed
 
--   `quantile()`: `probs` must be length 1; approximate quantile
-    (t-digest) is computed
+- [`quantile()`](https://rdrr.io/r/stats/quantile.html): `probs` must be
+  length 1; approximate quantile (t-digest) is computed
 
--   `sd()`
+- [`sd()`](https://rdrr.io/r/stats/sd.html)
 
--   `var()`
-
-</div>
-
-<div class="section">
+- [`var()`](https://rdrr.io/r/stats/cor.html)
 
 ### stringi
 
--   `stri_reverse()`
-
-</div>
-
-<div class="section">
+- [`stri_reverse()`](https://rdrr.io/pkg/stringi/man/stri_reverse.html)
 
 ### stringr
 
 Pattern modifiers `coll()` and `boundary()` are not supported in any
 functions.
 
--   `str_c()`: the `collapse` argument is not yet supported
+- [`str_c()`](https://stringr.tidyverse.org/reference/str_c.html): the
+  `collapse` argument is not yet supported
 
--   `str_count()`: `pattern` must be a length 1 character vector
+- [`str_count()`](https://stringr.tidyverse.org/reference/str_count.html):
+  `pattern` must be a length 1 character vector
 
--   `str_detect()`
+- [`str_detect()`](https://stringr.tidyverse.org/reference/str_detect.html)
 
--   `str_dup()`
+- [`str_dup()`](https://stringr.tidyverse.org/reference/str_dup.html)
 
--   `str_ends()`
+- [`str_ends()`](https://stringr.tidyverse.org/reference/str_starts.html)
 
--   `str_ilike()`
+- [`str_ilike()`](https://stringr.tidyverse.org/reference/str_like.html)
 
--   `str_length()`
+- [`str_length()`](https://stringr.tidyverse.org/reference/str_length.html)
 
--   `str_like()`
+- [`str_like()`](https://stringr.tidyverse.org/reference/str_like.html)
 
--   `str_pad()`
+- [`str_pad()`](https://stringr.tidyverse.org/reference/str_pad.html)
 
--   `str_remove()`
+- [`str_remove()`](https://stringr.tidyverse.org/reference/str_remove.html)
 
--   `str_remove_all()`
+- [`str_remove_all()`](https://stringr.tidyverse.org/reference/str_remove.html)
 
--   `str_replace()`
+- [`str_replace()`](https://stringr.tidyverse.org/reference/str_replace.html)
 
--   `str_replace_all()`
+- [`str_replace_all()`](https://stringr.tidyverse.org/reference/str_replace.html)
 
--   `str_replace_na()`
+- [`str_replace_na()`](https://stringr.tidyverse.org/reference/str_replace_na.html)
 
--   `str_split()`: Case-insensitive string splitting and splitting into
-    0 parts not supported
+- [`str_split()`](https://stringr.tidyverse.org/reference/str_split.html):
+  Case-insensitive string splitting and splitting into 0 parts not
+  supported
 
--   `str_starts()`
+- [`str_starts()`](https://stringr.tidyverse.org/reference/str_starts.html)
 
--   `str_sub()`: `start` and `end` must be length 1
+- [`str_sub()`](https://stringr.tidyverse.org/reference/str_sub.html):
+  `start` and `end` must be length 1
 
--   `str_to_lower()`
+- [`str_to_lower()`](https://stringr.tidyverse.org/reference/case.html)
 
--   `str_to_title()`
+- [`str_to_title()`](https://stringr.tidyverse.org/reference/case.html)
 
--   `str_to_upper()`
+- [`str_to_upper()`](https://stringr.tidyverse.org/reference/case.html)
 
--   `str_trim()`
-
-</div>
-
-<div class="section">
+- [`str_trim()`](https://stringr.tidyverse.org/reference/str_trim.html)
 
 ### tibble
 
--   `tibble()`
-
-</div>
-
-<div class="section">
+- [`tibble()`](https://tibble.tidyverse.org/reference/tibble.html)
 
 ### tidyselect
 
--   `all_of()`
+- [`all_of()`](https://tidyselect.r-lib.org/reference/all_of.html)
 
--   `contains()`
+- [`contains()`](https://tidyselect.r-lib.org/reference/starts_with.html)
 
--   `ends_with()`
+- [`ends_with()`](https://tidyselect.r-lib.org/reference/starts_with.html)
 
--   `everything()`
+- [`everything()`](https://tidyselect.r-lib.org/reference/everything.html)
 
--   `last_col()`
+- [`last_col()`](https://tidyselect.r-lib.org/reference/everything.html)
 
--   `matches()`
+- [`matches()`](https://tidyselect.r-lib.org/reference/starts_with.html)
 
--   `num_range()`
+- [`num_range()`](https://tidyselect.r-lib.org/reference/starts_with.html)
 
--   `one_of()`
+- [`one_of()`](https://tidyselect.r-lib.org/reference/one_of.html)
 
--   `starts_with()`
-
-</div>
-
-</div>
-
-</div>
+- [`starts_with()`](https://tidyselect.r-lib.org/reference/starts_with.html)

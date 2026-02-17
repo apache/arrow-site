@@ -1,48 +1,26 @@
-<div id="main" class="col-md-9" role="main">
-
 # Create an Arrow Scalar
-
-<div class="ref-description section level2">
 
 Create an Arrow Scalar
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 scalar(x, type = NULL)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   x:
+- x:
 
-    An R vector, list, or `data.frame`
+  An R vector, list, or `data.frame`
 
--   type:
+- type:
 
-    An optional [data
-    type](https://arrow.apache.org/docs/r/reference/data-type.md) for
-    `x`. If omitted, the type will be inferred from the data.
-
-</div>
-
-<div class="section level2">
+  An optional [data
+  type](https://arrow.apache.org/docs/r/reference/data-type.md) for `x`.
+  If omitted, the type will be inferred from the data.
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 scalar(pi)
@@ -60,9 +38,3 @@ scalar(9) == scalar(10)
 #> Scalar
 #> false
 ```
-
-</div>
-
-</div>
-
-</div>

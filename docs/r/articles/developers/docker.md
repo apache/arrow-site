@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Using docker containers
 
 Arrow is compatible with a huge number of combinations of OSs, OS
@@ -17,8 +15,6 @@ the desired setup.
 
 This article provides a basic guide to using Docker in your R
 development.
-
-<div class="section level2">
 
 ## How do I run a Docker container?
 
@@ -38,15 +34,15 @@ docker run -it -e ARROW_DEPENDENCY_SOURCE=AUTO -v $(pwd):/arrow apache/arrow-dev
 
 Components:
 
--   `docker run` - command to run the container
--   `-it` - run with an interactive terminal so you can run commands on
-    the containers
--   `-e ARROW_DEPENDENCY_SOURCE=AUTO` - set the environment variable
-    `ARROW_DEPENDENCY_SOURCE` to the value `AUTO`
--   `-v $(pwd):/arrow` - mount the current directory at `/arrow` in the
-    container
--   `apache/arrow-dev` - the DockerHub repo to get this container from
--   `r-rhub-ubuntu-release-latest` - the image tag
+- `docker run` - command to run the container
+- `-it` - run with an interactive terminal so you can run commands on
+  the containers
+- `-e ARROW_DEPENDENCY_SOURCE=AUTO` - set the environment variable
+  `ARROW_DEPENDENCY_SOURCE` to the value `AUTO`
+- `-v $(pwd):/arrow` - mount the current directory at `/arrow` in the
+  container
+- `apache/arrow-dev` - the DockerHub repo to get this container from
+- `r-rhub-ubuntu-release-latest` - the image tag
 
 Once you run this command, if you don’t have a copy of that particular
 image saved locally, it will first be downloaded before a container is
@@ -56,17 +52,9 @@ In the example above, mounting the directory in which the Arrow repo was
 stored on the local machine, meant that that code could be built and
 tested on the container.
 
-</div>
-
-<div class="section level2">
-
 ## How do I exit this image?
 
 On Linux, press Ctrl+D.
-
-</div>
-
-<div class="section level2">
 
 ## How do I show all images saved?
 
@@ -74,29 +62,17 @@ On Linux, press Ctrl+D.
 docker images
 ```
 
-</div>
-
-<div class="section level2">
-
 ## How do I show all running containers?
 
 ``` shell
 docker ps
 ```
 
-</div>
-
-<div class="section level2">
-
 ## How do I show all containers?
 
 ``` shell
 sudo docker ps -a
 ```
-
-</div>
-
-<div class="section level2">
 
 ## Running existing workflows from compose.yaml
 
@@ -110,8 +86,6 @@ These workflows are also parameterized, which means you can specify
 different options (or just use the defaults, which can be found in
 `.env`)
 
-<div class="section level3">
-
 ### Example - The manual way
 
 If you wanted to run [RHub’s latest `ubuntu-release`
@@ -121,10 +95,6 @@ image](https://hub.docker.com/r/rhub/ubuntu-release), you could run:
 R_ORG=rhub R_IMAGE=ubuntu-release R_TAG=latest docker compose build r
 R_ORG=rhub R_IMAGE=ubuntu-release R_TAG=latest docker compose run r
 ```
-
-</div>
-
-<div class="section level3">
 
 ### Example - Using Archery
 
@@ -143,9 +113,3 @@ If you want to run the `r` workflow discussed above, you could run:
 ``` shell
 R_ORG=rhub R_IMAGE=ubuntu-release R_TAG=latest archery docker run r
 ```
-
-</div>
-
-</div>
-
-</div>

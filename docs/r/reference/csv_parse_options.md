@@ -1,18 +1,8 @@
-<div id="main" class="col-md-9" role="main">
-
 # CSV Parsing Options
-
-<div class="ref-description section level2">
 
 CSV Parsing Options
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 csv_parse_options(
@@ -27,55 +17,43 @@ csv_parse_options(
 )
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   delimiter:
+- delimiter:
 
-    Field delimiting character
+  Field delimiting character
 
--   quoting:
+- quoting:
 
-    Logical: are strings quoted?
+  Logical: are strings quoted?
 
--   quote_char:
+- quote_char:
 
-    Quoting character, if `quoting` is `TRUE`
+  Quoting character, if `quoting` is `TRUE`
 
--   double_quote:
+- double_quote:
 
-    Logical: are quotes inside values double-quoted?
+  Logical: are quotes inside values double-quoted?
 
--   escaping:
+- escaping:
 
-    Logical: whether escaping is used
+  Logical: whether escaping is used
 
--   escape_char:
+- escape_char:
 
-    Escaping character, if `escaping` is `TRUE`
+  Escaping character, if `escaping` is `TRUE`
 
--   newlines_in_values:
+- newlines_in_values:
 
-    Logical: are values allowed to contain CR (`0x0d`) and LF (`0x0a`)
-    characters?
+  Logical: are values allowed to contain CR (`0x0d`) and LF (`0x0a`)
+  characters?
 
--   ignore_empty_lines:
+- ignore_empty_lines:
 
-    Logical: should empty lines be ignored (default) or generate a row
-    of missing values (if `FALSE`)?
-
-</div>
-
-<div class="section level2">
+  Logical: should empty lines be ignored (default) or generate a row of
+  missing values (if `FALSE`)?
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 tf <- tempfile()
@@ -93,9 +71,3 @@ open_csv_dataset(tf, parse_options = csv_parse_options(ignore_empty_lines = FALS
 #> 1 columns
 #> x: int64
 ```
-
-</div>
-
-</div>
-
-</div>

@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # Extension types
-
-<div class="ref-description section level2">
 
 Extension arrays are wrappers around regular Arrow
 [Array](https://arrow.apache.org/docs/r/reference/array-class.md)
@@ -16,13 +12,7 @@ built-in [vctrs extension
 type](https://arrow.apache.org/docs/r/reference/vctrs_extension_array.md)
 is probably sufficient.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 new_extension_type(
@@ -41,69 +31,57 @@ reregister_extension_type(extension_type)
 unregister_extension_type(extension_name)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   storage_type:
+- storage_type:
 
-    The [data
-    type](https://arrow.apache.org/docs/r/reference/data-type.md) of the
-    underlying storage array.
+  The [data
+  type](https://arrow.apache.org/docs/r/reference/data-type.md) of the
+  underlying storage array.
 
--   extension_name:
+- extension_name:
 
-    The extension name. This should be namespaced using "dot" syntax
-    (i.e., "some_package.some_type"). The namespace "arrow" is reserved
-    for extension types defined by the Apache Arrow libraries.
+  The extension name. This should be namespaced using "dot" syntax
+  (i.e., "some_package.some_type"). The namespace "arrow" is reserved
+  for extension types defined by the Apache Arrow libraries.
 
--   extension_metadata:
+- extension_metadata:
 
-    A `raw()` or `character()` vector containing the serialized version
-    of the type. Character vectors must be length 1 and are converted to
-    UTF-8 before converting to `raw()`.
+  A [`raw()`](https://rdrr.io/r/base/raw.html) or
+  [`character()`](https://rdrr.io/r/base/character.html) vector
+  containing the serialized version of the type. Character vectors must
+  be length 1 and are converted to UTF-8 before converting to
+  [`raw()`](https://rdrr.io/r/base/raw.html).
 
--   type_class:
+- type_class:
 
-    An [R6::R6Class](https://r6.r-lib.org/reference/R6Class.html) whose
-    `$new()` class method will be used to construct a new instance of
-    the type.
+  An [R6::R6Class](https://r6.r-lib.org/reference/R6Class.html) whose
+  `$new()` class method will be used to construct a new instance of the
+  type.
 
--   storage_array:
+- storage_array:
 
-    An [Array](https://arrow.apache.org/docs/r/reference/array-class.md)
-    object of the underlying storage.
+  An [Array](https://arrow.apache.org/docs/r/reference/array-class.md)
+  object of the underlying storage.
 
--   extension_type:
+- extension_type:
 
-    An
-    [ExtensionType](https://arrow.apache.org/docs/r/reference/ExtensionType.md)
-    instance.
-
-</div>
-
-<div class="section level2">
+  An
+  [ExtensionType](https://arrow.apache.org/docs/r/reference/ExtensionType.md)
+  instance.
 
 ## Value
 
--   `new_extension_type()` returns an
-    [ExtensionType](https://arrow.apache.org/docs/r/reference/ExtensionType.md)
-    instance according to the `type_class` specified.
+- `new_extension_type()` returns an
+  [ExtensionType](https://arrow.apache.org/docs/r/reference/ExtensionType.md)
+  instance according to the `type_class` specified.
 
--   `new_extension_array()` returns an
-    [ExtensionArray](https://arrow.apache.org/docs/r/reference/ExtensionArray.md)
-    whose `$type` corresponds to `extension_type`.
+- `new_extension_array()` returns an
+  [ExtensionArray](https://arrow.apache.org/docs/r/reference/ExtensionArray.md)
+  whose `$type` corresponds to `extension_type`.
 
--   `register_extension_type()`, `unregister_extension_type()` and
-    `reregister_extension_type()` return `NULL`, invisibly.
-
-</div>
-
-<div class="section level2">
+- `register_extension_type()`, `unregister_extension_type()` and
+  `reregister_extension_type()` return `NULL`, invisibly.
 
 ## Details
 
@@ -113,41 +91,35 @@ and
 [ExtensionArray](https://arrow.apache.org/docs/r/reference/ExtensionArray.md)
 objects. To use an extension type you will have to:
 
--   Define an [R6::R6Class](https://r6.r-lib.org/reference/R6Class.html)
-    that inherits from
-    [ExtensionType](https://arrow.apache.org/docs/r/reference/ExtensionType.md)
-    and reimplement one or more methods (e.g.,
-    `deserialize_instance()`).
+- Define an [R6::R6Class](https://r6.r-lib.org/reference/R6Class.html)
+  that inherits from
+  [ExtensionType](https://arrow.apache.org/docs/r/reference/ExtensionType.md)
+  and reimplement one or more methods (e.g., `deserialize_instance()`).
 
--   Make a type constructor function (e.g., `my_extension_type()`) that
-    calls `new_extension_type()` to create an R6 instance that can be
-    used as a [data
-    type](https://arrow.apache.org/docs/r/reference/data-type.md)
-    elsewhere in the package.
+- Make a type constructor function (e.g., `my_extension_type()`) that
+  calls `new_extension_type()` to create an R6 instance that can be used
+  as a [data
+  type](https://arrow.apache.org/docs/r/reference/data-type.md)
+  elsewhere in the package.
 
--   Make an array constructor function (e.g., `my_extension_array()`)
-    that calls `new_extension_array()` to create an
-    [Array](https://arrow.apache.org/docs/r/reference/array-class.md)
-    instance of your extension type.
+- Make an array constructor function (e.g., `my_extension_array()`) that
+  calls `new_extension_array()` to create an
+  [Array](https://arrow.apache.org/docs/r/reference/array-class.md)
+  instance of your extension type.
 
--   Register a dummy instance of your extension type created using you
-    constructor function using `register_extension_type()`.
+- Register a dummy instance of your extension type created using you
+  constructor function using `register_extension_type()`.
 
 If defining an extension type in an R package, you will probably want to
-use `reregister_extension_type()` in that package's `.onLoad()` hook
-since your package will probably get reloaded in the same R session
-during its development and `register_extension_type()` will error if
-called twice for the same `extension_name`. For an example of an
-extension type that uses most of these features, see
-`vctrs_extension_type()`.
-
-</div>
-
-<div class="section level2">
+use `reregister_extension_type()` in that package's
+[`.onLoad()`](https://rdrr.io/r/base/ns-hooks.html) hook since your
+package will probably get reloaded in the same R session during its
+development and `register_extension_type()` will error if called twice
+for the same `extension_name`. For an example of an extension type that
+uses most of these features, see
+[`vctrs_extension_type()`](https://arrow.apache.org/docs/r/reference/vctrs_extension_array.md).
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # Create the R6 type whose methods control how Array objects are
@@ -240,9 +212,3 @@ array$type$scale()
 as.vector(array)
 #> [1] 19.07559 19.97833 19.76974 19.27140 20.76730
 ```
-
-</div>
-
-</div>
-
-</div>

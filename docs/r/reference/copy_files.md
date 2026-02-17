@@ -1,63 +1,36 @@
-<div id="main" class="col-md-9" role="main">
-
 # Copy files between FileSystems
-
-<div class="ref-description section level2">
 
 Copy files between FileSystems
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 copy_files(from, to, chunk_size = 1024L * 1024L)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   from:
+- from:
 
-    A string path to a local directory or file, a URI, or a
-    `SubTreeFileSystem`. Files will be copied recursively from this
-    path.
+  A string path to a local directory or file, a URI, or a
+  `SubTreeFileSystem`. Files will be copied recursively from this path.
 
--   to:
+- to:
 
-    A string path to a local directory or file, a URI, or a
-    `SubTreeFileSystem`. Directories will be created as necessary
+  A string path to a local directory or file, a URI, or a
+  `SubTreeFileSystem`. Directories will be created as necessary
 
--   chunk_size:
+- chunk_size:
 
-    The maximum size of block to read before flushing to the destination
-    file. A larger chunk_size will use more memory while copying but may
-    help accommodate high latency FileSystems.
-
-</div>
-
-<div class="section level2">
+  The maximum size of block to read before flushing to the destination
+  file. A larger chunk_size will use more memory while copying but may
+  help accommodate high latency FileSystems.
 
 ## Value
 
 Nothing: called for side effects in the file system
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 if (FALSE) {
@@ -69,9 +42,3 @@ copy_files(s3_bucket("your-bucket-name"), "local-directory")
 copy_files("local-directory", s3_bucket("your-bucket-name"))
 }
 ```
-
-</div>
-
-</div>
-
-</div>

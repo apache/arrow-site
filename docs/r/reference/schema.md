@@ -1,58 +1,28 @@
-<div id="main" class="col-md-9" role="main">
-
 # Create a schema or extract one from an object.
-
-<div class="ref-description section level2">
 
 Create a schema or extract one from an object.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 schema(...)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   ...:
+- ...:
 
-    [fields](https://arrow.apache.org/docs/r/reference/Field.md), field
-    name/[data
-    type](https://arrow.apache.org/docs/r/reference/data-type.md) pairs
-    (or a list of), or object from which to extract a schema
-
-</div>
-
-<div class="section level2">
+  [fields](https://arrow.apache.org/docs/r/reference/Field.md), field
+  name/[data
+  type](https://arrow.apache.org/docs/r/reference/data-type.md) pairs
+  (or a list of), or object from which to extract a schema
 
 ## See also
-
-<div class="dont-index">
 
 [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md) for
 detailed documentation of the Schema R6 object
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # Create schema using pairs of field names and data types
@@ -95,9 +65,3 @@ schema(tab2)
 #> 
 #> See $metadata for additional Schema metadata
 ```
-
-</div>
-
-</div>
-
-</div>

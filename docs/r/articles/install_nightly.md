@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Installing development versions
 
 Users of the arrow package will typically want to use the latest release
@@ -7,8 +5,6 @@ version of the package, but may occasionally require a development
 build. Arrow developers are more likely to need the current development
 version. In this article we describe the process for installing the
 development version.
-
-<div class="section level2">
 
 ## Install nightly builds
 
@@ -20,13 +16,9 @@ and new features under active development.
 
 To install arrow from there, use the following command:
 
-<div id="cb1" class="sourceCode">
-
 ``` r
 install.packages("arrow", repos = c(arrow = "https://nightlies.apache.org/arrow/r", getOption("repos")))
 ```
-
-</div>
 
 Conda users can install arrow nightly builds with:
 
@@ -37,17 +29,9 @@ conda install -c arrow-nightlies -c conda-forge --strict-channel-priority r-arro
 If you already have a version of arrow installed, you can switch to the
 latest nightly development version as follows:
 
-<div id="cb3" class="sourceCode">
-
 ``` r
 arrow::install_arrow(nightly = TRUE)
 ```
-
-</div>
-
-</div>
-
-<div class="section level2">
 
 ## Install from git repository
 
@@ -66,19 +50,11 @@ package from source, it will also download and build libarrow for you.
 See the links below for build environment variables for options for
 configuring the build source and enabled features.
 
-</div>
-
-<div class="section level2">
-
 ## Further reading
 
--   For users looking for information about installing on Linux, see the
-    [Linux installation
-    article](https://arrow.apache.org/docs/r/articles/install.md).
--   For developers looking to understand the installation scripts, see
-    the [installation details
-    article](https://arrow.apache.org/docs/r/articles/developers/install_details.md).
-
-</div>
-
-</div>
+- For users looking for information about installing on Linux, see the
+  [Linux installation
+  article](https://arrow.apache.org/docs/r/articles/install.md).
+- For developers looking to understand the installation scripts, see the
+  [installation details
+  article](https://arrow.apache.org/docs/r/articles/developers/install_details.md).

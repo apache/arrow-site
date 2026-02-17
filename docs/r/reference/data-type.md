@@ -1,20 +1,12 @@
-<div id="main" class="col-md-9" role="main">
-
 # Create Arrow data types
 
-<div class="ref-description section level2">
-
 These functions create type objects corresponding to Arrow types. Use
-them when defining a `schema()` or as inputs to other types, like
-`struct`. Most of these functions don't take arguments, but a few do.
-
-</div>
-
-<div class="section level2">
+them when defining a
+[`schema()`](https://arrow.apache.org/docs/r/reference/schema.md) or as
+inputs to other types, like `struct`. Most of these functions don't take
+arguments, but a few do.
 
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 int8()
@@ -94,89 +86,77 @@ fixed_size_list_of(type, list_size)
 map_of(key_type, item_type, .keys_sorted = FALSE)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   byte_width:
+- byte_width:
 
-    byte width for `FixedSizeBinary` type.
+  byte width for `FixedSizeBinary` type.
 
--   unit:
+- unit:
 
-    For time/timestamp types, the time unit. `time32()` can take either
-    "s" or "ms", while `time64()` can be "us" or "ns". `timestamp()` can
-    take any of those four values.
+  For time/timestamp types, the time unit. `time32()` can take either
+  "s" or "ms", while `time64()` can be "us" or "ns". `timestamp()` can
+  take any of those four values.
 
--   timezone:
+- timezone:
 
-    For `timestamp()`, an optional time zone string.
+  For `timestamp()`, an optional time zone string.
 
--   precision:
+- precision:
 
-    For `decimal()`, `decimal128()`, and `decimal256()` the number of
-    significant digits the arrow `decimal` type can represent. The
-    maximum precision for `decimal128()` is 38 significant digits, while
-    for `decimal256()` it is 76 digits. `decimal()` will use it to
-    choose which type of decimal to return.
+  For `decimal()`, `decimal128()`, and `decimal256()` the number of
+  significant digits the arrow `decimal` type can represent. The maximum
+  precision for `decimal128()` is 38 significant digits, while for
+  `decimal256()` it is 76 digits. `decimal()` will use it to choose
+  which type of decimal to return.
 
--   scale:
+- scale:
 
-    For `decimal()`, `decimal128()`, and `decimal256()` the number of
-    digits after the decimal point. It can be negative.
+  For `decimal()`, `decimal128()`, and `decimal256()` the number of
+  digits after the decimal point. It can be negative.
 
--   ...:
+- ...:
 
-    For `struct()`, a named list of types to define the struct columns
+  For `struct()`, a named list of types to define the struct columns
 
--   type:
+- type:
 
-    For `list_of()`, a data type to make a list-of-type
+  For `list_of()`, a data type to make a list-of-type
 
--   list_size:
+- list_size:
 
-    list size for `FixedSizeList` type.
+  list size for `FixedSizeList` type.
 
--   key_type, item_type:
+- key_type, item_type:
 
-    For `MapType`, the key and item types.
+  For `MapType`, the key and item types.
 
--   .keys_sorted:
+- .keys_sorted:
 
-    Use `TRUE` to assert that keys of a `MapType` are sorted.
-
-</div>
-
-<div class="section level2">
+  Use `TRUE` to assert that keys of a `MapType` are sorted.
 
 ## Value
 
 An Arrow type object inheriting from
 [DataType](https://arrow.apache.org/docs/r/reference/DataType-class.md).
 
-</div>
-
-<div class="section level2">
-
 ## Details
 
 A few functions have aliases:
 
--   `utf8()` and `string()`
+- `utf8()` and `string()`
 
--   `float16()` and `halffloat()`
+- `float16()` and `halffloat()`
 
--   `float32()` and `float()`
+- `float32()` and `float()`
 
--   `bool()` and `boolean()`
+- `bool()` and `boolean()`
 
--   When called inside an `arrow` function, such as `schema()` or
-    `cast()`, `double()` also is supported as a way of creating a
-    `float64()`
+- When called inside an `arrow` function, such as
+  [`schema()`](https://arrow.apache.org/docs/r/reference/schema.md) or
+  [`cast()`](https://arrow.apache.org/docs/r/reference/cast.md),
+  [`double()`](https://rdrr.io/r/base/double.html) also is supported as
+  a way of creating a `float64()`
 
 `date32()` creates a datetime type with a "day" unit, like the R `Date`
 class. `date64()` has a "ms" unit.
@@ -186,9 +166,11 @@ and `int64` (64-bit signed integer) types may contain values that exceed
 the range of R's `integer` type (32-bit signed integer). When these
 arrow objects are translated to R objects, `uint32` and `uint64` are
 converted to `double` ("numeric") and `int64` is converted to
-`bit64::integer64`. For `int64` types, this conversion can be disabled
-(so that `int64` always yields a `bit64::integer64` object) by setting
-`options(arrow.int64_downcast = FALSE)`.
+[`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html).
+For `int64` types, this conversion can be disabled (so that `int64`
+always yields a
+[`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+object) by setting `options(arrow.int64_downcast = FALSE)`.
 
 `decimal128()` creates a `Decimal128Type`. Arrow decimals are
 fixed-point decimal numbers encoded as a scalar integer. The `precision`
@@ -219,25 +201,12 @@ depending on the value for `precision`. If `precision` is greater than
 Use `decimal128()` or `decimal256()` as the names are more informative
 than `decimal()`.
 
-</div>
-
-<div class="section level2">
-
 ## See also
 
-<div class="dont-index">
-
-`dictionary()` for creating a dictionary (factor-like) type.
-
-</div>
-
-</div>
-
-<div class="section level2">
+[`dictionary()`](https://arrow.apache.org/docs/r/reference/dictionary.md)
+for creating a dictionary (factor-like) type.
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 bool()
@@ -298,9 +267,3 @@ if (requireNamespace("dplyr", quietly = TRUE)) {
 #> 
 #> See $metadata for additional Schema metadata
 ```
-
-</div>
-
-</div>
-
-</div>

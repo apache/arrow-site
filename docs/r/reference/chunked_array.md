@@ -1,61 +1,31 @@
-<div id="main" class="col-md-9" role="main">
-
 # Create a Chunked Array
-
-<div class="ref-description section level2">
 
 Create a Chunked Array
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 chunked_array(..., type = NULL)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   ...:
+- ...:
 
-    R objects to coerce into a ChunkedArray. They must be of the same
-    type.
+  R objects to coerce into a ChunkedArray. They must be of the same
+  type.
 
--   type:
+- type:
 
-    An optional [data
-    type](https://arrow.apache.org/docs/r/reference/data-type.md). If
-    omitted, the type will be inferred from the data.
-
-</div>
-
-<div class="section level2">
+  An optional [data
+  type](https://arrow.apache.org/docs/r/reference/data-type.md). If
+  omitted, the type will be inferred from the data.
 
 ## See also
 
-<div class="dont-index">
-
 [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md)
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # Pass items into chunked_array as separate objects to create chunks
@@ -92,9 +62,3 @@ c(a, b)
 #>   ]
 #> ]
 ```
-
-</div>
-
-</div>
-
-</div>

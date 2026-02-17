@@ -1,20 +1,10 @@
-<div id="main" class="col-md-9" role="main">
-
 # Write a dataset
-
-<div class="ref-description section level2">
 
 This function allows you to write a dataset. By writing to more
 efficient binary storage formats, and by specifying relevant
 partitioning, you can make it much faster to read and query.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 write_dataset(
@@ -35,150 +25,138 @@ write_dataset(
 )
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   dataset:
+- dataset:
 
-    [Dataset](https://arrow.apache.org/docs/r/reference/Dataset.md),
-    [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md),
-    [Table](https://arrow.apache.org/docs/r/reference/Table-class.md),
-    `arrow_dplyr_query`, or `data.frame`. If an `arrow_dplyr_query`, the
-    query will be evaluated and the result will be written. This means
-    that you can `select()`, `filter()`, `mutate()`, etc. to transform
-    the data before it is written if you need to.
+  [Dataset](https://arrow.apache.org/docs/r/reference/Dataset.md),
+  [RecordBatch](https://arrow.apache.org/docs/r/reference/RecordBatch-class.md),
+  [Table](https://arrow.apache.org/docs/r/reference/Table-class.md),
+  `arrow_dplyr_query`, or `data.frame`. If an `arrow_dplyr_query`, the
+  query will be evaluated and the result will be written. This means
+  that you can
+  [`select()`](https://dplyr.tidyverse.org/reference/select.html),
+  [`filter()`](https://dplyr.tidyverse.org/reference/filter.html),
+  [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html), etc.
+  to transform the data before it is written if you need to.
 
--   path:
+- path:
 
-    string path, URI, or `SubTreeFileSystem` referencing a directory to
-    write to (directory will be created if it does not exist)
+  string path, URI, or `SubTreeFileSystem` referencing a directory to
+  write to (directory will be created if it does not exist)
 
--   format:
+- format:
 
-    a string identifier of the file format. Default is to use "parquet"
-    (see
-    [FileFormat](https://arrow.apache.org/docs/r/reference/FileFormat.md))
+  a string identifier of the file format. Default is to use "parquet"
+  (see
+  [FileFormat](https://arrow.apache.org/docs/r/reference/FileFormat.md))
 
--   partitioning:
+- partitioning:
 
-    `Partitioning` or a character vector of columns to use as partition
-    keys (to be written as path segments). Default is to use the current
-    `group_by()` columns.
+  `Partitioning` or a character vector of columns to use as partition
+  keys (to be written as path segments). Default is to use the current
+  [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
+  columns.
 
--   basename_template:
+- basename_template:
 
-    string template for the names of files to be written. Must contain
-    `"{i}"`, which will be replaced with an autoincremented integer to
-    generate basenames of datafiles. For example, `"part-{i}.arrow"`
-    will yield `"part-0.arrow", ...`. If not specified, it defaults to
-    `"part-{i}.<default extension>"`.
+  string template for the names of files to be written. Must contain
+  `"{i}"`, which will be replaced with an autoincremented integer to
+  generate basenames of datafiles. For example, `"part-{i}.arrow"` will
+  yield `"part-0.arrow", ...`. If not specified, it defaults to
+  `"part-{i}.<default extension>"`.
 
--   hive_style:
+- hive_style:
 
-    logical: write partition segments as Hive-style
-    (`key1=value1/key2=value2/file.ext`) or as just bare values. Default
-    is `TRUE`.
+  logical: write partition segments as Hive-style
+  (`key1=value1/key2=value2/file.ext`) or as just bare values. Default
+  is `TRUE`.
 
--   existing_data_behavior:
+- existing_data_behavior:
 
-    The behavior to use when there is already data in the destination
-    directory. Must be one of "overwrite", "error", or
-    "delete_matching".
+  The behavior to use when there is already data in the destination
+  directory. Must be one of "overwrite", "error", or "delete_matching".
 
-    -   "overwrite" (the default) then any new files created will
-        overwrite existing files
+  - "overwrite" (the default) then any new files created will overwrite
+    existing files
 
-    -   "error" then the operation will fail if the destination
-        directory is not empty
+  - "error" then the operation will fail if the destination directory is
+    not empty
 
-    -   "delete_matching" then the writer will delete any existing
-        partitions if data is going to be written to those partitions
-        and will leave alone partitions which data is not written to.
+  - "delete_matching" then the writer will delete any existing
+    partitions if data is going to be written to those partitions and
+    will leave alone partitions which data is not written to.
 
--   max_partitions:
+- max_partitions:
 
-    maximum number of partitions any batch may be written into. Default
-    is 1024L.
+  maximum number of partitions any batch may be written into. Default is
+  1024L.
 
--   max_open_files:
+- max_open_files:
 
-    maximum number of files that can be left opened during a write
-    operation. If greater than 0 then this will limit the maximum number
-    of files that can be left open. If an attempt is made to open too
-    many files then the least recently used file will be closed. If this
-    setting is set too low you may end up fragmenting your data into
-    many small files. The default is 900 which also allows some \# of
-    files to be open by the scanner before hitting the default Linux
-    limit of 1024.
+  maximum number of files that can be left opened during a write
+  operation. If greater than 0 then this will limit the maximum number
+  of files that can be left open. If an attempt is made to open too many
+  files then the least recently used file will be closed. If this
+  setting is set too low you may end up fragmenting your data into many
+  small files. The default is 900 which also allows some \# of files to
+  be open by the scanner before hitting the default Linux limit of 1024.
 
--   max_rows_per_file:
+- max_rows_per_file:
 
-    maximum number of rows per file. If greater than 0 then this will
-    limit how many rows are placed in any single file. Default is 0L.
+  maximum number of rows per file. If greater than 0 then this will
+  limit how many rows are placed in any single file. Default is 0L.
 
--   min_rows_per_group:
+- min_rows_per_group:
 
-    write the row groups to the disk when this number of rows have
-    accumulated. Default is 0L.
+  write the row groups to the disk when this number of rows have
+  accumulated. Default is 0L.
 
--   max_rows_per_group:
+- max_rows_per_group:
 
-    maximum rows allowed in a single group and when this number of rows
-    is exceeded, it is split and the next set of rows is written to the
-    next group. This value must be set such that it is greater than
-    `min_rows_per_group`. Default is 1024 \* 1024.
+  maximum rows allowed in a single group and when this number of rows is
+  exceeded, it is split and the next set of rows is written to the next
+  group. This value must be set such that it is greater than
+  `min_rows_per_group`. Default is 1024 \* 1024.
 
--   create_directory:
+- create_directory:
 
-    whether to create the directories written into. Requires appropriate
-    permissions on the storage backend. If set to FALSE, directories are
-    assumed to be already present if writing on a classic hierarchical
-    filesystem. Default is TRUE
+  whether to create the directories written into. Requires appropriate
+  permissions on the storage backend. If set to FALSE, directories are
+  assumed to be already present if writing on a classic hierarchical
+  filesystem. Default is TRUE
 
--   ...:
+- ...:
 
-    additional format-specific arguments. For available Parquet options,
-    see `write_parquet()`. The available Feather options are:
+  additional format-specific arguments. For available Parquet options,
+  see
+  [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md).
+  The available Feather options are:
 
-    -   `use_legacy_format` logical: write data formatted so that Arrow
-        libraries versions 0.14 and lower can read it. Default is
-        `FALSE`. You can also enable this by setting the environment
-        variable `ARROW_PRE_0_15_IPC_FORMAT=1`.
+  - `use_legacy_format` logical: write data formatted so that Arrow
+    libraries versions 0.14 and lower can read it. Default is `FALSE`.
+    You can also enable this by setting the environment variable
+    `ARROW_PRE_0_15_IPC_FORMAT=1`.
 
-    -   `metadata_version`: A string like "V5" or the equivalent integer
-        indicating the Arrow IPC MetadataVersion. Default (`NULL`) will
-        use the latest version, unless the environment variable
-        `ARROW_PRE_1_0_METADATA_VERSION=1`, in which case it will be V4.
+  - `metadata_version`: A string like "V5" or the equivalent integer
+    indicating the Arrow IPC MetadataVersion. Default (`NULL`) will use
+    the latest version, unless the environment variable
+    `ARROW_PRE_1_0_METADATA_VERSION=1`, in which case it will be V4.
 
-    -   `codec`: A
-        [Codec](https://arrow.apache.org/docs/r/reference/Codec.md)
-        which will be used to compress body buffers of written files.
-        Default (NULL) will not compress body buffers.
+  - `codec`: A
+    [Codec](https://arrow.apache.org/docs/r/reference/Codec.md) which
+    will be used to compress body buffers of written files. Default
+    (NULL) will not compress body buffers.
 
-    -   `null_fallback`: character to be used in place of missing values
-        (`NA` or `NULL`) when using Hive-style partitioning. See
-        `hive_partition()`.
-
-</div>
-
-<div class="section level2">
+  - `null_fallback`: character to be used in place of missing values
+    (`NA` or `NULL`) when using Hive-style partitioning. See
+    [`hive_partition()`](https://arrow.apache.org/docs/r/reference/hive_partition.md).
 
 ## Value
 
 The input `dataset`, invisibly
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # You can write datasets partitioned by the values in a column (here: "cyl").
@@ -231,9 +209,3 @@ list.files(two_levels_tree_no_hive, recursive = TRUE)
 #> [4] "6/3/part-0.parquet" "6/4/part-0.parquet" "6/5/part-0.parquet"
 #> [7] "8/3/part-0.parquet" "8/5/part-0.parquet"
 ```
-
-</div>
-
-</div>
-
-</div>

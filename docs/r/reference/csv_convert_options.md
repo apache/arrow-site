@@ -1,18 +1,8 @@
-<div id="main" class="col-md-9" role="main">
-
 # CSV Convert Options
-
-<div class="ref-description section level2">
 
 CSV Convert Options
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 csv_convert_options(
@@ -31,87 +21,77 @@ csv_convert_options(
 )
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   check_utf8:
+- check_utf8:
 
-    Logical: check UTF8 validity of string columns?
+  Logical: check UTF8 validity of string columns?
 
--   null_values:
+- null_values:
 
-    Character vector of recognized spellings for null values. Analogous
-    to the `na.strings` argument to `read.csv()` or `na` in
-    `readr::read_csv()`.
+  Character vector of recognized spellings for null values. Analogous to
+  the `na.strings` argument to
+  [`read.csv()`](https://rdrr.io/r/utils/read.table.html) or `na` in
+  `readr::read_csv()`.
 
--   true_values:
+- true_values:
 
-    Character vector of recognized spellings for `TRUE` values
+  Character vector of recognized spellings for `TRUE` values
 
--   false_values:
+- false_values:
 
-    Character vector of recognized spellings for `FALSE` values
+  Character vector of recognized spellings for `FALSE` values
 
--   strings_can_be_null:
+- strings_can_be_null:
 
-    Logical: can string / binary columns have null values? Similar to
-    the `quoted_na` argument to `readr::read_csv()`
+  Logical: can string / binary columns have null values? Similar to the
+  `quoted_na` argument to `readr::read_csv()`
 
--   col_types:
+- col_types:
 
-    A `Schema` or `NULL` to infer types
+  A `Schema` or `NULL` to infer types
 
--   auto_dict_encode:
+- auto_dict_encode:
 
-    Logical: Whether to try to automatically dictionary-encode string /
-    binary data (think `stringsAsFactors`). This setting is ignored for
-    non-inferred columns (those in `col_types`).
+  Logical: Whether to try to automatically dictionary-encode string /
+  binary data (think `stringsAsFactors`). This setting is ignored for
+  non-inferred columns (those in `col_types`).
 
--   auto_dict_max_cardinality:
+- auto_dict_max_cardinality:
 
-    If `auto_dict_encode`, string/binary columns are dictionary-encoded
-    up to this number of unique values (default 50), after which it
-    switches to regular encoding.
+  If `auto_dict_encode`, string/binary columns are dictionary-encoded up
+  to this number of unique values (default 50), after which it switches
+  to regular encoding.
 
--   include_columns:
+- include_columns:
 
-    If non-empty, indicates the names of columns from the CSV file that
-    should be actually read and converted (in the vector's order).
+  If non-empty, indicates the names of columns from the CSV file that
+  should be actually read and converted (in the vector's order).
 
--   include_missing_columns:
+- include_missing_columns:
 
-    Logical: if `include_columns` is provided, should columns named in
-    it but not found in the data be included as a column of type
-    `null()`? The default (`FALSE`) means that the reader will instead
-    raise an error.
+  Logical: if `include_columns` is provided, should columns named in it
+  but not found in the data be included as a column of type
+  [`null()`](https://arrow.apache.org/docs/r/reference/data-type.md)?
+  The default (`FALSE`) means that the reader will instead raise an
+  error.
 
--   timestamp_parsers:
+- timestamp_parsers:
 
-    User-defined timestamp parsers. If more than one parser is
-    specified, the CSV conversion logic will try parsing values starting
-    from the beginning of this vector. Possible values are (a) `NULL`,
-    the default, which uses the ISO-8601 parser; (b) a character vector
-    of [strptime](https://rdrr.io/r/base/strptime.html) parse strings;
-    or (c) a list of
-    [TimestampParser](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
-    objects.
+  User-defined timestamp parsers. If more than one parser is specified,
+  the CSV conversion logic will try parsing values starting from the
+  beginning of this vector. Possible values are (a) `NULL`, the default,
+  which uses the ISO-8601 parser; (b) a character vector of
+  [strptime](https://rdrr.io/r/base/strptime.html) parse strings; or (c)
+  a list of
+  [TimestampParser](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+  objects.
 
--   decimal_point:
+- decimal_point:
 
-    Character to use for decimal point in floating point numbers.
-
-</div>
-
-<div class="section level2">
+  Character to use for decimal point in floating point numbers.
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 tf <- tempfile()
@@ -130,9 +110,3 @@ open_csv_dataset(tf, convert_options = csv_convert_options(null_values = c("", "
 #> 1 columns
 #> x: int64
 ```
-
-</div>
-
-</div>
-
-</div>

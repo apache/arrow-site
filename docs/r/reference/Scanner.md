@@ -1,79 +1,59 @@
-<div id="main" class="col-md-9" role="main">
-
 # Scan the contents of a dataset
-
-<div class="ref-description section level2">
 
 A `Scanner` iterates over a
 [Dataset](https://arrow.apache.org/docs/r/reference/Dataset.md)'s
 fragments and returns data according to given row filtering and column
 projection. A `ScannerBuilder` can help create one.
 
-</div>
-
-<div class="section level2">
-
 ## Factory
 
 `Scanner$create()` wraps the `ScannerBuilder` interface to make a
 `Scanner`. It takes the following arguments:
 
--   `dataset`: A `Dataset` or `arrow_dplyr_query` object, as returned by
-    the `dplyr` methods on `Dataset`.
+- `dataset`: A `Dataset` or `arrow_dplyr_query` object, as returned by
+  the `dplyr` methods on `Dataset`.
 
--   `projection`: A character vector of column names to select columns
-    or a named list of expressions
+- `projection`: A character vector of column names to select columns or
+  a named list of expressions
 
--   `filter`: A `Expression` to filter the scanned rows by, or `TRUE`
-    (default) to keep all rows.
+- `filter`: A `Expression` to filter the scanned rows by, or `TRUE`
+  (default) to keep all rows.
 
--   `use_threads`: logical: should scanning use multithreading? Default
-    `TRUE`
+- `use_threads`: logical: should scanning use multithreading? Default
+  `TRUE`
 
--   `...`: Additional arguments, currently ignored
-
-</div>
-
-<div class="section level2">
+- `...`: Additional arguments, currently ignored
 
 ## Methods
 
 `ScannerBuilder` has the following methods:
 
--   `$Project(cols)`: Indicate that the scan should only return columns
-    given by `cols`, a character vector of column names or a named list
-    of
-    [Expression](https://arrow.apache.org/docs/r/reference/Expression.md).
+- `$Project(cols)`: Indicate that the scan should only return columns
+  given by `cols`, a character vector of column names or a named list of
+  [Expression](https://arrow.apache.org/docs/r/reference/Expression.md).
 
--   `$Filter(expr)`: Filter rows by an
-    [Expression](https://arrow.apache.org/docs/r/reference/Expression.md).
+- `$Filter(expr)`: Filter rows by an
+  [Expression](https://arrow.apache.org/docs/r/reference/Expression.md).
 
--   `$UseThreads(threads)`: logical: should the scan use multithreading?
-    The method's default input is `TRUE`, but you must call the method
-    to enable multithreading because the scanner default is `FALSE`.
+- `$UseThreads(threads)`: logical: should the scan use multithreading?
+  The method's default input is `TRUE`, but you must call the method to
+  enable multithreading because the scanner default is `FALSE`.
 
--   `$BatchSize(batch_size)`: integer: Maximum row count of scanned
-    record batches, default is 32K. If scanned record batches are
-    overflowing memory then this method can be called to reduce their
-    size.
+- `$BatchSize(batch_size)`: integer: Maximum row count of scanned record
+  batches, default is 32K. If scanned record batches are overflowing
+  memory then this method can be called to reduce their size.
 
--   `$schema`: Active binding, returns the
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
-    of the Dataset
+- `$schema`: Active binding, returns the
+  [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md) of
+  the Dataset
 
--   `$Finish()`: Returns a `Scanner`
+- `$Finish()`: Returns a `Scanner`
 
 `Scanner` currently has a single method, `$ToTable()`, which evaluates
 the query and returns an Arrow
 [Table](https://arrow.apache.org/docs/r/reference/Table-class.md).
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # Set up directory for examples
@@ -129,9 +109,3 @@ scanner$ToRecordBatchReader()
 #> 
 #> See $metadata for additional Schema metadata
 ```
-
-</div>
-
-</div>
-
-</div>

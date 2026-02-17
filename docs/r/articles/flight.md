@@ -1,5 +1,3 @@
-<div id="main" class="col-md-9" role="main">
-
 # Connecting to a Flight server
 
 [Arrow
@@ -9,15 +7,13 @@ transport of large datasets over network interfaces, built as part of
 the Apache Arrow project. It allows for highly efficient data transfer
 by several means:
 
--   Flight removes the need for deserialization during data transfer.
--   Flight allows for parallel data streaming.
--   Flight employs optimizations designed to take advantage of Arrow’s
-    columnar format.
+- Flight removes the need for deserialization during data transfer.
+- Flight allows for parallel data streaming.
+- Flight employs optimizations designed to take advantage of Arrow’s
+  columnar format.
 
 The arrow package provides methods for connecting to Flight servers to
 send and receive data.
-
-<div class="section level2">
 
 ## Prerequisites
 
@@ -30,30 +26,20 @@ and requires both the
 Python PyArrow library to be installed. If you are using them for the
 first time you can install them like this:
 
-<div id="cb1" class="sourceCode">
-
 ``` r
 install.packages("reticulate")
 arrow::install_pyarrow()
 ```
 
-</div>
-
 See the [python integrations
 article](https://arrow.apache.org/docs/r/articles/python.md) for more
 details on setting up pyarrow.
-
-</div>
-
-<div class="section level2">
 
 ## Example
 
 The package includes methods for starting a Python-based Flight server,
 as well as methods for connecting to a Flight server running elsewhere.
 To illustrate both sides, in one R process we’ll start a demo server:
-
-<div id="cb2" class="sourceCode">
 
 ``` r
 library(arrow)
@@ -62,13 +48,9 @@ server <- demo_server$DemoFlightServer(port = 8089)
 server$serve()
 ```
 
-</div>
-
 We’ll leave that one running.
 
 In a different R process, let’s connect to it and put some data in it.
-
-<div id="cb3" class="sourceCode">
 
 ``` r
 library(arrow)
@@ -76,12 +58,8 @@ client <- flight_connect(port = 8089)
 flight_put(client, iris, path = "test_data/iris")
 ```
 
-</div>
-
 Now, in yet another R process, we can connect to the server and pull the
 data we put there:
-
-<div id="cb4" class="sourceCode">
 
 ``` r
 library(arrow)
@@ -100,31 +78,22 @@ client |>
 ## 3 virginica        6.9
 ```
 
-</div>
-
-Because `flight_get()` returns an Arrow data structure, you can directly
-pipe its result into a [dplyr](https://dplyr.tidyverse.org/) workflow.
-See the article on [data
+Because
+[`flight_get()`](https://arrow.apache.org/docs/r/reference/flight_get.md)
+returns an Arrow data structure, you can directly pipe its result into a
+[dplyr](https://dplyr.tidyverse.org/) workflow. See the article on [data
 wrangling](https://arrow.apache.org/docs/r/articles/data_wrangling.md)
 for more information on working with Arrow objects via a dplyr
 interface.
 
-</div>
-
-<div class="section level2">
-
 ## Further reading
 
--   The specification of the [Flight remote procedure call
-    protocol](https://arrow.apache.org/docs/format/Flight.html) is
-    listed on the Arrow project homepage
--   The Arrow C++ documentation contains a list of [best
-    practices](https://arrow.apache.org/docs/cpp/flight.html#best-practices)
-    for Arrow Flight.
--   A detailed worked example of an Arrow Flight server in Python is
-    provided in the [Apache Arrow Python
-    Cookbook](https://arrow.apache.org/cookbook/py/flight.html).
-
-</div>
-
-</div>
+- The specification of the [Flight remote procedure call
+  protocol](https://arrow.apache.org/docs/format/Flight.html) is listed
+  on the Arrow project homepage
+- The Arrow C++ documentation contains a list of [best
+  practices](https://arrow.apache.org/docs/cpp/flight.html#best-practices)
+  for Arrow Flight.
+- A detailed worked example of an Arrow Flight server in Python is
+  provided in the [Apache Arrow Python
+  Cookbook](https://arrow.apache.org/cookbook/py/flight.html).

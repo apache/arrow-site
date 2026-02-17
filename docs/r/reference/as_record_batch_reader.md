@@ -1,18 +1,8 @@
-<div id="main" class="col-md-9" role="main">
-
 # Convert an object to an Arrow RecordBatchReader
-
-<div class="ref-description section level2">
 
 Convert an object to an Arrow RecordBatchReader
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 as_record_batch_reader(x, ...)
@@ -42,44 +32,29 @@ as_record_batch_reader(x, ...)
 as_record_batch_reader(x, ...)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   x:
+- x:
 
-    An object to convert to a
-    [RecordBatchReader](https://arrow.apache.org/docs/r/reference/RecordBatchReader.md)
+  An object to convert to a
+  [RecordBatchReader](https://arrow.apache.org/docs/r/reference/RecordBatchReader.md)
 
--   ...:
+- ...:
 
-    Passed to S3 methods
+  Passed to S3 methods
 
--   schema:
+- schema:
 
-    The `schema()` that must match the schema returned by each call to
-    `x` when `x` is a function.
-
-</div>
-
-<div class="section level2">
+  The [`schema()`](https://arrow.apache.org/docs/r/reference/schema.md)
+  that must match the schema returned by each call to `x` when `x` is a
+  function.
 
 ## Value
 
 A
 [RecordBatchReader](https://arrow.apache.org/docs/r/reference/RecordBatchReader.md)
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 reader <- as_record_batch_reader(data.frame(col1 = 1, col2 = "two"))
@@ -91,9 +66,3 @@ reader$read_next_batch()
 #> 
 #> See $metadata for additional Schema metadata
 ```
-
-</div>
-
-</div>
-
-</div>

@@ -1,65 +1,34 @@
-<div id="main" class="col-md-9" role="main">
-
 # Create an Arrow Table
-
-<div class="ref-description section level2">
 
 Create an Arrow Table
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 arrow_table(..., schema = NULL)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   ...:
+- ...:
 
-    A `data.frame` or a named set of Arrays or vectors. If given a
-    mixture of data.frames and named vectors, the inputs will be
-    autospliced together (see examples). Alternatively, you can provide
-    a single Arrow IPC `InputStream`, `Message`, `Buffer`, or R `raw`
-    object containing a `Buffer`.
+  A `data.frame` or a named set of Arrays or vectors. If given a mixture
+  of data.frames and named vectors, the inputs will be autospliced
+  together (see examples). Alternatively, you can provide a single Arrow
+  IPC `InputStream`, `Message`, `Buffer`, or R `raw` object containing a
+  `Buffer`.
 
--   schema:
+- schema:
 
-    a
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md),
-    or `NULL` (the default) to infer the schema from the data in `...`.
-    When providing an Arrow IPC buffer, `schema` is required.
-
-</div>
-
-<div class="section level2">
+  a [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md),
+  or `NULL` (the default) to infer the schema from the data in `...`.
+  When providing an Arrow IPC buffer, `schema` is required.
 
 ## See also
 
-<div class="dont-index">
-
 [Table](https://arrow.apache.org/docs/r/reference/Table-class.md)
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 tbl <- arrow_table(name = rownames(mtcars), mtcars)
@@ -134,9 +103,3 @@ as.data.frame(tbl[4:8, c("gear", "hp", "wt")])
 #> 4    3 245 3.570
 #> 5    4  62 3.190
 ```
-
-</div>
-
-</div>
-
-</div>

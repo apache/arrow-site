@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # RecordBatchReader classes
-
-<div class="ref-description section level2">
 
 Apache Arrow defines two formats for [serializing data for interprocess
 communication
@@ -14,71 +10,51 @@ respectively.
 
 For guidance on how to use these classes, see the examples section.
 
-</div>
-
-<div class="section level2">
-
 ## Factory
 
 The `RecordBatchFileReader$create()` and
 `RecordBatchStreamReader$create()` factory methods instantiate the
 object and take a single argument, named according to the class:
 
--   `file` A character file name, raw vector, or Arrow file connection
-    object (e.g.
-    [RandomAccessFile](https://arrow.apache.org/docs/r/reference/InputStream.md)).
+- `file` A character file name, raw vector, or Arrow file connection
+  object (e.g.
+  [RandomAccessFile](https://arrow.apache.org/docs/r/reference/InputStream.md)).
 
--   `stream` A raw vector,
-    [Buffer](https://arrow.apache.org/docs/r/reference/Buffer-class.md),
-    or
-    [InputStream](https://arrow.apache.org/docs/r/reference/InputStream.md).
-
-</div>
-
-<div class="section level2">
+- `stream` A raw vector,
+  [Buffer](https://arrow.apache.org/docs/r/reference/Buffer-class.md),
+  or
+  [InputStream](https://arrow.apache.org/docs/r/reference/InputStream.md).
 
 ## Methods
 
--   `$read_next_batch()`: Returns a `RecordBatch`, iterating through the
-    Reader. If there are no further batches in the Reader, it returns
-    `NULL`.
+- `$read_next_batch()`: Returns a `RecordBatch`, iterating through the
+  Reader. If there are no further batches in the Reader, it returns
+  `NULL`.
 
--   `$schema`: Returns a
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
-    (active binding)
+- `$schema`: Returns a
+  [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
+  (active binding)
 
--   `$batches()`: Returns a list of `RecordBatch`es
+- `$batches()`: Returns a list of `RecordBatch`es
 
--   `$read_table()`: Collects the reader's `RecordBatch`es into a
-    [Table](https://arrow.apache.org/docs/r/reference/Table-class.md)
+- `$read_table()`: Collects the reader's `RecordBatch`es into a
+  [Table](https://arrow.apache.org/docs/r/reference/Table-class.md)
 
--   `$get_batch(i)`: For `RecordBatchFileReader`, return a particular
-    batch by an integer index.
+- `$get_batch(i)`: For `RecordBatchFileReader`, return a particular
+  batch by an integer index.
 
--   `$num_record_batches()`: For `RecordBatchFileReader`, see how many
-    batches are in the file.
-
-</div>
-
-<div class="section level2">
+- `$num_record_batches()`: For `RecordBatchFileReader`, see how many
+  batches are in the file.
 
 ## See also
 
-<div class="dont-index">
-
-`read_ipc_stream()` and `read_feather()` provide a much simpler
-interface for reading data from these formats and are sufficient for
-many use cases.
-
-</div>
-
-</div>
-
-<div class="section level2">
+[`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
+and
+[`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+provide a much simpler interface for reading data from these formats and
+are sufficient for many use cases.
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 tf <- tempfile()
@@ -117,9 +93,3 @@ all.equal(df, chickwts, check.attributes = FALSE)
 # but we do still need to close the file connection
 read_file_obj$close()
 ```
-
-</div>
-
-</div>
-
-</div>

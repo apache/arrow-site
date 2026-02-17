@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # Open a multi-file dataset
-
-<div class="ref-description section level2">
 
 Arrow Datasets allow you to query against data that has been split
 across multiple files. This sharding of data may indicate partitioning,
@@ -10,13 +6,7 @@ which can accelerate queries that only touch some partitions (files).
 Call `open_dataset()` to point to a directory of data files and return a
 `Dataset`, then use `dplyr` methods to query it.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 open_dataset(
@@ -31,154 +21,143 @@ open_dataset(
 )
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   sources:
+- sources:
 
-    One of:
+  One of:
 
-    -   a string path or URI to a directory containing data files
+  - a string path or URI to a directory containing data files
 
-    -   a
-        [FileSystem](https://arrow.apache.org/docs/r/reference/FileSystem.md)
-        that references a directory containing data files (such as what
-        is returned by `s3_bucket()`)
+  - a
+    [FileSystem](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+    that references a directory containing data files (such as what is
+    returned by
+    [`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md))
 
-    -   a string path or URI to a single file
+  - a string path or URI to a single file
 
-    -   a character vector of paths or URIs to individual data files
+  - a character vector of paths or URIs to individual data files
 
-    -   a list of `Dataset` objects as created by this function
+  - a list of `Dataset` objects as created by this function
 
-    -   a list of `DatasetFactory` objects as created by
-        `dataset_factory()`.
+  - a list of `DatasetFactory` objects as created by
+    [`dataset_factory()`](https://arrow.apache.org/docs/r/reference/dataset_factory.md).
 
-    When `sources` is a vector of file URIs, they must all use the same
-    protocol and point to files located in the same file system and
-    having the same format.
+  When `sources` is a vector of file URIs, they must all use the same
+  protocol and point to files located in the same file system and having
+  the same format.
 
--   schema:
+- schema:
 
-    [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
-    for the `Dataset`. If `NULL` (the default), the schema will be
-    inferred from the data sources.
+  [Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md)
+  for the `Dataset`. If `NULL` (the default), the schema will be
+  inferred from the data sources.
 
--   partitioning:
+- partitioning:
 
-    When `sources` is a directory path/URI, one of:
+  When `sources` is a directory path/URI, one of:
 
-    -   a `Schema`, in which case the file paths relative to `sources`
-        will be parsed, and path segments will be matched with the
-        schema fields.
+  - a `Schema`, in which case the file paths relative to `sources` will
+    be parsed, and path segments will be matched with the schema fields.
 
-    -   a character vector that defines the field names corresponding to
-        those path segments (that is, you're providing the names that
-        would correspond to a `Schema` but the types will be
-        autodetected)
+  - a character vector that defines the field names corresponding to
+    those path segments (that is, you're providing the names that would
+    correspond to a `Schema` but the types will be autodetected)
 
-    -   a `Partitioning` or `PartitioningFactory`, such as returned by
-        `hive_partition()`
+  - a `Partitioning` or `PartitioningFactory`, such as returned by
+    [`hive_partition()`](https://arrow.apache.org/docs/r/reference/hive_partition.md)
 
-    -   `NULL` for no partitioning
+  - `NULL` for no partitioning
 
-    The default is to autodetect Hive-style partitions unless
-    `hive_style = FALSE`. See the "Partitioning" section for details.
-    When `sources` is not a directory path/URI, `partitioning` is
-    ignored.
+  The default is to autodetect Hive-style partitions unless
+  `hive_style = FALSE`. See the "Partitioning" section for details. When
+  `sources` is not a directory path/URI, `partitioning` is ignored.
 
--   hive_style:
+- hive_style:
 
-    Logical: should `partitioning` be interpreted as Hive-style? Default
-    is `NA`, which means to inspect the file paths for Hive-style
-    partitioning and behave accordingly.
+  Logical: should `partitioning` be interpreted as Hive-style? Default
+  is `NA`, which means to inspect the file paths for Hive-style
+  partitioning and behave accordingly.
 
--   unify_schemas:
+- unify_schemas:
 
-    logical: should all data fragments (files, `Dataset`s) be scanned in
-    order to create a unified schema from them? If `FALSE`, only the
-    first fragment will be inspected for its schema. Use this fast path
-    when you know and trust that all fragments have an identical schema.
-    The default is `FALSE` when creating a dataset from a directory
-    path/URI or vector of file paths/URIs (because there may be many
-    files and scanning may be slow) but `TRUE` when `sources` is a list
-    of `Dataset`s (because there should be few `Dataset`s in the list
-    and their `Schema`s are already in memory).
+  logical: should all data fragments (files, `Dataset`s) be scanned in
+  order to create a unified schema from them? If `FALSE`, only the first
+  fragment will be inspected for its schema. Use this fast path when you
+  know and trust that all fragments have an identical schema. The
+  default is `FALSE` when creating a dataset from a directory path/URI
+  or vector of file paths/URIs (because there may be many files and
+  scanning may be slow) but `TRUE` when `sources` is a list of
+  `Dataset`s (because there should be few `Dataset`s in the list and
+  their `Schema`s are already in memory).
 
--   format:
+- format:
 
-    A
-    [FileFormat](https://arrow.apache.org/docs/r/reference/FileFormat.md)
-    object, or a string identifier of the format of the files in `x`.
-    This argument is ignored when `sources` is a list of `Dataset`
-    objects. Currently supported values:
+  A
+  [FileFormat](https://arrow.apache.org/docs/r/reference/FileFormat.md)
+  object, or a string identifier of the format of the files in `x`. This
+  argument is ignored when `sources` is a list of `Dataset` objects.
+  Currently supported values:
 
-    -   "parquet"
+  - "parquet"
 
-    -   "ipc"/"arrow"/"feather", all aliases for each other; for
-        Feather, note that only version 2 files are supported
+  - "ipc"/"arrow"/"feather", all aliases for each other; for Feather,
+    note that only version 2 files are supported
 
-    -   "csv"/"text", aliases for the same thing (because comma is the
-        default delimiter for text files
+  - "csv"/"text", aliases for the same thing (because comma is the
+    default delimiter for text files
 
-    -   "tsv", equivalent to passing `format = "text", delimiter = "\t"`
+  - "tsv", equivalent to passing `format = "text", delimiter = "\t"`
 
-    -   "json", for JSON format datasets Note: only newline-delimited
-        JSON (aka ND-JSON) datasets are currently supported Default is
-        "parquet", unless a `delimiter` is also specified, in which case
-        it is assumed to be "text".
+  - "json", for JSON format datasets Note: only newline-delimited JSON
+    (aka ND-JSON) datasets are currently supported Default is "parquet",
+    unless a `delimiter` is also specified, in which case it is assumed
+    to be "text".
 
--   factory_options:
+- factory_options:
 
-    list of optional FileSystemFactoryOptions:
+  list of optional FileSystemFactoryOptions:
 
-    -   `partition_base_dir`: string path segment prefix to ignore when
-        discovering partition information with DirectoryPartitioning.
-        Not meaningful (ignored with a warning) for HivePartitioning,
-        nor is it valid when providing a vector of file paths.
+  - `partition_base_dir`: string path segment prefix to ignore when
+    discovering partition information with DirectoryPartitioning. Not
+    meaningful (ignored with a warning) for HivePartitioning, nor is it
+    valid when providing a vector of file paths.
 
-    -   `exclude_invalid_files`: logical: should files that are not
-        valid data files be excluded? Default is `FALSE` because
-        checking all files up front incurs I/O and thus will be slower,
-        especially on remote filesystems. If false and there are invalid
-        files, there will be an error at scan time. This is the only
-        FileSystemFactoryOption that is valid for both when providing a
-        directory path in which to discover files and when providing a
-        vector of file paths.
+  - `exclude_invalid_files`: logical: should files that are not valid
+    data files be excluded? Default is `FALSE` because checking all
+    files up front incurs I/O and thus will be slower, especially on
+    remote filesystems. If false and there are invalid files, there will
+    be an error at scan time. This is the only FileSystemFactoryOption
+    that is valid for both when providing a directory path in which to
+    discover files and when providing a vector of file paths.
 
-    -   `selector_ignore_prefixes`: character vector of file prefixes to
-        ignore when discovering files in a directory. If invalid files
-        can be excluded by a common filename prefix this way, you can
-        avoid the I/O cost of `exclude_invalid_files`. Not valid when
-        providing a vector of file paths (but if you're providing the
-        file list, you can filter invalid files yourself).
+  - `selector_ignore_prefixes`: character vector of file prefixes to
+    ignore when discovering files in a directory. If invalid files can
+    be excluded by a common filename prefix this way, you can avoid the
+    I/O cost of `exclude_invalid_files`. Not valid when providing a
+    vector of file paths (but if you're providing the file list, you can
+    filter invalid files yourself).
 
--   ...:
+- ...:
 
-    additional arguments passed to `dataset_factory()` when `sources` is
-    a directory path/URI or vector of file paths/URIs, otherwise
-    ignored. These may include `format` to indicate the file format, or
-    other format-specific options (see `read_csv_arrow()`,
-    `read_parquet()` and `read_feather()` on how to specify these).
-
-</div>
-
-<div class="section level2">
+  additional arguments passed to
+  [`dataset_factory()`](https://arrow.apache.org/docs/r/reference/dataset_factory.md)
+  when `sources` is a directory path/URI or vector of file paths/URIs,
+  otherwise ignored. These may include `format` to indicate the file
+  format, or other format-specific options (see
+  [`read_csv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md),
+  [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md)
+  and
+  [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  on how to specify these).
 
 ## Value
 
 A [Dataset](https://arrow.apache.org/docs/r/reference/Dataset.md) R6
 object. Use `dplyr` methods on it to query the data, or call
-`$NewScan()` to construct a query directly.
-
-</div>
-
-<div class="section level2">
+[`$NewScan()`](https://arrow.apache.org/docs/r/reference/Scanner.md) to
+construct a query directly.
 
 ## Partitioning
 
@@ -195,16 +174,16 @@ files entirely.
 Arrow supports reading partition information from file paths in two
 forms:
 
--   "Hive-style", deriving from the Apache Hive project and common to
-    some database systems. Partitions are encoded as "key=value" in path
-    segments, such as `"year=2019/month=1/file.parquet"`. While they may
-    be awkward as file names, they have the advantage of being
-    self-describing.
+- "Hive-style", deriving from the Apache Hive project and common to some
+  database systems. Partitions are encoded as "key=value" in path
+  segments, such as `"year=2019/month=1/file.parquet"`. While they may
+  be awkward as file names, they have the advantage of being
+  self-describing.
 
--   "Directory" partitioning, which is Hive without the key names, like
-    `"2019/01/file.parquet"`. In order to use these, we need know at
-    least what names to give the virtual columns that come from the path
-    segments.
+- "Directory" partitioning, which is Hive without the key names, like
+  `"2019/01/file.parquet"`. In order to use these, we need know at least
+  what names to give the virtual columns that come from the path
+  segments.
 
 The default behavior in `open_dataset()` is to inspect the file paths
 contained in the provided directory, and if they look like Hive-style,
@@ -213,12 +192,17 @@ file paths, you do not need to provide anything in the `partitioning`
 argument to `open_dataset()` to use them. If you do provide a character
 vector of partition column names, they will be ignored if they match
 what is detected, and if they don't match, you'll get an error. (If you
-want to rename partition columns, do that using `select()` or `rename()`
-after opening the dataset.). If you provide a `Schema` and the names
-match what is detected, it will use the types defined by the Schema. In
-the example file path above, you could provide a Schema to specify that
-"month" should be `int8()` instead of the `int32()` it will be parsed as
-by default.
+want to rename partition columns, do that using
+[`select()`](https://dplyr.tidyverse.org/reference/select.html) or
+[`rename()`](https://dplyr.tidyverse.org/reference/rename.html) after
+opening the dataset.). If you provide a `Schema` and the names match
+what is detected, it will use the types defined by the Schema. In the
+example file path above, you could provide a Schema to specify that
+"month" should be
+[`int8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
+instead of the
+[`int32()`](https://arrow.apache.org/docs/r/reference/data-type.md) it
+will be parsed as by default.
 
 If your file paths do not appear to be Hive-style, or if you pass
 `hive_style = FALSE`, the `partitioning` argument will be used to create
@@ -227,26 +211,12 @@ create partitions; you may instead provide a `Schema` to map those names
 to desired column types, as described above. If neither are provided, no
 partitioning information will be taken from the file paths.
 
-</div>
-
-<div class="section level2">
-
 ## See also
-
-<div class="dont-index">
 
 [datasets
 article](https://arrow.apache.org/docs/r/articles/dataset.html)
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 # Set up directory for examples
@@ -365,9 +335,3 @@ open_dataset(tf3, partitioning = schema(Month = int8(), Day = int8()))
 #> 
 #> See $metadata for additional Schema metadata
 ```
-
-</div>
-
-</div>
-
-</div>

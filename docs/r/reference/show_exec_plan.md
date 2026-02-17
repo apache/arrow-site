@@ -1,54 +1,33 @@
-<div id="main" class="col-md-9" role="main">
-
 # Show the details of an Arrow Execution Plan
-
-<div class="ref-description section level2">
 
 This is a function which gives more details about the logical query plan
 that will be executed when evaluating an `arrow_dplyr_query` object. It
 calls the C++ `ExecPlan` object's print method. Functionally, it is
-similar to `dplyr::explain()`. This function is used as the
-`dplyr::explain()` and `dplyr::show_query()` methods.
-
-</div>
-
-<div class="section level2">
+similar to
+[`dplyr::explain()`](https://dplyr.tidyverse.org/reference/explain.html).
+This function is used as the
+[`dplyr::explain()`](https://dplyr.tidyverse.org/reference/explain.html)
+and
+[`dplyr::show_query()`](https://dplyr.tidyverse.org/reference/explain.html)
+methods.
 
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 show_exec_plan(x)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   x:
+- x:
 
-    an `arrow_dplyr_query` to print the `ExecPlan` for.
-
-</div>
-
-<div class="section level2">
+  an `arrow_dplyr_query` to print the `ExecPlan` for.
 
 ## Value
 
 `x`, invisibly.
 
-</div>
-
-<div class="section level2">
-
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 library(dplyr)
@@ -63,9 +42,3 @@ mtcars |>
 #>     1:FilterNode{filter=(mpg > 20)}
 #>       0:TableSourceNode{}
 ```
-
-</div>
-
-</div>
-
-</div>

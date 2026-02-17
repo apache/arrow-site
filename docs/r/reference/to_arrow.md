@@ -1,63 +1,37 @@
-<div id="main" class="col-md-9" role="main">
-
 # Create an Arrow object from a DuckDB connection
-
-<div class="ref-description section level2">
 
 This can be used in pipelines that pass data back and forth between
 Arrow and DuckDB.
 
-</div>
-
-<div class="section level2">
-
 ## Usage
-
-<div class="sourceCode">
 
 ``` r
 to_arrow(.data)
 ```
 
-</div>
-
-</div>
-
-<div class="section level2">
-
 ## Arguments
 
--   .data:
+- .data:
 
-    the object to be converted
-
-</div>
-
-<div class="section level2">
+  the object to be converted
 
 ## Value
 
 A `RecordBatchReader`.
 
-</div>
-
-<div class="section level2">
-
 ## Details
 
-Note that you can only call `collect()` or `compute()` on the result of
-this function once. To work around this limitation, you should either
-only call `collect()` as the final step in a pipeline or call
-`as_arrow_table()` on the result to materialize the entire Table
-in-memory.
-
-</div>
-
-<div class="section level2">
+Note that you can only call
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) or
+[`compute()`](https://dplyr.tidyverse.org/reference/compute.html) on the
+result of this function once. To work around this limitation, you should
+either only call
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) as the
+final step in a pipeline or call
+[`as_arrow_table()`](https://arrow.apache.org/docs/r/reference/as_arrow_table.md)
+on the result to materialize the entire Table in-memory.
 
 ## Examples
-
-<div class="sourceCode">
 
 ``` r
 library(dplyr)
@@ -78,9 +52,3 @@ ds |>
 #> 2     6     19.7
 #> 3     8     15.1
 ```
-
-</div>
-
-</div>
-
-</div>

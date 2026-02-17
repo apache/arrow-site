@@ -1,8 +1,4 @@
-<div id="main" class="col-md-9" role="main">
-
 # Arrow expressions
-
-<div class="ref-description section level2">
 
 `Expression`s are used to define filter logic for passing to a
 [Dataset](https://arrow.apache.org/docs/r/reference/Dataset.md)
@@ -25,7 +21,3 @@ Scalar inputs in `...` will be attempted to be cast to the common type
 of the `Expression`s in the call so that the types of the columns in the
 `Dataset` are preserved and not unnecessarily upcast, which may be
 expensive.
-
-</div>
-
-</div>
