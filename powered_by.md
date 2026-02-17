@@ -153,6 +153,11 @@ short description of your use case.
   written in Rust.  It is the future core of InfluxDB; supporting
   industry standard SQL, InfluxQL, and Flux. IOx uses Apache Arrow as its in-memory
   format, Apache Parquet as its persistence format and Apache Arrow Flight for RPC.
+* **[IOMETE][60]:** IOMETE, a sovereign data lakehouse for AI and analytics, embeds
+  an Arrow Flight SQL server within its Apache Spark-based query engine, converting
+  results to Arrow columnar format and streaming them to clients via the Flight RPC
+  protocol. IOMETE provides high-throughput SQL access for BI tools and applications
+  through standard JDBC and ADBC interfaces.
 * **[Kaskada][49]:** An open source event processing engine written in Rust and
   built on Apache Arrow.
 * **[libgdf][14]:** A C library of CUDA-based analytics functions and GPU IPC
@@ -296,3 +301,4 @@ short description of your use case.
 [57]: https://squey.org
 [58]: https://www.weisang.com/
 [59]: https://github.com/rdcn-link/dftp-dacp
+[60]: https://iomete.com
