@@ -41,6 +41,12 @@ A `tibble` if `as_data_frame` is `TRUE` (the default), or an Arrow
 [Table](https://arrow.apache.org/docs/r/reference/Table-class.md)
 otherwise
 
+## Untrusted data
+
+If reading from an untrusted source, you can validate the data by
+reading with `as_data_frame = FALSE` and calling `$ValidateFull()` on
+the Table before processing.
+
 ## See also
 
 [`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)

@@ -1,8 +1,12 @@
 # Changelog
 
-## arrow 23.0.0.9000
+## arrow 23.0.1.9000
+
+## arrow 23.0.1
 
 ## arrow 23.0.0
+
+CRAN release: 2026-01-23
 
 ### New features
 
@@ -35,6 +39,8 @@
 
 ## arrow 22.0.0.1
 
+CRAN release: 2025-12-23
+
 ### Minor improvements and fixes
 
 - Turn off GCS support by default; bundle if enabled
@@ -45,6 +51,8 @@
   ([\#48011](https://github.com/apache/arrow/issues/48011))
 
 ## arrow 22.0.0
+
+CRAN release: 2025-10-29
 
 ### New features
 
@@ -60,6 +68,8 @@
 
 ## arrow 21.0.0.1
 
+CRAN release: 2025-08-18
+
 ### Minor improvements and fixes
 
 - Patch bundled version of Thrift to prevent CRAN check failures
@@ -67,6 +77,8 @@
   [\#47286](https://github.com/apache/arrow/issues/47286))
 
 ## arrow 21.0.0
+
+CRAN release: 2025-07-24
 
 ### New features
 
@@ -111,12 +123,16 @@
 
 ## arrow 20.0.0.2
 
+CRAN release: 2025-05-26
+
 ### Minor improvements and fixes
 
 - Updated internal C++ code to comply with CRAN’s gcc-UBSAN checks
   ([\#46394](https://github.com/apache/arrow/issues/46394))
 
 ## arrow 20.0.0
+
+CRAN release: 2025-05-10
 
 ### Minor improvements and fixes
 
@@ -131,6 +147,8 @@
 
 ## arrow 19.0.1.1
 
+CRAN release: 2025-04-08
+
 ### Minor improvements and fixes
 
 - Updated internal code to comply with new CRAN requirements on non-API
@@ -139,6 +157,8 @@
   ([\#45987](https://github.com/apache/arrow/issues/45987))
 
 ## arrow 19.0.1
+
+CRAN release: 2025-02-26
 
 This release primarily updates the underlying Arrow C++ version used by
 the package to version 19.0.1 and includes all changes from the 19.0.0
@@ -151,6 +171,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 [changelog](https://arrow.apache.org/release/19.0.1.html#changelog).
 
 ## arrow 18.1.0
+
+CRAN release: 2024-12-05
 
 ### Minor improvements and fixes
 
@@ -170,6 +192,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
   ([\#43172](https://github.com/apache/arrow/issues/43172))
 
 ## arrow 17.0.0
+
+CRAN release: 2024-08-17
 
 ### New features
 
@@ -214,6 +238,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 
 ## arrow 16.1.0
 
+CRAN release: 2024-05-25
+
 ### New features
 
 - Streams can now be written to socket connections
@@ -237,6 +263,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
   [\#40232](https://github.com/apache/arrow/issues/40232))
 
 ## arrow 15.0.1
+
+CRAN release: 2024-03-12
 
 ### New features
 
@@ -293,6 +321,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 
 ## arrow 14.0.2.1
 
+CRAN release: 2024-02-23
+
 ### Minor improvements and fixes
 
 - Check for internet access when building from source and fallback to a
@@ -324,6 +354,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 
 ## arrow 14.0.0.2
 
+CRAN release: 2023-12-02
+
 ### Minor improvements and fixes
 
 - Fixed the printf syntax to align with format checking
@@ -350,6 +382,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 
 ## arrow 14.0.0.1
 
+CRAN release: 2023-11-24
+
 ### Minor improvements and fixes
 
 - Add more debug output for build failures
@@ -360,6 +394,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
   ([\#38754](https://github.com/apache/arrow/issues/38754))
 
 ## arrow 14.0.0
+
+CRAN release: 2023-11-16
 
 ### New features
 
@@ -429,10 +465,14 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 
 ## arrow 13.0.0.1
 
+CRAN release: 2023-09-22
+
 - Remove reference to legacy timezones to prevent CRAN check failures
   ([\#37671](https://github.com/apache/arrow/issues/37671))
 
 ## arrow 13.0.0
+
+CRAN release: 2023-08-30
 
 ### Breaking changes
 
@@ -516,12 +556,16 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 
 ## arrow 12.0.1.1
 
+CRAN release: 2023-07-18
+
 - Update a package version reference to be text only instead of numeric
   due to CRAN update requiring this
   ([\#36353](https://github.com/apache/arrow/issues/36353),
   [\#36364](https://github.com/apache/arrow/issues/36364))
 
 ## arrow 12.0.1
+
+CRAN release: 2023-06-15
 
 - Update the version of the date library vendored with Arrow C++ library
   for compatibility with tzdb 0.4.0
@@ -532,6 +576,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
   [\#35308](https://github.com/apache/arrow/issues/35308)).
 
 ## arrow 12.0.0
+
+CRAN release: 2023-05-05
 
 ### New features
 
@@ -630,6 +676,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 
 ## arrow 11.0.0.3
 
+CRAN release: 2023-03-08
+
 ### Minor improvements and fixes
 
 - [`open_csv_dataset()`](https://arrow.apache.org/docs/r/reference/open_delim_dataset.md)
@@ -640,6 +688,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
   ([\#34369](https://github.com/apache/arrow/issues/34369))
 
 ## arrow 11.0.0.2
+
+CRAN release: 2023-02-12
 
 ### Breaking changes
 
@@ -759,6 +809,8 @@ post](https://arrow.apache.org/blog/2025/02/16/19.0.1-release/) and
 
 ## arrow 10.0.1
 
+CRAN release: 2022-12-06
+
 Minor improvements and fixes:
 
 - Fixes for failing test after lubridate 1.9 release
@@ -770,6 +822,8 @@ Minor improvements and fixes:
   ([\#14484](https://github.com/apache/arrow/issues/14484))
 
 ## arrow 10.0.0
+
+CRAN release: 2022-10-26
 
 ### Arrow dplyr queries
 
@@ -871,6 +925,8 @@ As of version 10.0.0, `arrow` requires C++17 to build. This means that:
   system defaults.
 
 ## arrow 9.0.0
+
+CRAN release: 2022-08-10
 
 ### Arrow dplyr queries
 
@@ -1022,6 +1078,8 @@ As of version 10.0.0, `arrow` requires C++17 to build. This means that:
   ([\#13484](https://github.com/apache/arrow/issues/13484))
 
 ## arrow 8.0.0
+
+CRAN release: 2022-05-09
 
 ### Enhancements to dplyr and datasets
 
@@ -1184,6 +1242,8 @@ Arrow arrays and tables can be easily concatenated:
 
 ## arrow 7.0.0
 
+CRAN release: 2022-02-10
+
 ### Enhancements to dplyr and datasets
 
 - Additional [lubridate](https://lubridate.tidyverse.org) features:
@@ -1280,6 +1340,8 @@ Arrow arrays and tables can be easily concatenated:
   transitively, has dropped support for it.
 
 ## arrow 6.0.1
+
+CRAN release: 2021-11-20
 
 - Joins now support inclusion of dictionary columns, and multiple
   crashes have been fixed
@@ -1501,10 +1563,14 @@ DuckDB, then evaluate the rest in Arrow.
 
 ## arrow 5.0.0.2
 
+CRAN release: 2021-09-05
+
 This patch version contains fixes for some sanitizer and compiler
 warnings.
 
 ## arrow 5.0.0
+
+CRAN release: 2021-07-29
 
 ### More dplyr
 
@@ -1615,11 +1681,15 @@ warnings.
 
 ## arrow 4.0.1
 
+CRAN release: 2021-05-28
+
 - Resolved a few bugs in new string compute kernels
   ([\#10320](https://github.com/apache/arrow/issues/10320),
   [\#10287](https://github.com/apache/arrow/issues/10287))
 
 ## arrow 4.0.0.1
+
+CRAN release: 2021-05-10
 
 - The mimalloc memory allocator is the default memory allocator when
   using a static source build of the package on Linux. This is because
@@ -1634,6 +1704,8 @@ warnings.
   resolved.
 
 ## arrow 4.0.0
+
+CRAN release: 2021-04-27
 
 ### dplyr methods
 
@@ -1804,6 +1876,8 @@ verb:
 
 ## arrow 3.0.0
 
+CRAN release: 2021-01-27
+
 ### Python and Flight
 
 - Flight methods
@@ -1896,6 +1970,8 @@ verb:
   correctly identified, please report an issue there.
 
 ## arrow 2.0.0
+
+CRAN release: 2020-10-20
 
 ### Datasets
 
@@ -1998,6 +2074,8 @@ for an overview.
 
 ## arrow 1.0.1
 
+CRAN release: 2020-08-28
+
 ### Bug fixes
 
 - Filtering a Dataset that has multiple partition keys using an `%in%`
@@ -2015,6 +2093,8 @@ for an overview.
   `CMAKE` environment variable
 
 ## arrow 1.0.0
+
+CRAN release: 2020-07-25
 
 ### Arrow format conversion
 
@@ -2102,6 +2182,8 @@ for an overview.
 
 ## arrow 0.17.1
 
+CRAN release: 2020-05-19
+
 - Updates for compatibility with `dplyr` 1.0
 - [`reticulate::r_to_py()`](https://rstudio.github.io/reticulate/reference/r-py-conversion.html)
   conversion now correctly works automatically, without having to call
@@ -2109,6 +2191,8 @@ for an overview.
 - Assorted bug fixes in the C++ library around Parquet reading
 
 ## arrow 0.17.0
+
+CRAN release: 2020-04-21
 
 ### Feather v2
 
@@ -2197,6 +2281,8 @@ for details.
 
 ## arrow 0.16.0.2
 
+CRAN release: 2020-02-14
+
 - [`install_arrow()`](https://arrow.apache.org/docs/r/reference/install_arrow.md)
   now installs the latest release of `arrow`, including Linux
   dependencies, either for CRAN releases or for development builds (if
@@ -2217,6 +2303,8 @@ for details.
   [@michaelchirico](https://github.com/michaelchirico))
 
 ## arrow 0.16.0
+
+CRAN release: 2020-02-09
 
 ### Multi-file datasets
 
@@ -2289,10 +2377,14 @@ for details.
 
 ## arrow 0.15.1
 
+CRAN release: 2019-11-04
+
 - This patch release includes bugfixes in the C++ library around
   dictionary types and Parquet reading.
 
 ## arrow 0.15.0
+
+CRAN release: 2019-10-07
 
 ### Breaking changes
 
@@ -2362,6 +2454,8 @@ for details.
   [\#5201](https://github.com/apache/arrow/issues/5201))
 
 ## arrow 0.14.1
+
+CRAN release: 2019-08-05
 
 Initial CRAN release of the `arrow` package. Key features include:
 

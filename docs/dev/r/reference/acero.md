@@ -1,6 +1,6 @@
 # Functions available in Arrow dplyr queries
 
-The `arrow` package contains methods for 37 `dplyr` table functions,
+The `arrow` package contains methods for 38 `dplyr` table functions,
 many of which are "verbs" that do transformations to one or more tables.
 The package also has mappings of 224 R functions to the corresponding
 functions in the Arrow compute library. These allow you to write code
@@ -39,6 +39,8 @@ To run the query, call either `compute()`, which returns an `arrow`
 - [`explain()`](https://dplyr.tidyverse.org/reference/explain.html)
 
 - [`filter()`](https://dplyr.tidyverse.org/reference/filter.html)
+
+- [`filter_out()`](https://dplyr.tidyverse.org/reference/filter.html)
 
 - [`full_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
   the `copy` argument is ignored
