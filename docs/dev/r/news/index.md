@@ -4,6 +4,16 @@
 
 ## arrow 23.0.1
 
+### Minor improvements and fixes
+
+- Fix C++20 compatibility issue on macOS
+  ([\#49221](https://github.com/apache/arrow/issues/49221)).
+- Turn off GCS support by default on macOS; see
+  [`vignette("install", package = "arrow")`](https://arrow.apache.org/docs/r/articles/install.md)
+  for details on enabling it
+  ([\#49068](https://github.com/apache/arrow/issues/49068),
+  [\#48995](https://github.com/apache/arrow/issues/48995)).
+
 ## arrow 23.0.0
 
 CRAN release: 2026-01-23
