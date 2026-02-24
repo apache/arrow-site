@@ -4,6 +4,8 @@
 
 ## arrow 23.0.1
 
+CRAN release: 2026-02-22
+
 ### Minor improvements and fixes
 
 - Fix C++20 compatibility issue on macOS
