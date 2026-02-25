@@ -86,6 +86,12 @@ short description of your use case.
   over the Apache Arrow Flight protocol and defines a unified Streaming DataFrame (SDF) model,
   which acts as a high-performance abstraction for accessing
   and processing both structured and unstructured data. 
+* **[Daft][61]:** A high-performance data engine for AI and multimodal
+  workloads, built to process images, audio, video, and structured data at
+  scale. Daft uses Apache Arrow as its in-memory columnar format with a
+  vectorized execution engine written in Rust. It reads and writes Parquet
+  files via Arrow, uses Arrow Flight for distributed shuffle, and supports
+  Python interop through the Arrow PyCapsule interface.
 * **[Dask][15]:** Python library for parallel and distributed execution of
   dynamic task graphs. Dask supports using pyarrow for accessing Parquet
   files
@@ -302,3 +308,4 @@ short description of your use case.
 [58]: https://www.weisang.com/
 [59]: https://github.com/rdcn-link/dftp-dacp
 [60]: https://iomete.com
+[61]: https://github.com/Eventual-Inc/Daft
