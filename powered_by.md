@@ -91,7 +91,8 @@ short description of your use case.
   scale. Daft uses Apache Arrow as its in-memory columnar format with a
   vectorized execution engine written in Rust. It reads and writes Parquet
   files via Arrow, uses Arrow Flight for distributed shuffle, and supports
-  authoring custom catalogs, functions, and tables (source+sink) in Python.
+  authoring custom catalogs, functions, and tables (source and sink) in
+  Python.
 * **[Dask][15]:** Python library for parallel and distributed execution of
   dynamic task graphs. Dask supports using pyarrow for accessing Parquet
   files
