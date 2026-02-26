@@ -21,6 +21,7 @@ write_dataset(
   min_rows_per_group = 0L,
   max_rows_per_group = bitwShiftL(1, 20),
   create_directory = TRUE,
+  preserve_order = FALSE,
   ...
 )
 ```
@@ -124,7 +125,11 @@ write_dataset(
   whether to create the directories written into. Requires appropriate
   permissions on the storage backend. If set to FALSE, directories are
   assumed to be already present if writing on a classic hierarchical
-  filesystem. Default is TRUE
+  filesystem. Default is TRUE.
+
+- preserve_order:
+
+  Preserve the order of the rows.
 
 - ...:
 

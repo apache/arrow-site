@@ -24,7 +24,8 @@ write_delim_dataset(
   delim = ",",
   na = "",
   eol = "\n",
-  quote = c("needed", "all", "none")
+  quote = c("needed", "all", "none"),
+  preserve_order = FALSE
 )
 
 write_csv_dataset(
@@ -44,7 +45,8 @@ write_csv_dataset(
   delim = ",",
   na = "",
   eol = "\n",
-  quote = c("needed", "all", "none")
+  quote = c("needed", "all", "none"),
+  preserve_order = FALSE
 )
 
 write_tsv_dataset(
@@ -63,7 +65,8 @@ write_tsv_dataset(
   batch_size = 1024L,
   na = "",
   eol = "\n",
-  quote = c("needed", "all", "none")
+  quote = c("needed", "all", "none"),
+  preserve_order = FALSE
 )
 ```
 
@@ -195,6 +198,10 @@ write_tsv_dataset(
     containing quotes ("), cell delimiters (,) or line endings (\r, \n),
     (following RFC4180). If values contain these characters, an error is
     caused when attempting to write.
+
+- preserve_order:
+
+  Preserve the order of the rows.
 
 ## Value
 
