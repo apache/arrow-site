@@ -356,18 +356,18 @@ sw |>
 ```
 
     ## # A tibble: 28 x 4
-    ##    name            height  mass hair_color
-    ##    <chr>            <int> <dbl> <chr>     
-    ##  1 Luke Skywalker     172  77   blond     
-    ##  2 Finis Valorum      170  NA   blond     
-    ##  3 Watto              137  NA   black     
-    ##  4 Shmi Skywalker     163  NA   black     
-    ##  5 Eeth Koth          171  NA   black     
-    ##  6 Luminara Unduli    170  56.2 black     
-    ##  7 Barriss Offee      166  50   black     
-    ##  8 R4-P17              96  NA   none      
-    ##  9 Lobot              175  79   none      
-    ## 10 Ackbar             180  83   none      
+    ##    name         height  mass hair_color
+    ##    <chr>         <int> <dbl> <chr>     
+    ##  1 R4-P17           96    NA none      
+    ##  2 Lobot           175    79 none      
+    ##  3 Ackbar          180    83 none      
+    ##  4 Nien Nunb       160    68 none      
+    ##  5 Sebulba         112    40 none      
+    ##  6 Bib Fortuna     180    NA none      
+    ##  7 Ayla Secura     178    55 none      
+    ##  8 Ratts Tyerel     79    15 none      
+    ##  9 Dud Bolt         94    45 none      
+    ## 10 Gasgano         122    NA none      
     ## # i 18 more rows
 
 ## Further reading
