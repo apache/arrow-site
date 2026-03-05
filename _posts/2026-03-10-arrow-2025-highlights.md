@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Community Highlights 2025"
-date: "2026-02-27 00:00:00"
+date: "2026-03-04 00:00:00"
 author: pmc
 categories: [arrow]
 ---
@@ -63,30 +63,30 @@ his first contribution and helped on the Python packaging side further on.
 
 #### Notable New Contributors in apache/arrow for 2025 are:
 
-| Author | # of prs | # of comments on prs | # of pr reviews | # of line changes (+ and -) |
-|---|---|---|---|---|
-| alinaliBQ | 36 | 505 | 332 | 15754 |
-| andishgar | 19 | 438 | 304 | 2926 |
-| AntoinePrv | 8 | 440 | 318 | 79257 |
-| rmnskb | 7 | 123 | 56 | 550 |
-| justing-bq | 4 | 93 | 76 | 12607 |
+| Author | # of prs | # of line changes (+ and -) |
+|---|---|---|
+| alinaliBQ | 36 | 15754 |
+| andishgar | 19 | 2926 |
+| AntoinePrv | 8 | 79257 |
+| rmnskb | 7 | 550 |
+| justing-bq | 4 | 12607 |
 
 #### Notable New Contributors in apache/arrow-rs for 2025 are:
 
-| Author | # of prs | # of comments on prs | # of pr reviews | # of line changes (+ and -) |
-|---|---|---|---|---|
-| scovich | 50 | 663 | 444 | 21006 |
-| jecsand838 | 38 | 771 | 665 | 26753 |
-| friendlymatthew | 33 | 550 | 399 | 7203 |
-| rambleraptor | 4 | 57 | 32 | 333 |
-| sdf-jkl | 4 | 43 | 34 | 388 |
+| Author | # of prs | # of line changes (+ and -) |
+|---|---|---|
+| scovich | 50 | 21006 |
+| jecsand838 | 38 | 26753 |
+| friendlymatthew | 33 | 7203 |
+| rambleraptor | 4 | 333 |
+| sdf-jkl | 4 | 388 |
 
 #### Notable New Contributors in apache/arrow-go for 2025 are:
 
-| Author | # of prs | # of comments on prs | # of pr reviews | # of line changes (+ and -) |
-|---|---|---|---|---|
-| Mandukhai-Alimaa | 6 | 16 | 13 | 1392 |
-| hamilton-earthscope | 5 | 13 | 7 | 2998 |
+| Author | # of prs | # of line changes (+ and -) |
+|---|---|---|
+| Mandukhai-Alimaa | 6 | 1392 |
+| hamilton-earthscope | 5 | 2998 |
 
 
 ## Release, Packaging and CI
@@ -104,24 +104,29 @@ to [kou](https://github.com/kou) and [raulcd](https://github.com/raulcd).
 Notable contributions worth mentioning are enhanced release automation and
 reproducible builds for sources, migrating remaining AppVeyor and Azure jobs
 to GitHub actions, improving dev experience with more pre-commit checks instead
-of custom archery linting.
+of custom made linting tools.
 
-Moving last implementations out of the main repository (apache/arrow on GitHub)
+Moving some implementations out of the main repository (apache/arrow on GitHub)
 helped with easier releases and maintenance of the main repository and also of
 separate language implementations. The current arrow repo now holds the format
 specification, C++ implementation together with all the bindings to it (Python, R, Ruby
-and C GLib). Other languages now live in their own apache repos namely apache/arrow-java,
-apache/arrow-js, apache/arrow-rs, apache/arrow-go, apache/arrow-dotnet and apache/arrow-swift.
+and C GLib). Other languages now live in their own apache repos namely
+[apache/arrow-java](https://github.com/apache/arrow-java),
+[apache/arrow-js](https://github.com/apache/arrow-js),
+[apache/arrow-rs](https://github.com/apache/arrow-rs),
+[apache/arrow-go](https://github.com/apache/arrow-go),
+[apache/arrow-dotnet](https://github.com/apache/arrow-dotnet) and
+[apache/arrow-swift](https://github.com/apache/arrow-swift).
 
 #### Notable Contributors in apache/arrow for 2025 are:
 
-| Author | # of prs | # of comments on prs | # of pr reviews | # of line changes (+ and -) |
-|---|---|---|---|---|
-| kou | 221 | 1542 | 325 | 141015 |
-| AntoinePrv | 8 | 440 | 318 | 79257 |
-| raulcd | 110 | 1835 | 682 | 46645 |
-| pitrou | 101 | 1212 | 468 | 36585 |
-| jbonofre | 1 | 251 | 181 | 20061 |
+| Author | # of prs | # of line changes (+ and -) |
+|---|---|---|
+| kou | 221 | 141015 |
+| AntoinePrv | 8 | 79257 |
+| raulcd | 110 | 46645 |
+| pitrou | 101 | 36585 |
+| jbonofre | 1 | 20061 |
 
 
 #### Notable Components in apache/arrow for 2025 are:
@@ -176,7 +181,7 @@ by [neilechao](https://github.com/neilechao) and
 An important feature added has also been Content-Defined Chunking
 which improves deduplication of Parquet files with mostly identical
 contents, by choosing data page boundaries based on actual contents
-rather than a number of values. This work has been done by
+rather than a number of values [^2]. This work has been done by
 [kszucs](https://github.com/kszucs).
 
 There have been improvements in the Parquet encryption support for
@@ -196,7 +201,7 @@ this over the finish line. The work has been championed by
 ### Rust
 
 Arrow Rust community invested heavily in the Rust parquet reader for
-which they created several blog posts [^2], [^3]. The work has been
+which they created several blog posts [^3], [^4]. The work has been
 championed by [alamb](https://github.com/alamb) and
 [etseidl](https://github.com/etseidl).
 
@@ -251,7 +256,7 @@ to continue collaborating and growing together!
 <br>
 
 The Notebooks with the analysis for this blog post can be found
-in [^4].
+in [^5].
 
 Note not all language implementations are mentioned. Some due to being
 moved into a separate repository in 2025 resulting in missing information
@@ -262,7 +267,8 @@ number of bigger contributions in the past year.
 ---
 
 [^1]: [Developer Thriving: Four Sociocognitive Factors That Create Resilient Productivity on Software Teams](https://ieeexplore.ieee.org/abstract/document/10491133)
-[^2]: [A Practical Dive Into Late Materialization in arrow-rs Parquet Reads](https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/)
-[^3]: [3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust](https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/)
-[^4]: [arrow-maintenance/explorations](https://github.com/arrow-maintenance/explorations/tree/main/yearly_highlights)
+[^2]: [Parquet Content-Defined Chunking](https://huggingface.co/blog/parquet-cdc)
+[^3]: [A Practical Dive Into Late Materialization in arrow-rs Parquet Reads](https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/)
+[^4]: [3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust](https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/)
+[^5]: [arrow-maintenance/explorations](https://github.com/arrow-maintenance/explorations/tree/main/yearly_highlights)
 
