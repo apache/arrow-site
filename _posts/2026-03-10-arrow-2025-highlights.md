@@ -99,7 +99,9 @@ health of the project and the positive contributor experience.
 
 The most active contributors in the main repository are the ones contributing
 heavily on those areas while also providing the most review capacity. Shout out
-to [kou](https://github.com/kou) and [raulcd](https://github.com/raulcd).
+to [kou](https://github.com/kou) and [raulcd](https://github.com/raulcd) for
+taking such good care of the project and devoting countless hours so that everything
+runs smoothly.
 
 Notable contributions worth mentioning are enhanced release automation and
 reproducible builds for sources, migrating remaining AppVeyor and Azure jobs
@@ -110,7 +112,7 @@ Moving some implementations out of the main repository (apache/arrow on GitHub)
 helped with easier releases and maintenance of the main repository and also of
 separate language implementations. The current apache/arrow repo now holds the format
 specification, C++ implementation together with all the bindings to it (Python, R, Ruby
-and C GLib). Other languages now live in their own apache repos namely
+and C GLib). Other languages now live in their own apache/ repos namely
 [apache/arrow-java](https://github.com/apache/arrow-java),
 [apache/arrow-js](https://github.com/apache/arrow-js),
 [apache/arrow-rs](https://github.com/apache/arrow-rs),
@@ -169,8 +171,8 @@ been done by [raulcd](https://github.com/raulcd).
 ### Arrow C++ Parquet implementation
 
 There have been multiple contributions to fix and improve fuzzing
-support for Parquet. Fuzzing work is lead by [pitrou](https://github.com/pitrou)
-who is also the most active member of the community guiding other
+support for Parquet. Fuzzing work is led by [pitrou](https://github.com/pitrou)
+who is also one of the most active members of the community guiding other
 developers and supporting us with abundant review capacity.
 
 Multiple newer types have also been supported in the last year,
