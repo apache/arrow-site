@@ -35,7 +35,7 @@ the open source community.
 ## New contributors
 
 It has been great to see many new contributors joining the project
-in the past year with over 300 such individuals observed in main
+in the past year, with over 300 such individuals observed across the main
 Apache Arrow language implementations.
 
 | Repository/Implementation | Number of new contributors |
@@ -108,7 +108,7 @@ of custom made linting tools.
 
 Moving some implementations out of the main repository (apache/arrow on GitHub)
 helped with easier releases and maintenance of the main repository and also of
-separate language implementations. The current arrow repo now holds the format
+separate language implementations. The current apache/arrow repo now holds the format
 specification, C++ implementation together with all the bindings to it (Python, R, Ruby
 and C GLib). Other languages now live in their own apache repos namely
 [apache/arrow-java](https://github.com/apache/arrow-java),
@@ -193,7 +193,7 @@ and [kapoisu](https://github.com/kapoisu).
 ### PyArrow
 
 A lot of work has been put into adding type annotations. It all
-started in July ar EuroPython sprints and the code is now ready to be 
+started in July at EuroPython sprints and the code is now ready to be 
 reviewed and merged. Some more review capacity will be needed to get
 this over the finish line. The work has been championed by
 [rok](https://github.com/rok).
