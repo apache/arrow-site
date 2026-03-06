@@ -117,6 +117,7 @@ and C GLib). Other languages now live in their own apache/ repos namely
 [apache/arrow-js](https://github.com/apache/arrow-js),
 [apache/arrow-rs](https://github.com/apache/arrow-rs),
 [apache/arrow-go](https://github.com/apache/arrow-go),
+[apache/arrow-nanoarrow](https://github.com/apache/arrow-nanoarrow),
 [apache/arrow-dotnet](https://github.com/apache/arrow-dotnet) and
 [apache/arrow-swift](https://github.com/apache/arrow-swift).
 
@@ -144,9 +145,9 @@ and C GLib). Other languages now live in their own apache/ repos namely
 
 ## Migration of infrastructure from Voltron Data
 
-As Voltron Data has wind down its operations in 2025, the Arrow project
+As Voltron Data has wound down its operations in 2025, the Arrow project
 had to migrate benchmarking infrastructure and nightly report from
-Voltron-managed services to Arrow managed AWS account. This work has been
+Voltron-managed services to an Arrow-managed AWS account. This work has been
 driven by [rok](https://github.com/rok).
 
 ## Closing of Stale issues
@@ -219,15 +220,15 @@ championed by [alamb](https://github.com/alamb) and
 
 ### Java
 
-Biggest changes apache/arrow-java for 2025 have been connected
-to Flight and Avro components plus Sphinx support due to Java
-implementation being moved into a separate apache repository.
+The biggest changes in apache/arrow-java for 2025 have been connected
+to Flight and Avro components plus Sphinx support due to the Java
+implementation being moved into a separate Apache repository.
 Contributors involved in the above are [lidavidm](https://github.com/lidavidm)
 and [martin-traverse](https://github.com/martin-traverse).
 
 ### Go
 
-There has been a lot of work related to new variant type in
+There has been a lot of work related to new variant type in the
 Parquet implementation done in apache/arrow-go all by
 [zeroshade](https://github.com/zeroshade).
 
