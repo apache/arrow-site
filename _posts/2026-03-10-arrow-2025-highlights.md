@@ -24,11 +24,15 @@ limitations under the License.
 {% endcomment %}
 -->
 
-This blog post has been created as an effort to improve the value of
-an individual contributor with recognition and visibility. As per
-IEEE Software paper [^1] concrete evidence of our progress and
-accomplishments can help with motivation and better collaboration in
-the open source community.
+As you may have read in a previous blog post [^1], the Apache Arrow project
+recently turned 10 years old. We are grateful to everyone who helped us
+achieve this milestone, and we wanted to celebrate the community's
+accomplishments, by publishing our community highlights from 2025.
+
+We were inspired by the research by Dr Cat Hicks et al [^2], who found
+that concrete evidence of progress and accomplishments is instrumental
+to motivation and collaboration in developer teams. We think the same
+should hold for open source.
 
 ---
 
@@ -184,7 +188,7 @@ by [neilechao](https://github.com/neilechao) and
 An important feature added has also been Content-Defined Chunking
 which improves deduplication of Parquet files with mostly identical
 contents, by choosing data page boundaries based on actual contents
-rather than a number of values [^2]. This work has been done by
+rather than a number of values [^3]. This work has been done by
 [kszucs](https://github.com/kszucs).
 
 There have been improvements in the Parquet encryption support for
@@ -204,7 +208,7 @@ this over the finish line. The work has been championed by
 ### Rust
 
 Arrow Rust community invested heavily in the Rust parquet reader for
-which they created several blog posts [^3], [^4]. The work has been
+which they created several blog posts [^4], [^5]. The work has been
 championed by [alamb](https://github.com/alamb) and
 [etseidl](https://github.com/etseidl).
 
@@ -259,7 +263,7 @@ to continue collaborating and growing together!
 <br>
 
 The Notebooks with the analysis for this blog post can be found
-in [^5].
+in [^6].
 
 Note not all language implementations are mentioned. Some due to being
 moved into a separate repository in 2025 resulting in missing information
@@ -269,9 +273,10 @@ number of bigger contributions in the past year.
 
 ---
 
-[^1]: [Developer Thriving: Four Sociocognitive Factors That Create Resilient Productivity on Software Teams](https://ieeexplore.ieee.org/abstract/document/10491133)
-[^2]: [Parquet Content-Defined Chunking](https://huggingface.co/blog/parquet-cdc)
-[^3]: [A Practical Dive Into Late Materialization in arrow-rs Parquet Reads](https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/)
-[^4]: [3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust](https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/)
-[^5]: [arrow-maintenance/explorations](https://github.com/arrow-maintenance/explorations/tree/main/yearly_highlights)
+[^1]: [Apache Arrow is 10 years old 🎉](https://arrow.apache.org/blog/2026/02/12/arrow-anniversary/)
+[^2]: [Developer Thriving: Four Sociocognitive Factors That Create Resilient Productivity on Software Teams](https://ieeexplore.ieee.org/abstract/document/10491133)
+[^3]: [Parquet Content-Defined Chunking](https://huggingface.co/blog/parquet-cdc)
+[^4]: [A Practical Dive Into Late Materialization in arrow-rs Parquet Reads](https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/)
+[^5]: [3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust](https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/)
+[^6]: [arrow-maintenance/explorations](https://github.com/arrow-maintenance/explorations/tree/main/yearly_highlights)
 
