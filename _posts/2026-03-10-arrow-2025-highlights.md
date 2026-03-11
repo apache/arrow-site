@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Community Highlights 2025"
-date: "2026-03-04 00:00:00"
+date: "2026-03-11 00:00:00"
 author: pmc
 categories: [arrow]
 ---
@@ -82,8 +82,8 @@ his first contribution and helped on the Python packaging side further on.
 | scovich | 50 | 21006 |
 | jecsand838 | 38 | 26753 |
 | friendlymatthew | 33 | 7203 |
-| rambleraptor | 4 | 333 |
 | sdf-jkl | 4 | 388 |
+| rambleraptor | 4 | 333 |
 
 #### Notable New Contributors in apache/arrow-go for 2025 are:
 
@@ -235,6 +235,20 @@ and [martin-traverse](https://github.com/martin-traverse).
 There has been a lot of work related to new variant type in the
 Parquet implementation done in apache/arrow-go all by
 [zeroshade](https://github.com/zeroshade).
+
+Noticeable emphasis was also visible on performance-focused PRs leading to
+the addition of row seeking, bloom filter reading/writing, and reduction of
+allocations in the Parquet library along with significant optimization work
+in the ``compute.Take` kernels. Shout out to [pixelherodev](https://github.com/pixelherodev)
+and [hamilton-earthscope](https://github.com/hamilton-earthscope) for the
+emphasis they placed on improving performance.
+
+### Nanoarrow
+
+Bigger work in nanoarrow include Decimal32/64 and ListView/LargeListView support,
+LZ4 and ZSTD decompression in the IPC reader, and broader packaging via Conan, Homebrew,
+and vcpkg. Contributors driving most above are [paleolimbot](https://github.com/paleolimbot)
+and [WillAyd](https://github.com/WillAyd).
 
 ---
 
