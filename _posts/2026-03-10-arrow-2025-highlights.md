@@ -45,7 +45,7 @@ Apache Arrow language implementations.
 | Repository/Implementation | Number of new contributors |
 |---|---|
 | arrow | 125 |
-| arrow-rust | 131 |
+| arrow-rs | 131 |
 | arrow-java | 28 |
 | arrow-go | 35 |
 <br>
@@ -63,7 +63,19 @@ EuroPython sprints and has contributed multiple PRs since then. On the
 same event [paddyroddy](https://github.com/paddyroddy) also started with
 his first contribution and helped on the Python packaging side further on.
 
-<!-- TODO: Add Rust and Go new contribs content -->
+
+[sdf-jkl](https://github.com/sdf-jkl), [liamzwbao](https://github.com/liamzwbao),
+[friendlymatthew](https://github.com/friendlymatthew), and
+[klion26](https://github.com/klion26) helped drive early Variant
+functionality in the Rust Parquet implementation and contributed a number
+of follow-up improvements.
+
+[jecsand838](https://github.com/jecsand838) drove major improvements to the
+Rust `arrow-avro` crate, work highlighted in the
+[Introducing Arrow Avro](https://arrow.apache.org/blog/2025/10/23/introducing-arrow-avro/)
+blog post.
+
+<!-- TODO: Add Go new contribs content -->
 
 #### Notable New Contributors in apache/arrow for 2025 are:
 
