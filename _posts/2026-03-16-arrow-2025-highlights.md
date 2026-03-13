@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Community Highlights 2025"
-date: "2026-03-10 00:00:00"
+date: "2026-03-16 00:00:00"
 author: pmc
 categories: [arrow]
 ---
