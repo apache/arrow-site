@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Community Highlights 2025"
-date: "2026-03-11 00:00:00"
+date: "2026-03-10 00:00:00"
 author: pmc
 categories: [arrow]
 ---
@@ -74,8 +74,6 @@ of follow-up improvements.
 Rust `arrow-avro` crate, work highlighted in the
 [Introducing Arrow Avro](https://arrow.apache.org/blog/2025/10/23/introducing-arrow-avro/)
 blog post.
-
-<!-- TODO: Add Go new contribs content -->
 
 #### Notable New Contributors in apache/arrow for 2025 are:
 
@@ -273,7 +271,7 @@ definitely was a highlight of the year for many of us. Thanks to
 [raulcd](https://github.com/raulcd) and [pitrou](https://github.com/pitrou)
 for organizing the event.
 
-<!-- TODO: Would it be possible to add a group picture here? -->
+<img src="{{ site.baseurl }}/img/arrow_summit.JPG" alt="Arrow Summit 25 group picture" width="100%">
 
 ---
 
