@@ -52,9 +52,9 @@ Apache Arrow language implementations.
 
 Worth highlighting is [alinaliBQ](https://github.com/alinaliBQ) who
 has been very active on the C++ Flight SQL ODBC Driver work together
-with [justing-bq](https://github.com/justing-bq) .
+with [justing-bq](https://github.com/justing-bq).
 
-[AntoinePrv](https://github.com/AntoinePrv) has done huge amount of
+[AntoinePrv](https://github.com/AntoinePrv) has done a huge amount of
 work on the C++ Parquet implementation and [andishgar](https://github.com/andishgar)
 in the C++ Statistics area.
 
@@ -271,7 +271,7 @@ definitely was a highlight of the year for many of us. Thanks to
 [raulcd](https://github.com/raulcd) and [pitrou](https://github.com/pitrou)
 for organizing the event.
 
-<img src="{{ site.baseurl }}/img/arrow_summit.JPG" alt="Arrow Summit 25 group picture" width="100%">
+<img src="{{ site.baseurl }}/img/arrow_summit.jpeg" alt="Arrow Summit 25 group picture" width="100%">
 
 ---
 
