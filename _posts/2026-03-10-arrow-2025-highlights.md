@@ -253,6 +253,13 @@ in the ``compute.Take` kernels. Shout out to [pixelherodev](https://github.com/p
 and [hamilton-earthscope](https://github.com/hamilton-earthscope) for the
 emphasis they placed on improving performance.
 
+#### Notable Components in apache/arrow-go for 2025 are:
+
+| component | merged_prs | line_changes |
+|---|---|---|
+| parquet | 34 | 27056 |
+| arrow | 33 | 14235 |
+
 ### Nanoarrow
 
 Bigger work in nanoarrow include Decimal32/64 and ListView/LargeListView support,
