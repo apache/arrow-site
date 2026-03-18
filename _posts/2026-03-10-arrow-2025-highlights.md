@@ -42,13 +42,33 @@ It has been great to see many new contributors joining the project
 in the past year, with over 300 such individuals observed across the main
 Apache Arrow language implementations.
 
-| Repository/Implementation | Number of new contributors |
-|---|---|
-| arrow | 125 |
-| arrow-rs | 131 |
-| arrow-java | 28 |
-| arrow-go | 35 |
-<br>
+<table class="table">
+  <caption>Number of new contributors per repository.</caption>
+  <thead style="background-color: #e9ecef">
+    <tr>
+      <th>Repository/Implementation</th>
+      <th>Number of new contributors</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>arrow</td>
+      <td>125</td>
+    </tr>
+    <tr>
+      <td>arrow-rs</td>
+      <td>132</td>
+    </tr>
+    <tr>
+      <td>arrow-java</td>
+      <td>28</td>
+    </tr>
+    <tr>
+      <td>arrow-go</td>
+      <td>35</td>
+    </tr>
+  </tbody>
+</table>
 
 Worth highlighting is [alinaliBQ](https://github.com/alinaliBQ) who
 has been very active on the C++ Flight SQL ODBC Driver work together
@@ -77,30 +97,108 @@ blog post.
 
 #### Notable New Contributors in apache/arrow for 2025 are:
 
-| Author | # of prs | # of line changes (+ and -) |
-|---|---|---|
-| alinaliBQ | 36 | 15754 |
-| andishgar | 19 | 2926 |
-| AntoinePrv | 8 | 79257 |
-| rmnskb | 7 | 550 |
-| justing-bq | 4 | 12607 |
+<table class="table">
+  <caption>Notable New Contributors in apache/arrow for 2025.</caption>
+  <thead style="background-color: #e9ecef">
+    <tr>
+      <th>Author</th>
+      <th>Number of prs</th>
+      <th>Number of line changes (+ and -)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>alinaliBQ</td>
+      <td>36</td>
+      <td>15754</td>
+    </tr>
+    <tr>
+      <td>andishgar</td>
+      <td>19</td>
+      <td>2926</td>
+    </tr>
+    <tr>
+      <td>AntoinePrv</td>
+      <td>8</td>
+      <td>79257</td>
+    </tr>
+    <tr>
+      <td>rmnskb</td>
+      <td>7</td>
+      <td>550</td>
+    </tr>
+    <tr>
+      <td>justing-bq</td>
+      <td>4</td>
+      <td>12607</td>
+    </tr>
+  </tbody>
+</table>
 
 #### Notable New Contributors in apache/arrow-rs for 2025 are:
 
-| Author | # of prs | # of line changes (+ and -) |
-|---|---|---|
-| scovich | 50 | 21006 |
-| jecsand838 | 38 | 26753 |
-| friendlymatthew | 33 | 7203 |
-| sdf-jkl | 4 | 388 |
-| rambleraptor | 4 | 333 |
+<table class="table">
+  <caption>Notable New Contributors in apache/arrow-rs for 2025.</caption>
+  <thead style="background-color: #e9ecef">
+    <tr>
+      <th>Author</th>
+      <th>Number of prs</th>
+      <th>Number of line changes (+ and -)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>scovich</td>
+      <td>50</td>
+      <td>21006</td>
+    </tr>
+    <tr>
+      <td>jecsand838</td>
+      <td>38</td>
+      <td>26753</td>
+    </tr>
+    <tr>
+      <td>friendlymatthew</td>
+      <td>33</td>
+      <td>7203</td>
+    </tr>
+    <tr>
+      <td>sdf-jkl</td>
+      <td>4</td>
+      <td>388</td>
+    </tr>
+    <tr>
+      <td>rambleraptor</td>
+      <td>4</td>
+      <td>333</td>
+    </tr>
+  </tbody>
+</table>
 
 #### Notable New Contributors in apache/arrow-go for 2025 are:
 
-| Author | # of prs | # of line changes (+ and -) |
-|---|---|---|
-| Mandukhai-Alimaa | 6 | 1392 |
-| hamilton-earthscope | 5 | 2998 |
+<table class="table">
+  <caption>Notable New Contributors in apache/arrow-go for 2025.</caption>
+  <thead style="background-color: #e9ecef">
+    <tr>
+      <th>Author</th>
+      <th>Number of prs</th>
+      <th>Number of line changes (+ and -)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Mandukhai-Alimaa</td>
+      <td>6</td>
+      <td>1392</td>
+    </tr>
+    <tr>
+      <td>hamilton-earthscope</td>
+      <td>5</td>
+      <td>2998</td>
+    </tr>
+  </tbody>
+</table>
 
 
 ## Release, Packaging and CI
@@ -137,24 +235,84 @@ and C GLib). Other languages now live in their own apache/ repos namely
 
 #### Notable Contributors in apache/arrow for 2025 are:
 
-| Author | # of prs | # of line changes (+ and -) |
-|---|---|---|
-| kou | 221 | 141015 |
-| AntoinePrv | 8 | 79257 |
-| raulcd | 110 | 46645 |
-| pitrou | 101 | 36585 |
-| jbonofre | 1 | 20061 |
+<table class="table">
+  <caption>Notable Contributors in apache/arrow for 2025.</caption>
+  <thead style="background-color: #e9ecef">
+    <tr>
+      <th>Author</th>
+      <th>Number of prs</th>
+      <th>Number of line changes (+ and -)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>kou</td>
+      <td>221</td>
+      <td>141015</td>
+    </tr>
+    <tr>
+      <td>AntoinePrv</td>
+      <td>8</td>
+      <td>79257</td>
+    </tr>
+    <tr>
+      <td>raulcd</td>
+      <td>110</td>
+      <td>46645</td>
+    </tr>
+    <tr>
+      <td>pitrou</td>
+      <td>101</td>
+      <td>36585</td>
+    </tr>
+    <tr>
+      <td>jbonofre</td>
+      <td>1</td>
+      <td>20061</td>
+    </tr>
+  </tbody>
+</table>
 
 
 #### Notable Components in apache/arrow for 2025 are:
 
-| Component label | # of merged prs | # of line changes (+ and -) |
-|---|---|---|
-| Parquet | 100 | 103828 |
-| C++ | 387 | 82744 |
-| FlightRPC | 43 | 52659 |
-| CI | 237 | 42249 |
-| Ruby | 74 | 20676 |
+<table class="table">
+  <caption>Notable Components in apache/arrow for 2025.</caption>
+  <thead style="background-color: #e9ecef">
+    <tr>
+      <th>Component label</th>
+      <th>Number of merged prs</th>
+      <th>Number of line changes (+ and -)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Parquet</td>
+      <td>100</td>
+      <td>103828</td>
+    </tr>
+    <tr>
+      <td>C++</td>
+      <td>387</td>
+      <td>82744</td>
+    </tr>
+    <tr>
+      <td>FlightRPC</td>
+      <td>43</td>
+      <td>52659</td>
+    </tr>
+    <tr>
+      <td>CI</td>
+      <td>237</td>
+      <td>42249</td>
+    </tr>
+    <tr>
+      <td>Ruby</td>
+      <td>74</td>
+      <td>20676</td>
+    </tr>
+  </tbody>
+</table>
 
 
 ## Migration of infrastructure from Voltron Data
@@ -224,13 +382,43 @@ championed by [alamb](https://github.com/alamb) and
 
 #### Notable Components in apache/arrow-rs for 2025 are:
 
-| component | merged_prs | line_changes |
-|---|---|---|
-| parquet | 333 | 140958 |
-| arrow | 436 | 76590 |
-| parquet-variant | 125 | 41832 |
-| api-change | 59 | 33938 |
-| arrow-avro | 48 | 29487 |
+<table class="table">
+  <caption>Notable Components in apache/arrow-rs for 2025.</caption>
+  <thead style="background-color: #e9ecef">
+    <tr>
+      <th>component</th>
+      <th>merged_prs</th>
+      <th>line_changes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>parquet</td>
+      <td>333</td>
+      <td>140958</td>
+    </tr>
+    <tr>
+      <td>arrow</td>
+      <td>436</td>
+      <td>76590</td>
+    </tr>
+    <tr>
+      <td>parquet-variant</td>
+      <td>125</td>
+      <td>41832</td>
+    </tr>
+    <tr>
+      <td>api-change</td>
+      <td>59</td>
+      <td>33938</td>
+    </tr>
+    <tr>
+      <td>arrow-avro</td>
+      <td>48</td>
+      <td>29487</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Java
 
@@ -255,10 +443,28 @@ emphasis they placed on improving performance.
 
 #### Notable Components in apache/arrow-go for 2025 are:
 
-| component | merged_prs | line_changes |
-|---|---|---|
-| parquet | 34 | 27056 |
-| arrow | 33 | 14235 |
+<table class="table">
+  <caption>Notable Components in apache/arrow-go for 2025.</caption>
+  <thead style="background-color: #e9ecef">
+    <tr>
+      <th>component</th>
+      <th>merged_prs</th>
+      <th>line_changes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>parquet</td>
+      <td>34</td>
+      <td>27056</td>
+    </tr>
+    <tr>
+      <td>arrow</td>
+      <td>33</td>
+      <td>14235</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Nanoarrow
 
