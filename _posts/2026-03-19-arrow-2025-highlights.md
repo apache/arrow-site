@@ -425,7 +425,7 @@ Parquet implementation done in apache/arrow-go all by
 Noticeable emphasis was also visible on performance-focused PRs leading to
 the addition of row seeking, bloom filter reading/writing, and reduction of
 allocations in the Parquet library along with significant optimization work
-in the ``compute.Take` kernels. Shout out to [pixelherodev](https://github.com/pixelherodev)
+in the `compute.Take` kernels. Shout out to [pixelherodev](https://github.com/pixelherodev)
 and [hamilton-earthscope](https://github.com/hamilton-earthscope) for the
 emphasis they placed on improving performance.
 
