@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Community Highlights 2025"
-date: "2026-03-10 00:00:00"
+date: "2026-03-19 00:00:00"
 author: pmc
 categories: [arrow]
 ---
@@ -95,8 +95,6 @@ Rust `arrow-avro` crate, work highlighted in the
 [Introducing Arrow Avro](https://arrow.apache.org/blog/2025/10/23/introducing-arrow-avro/)
 blog post.
 
-#### Notable New Contributors in apache/arrow for 2025 are:
-
 <table class="table">
   <caption>Notable New Contributors in apache/arrow for 2025.</caption>
   <thead style="background-color: #e9ecef">
@@ -135,8 +133,6 @@ blog post.
   </tbody>
 </table>
 
-#### Notable New Contributors in apache/arrow-rs for 2025 are:
-
 <table class="table">
   <caption>Notable New Contributors in apache/arrow-rs for 2025.</caption>
   <thead style="background-color: #e9ecef">
@@ -174,8 +170,6 @@ blog post.
     </tr>
   </tbody>
 </table>
-
-#### Notable New Contributors in apache/arrow-go for 2025 are:
 
 <table class="table">
   <caption>Notable New Contributors in apache/arrow-go for 2025.</caption>
@@ -233,8 +227,6 @@ and C GLib). Other languages now live in their own apache/ repos namely
 [apache/arrow-dotnet](https://github.com/apache/arrow-dotnet) and
 [apache/arrow-swift](https://github.com/apache/arrow-swift).
 
-#### Notable Contributors in apache/arrow for 2025 are:
-
 <table class="table">
   <caption>Notable Contributors in apache/arrow for 2025.</caption>
   <thead style="background-color: #e9ecef">
@@ -273,8 +265,6 @@ and C GLib). Other languages now live in their own apache/ repos namely
   </tbody>
 </table>
 
-
-#### Notable Components in apache/arrow for 2025 are:
 
 <table class="table">
   <caption>Notable Components in apache/arrow for 2025.</caption>
@@ -380,8 +370,6 @@ which they created several blog posts [^4], [^5]. The work has been
 championed by [alamb](https://github.com/alamb) and
 [etseidl](https://github.com/etseidl).
 
-#### Notable Components in apache/arrow-rs for 2025 are:
-
 <table class="table">
   <caption>Notable Components in apache/arrow-rs for 2025.</caption>
   <thead style="background-color: #e9ecef">
@@ -440,8 +428,6 @@ allocations in the Parquet library along with significant optimization work
 in the ``compute.Take` kernels. Shout out to [pixelherodev](https://github.com/pixelherodev)
 and [hamilton-earthscope](https://github.com/hamilton-earthscope) for the
 emphasis they placed on improving performance.
-
-#### Notable Components in apache/arrow-go for 2025 are:
 
 <table class="table">
   <caption>Notable Components in apache/arrow-go for 2025.</caption>
