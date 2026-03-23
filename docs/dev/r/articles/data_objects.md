@@ -666,10 +666,10 @@ ds |>
     ##   <int> <chr>      <dbl>
     ## 1     2 a             26
     ## 2     5 a             62
-    ## 3     6 b            115
-    ## 4    12 c             63
-    ## 5    13 c            207
-    ## 6    15 c             51
+    ## 3    12 c             63
+    ## 4    13 c            207
+    ## 5    15 c             51
+    ## 6     6 b            115
 
 We can replicate this using the low-level Dataset interface by creating
 a new scan by specifying the `filter` and `projection` arguments to
