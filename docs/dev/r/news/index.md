@@ -4,6 +4,8 @@
 
 ## arrow 23.0.1.2
 
+CRAN release: 2026-03-25
+
 ### Minor improvements and fixes
 
 - Update use of internal function for non-API call CRAN requirements
