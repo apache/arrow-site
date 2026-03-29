@@ -2,7 +2,7 @@
 
 The `arrow` package contains methods for 38 `dplyr` table functions,
 many of which are "verbs" that do transformations to one or more tables.
-The package also has mappings of 224 R functions to the corresponding
+The package also has mappings of 226 R functions to the corresponding
 functions in the Arrow compute library. These allow you to write code
 inside of `dplyr` methods that call R functions, including many in
 packages like `stringr` and `lubridate`, and they will get translated to
@@ -384,6 +384,10 @@ as `arrow_ascii_is_decimal`.
 - [`n()`](https://dplyr.tidyverse.org/reference/context.html)
 
 - [`n_distinct()`](https://dplyr.tidyverse.org/reference/n_distinct.html)
+
+- [`when_all()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
+
+- [`when_any()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
 
 ### hms
 

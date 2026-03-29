@@ -12,7 +12,7 @@ schema(...)
 
 - ...:
 
-  [fields](https://arrow.apache.org/docs/r/reference/Field.md), field
+  [fields](https://vctrs.r-lib.org/reference/fields.html), field
   name/[data
   type](https://arrow.apache.org/docs/r/reference/data-type.md) pairs
   (or a list of), or object from which to extract a schema
