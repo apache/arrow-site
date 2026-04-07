@@ -126,7 +126,8 @@ $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-a
 
 We are working on the next revision of the API standard, focusing on missing
 features (primarily metadata/catalog data). We welcome anyone interested in
-contributing.
+contributing. Current progress can be found in the [1.2.0 specification
+milestone](https://github.com/apache/arrow-adbc/milestone/9).
 
 ## Getting Involved
 
