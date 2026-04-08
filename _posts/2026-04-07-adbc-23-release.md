@@ -62,14 +62,17 @@ profiles](https://arrow.apache.org/adbc/current/format/connection_profiles.html)
 ([#3876](https://github.com/apache/arrow-adbc/pull/3876),
 [#3973](https://github.com/apache/arrow-adbc/pull/3973),
 [#4080](https://github.com/apache/arrow-adbc/pull/4080),
-[#4083](https://github.com/apache/arrow-adbc/pull/4083) etc.).
+[#4083](https://github.com/apache/arrow-adbc/pull/4083) etc.). (Note that
+other bindings that use the C++ driver manager, including GLib/Ruby, Go, Java,
+Python, R, and so on, inherit this support.)
 
 The Go APIs have added interfaces that always take a `context.Context` for
 consistency, and to make sure context like telemetry traces propagate properly
 ([#4009](https://github.com/apache/arrow-adbc/pull/4009)).
 
-The Python driver manager supports [connection profiles](https://arrow.apache.org/adbc/current/format/connection_profiles.html) as well
-([#4078](https://github.com/apache/arrow-adbc/pull/4078),
+The Python driver manager has added specific parameters for using [connection
+profiles](https://arrow.apache.org/adbc/current/format/connection_profiles.html)
+as well ([#4078](https://github.com/apache/arrow-adbc/pull/4078),
 [#4118](https://github.com/apache/arrow-adbc/pull/4118)). Also, non-string
 option values are directly accepted for convenience
 ([#4088](https://github.com/apache/arrow-adbc/pull/4088)). `adbc_get_statistics`
@@ -86,7 +89,9 @@ Packages are now being uploaded to
 ([#4131](https://github.com/apache/arrow-adbc/pull/4131)).
 
 Python wheels now require `manylinux_2_28`, up from `manylinux2010`, following
-PyArrow ([#4146](https://github.com/apache/arrow-adbc/pull/4146)).
+PyArrow ([#4146](https://github.com/apache/arrow-adbc/pull/4146)).  On macOS,
+macOS 12 is now the minimum version due to upgrading to Go 1.25+ (including on
+conda-forge, where the packages previously pinned Go 1.24 to avoid this).
 
 The PostgreSQL driver tries to reconcile Arrow NA arrays with PostgreSQL types
 when binding ([#4098](https://github.com/apache/arrow-adbc/pull/4098)). Also,
