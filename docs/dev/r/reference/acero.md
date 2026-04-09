@@ -2,7 +2,7 @@
 
 The `arrow` package contains methods for 38 `dplyr` table functions,
 many of which are "verbs" that do transformations to one or more tables.
-The package also has mappings of 226 R functions to the corresponding
+The package also has mappings of 229 R functions to the corresponding
 functions in the Arrow compute library. These allow you to write code
 inside of `dplyr` methods that call R functions, including many in
 packages like `stringr` and `lubridate`, and they will get translated to
@@ -142,7 +142,7 @@ both `str_sub()` and
 [`stringr::str_sub()`](https://stringr.tidyverse.org/reference/str_sub.html)
 work.
 
-In addition to these functions, you can call any of Arrow's 281 compute
+In addition to these functions, you can call any of Arrow's 253 compute
 functions directly. Arrow has many functions that don't map to an
 existing R function. In other cases where there is an R function
 mapping, you can still call the Arrow function directly if you don't
@@ -384,6 +384,13 @@ as `arrow_ascii_is_decimal`.
 - [`n()`](https://dplyr.tidyverse.org/reference/context.html)
 
 - [`n_distinct()`](https://dplyr.tidyverse.org/reference/n_distinct.html)
+
+- [`recode_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html):
+  `ptype` argument and `unmatched = "error"` not supported
+
+- [`replace_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html)
+
+- [`replace_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
 
 - [`when_all()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
 
