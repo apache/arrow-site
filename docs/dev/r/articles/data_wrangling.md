@@ -356,6 +356,7 @@ sw |>
 ```
 
     ## # A tibble: 28 x 4
+    ## # Groups:   hair_color [5]
     ##    name                  height  mass hair_color
     ##    <chr>                  <int> <dbl> <chr>     
     ##  1 Luke Skywalker           172    77 blond     
