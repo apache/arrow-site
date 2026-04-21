@@ -1,6 +1,71 @@
 # Changelog
 
+## arrow 24.0.0
+
+## arrow 23.0.1.2
+
+CRAN release: 2026-03-25
+
+### Minor improvements and fixes
+
+- Update use of internal function for non-API call CRAN requirements
+  ([\#49530](https://github.com/apache/arrow/issues/49530))
+
+## arrow 23.0.1.1
+
+CRAN release: 2026-02-24
+
+### Minor improvements and fixes
+
+- Refine checks for ensuring building with macOS libtool instead of GNU
+  libtool ([\#49370](https://github.com/apache/arrow/issues/49370))
+
 ## arrow 23.0.1
+
+CRAN release: 2026-02-22
+
+### Minor improvements and fixes
+
+- Fix C++20 compatibility issue on macOS
+  ([\#49221](https://github.com/apache/arrow/issues/49221)).
+- Turn off GCS support by default on macOS; see
+  [`vignette("install", package = "arrow")`](https://arrow.apache.org/docs/r/articles/install.md)
+  for details on enabling it
+  ([\#49068](https://github.com/apache/arrow/issues/49068),
+  [\#48995](https://github.com/apache/arrow/issues/48995)).
+
+## arrow 23.0.0
+
+CRAN release: 2026-01-23
+
+### New features
+
+- [`nchar()`](https://rdrr.io/r/base/nchar.html) now supports
+  `keepNA = FALSE` ([@HyukjinKwon](https://github.com/HyukjinKwon),
+  [\#48665](https://github.com/apache/arrow/issues/48665)).
+- [`stringr::str_ilike()`](https://stringr.tidyverse.org/reference/str_like.html)
+  binding for case-insensitive pattern matching
+  ([\#48262](https://github.com/apache/arrow/issues/48262)).
+
+### Minor improvements and fixes
+
+- Fix slow performance reading files with large number of columns
+  ([\#48104](https://github.com/apache/arrow/issues/48104)).
+- Fix segfault when calling
+  [`concat_tables()`](https://arrow.apache.org/docs/r/reference/concat_tables.md)
+  on a `RecordBatch`
+  ([\#47885](https://github.com/apache/arrow/issues/47885)).
+- Writing partitioned datasets on S3 no longer requires `ListBucket`
+  permissions ([@HaochengLIU](https://github.com/HaochengLIU),
+  [\#47599](https://github.com/apache/arrow/issues/47599)).
+
+### Installation
+
+- As of version 23.0.0, `arrow` requires C++20 to build from source.
+  This means that you may need a newer compiler than the default on some
+  older systems. See
+  [`vignette("install", package = "arrow")`](https://arrow.apache.org/docs/r/articles/install.md)
+  for guidance.
 
 ## arrow 22.0.0.1
 

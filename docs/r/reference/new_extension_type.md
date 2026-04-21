@@ -185,7 +185,7 @@ reregister_extension_type(quantized())
 
 # Create Array objects and use them!
 (vals <- runif(5, min = 19, max = 21))
-#> [1] 19.07557 19.97832 19.76972 19.27137 20.76730
+#> [1] 20.42644 20.32484 20.21635 20.83541 19.04193
 
 (array <- quantized_array(
   vals,
@@ -197,11 +197,11 @@ reregister_extension_type(quantized())
 #> ExtensionArray
 #> <QuantizedType <20;32767>>
 #> [
-#>   -30290,
-#>   -710,
-#>   -7545,
-#>   -23874,
-#>   25142
+#>   13973,
+#>   10643,
+#>   7089,
+#>   27373,
+#>   -31393
 #> ]
 
 array$type$center()
@@ -210,5 +210,5 @@ array$type$scale()
 #> [1] 32767
 
 as.vector(array)
-#> [1] 19.07559 19.97833 19.76974 19.27140 20.76730
+#> [1] 20.42644 20.32481 20.21635 20.83538 19.04193
 ```
