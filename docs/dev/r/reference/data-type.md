@@ -166,10 +166,10 @@ and `int64` (64-bit signed integer) types may contain values that exceed
 the range of R's `integer` type (32-bit signed integer). When these
 arrow objects are translated to R objects, `uint32` and `uint64` are
 converted to `double` ("numeric") and `int64` is converted to
-[`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html).
+[`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html).
 For `int64` types, this conversion can be disabled (so that `int64`
 always yields a
-[`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+[`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
 object) by setting `options(arrow.int64_downcast = FALSE)`.
 
 `decimal128()` creates a `Decimal128Type`. Arrow decimals are

@@ -358,9 +358,9 @@ as `arrow_ascii_is_decimal`.
 
 ### bit64
 
-- [`as.integer64()`](https://rdrr.io/pkg/bit64/man/as.integer64.character.html)
+- [`as.integer64()`](https://bit64.r-lib.org/reference/as.integer64.character.html)
 
-- [`is.integer64()`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+- [`is.integer64()`](https://bit64.r-lib.org/reference/bit64-package.html)
 
 ### dplyr
 

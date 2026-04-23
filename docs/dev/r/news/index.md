@@ -4,6 +4,8 @@
 
 ## arrow 24.0.0
 
+## arrow 24.0.0
+
 ### New features
 
 - [`dplyr::when_any()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
@@ -2125,7 +2127,7 @@ for an overview.
 - Automatic conversion of Arrow `Int64` type when all values fit with an
   R 32-bit integer now correctly inspects all chunks in a ChunkedArray,
   and this conversion can be disabled (so that `Int64` always yields a
-  [`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+  [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
   vector) by setting `options(arrow.int64_downcast = FALSE)`.
 - In addition to the data.frame column metadata preserved in round trip,
   added in 1.0.0, now attributes of the data.frame itself are also
