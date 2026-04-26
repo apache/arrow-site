@@ -213,7 +213,8 @@ short description of your use case.
   existing Ruby libraries with Apache Arrow. They use Red Arrow.
 * **[Sail][62]:** A drop-in Apache Spark replacement written in Rust,
   unifying batch processing, stream processing, and compute-intensive AI workloads.
-  Sail uses Arrow in query execution, distributed data shuffle, Python UDFs, and data source integrations.
+  Sail uses Arrow in query execution, distributed data shuffle, Python UDFs,
+  and data source integrations.
 * **[SciDB][21]:** Paradigm4's SciDB is a scalable, scientific
   database management system that helps researchers integrate and
   analyze diverse, multi-dimensional, high resolution data - like
