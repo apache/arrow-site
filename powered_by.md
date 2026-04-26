@@ -211,6 +211,8 @@ short description of your use case.
   of Apache Arrow based on Apache Arrow GLib. Red Arrow is a core
   library for it. It also provides many Ruby libraries to integrate
   existing Ruby libraries with Apache Arrow. They use Red Arrow.
+* **[Sail][62]:** A drop-in Apache Spark replacement written in Rust,
+  unifying batch processing, stream processing, and compute-intensive AI workloads.
 * **[SciDB][21]:** Paradigm4's SciDB is a scalable, scientific
   database management system that helps researchers integrate and
   analyze diverse, multi-dimensional, high resolution data - like
@@ -310,3 +312,4 @@ short description of your use case.
 [59]: https://github.com/rdcn-link/dftp-dacp
 [60]: https://iomete.com
 [61]: https://github.com/Eventual-Inc/Daft
+[62]: https://github.com/lakehq/sail
