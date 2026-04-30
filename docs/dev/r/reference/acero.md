@@ -142,7 +142,7 @@ both `str_sub()` and
 [`stringr::str_sub()`](https://stringr.tidyverse.org/reference/str_sub.html)
 work.
 
-In addition to these functions, you can call any of Arrow's 253 compute
+In addition to these functions, you can call any of Arrow's 281 compute
 functions directly. Arrow has many functions that don't map to an
 existing R function. In other cases where there is an R function
 mapping, you can still call the Arrow function directly if you don't

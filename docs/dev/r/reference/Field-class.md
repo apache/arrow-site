@@ -10,5 +10,18 @@ column name. Fields are contained in
 
 - `f$ToString()`: convert to a string
 
-- `f$Equals(other)`: test for equality. More naturally called as
-  `f == other`
+- `f$Equals(other, check_metadata = FALSE)`: test for equality. More
+  naturally called as `f == other`
+
+- `f$WithMetadata(metadata)`: returns a new `Field` with the key-value
+  `metadata` set. Note that all list elements in `metadata` will be
+  coerced to `character`.
+
+- `f$RemoveMetadata()`: returns a new `Field` without metadata.
+
+## Active bindings
+
+- `$HasMetadata`: logical: does this `Field` have extra metadata?
+
+- `$metadata`: returns the key-value metadata as a named list, or `NULL`
+  if no metadata is set.
