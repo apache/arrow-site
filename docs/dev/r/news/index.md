@@ -4,7 +4,11 @@
 
 ## arrow 24.0.0
 
+CRAN release: 2026-04-29
+
 ## arrow 24.0.0
+
+CRAN release: 2026-04-29
 
 ### New features
 
