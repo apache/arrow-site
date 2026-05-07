@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>NumPy Integration &#8212; Apache Arrow v25.0.0.dev28</title>
+    <title>NumPy Integration &#8212; Apache Arrow v25.0.0.dev36</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=fafa126a"></script>
+    <script src="../_static/documentation_options.js?v=d257e5f5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="25.0.0.dev28" />
+  <meta name="docsearch:version" content="25.0.0.dev36" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -156,8 +156,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v25.0.0.dev28 - Home"/>
-    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v25.0.0.dev28 - Home"/>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v25.0.0.dev36 - Home"/>
+    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v25.0.0.dev36 - Home"/>
   
   
 </a></div>
@@ -1614,6 +1614,53 @@ representation as Arrow, and assuming the Arrow data has no nulls.</p>
 <p>For more complex data types, you have to use the <a class="reference internal" href="generated/pyarrow.Array.html#pyarrow.Array.to_pandas" title="pyarrow.Array.to_pandas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to_pandas()</span></code></a>
 method (which will construct a Numpy array with Pandas semantics for, e.g.,
 representation of null values).</p>
+<section id="timezone-aware-timestamps">
+<h3>Timezone-aware Timestamps<a class="headerlink" href="#timezone-aware-timestamps" title="Link to this heading">#</a></h3>
+<p>NumPy’s <code class="docutils literal notranslate"><span class="pre">datetime64</span></code> type does not support timezones. When converting a
+timezone-aware Arrow timestamp array to NumPy via <a class="reference internal" href="generated/pyarrow.Array.html#pyarrow.Array.to_numpy" title="pyarrow.Array.to_numpy"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to_numpy()</span></code></a>,
+the timezone information is silently dropped:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1735689600</span><span class="p">,</span> <span class="mi">1735689600</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="n">pa</span><span class="o">.</span><span class="n">timestamp</span><span class="p">(</span><span class="s2">&quot;s&quot;</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="s2">&quot;UTC&quot;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="o">.</span><span class="n">type</span>
+<span class="go">TimestampType(timestamp[s, tz=UTC])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+<span class="go">array([&#39;2025-01-01T00:00:00&#39;, &#39;2025-01-01T00:00:00&#39;],</span>
+<span class="go">      dtype=&#39;datetime64[s]&#39;)</span>
+</pre></div>
+</div>
+<p>If you need to preserve timezone information, there are two alternatives:</p>
+<ul>
+<li><p>Convert to a Pandas Series, which supports timezone-aware <code class="docutils literal notranslate"><span class="pre">datetime64</span></code> dtypes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+<span class="go">0   2025-01-01 00:00:00+00:00</span>
+<span class="go">1   2025-01-01 00:00:00+00:00</span>
+<span class="go">dtype: datetime64[s, UTC]</span>
+</pre></div>
+</div>
+<p>To get a NumPy array while preserving timezone information, use
+<code class="docutils literal notranslate"><span class="pre">timestamp_as_object=True</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">timestamp_as_object</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+<span class="go">array([datetime.datetime(2025, 1, 1, 0, 0, tzinfo=...),</span>
+<span class="go">       datetime.datetime(2025, 1, 1, 0, 0, tzinfo=...)],</span>
+<span class="go">      dtype=object)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For nested types (e.g., list arrays containing timestamps),
+<code class="docutils literal notranslate"><span class="pre">to_pandas()</span></code> may not preserve timezone information. Structs and maps
+do retain timezones, but lists currently do not. See
+<a class="reference external" href="https://github.com/apache/arrow/issues/41162">GH-41162</a> for details.</p>
+</div>
+</li>
+<li><p>Convert to Python <code class="docutils literal notranslate"><span class="pre">datetime</span></code> objects, which carry <code class="docutils literal notranslate"><span class="pre">tzinfo</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()</span>
+<span class="go">[datetime.datetime(2025, 1, 1, 0, 0, tzinfo=zoneinfo.ZoneInfo(key=&#39;UTC&#39;)),</span>
+<span class="go"> datetime.datetime(2025, 1, 1, 0, 0, tzinfo=zoneinfo.ZoneInfo(key=&#39;UTC&#39;))]</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
 </section>
 </section>
 
@@ -1665,7 +1712,10 @@ representation of null values).</p>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#numpy-to-arrow">NumPy to Arrow</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#arrow-to-numpy">Arrow to NumPy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#arrow-to-numpy">Arrow to NumPy</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#timezone-aware-timestamps">Timezone-aware Timestamps</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 
