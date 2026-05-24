@@ -3,11 +3,6 @@
 These objects are imported from other packages. Follow the links below
 to see their documentation.
 
-- bit64:
-
-  [`print.integer64`](https://bit64.r-lib.org/reference/bit64-package.html),
-  [`str.integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
-
 - tidyselect:
 
   [`all_of`](https://tidyselect.r-lib.org/reference/all_of.html),
