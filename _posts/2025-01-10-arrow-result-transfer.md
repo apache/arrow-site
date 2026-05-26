@@ -68,7 +68,7 @@ Columnar (column-oriented) data formats hold the values for each column in conti
   <figcaption>Figure 1: An illustration of row-oriented and column-oriented physical memory layouts of a table containing three columns and five rows.</figcaption>
 </figure>
 
-High-performance analytic databases, data warehouses, query engines, and storage systems have converged on columnar architecture because it speeds up the most common types of analytic queries. Examples of modern columnar query systems include Amazon Redshift, Apache DataFusion, ClickHouse, Databricks Photon Engine, DuckDB, Google BigQuery, Microsoft Azure Synapse Analytics, OpenText Analytics Database (Vertica), Snowflake, and Voltron Data Theseus.
+High-performance analytic databases, data warehouses, query engines, and storage systems have converged on columnar architecture because it speeds up the most common types of analytic queries. Examples of modern columnar query systems include Amazon Redshift, Apache DataFusion, ClickHouse, Databricks Photon Engine, DuckDB, Google BigQuery, Microsoft Azure Synapse Analytics, OpenText Analytics Database (Vertica), and Snowflake.
 
 Likewise, many destinations for analytic query results (such as business intelligence tools, data application platforms, dataframe libraries, and machine learning platforms) use columnar architecture. Examples of columnar business intelligence tools include Amazon QuickSight, Domo, GoodData, Power BI, Qlik Sense, Spotfire, and Tableau. Examples of columnar dataframe libraries include cuDF, pandas, and Polars.
 
@@ -97,7 +97,7 @@ As a result of these design choices, Arrow can serve not only as a transfer form
 
 This means that at the source system, if data exists in memory or on disk in Arrow format, that data can be transmitted over the network in Arrow format without any serialization. And at the destination system, Arrow-formatted data can be read off the network into memory or into Arrow files on disk without any deserialization.
 
-The Arrow format was designed to be highly efficient as an in-memory format for analytic operations. Because of this, many columnar data systems have been built using Arrow as their in-memory format. These include Apache DataFusion, cuDF, Dremio, InfluxDB, Polars, Velox, and Voltron Data Theseus. When one of these systems is the source or destination of a transfer, ser/de overheads can be fully eliminated. With most other columnar data systems, the proprietary in-memory formats they use are very similar to Arrow. With those systems, serialization to Arrow and deserialization from Arrow format are fast and efficient.
+The Arrow format was designed to be highly efficient as an in-memory format for analytic operations. Because of this, many columnar data systems have been built using Arrow as their in-memory format. These include Apache DataFusion, cuDF, Dremio, InfluxDB, Polars, and Velox. When one of these systems is the source or destination of a transfer, ser/de overheads can be fully eliminated. With most other columnar data systems, the proprietary in-memory formats they use are very similar to Arrow. With those systems, serialization to Arrow and deserialization from Arrow format are fast and efficient.
 
 ### 4. The Arrow format enables streaming.
 
@@ -122,7 +122,7 @@ Arrow’s ability to operate efficiently in virtually any technology stack helps
 
 ### Conclusion
 
-As more commercial and open source tools have added support for Arrow, fast query result transfer with low or no ser/de overheads has become increasingly common. Today, commercial data platforms and query engines including Databricks, Dremio, Google BigQuery, InfluxDB, Snowflake, and Voltron Data Theseus and open source databases and query engines including Apache DataFusion, Apache Doris, Apache Spark, ClickHouse, and DuckDB can all transfer query results in Arrow format. The speedups are substantial:
+As more commercial and open source tools have added support for Arrow, fast query result transfer with low or no ser/de overheads has become increasingly common. Today, commercial data platforms and query engines including Databricks, Dremio, Google BigQuery, InfluxDB, and Snowflake and open source databases and query engines including Apache DataFusion, Apache Doris, Apache Spark, ClickHouse, and DuckDB can all transfer query results in Arrow format. The speedups are substantial:
 
 - Apache Doris: [faster “by a factor ranging from 20 to several hundreds”](https://doris.apache.org/blog/arrow-flight-sql-in-apache-doris-for-10x-faster-data-transfer)
 - Google BigQuery: [up to “31x faster”](https://medium.com/google-cloud/announcing-google-cloud-bigquery-version-1-17-0-1fc428512171)
