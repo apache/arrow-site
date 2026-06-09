@@ -664,12 +664,12 @@ ds |>
     ## # A tibble: 6 x 3
     ##      id subset new_value
     ##   <int> <chr>      <dbl>
-    ## 1     2 a             26
-    ## 2     5 a             62
-    ## 3     6 b            115
-    ## 4    12 c             63
-    ## 5    13 c            207
-    ## 6    15 c             51
+    ## 1    12 c             63
+    ## 2    13 c            207
+    ## 3    15 c             51
+    ## 4     6 b            115
+    ## 5     2 a             26
+    ## 6     5 a             62
 
 We can replicate this using the low-level Dataset interface by creating
 a new scan by specifying the `filter` and `projection` arguments to
