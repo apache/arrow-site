@@ -22,6 +22,8 @@ Useful links:
 
 Authors:
 
+- Jonathan Keane <jkeane@gmail.com>
+
 - Neal Richardson <neal.p.richardson@gmail.com>
 
 - Ian Cook <ianmcook@gmail.com>
