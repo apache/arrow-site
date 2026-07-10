@@ -204,11 +204,11 @@ integers unless one of the following exceptions applies:
   allowed for R integers, the result will be a numeric vector in R
 - If the value of an Arrow int64 variable falls outside the range
   allowed for R integers, the result will be a
-  [`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+  [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
   vector in R
 - If the user sets `options(arrow.int64_downcast = FALSE)`, the Arrow
   int64 type always yields a
-  [`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+  [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
   vector in R regardless of the value
 
 ## Floating point numeric types
@@ -732,9 +732,9 @@ translated to Arrow list type (which is a “list of” some type).
 `integer` type (32 bit signed integer). When they do, `uint32` and
 `uint64` are converted to `double` (“numeric”) and `int64` is converted
 to
-[`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html).
+[`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html).
 This conversion can be disabled (so that `int64` always yields a
-[`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+[`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
 vector) by setting `options(arrow.int64_downcast = FALSE)`.
 
 ²: Some Arrow data types do not currently have an R equivalent and will

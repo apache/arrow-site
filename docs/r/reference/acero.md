@@ -2,7 +2,7 @@
 
 The `arrow` package contains methods for 38 `dplyr` table functions,
 many of which are "verbs" that do transformations to one or more tables.
-The package also has mappings of 226 R functions to the corresponding
+The package also has mappings of 229 R functions to the corresponding
 functions in the Arrow compute library. These allow you to write code
 inside of `dplyr` methods that call R functions, including many in
 packages like `stringr` and `lubridate`, and they will get translated to
@@ -126,7 +126,7 @@ To run the query, call either `compute()`, which returns an `arrow`
 
 - [`ungroup()`](https://dplyr.tidyverse.org/reference/group_by.html)
 
-- [`union()`](https://dplyr.tidyverse.org/reference/setops.html)
+- [`union()`](https://generics.r-lib.org/reference/setops.html)
 
 - [`union_all()`](https://dplyr.tidyverse.org/reference/setops.html)
 
@@ -170,7 +170,7 @@ as `arrow_ascii_is_decimal`.
 
 - [`%in%`](https://rdrr.io/r/base/match.html)
 
-- [`&`](https://rdrr.io/r/base/Logic.html)
+- `&`
 
 - [`*`](https://rdrr.io/r/base/Arithmetic.html)
 
@@ -180,15 +180,15 @@ as `arrow_ascii_is_decimal`.
 
 - [`/`](https://rdrr.io/r/base/Arithmetic.html)
 
-- [`<`](https://rdrr.io/r/base/Comparison.html)
+- `<`
 
-- [`<=`](https://rdrr.io/r/base/Comparison.html)
+- `<=`
 
 - [`==`](https://rdrr.io/r/base/Comparison.html)
 
-- [`>`](https://rdrr.io/r/base/Comparison.html)
+- `>`
 
-- [`>=`](https://rdrr.io/r/base/Comparison.html)
+- `>=`
 
 - [`ISOdate()`](https://rdrr.io/r/base/ISOdatetime.html)
 
@@ -358,9 +358,9 @@ as `arrow_ascii_is_decimal`.
 
 ### bit64
 
-- [`as.integer64()`](https://rdrr.io/pkg/bit64/man/as.integer64.character.html)
+- [`as.integer64()`](https://bit64.r-lib.org/reference/as.integer64.character.html)
 
-- [`is.integer64()`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+- [`is.integer64()`](https://bit64.r-lib.org/reference/bit64-package.html)
 
 ### dplyr
 
@@ -384,6 +384,13 @@ as `arrow_ascii_is_decimal`.
 - [`n()`](https://dplyr.tidyverse.org/reference/context.html)
 
 - [`n_distinct()`](https://dplyr.tidyverse.org/reference/n_distinct.html)
+
+- [`recode_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html):
+  `ptype` argument and `unmatched = "error"` not supported
+
+- [`replace_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html)
+
+- [`replace_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
 
 - [`when_all()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
 
@@ -428,16 +435,20 @@ as `arrow_ascii_is_decimal`.
 - [`dmonths()`](https://lubridate.tidyverse.org/reference/duration.html)
 
 - [`dmy()`](https://lubridate.tidyverse.org/reference/ymd.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`dmy_h()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`dmy_hm()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`dmy_hms()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`dnanoseconds()`](https://lubridate.tidyverse.org/reference/duration.html)
 
@@ -453,7 +464,8 @@ as `arrow_ascii_is_decimal`.
 - [`dyears()`](https://lubridate.tidyverse.org/reference/duration.html)
 
 - [`dym()`](https://lubridate.tidyverse.org/reference/ymd.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`epiweek()`](https://lubridate.tidyverse.org/reference/week.html)
 
@@ -474,9 +486,9 @@ as `arrow_ascii_is_decimal`.
 
 - [`hour()`](https://lubridate.tidyverse.org/reference/hour.html)
 
-- `is.Date()`
+- [`is.Date()`](https://lubridate.tidyverse.org/reference/date_utils.html)
 
-- `is.POSIXct()`
+- [`is.POSIXct()`](https://lubridate.tidyverse.org/reference/posix_utils.html)
 
 - [`is.instant()`](https://lubridate.tidyverse.org/reference/is.instant.html)
 
@@ -500,31 +512,37 @@ as `arrow_ascii_is_decimal`.
 - [`mday()`](https://lubridate.tidyverse.org/reference/day.html)
 
 - [`mdy()`](https://lubridate.tidyverse.org/reference/ymd.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`mdy_h()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`mdy_hm()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`mdy_hms()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`minute()`](https://lubridate.tidyverse.org/reference/minute.html)
 
 - [`month()`](https://lubridate.tidyverse.org/reference/month.html)
 
 - [`my()`](https://lubridate.tidyverse.org/reference/ymd.html): `locale`
-  argument not supported
+  argument not supported; see docs for `parse_date_time()` mapping for
+  supported formats
 
 - [`myd()`](https://lubridate.tidyverse.org/reference/ymd.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`parse_date_time()`](https://lubridate.tidyverse.org/reference/parse_date_time.html):
   `quiet = FALSE` is not supported Available formats are H, I, j, M, S,
-  U, w, W, y, Y, R, T. On Linux and OS X additionally a, A, b, B, Om, p,
-  r are available.
+  U, w, W, y, Y, R, T. On Linux and macOS additionally a, A, b, B, Om,
+  p, r are available.
 
 - [`pm()`](https://lubridate.tidyverse.org/reference/am.html)
 
@@ -549,36 +567,46 @@ as `arrow_ascii_is_decimal`.
 - [`yday()`](https://lubridate.tidyverse.org/reference/day.html)
 
 - [`ydm()`](https://lubridate.tidyverse.org/reference/ymd.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`ydm_h()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`ydm_hm()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`ydm_hms()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`year()`](https://lubridate.tidyverse.org/reference/year.html)
 
 - [`ym()`](https://lubridate.tidyverse.org/reference/ymd.html): `locale`
-  argument not supported
+  argument not supported; see docs for `parse_date_time()` mapping for
+  supported formats
 
 - [`ymd()`](https://lubridate.tidyverse.org/reference/ymd.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`ymd_h()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`ymd_hm()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`ymd_hms()`](https://lubridate.tidyverse.org/reference/ymd_hms.html):
-  `locale` argument not supported
+  `locale` argument not supported; see docs for `parse_date_time()`
+  mapping for supported formats
 
 - [`yq()`](https://lubridate.tidyverse.org/reference/ymd.html): `locale`
-  argument not supported
+  argument not supported; see docs for `parse_date_time()` mapping for
+  supported formats
 
 ### methods
 

@@ -132,13 +132,13 @@ of the resulting `data.frame`. This means that custom data types,
 including `haven::labelled`, `vctrs` annotations, and others, are
 preserved when doing a round-trip through Arrow.
 
-Note that the attributes stored in `$metadata$r` are only understood by
-R. If you write a `data.frame` with `haven` columns to a Feather file
-and read that in Pandas, the `haven` metadata won’t be recognized there.
-Similarly, Pandas writes its own custom metadata, which the R package
-does not consume. You are free, however, to define custom metadata
-conventions for your application and assign any (string) values you want
-to other metadata keys.
+Note that the attributes stored in `$metadata[["r"]]` are only
+understood by R. If you write a `data.frame` with `haven` columns to a
+Feather file and read that in Pandas, the `haven` metadata won’t be
+recognized there. Similarly, Pandas writes its own custom metadata,
+which the R package does not consume. You are free, however, to define
+custom metadata conventions for your application and assign any (string)
+values you want to other metadata keys.
 
 ## Further reading
 

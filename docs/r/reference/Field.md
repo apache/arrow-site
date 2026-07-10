@@ -5,7 +5,7 @@ Create a Field
 ## Usage
 
 ``` r
-field(name, type, metadata, nullable = TRUE)
+field(name, type, metadata = NULL, nullable = TRUE)
 ```
 
 ## Arguments
@@ -21,7 +21,8 @@ field(name, type, metadata, nullable = TRUE)
 
 - metadata:
 
-  currently ignored
+  a named character vector or list to attach as field metadata. All
+  values will be coerced to `character`.
 
 - nullable:
 
@@ -35,6 +36,9 @@ field(name, type, metadata, nullable = TRUE)
 
 ``` r
 field("x", int32())
+#> Field
+#> x: int32
+field("x", int32(), metadata = list(key = "value"))
 #> Field
 #> x: int32
 ```
