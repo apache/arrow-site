@@ -51,10 +51,13 @@ csv_read_options(
 
   Number of lines to skip after the column names (default 0). This
   number can be larger than the number of rows in one block, and empty
-  rows are counted. The order of application is as follows: -
-  `skip_rows` is applied (if non-zero); - column names are read (unless
-  `column_names` is set); - `skip_rows_after_names` is applied (if
-  non-zero).
+  rows are counted. The order of application is as follows:
+
+  - `skip_rows` is applied (if non-zero);
+
+  - column names are read (unless `column_names` is set);
+
+  - `skip_rows_after_names` is applied (if non-zero).
 
 ## Examples
 

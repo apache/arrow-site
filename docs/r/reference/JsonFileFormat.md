@@ -30,8 +30,3 @@ Available `parse_options` parameters:
 ## See also
 
 [FileFormat](https://arrow.apache.org/docs/r/reference/FileFormat.md)
-
-## Examples
-
-``` r
-```

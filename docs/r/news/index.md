@@ -1,6 +1,50 @@
 # Changelog
 
+## arrow 25.0.0
+
 ## arrow 24.0.0
+
+CRAN release: 2026-04-29
+
+## arrow 24.0.0
+
+CRAN release: 2026-04-29
+
+### New features
+
+- [`dplyr::when_any()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
+  and
+  [`dplyr::when_all()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
+  helper bindings
+  ([\#49535](https://github.com/apache/arrow/issues/49535)).
+- [`dplyr::filter_out()`](https://dplyr.tidyverse.org/reference/filter.html)
+  binding ([@larry77](https://github.com/larry77),
+  [\#49256](https://github.com/apache/arrow/issues/49256)).
+- [`dplyr::recode_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html),
+  [`dplyr::replace_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html),
+  and
+  [`dplyr::replace_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
+  bindings ([\#49536](https://github.com/apache/arrow/issues/49536)).
+- [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
+  gains a `preserve_order` argument to preserve row ordering within
+  partitions ([@marberts](https://github.com/marberts),
+  [\#49343](https://github.com/apache/arrow/issues/49343)).
+
+### Minor improvements and fixes
+
+- Zero-length `POSIXct` objects with integer storage (as created by
+  `as.POSIXct(NULL)` in R 4.5.2+) are now correctly mapped to timestamp
+  type instead of integer
+  ([\#49619](https://github.com/apache/arrow/issues/49619)).
+- [`all.equal()`](https://rdrr.io/r/base/all.equal.html) S3 method is
+  now correctly registered
+  ([@MichaelChirico](https://github.com/MichaelChirico),
+  [\#49481](https://github.com/apache/arrow/issues/49481)).
+
+### Installation
+
+- arm64 (aarch64) Linux binaries are now available
+  ([\#48574](https://github.com/apache/arrow/issues/48574)).
 
 ## arrow 23.0.1.2
 
@@ -2087,7 +2131,7 @@ for an overview.
 - Automatic conversion of Arrow `Int64` type when all values fit with an
   R 32-bit integer now correctly inspects all chunks in a ChunkedArray,
   and this conversion can be disabled (so that `Int64` always yields a
-  [`bit64::integer64`](https://rdrr.io/pkg/bit64/man/bit64-package.html)
+  [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
   vector) by setting `options(arrow.int64_downcast = FALSE)`.
 - In addition to the data.frame column metadata preserved in round trip,
   added in 1.0.0, now attributes of the data.frame itself are also

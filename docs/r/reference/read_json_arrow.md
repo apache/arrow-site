@@ -89,7 +89,7 @@ data:
   a conversion error occurs.
 
 - JSON arrays convert to a
-  [`vctrs::list_of()`](https://vctrs.r-lib.org/reference/list_of.html)
+  [`list_of()`](https://arrow.apache.org/docs/r/reference/data-type.md)
   type, and inference proceeds recursively on the JSON arrays' values.
 
 - Nested JSON objects convert to a
