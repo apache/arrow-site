@@ -44,8 +44,11 @@ When building libarrow, by default, system dependencies will be used if
 suitable versions are found. If system dependencies are not present,
 libarrow will build them during its own build process. The only
 dependencies that you need to install *outside* of the build process are
-[cmake](https://cmake.org/) (for configuring the build) and
-[openssl](https://www.openssl.org/) if you are building with S3 support.
+[cmake](https://cmake.org/) (for configuring the build),
+[openssl](https://www.openssl.org/) and [curl](https://curl.se/libcurl/)
+if you are building with S3 and GCS support, and
+[libxml2](https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home) if you’re
+building with Azure support.
 
 For a faster build, you may choose to pre-install more C++ library
 dependencies (such as [lz4](http://lz4.github.io/lz4/),
@@ -55,13 +58,13 @@ they don’t need to be built from source in the libarrow build.
 ##### Ubuntu
 
 ``` bash
-sudo apt install -y cmake libcurl4-openssl-dev libssl-dev
+sudo apt install -y cmake libcurl4-openssl-dev libssl-dev libxml2-dev
 ```
 
 ##### macOS
 
 ``` bash
-brew install cmake openssl
+brew install cmake openssl libxml2
 ```
 
 #### Step 2 - Configure the libarrow build
@@ -153,6 +156,7 @@ to paste into a bash shell on a new line):
   -DARROW_GCS=ON \
   -DARROW_MIMALLOC=ON \
   -DARROW_S3=ON \
+  -DARROW_AZURE=ON \
   -DARROW_WITH_BROTLI=ON \
   -DARROW_WITH_BZ2=ON \
   -DARROW_WITH_LZ4=ON \
@@ -265,6 +269,7 @@ cmake \
   -DARROW_MIMALLOC=ON \
   -DARROW_PARQUET=ON \
   -DARROW_S3=ON \
+  -DARROW_AZURE=ON \
   -DARROW_WITH_BROTLI=ON \
   -DARROW_WITH_BZ2=ON \
   -DARROW_WITH_LZ4=ON \

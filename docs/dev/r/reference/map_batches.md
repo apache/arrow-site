@@ -1,13 +1,12 @@
 # Apply a function to a stream of RecordBatches
 
 As an alternative to calling
-[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) on a
-`Dataset` query, you can use this function to access the stream of
-`RecordBatch`es in the `Dataset`. This lets you do more complex
-operations in R that operate on chunks of data without having to hold
-the entire Dataset in memory at once. You can include `map_batches()` in
-a dplyr pipeline and do additional dplyr methods on the stream of data
-in Arrow after it.
+[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) on a `Dataset`
+query, you can use this function to access the stream of `RecordBatch`es
+in the `Dataset`. This lets you do more complex operations in R that
+operate on chunks of data without having to hold the entire Dataset in
+memory at once. You can include `map_batches()` in a dplyr pipeline and
+do additional dplyr methods on the stream of data in Arrow after it.
 
 ## Usage
 

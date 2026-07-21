@@ -1,11 +1,12 @@
-# Using cloud storage (S3, GCS)
+# Using cloud storage (S3, GCS, Azure)
 
 Working with data stored in cloud storage systems like [Amazon Simple
-Storage Service](https://docs.aws.amazon.com/s3/) (S3) and [Google Cloud
-Storage](https://cloud.google.com/storage/docs) (GCS) is a very common
-task. Because of this, the Arrow C++ library provides a toolkit aimed to
-make it as simple to work with cloud storage as it is to work with the
-local filesystem.
+Storage Service](https://docs.aws.amazon.com/s3/) (S3), [Google Cloud
+Storage](https://cloud.google.com/storage/docs) (GCS), and [Microsoft
+Azure](https://azure.microsoft.com) is a very common task. Because of
+this, the Arrow C++ library provides a toolkit aimed to make it as
+simple to work with cloud storage as it is to work with the local
+filesystem.
 
 To make this work, the Arrow C++ library contains a general-purpose
 interface for file systems, and the arrow package exposes this interface
@@ -18,28 +19,30 @@ for details). In general you probably don’t need this functionality
 because you already have tools for working with your local file system,
 but this interface becomes much more useful in the context of remote
 file systems. Currently there is a specific implementation for Amazon S3
-provided by the `S3FileSystem` class, and another one for Google Cloud
-Storage provided by `GcsFileSystem`.
+provided by the `S3FileSystem` class, one for Google Cloud Storage
+provided by `GcsFileSystem`, and another for Microsoft Azure provided by
+the `AzureFileSystem` class.
 
-This article provides an overview of working with both S3 and GCS data
-using the Arrow toolkit.
+This article provides an overview of working with S3, GCS, and Azure
+data using the Arrow toolkit.
 
-## S3 and GCS support
+## S3, GCS, and Azure support
 
 Before you start, make sure that your arrow installation has support for
-S3 and/or GCS enabled. You can check whether support is enabled via
-helper functions:
+S3, GCS, and/or Azure enabled. You can check whether support is enabled
+via helper functions:
 
 ``` r
 arrow_with_s3()
 arrow_with_gcs()
+arrow_with_azure()
 ```
 
 If these return `TRUE` then the relevant support is enabled.
 
-CRAN builds of arrow include S3 support but not GCS support. If you need
-GCS support, you can install arrow with full features using one of the
-following methods:
+CRAN builds of arrow include S3 and Azure support but not GCS support.
+If you need GCS support, you can install arrow with full features using
+one of the following methods:
 
 ``` r
 # Option 1: Install from R-universe
@@ -52,11 +55,12 @@ Sys.setenv("NOT_CRAN" = "true")
 install.packages("arrow", type = "source")
 ```
 
-On Linux, S3 and GCS support is not always enabled by default when
-installing from source, and there are additional system requirements
-involved. See the [installation
+On Linux, S3, GCS, and Azure support is not always enabled by default
+when installing from source, and there are additional system
+requirements involved. See the [installation
 article](https://arrow.apache.org/docs/r/articles/install.md) for
-details.
+details. Note that it is not currently possible to work with Azure on
+Windows.
 
 ## Connecting to cloud storage
 
@@ -71,9 +75,13 @@ Similarly,
 [`?GcsFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
 objects can be created with the
 [`gs_bucket()`](https://arrow.apache.org/docs/r/reference/gs_bucket.md)
+function and
+[`?AzureFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+objects can be created with the
+[`az_container()`](https://arrow.apache.org/docs/r/reference/az_container.md)
 function. The resulting `FileSystem` will consider paths relative to the
-bucket’s path (so for example you don’t need to prefix the bucket path
-when listing a directory).
+bucket/container’s path (so for example you don’t need to prefix the
+bucket path when listing a directory).
 
 With a `FileSystem` object, you can point to specific files in it with
 the `$path()` method and pass the result to file readers and writers
@@ -94,7 +102,7 @@ this data set consists of 5 Parquet files totaling less than 1MB in
 size.
 
 The diamonds data set is hosted on both S3 and GCS, in a bucket named
-`arrow-datasets`. To create an S3FileSystem object that refers to that
+`arrow-datasets`. To create an `S3FileSystem` object that refers to that
 bucket, use the following command:
 
 ``` r
@@ -171,17 +179,18 @@ Note that this will be slower to read than if the file were local.
 
 In most use cases, the easiest and most natural way to connect to cloud
 storage in arrow is to use the FileSystem objects returned by
-[`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md)
-and
+[`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md),
 [`gs_bucket()`](https://arrow.apache.org/docs/r/reference/gs_bucket.md),
+and
+[`az_container()`](https://arrow.apache.org/docs/r/reference/az_container.md),
 especially when multiple file operations are required. However, in some
 cases you may want to download a file directly by specifying the URI.
 This is permitted by arrow, and functions like
 [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md),
 [`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md),
 [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
-etc will all accept URIs to cloud resources hosted on S3 or GCS. The
-format of an S3 URI is as follows:
+etc will all accept URIs to cloud resources hosted on S3, GCS, or Azure.
+The format of an S3 URI is as follows:
 
     s3://[access_key:secret_key@]bucket/path[?region=]
 
@@ -189,6 +198,10 @@ For GCS, the URI format looks like this:
 
     gs://[access_key:secret_key@]bucket/path
     gs://anonymous@bucket/path
+
+For Azure, the URI format looks like this:
+
+    abfs://container@account_name.dfs.core.windows.net/path
 
 For example, the Parquet file storing the “good cut” diamonds that we
 downloaded earlier in the article is available on both S3 and CGS. The
@@ -300,6 +313,35 @@ fs <- GcsFileSystem$create(anonymous = TRUE)
 df <- read_parquet("gs://anonymous@arrow-datasets/diamonds/cut=Good/part-0.parquet")
 ```
 
+### Azure Authentication
+
+By default, `AzureFileSystem$create()` and
+[`az_container()`](https://arrow.apache.org/docs/r/reference/az_container.md)
+use the
+[DefaultAzureCredential](https://github.com/Azure/azure-sdk-for-cpp/blob/main/sdk/identity/azure-identity/README.md#defaultazurecredential)
+for authentication. This will try several different types of
+authentication, using the first one that succeeds. Like with GCS, a
+simple way to authenticate with Azure is to first use [Azure
+CLI](https://learn.microsoft.com/en-us/cli/azure/?view=azure-cli-latest)
+to login and setup default credentials:
+
+    az login
+
+It is possible to use other forms of authentication with Azure when
+calling `AzureFileSystem$create()` and
+[`az_container()`](https://arrow.apache.org/docs/r/reference/az_container.md).
+
+- Passing `client_id` on its own will use
+  [`ManagedIdentityCredential`](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview)
+  to authenticate.
+- Passing `client_id` with `tenant_id` and `client_secret` will use
+  [`ClientSecretCredential`](https://learn.microsoft.com/en-us/entra/identity-platform/app-objects-and-service-principals?tabs=browser)
+  to authenticate.
+- Passing `sas_token` will use a shared access signature (SAS) token for
+  the storage account.
+- Passing `account_key` will use the account key for the storage
+  account.
+
 ## Using a proxy server
 
 If you need to use a proxy server to connect to an S3 bucket, you can
@@ -373,9 +415,10 @@ Sys.setenv(AWS_EC2_METADATA_DISABLED = TRUE)
 
 ## Further reading
 
-- To learn more about `FileSystem` classes, including `S3FileSystem` and
-  `GcsFileSystem`, see
+- To learn more about `FileSystem` classes, including `S3FileSystem`,
+  `GcsFileSystem`, and `AzureFileSystem`, see
   [`help("FileSystem", package = "arrow")`](https://arrow.apache.org/docs/r/reference/FileSystem.md).
+
 - To see a data analysis example that relies on data hosted on cloud
   storage, see the [dataset
   article](https://arrow.apache.org/docs/r/articles/dataset.md).

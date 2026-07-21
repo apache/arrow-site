@@ -274,9 +274,8 @@ There are three reasons arrow can accomplish this task so quickly:
 First, arrow adopts a lazy evaluation approach to queries: when dplyr
 verbs are called on the Dataset, they record their actions but do not
 evaluate those actions on the data until you run
-[`collect()`](https://dplyr.tidyverse.org/reference/compute.html). We
-can see this by taking the same code as before and leaving off the final
-step:
+[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html). We can see
+this by taking the same code as before and leaving off the final step:
 
 ``` r
 ds |>
@@ -323,7 +322,7 @@ call unsupported dplyr verbs or unimplemented functions in your query on
 an Arrow Dataset. In that case, the arrow package raises an error.
 However, for dplyr queries on Arrow Table objects (which are already
 in-memory), the package automatically calls
-[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) before
+[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) before
 processing that dplyr verb. To learn more about the dplyr back end, see
 the [data wrangling
 article](https://arrow.apache.org/docs/r/articles/data_wrangling.md).
@@ -400,8 +399,8 @@ multiple file paths to
 This is useful if, for example, you have a single CSV file that is too
 big to read into memory. You could pass the file path to
 [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md),
-use [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
-to partition the Dataset into manageable chunks, then use
+use [`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html) to
+partition the Dataset into manageable chunks, then use
 [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
 to write each chunk to a separate Parquet file—all without needing to
 read the full CSV file into R.
@@ -477,8 +476,7 @@ doing so you ensure that a filter like `payment_type == "Cash"` will
 touch only a subset of files where `payment_type` is always `"Cash"`.
 
 One natural way to express the columns you want to partition on is to
-use the
-[`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
+use the [`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html)
 method:
 
 ``` r
@@ -518,8 +516,8 @@ with `hive_style = FALSE`.)
 Perhaps, though, `payment_type == "Cash"` is the only data you ever care
 about, and you just want to drop the rest and have a smaller working
 set. For this, you can
-[`filter()`](https://dplyr.tidyverse.org/reference/filter.html) them out
-when writing:
+[`filter()`](https://rdrr.io/pkg/dplyr/man/filter.html) them out when
+writing:
 
 ``` r
 ds |>

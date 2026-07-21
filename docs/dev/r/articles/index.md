@@ -24,11 +24,11 @@
   Learn how to use arrow and reticulate to efficiently transfer data
   between R and Python without making unnecessary copies
 
-- [Using cloud storage (S3,
-  GCS)](https://arrow.apache.org/docs/r/articles/fs.md):
+- [Using cloud storage (S3, GCS,
+  Azure)](https://arrow.apache.org/docs/r/articles/fs.md):
 
-  Learn how to work with data sets stored in an Amazon S3 bucket or on
-  Google Cloud Storage
+  Learn how to work with data sets stored in an Amazon S3 bucket, on
+  Google Cloud Storage, or on Azure
 
 - [Connecting to a Flight
   server](https://arrow.apache.org/docs/r/articles/flight.md):

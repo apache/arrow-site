@@ -193,12 +193,12 @@ argument to `open_dataset()` to use them. If you do provide a character
 vector of partition column names, they will be ignored if they match
 what is detected, and if they don't match, you'll get an error. (If you
 want to rename partition columns, do that using
-[`select()`](https://dplyr.tidyverse.org/reference/select.html) or
-[`rename()`](https://dplyr.tidyverse.org/reference/rename.html) after
-opening the dataset.). If you provide a `Schema` and the names match
-what is detected, it will use the types defined by the Schema. In the
-example file path above, you could provide a Schema to specify that
-"month" should be
+[`select()`](https://rdrr.io/pkg/dplyr/man/select.html) or
+[`rename()`](https://rdrr.io/pkg/dplyr/man/rename.html) after opening
+the dataset.). If you provide a `Schema` and the names match what is
+detected, it will use the types defined by the Schema. In the example
+file path above, you could provide a Schema to specify that "month"
+should be
 [`int8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
 instead of the
 [`int32()`](https://arrow.apache.org/docs/r/reference/data-type.md) it

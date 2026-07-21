@@ -1,12 +1,10 @@
 # Register user-defined functions
 
 These functions support calling R code from query engine execution
-(i.e., a
-[`dplyr::mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
-or
-[`dplyr::filter()`](https://dplyr.tidyverse.org/reference/filter.html)
-on a [Table](https://arrow.apache.org/docs/r/reference/Table-class.md)
-or [Dataset](https://arrow.apache.org/docs/r/reference/Dataset.md)). Use
+(i.e., a [`dplyr::mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html)
+or [`dplyr::filter()`](https://rdrr.io/pkg/dplyr/man/filter.html) on a
+[Table](https://arrow.apache.org/docs/r/reference/Table-class.md) or
+[Dataset](https://arrow.apache.org/docs/r/reference/Dataset.md)). Use
 `register_scalar_function()` attach Arrow input and output types to an R
 function and make it available for use in the dplyr interface and/or
 [`call_function()`](https://arrow.apache.org/docs/r/reference/call_function.md).

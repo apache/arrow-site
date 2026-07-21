@@ -723,14 +723,14 @@ lapply(scan$ScanBatches(), as.data.frame)
     ## 3 15      c        51
 
 If we return to the dplyr query we made earlier, and use
-[`compute()`](https://dplyr.tidyverse.org/reference/compute.html) to
-return a Table rather use
-[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) to
-return a data frame, we can see the evidence of this process at work.
-The Table object is created by concatenating the three Record Batches
-produced when the query executes against three data files, and as a
-consequence of this the Chunked Array that defines a column of the Table
-mirrors the partitioning structure present in the data files:
+[`compute()`](https://rdrr.io/pkg/dplyr/man/compute.html) to return a
+Table rather use
+[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) to return a
+data frame, we can see the evidence of this process at work. The Table
+object is created by concatenating the three Record Batches produced
+when the query executes against three data files, and as a consequence
+of this the Chunked Array that defines a column of the Table mirrors the
+partitioning structure present in the data files:
 
 ``` r
 tbl <- ds |>
@@ -746,11 +746,11 @@ tbl$subset
     ## <string>
     ## [
     ##   [
-    ##     "a",
-    ##     "a"
+    ##     "b"
     ##   ],
     ##   [
-    ##     "b"
+    ##     "a",
+    ##     "a"
     ##   ],
     ##   [
     ##     "c",

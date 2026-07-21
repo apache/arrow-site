@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Index &#8212; Apache Arrow v25.0.0.dev160</title>
+    <title>Index &#8212; Apache Arrow v26.0.0.dev13</title>
   
   
   
@@ -26,8 +26,8 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=0790524f97105ba85085" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=0790524f97105ba85085" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
@@ -35,12 +35,12 @@
     <link rel="stylesheet" type="text/css" href="_static/theme_overrides.css?v=8dcd28dc" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="_static/scripts/fontawesome.js?digest=0790524f97105ba85085"></script>
+  <script defer src="_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=0790524f97105ba85085" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=0790524f97105ba85085" />
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
 
-    <script src="_static/documentation_options.js?v=55918d99"></script>
+    <script src="_static/documentation_options.js?v=37355188"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -265,6 +265,25 @@ let darkTheme = isDarkTheme();
 let modal = null;
 let modalContent = null;
 let previousScrollOffset = [window.scrollX, window.scrollY];
+let _lazyObserver = null;
+let _renderQueue = Promise.resolve();
+
+// Apply d3 zoom to each SVG. Idempotent: an SVG already wrapped is skipped,
+// so this is safe to call both for the initial batch and for diagrams that
+// render lazily once they become visible.
+const addZoomToSvgs = (svgs) => {
+    svgs.each(function() {
+        if (this.getAttribute('data-zoom-applied') === 'true') return;
+        var svg = d3.select(this);
+        svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+        var inner = svg.select("g");
+        var zoom = d3.zoom().on("zoom", function(event) {
+            inner.attr("transform", event.transform);
+        });
+        svg.call(zoom);
+        this.setAttribute('data-zoom-applied', 'true');
+    });
+};
 
 const runMermaid = async (rerun) => {
     console.log("Running mermaid diagrams, rerun =", rerun);
@@ -272,7 +291,15 @@ const runMermaid = async (rerun) => {
     let all_mermaids = document.querySelectorAll(".mermaid");
 
     if (rerun) {
+        // Disconnect any previous lazy rendering observer
+        if (_lazyObserver) {
+            _lazyObserver.disconnect();
+            _lazyObserver = null;
+        }
+
         all_mermaids.forEach((el) => {
+            el.removeAttribute('data-mermaid-deferred');
+            el.removeAttribute('data-mermaid-render-failed');
             if(!el.hasAttribute("data-original-code")) {
                 // store original code
                 // console.log(`Storing original code for first run: `, el.innerHTML);
@@ -289,35 +316,89 @@ const runMermaid = async (rerun) => {
                 el.setAttribute('data-original-code', el.innerHTML);
             }
         });
-        await mermaid.run();
+
+        // Separate visible and hidden elements. Mermaid's layout engine measures
+        // text dimensions via the DOM, which fails for elements hidden by a parent
+        // (e.g., Reveal.js non-active slides, sphinx-design unopened tabs),
+        // producing broken SVGs. Render visible elements now, defer hidden ones.
+        const visible = [];
+        const hidden = [];
+        all_mermaids.forEach((el) => {
+            // offsetParent is null for display:none ancestors.
+            // getClientRects().length > 0 catches position:fixed elements
+            // (which also have null offsetParent but are still visible).
+            if (el.offsetParent !== null || el.getClientRects().length > 0) {
+                visible.push(el);
+            } else {
+                hidden.push(el);
+                el.setAttribute('data-mermaid-deferred', 'true');
+            }
+        });
+
+        if (visible.length > 0) {
+            try {
+                await mermaid.run({ nodes: visible });
+            } catch (e) {
+                console.error("Mermaid rendering failed:", e);
+            }
+        }
+
+        // Lazily render hidden elements when they become visible.
+        // Uses a promise chain (_renderQueue) to serialize rendering,
+        // since IntersectionObserver may report multiple entries at once
+        // and mermaid.run() is not safe to call concurrently.
+        if (hidden.length > 0) {
+            if (typeof IntersectionObserver === 'undefined') {
+                console.warn("IntersectionObserver not available; hidden mermaid diagrams will not render.");
+            } else {
+                _renderQueue = Promise.resolve();
+                _lazyObserver = new IntersectionObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.isIntersecting && entry.target.getAttribute("data-processed") !== "true") {
+                            _lazyObserver.unobserve(entry.target);
+                            const el = entry.target;
+                            _renderQueue = _renderQueue.then(async () => {
+                                try {
+                                    await mermaid.run({ nodes: [el] });
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    // Apply zoom to the now-rendered diagram, matching
+                                    // the decoration visible diagrams receive.
+                                    if ("False" === "True") {
+                                        addZoomToSvgs(d3.selectAll(""));
+                                    }
+                                } catch (e) {
+                                    console.error("Mermaid deferred rendering failed:", e);
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    el.setAttribute('data-mermaid-render-failed', 'true');
+                                }
+                            });
+                        }
+                    }
+                });
+                hidden.forEach((el) => _lazyObserver.observe(el));
+            }
+        }
     }
 
     all_mermaids = document.querySelectorAll(".mermaid");
-    const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
+    // Exclude deferred (hidden) and render-failed elements from completion checks
+    const mermaids_active = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])");
+    const mermaids_processed = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])[data-processed='true']");
 
     if ("False" === "True") {
-        const mermaids_to_add_zoom = -1 === -1 ? all_mermaids.length : -1;
+        const mermaids_to_add_zoom = -1 === -1 ? mermaids_active.length : -1;
         if(mermaids_to_add_zoom > 0) {
             var svgs = d3.selectAll("");
-            if(all_mermaids.length !== mermaids_processed.length) {
+            // Wait until every active (visible) diagram has rendered. Deferred
+            // diagrams are excluded, so a fixed d3_node_count that counts a
+            // hidden diagram no longer loops forever waiting for its SVG.
+            if(mermaids_active.length !== mermaids_processed.length) {
                 setTimeout(() => runMermaid(false), 200);
                 return;
-            } else if(svgs.size() !== mermaids_to_add_zoom) {
-                setTimeout(() => runMermaid(false), 200);
-                return;
-            } else {
-                svgs.each(function() {
-                    var svg = d3.select(this);
-                    svg.html("<g class='wrapper'>" + svg.html() + "</g>");
-                    var inner = svg.select("g");
-                    var zoom = d3.zoom().on("zoom", function(event) {
-                        inner.attr("transform", event.transform);
-                    });
-                    svg.call(zoom);
-                });
             }
+            addZoomToSvgs(svgs);
         }
-    } else if(all_mermaids.length !== mermaids_processed.length) {
+    } else if(mermaids_active.length !== mermaids_processed.length) {
         // Wait for mermaid to process all diagrams
         setTimeout(() => runMermaid(false), 200);
         return;
@@ -483,7 +564,7 @@ window.addEventListener("load", load);
 window.runMermaid = runMermaid;</script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
     <script>
-        DOCUMENTATION_OPTIONS.theme_version = '0.18.0';
+        DOCUMENTATION_OPTIONS.theme_version = '0.20.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://arrow.apache.org/docs/_static/versions.json';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev/';
         DOCUMENTATION_OPTIONS.show_version_warning_banner =
@@ -497,7 +578,7 @@ window.runMermaid = runMermaid;</script>
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="25.0.0.dev160" />
+  <meta name="docsearch:version" content="26.0.0.dev13" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -588,8 +669,8 @@ window.runMermaid = runMermaid;</script>
       
     
     
-    <img src="_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v25.0.0.dev160 - Home"/>
-    <img src="_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v25.0.0.dev160 - Home"/>
+    <img src="_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v26.0.0.dev13 - Home"/>
+    <img src="_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v26.0.0.dev13 - Home"/>
   
   
 </a></div>
@@ -2411,9 +2492,13 @@ window.runMermaid = runMermaid;</script>
 </li>
       <li><a href="cpp/api/array.html#_CPPv4NK5arrow9ArrayData11device_typeEv">arrow::ArrayData::device_type (C++ function)</a>
 </li>
+      <li><a href="cpp/api/array.html#_CPPv4I0EN5arrow9ArrayData14GetMutableSpanENSt4spanI1TEEi7int64_t">arrow::ArrayData::GetMutableSpan (C++ function)</a>
+</li>
       <li><a href="cpp/api/array.html#_CPPv4I0EN5arrow9ArrayData16GetMutableValuesEP1Ti">arrow::ArrayData::GetMutableValues (C++ function)</a>, <a href="cpp/api/array.html#_CPPv4I0EN5arrow9ArrayData16GetMutableValuesEP1Ti7int64_t">[1]</a>
 </li>
       <li><a href="cpp/api/array.html#_CPPv4NK5arrow9ArrayData12GetNullCountEv">arrow::ArrayData::GetNullCount (C++ function)</a>
+</li>
+      <li><a href="cpp/api/array.html#_CPPv4I0ENK5arrow9ArrayData7GetSpanENSt4spanIK1TEEi7int64_t">arrow::ArrayData::GetSpan (C++ function)</a>
 </li>
       <li><a href="cpp/api/array.html#_CPPv4I0ENK5arrow9ArrayData9GetValuesEPK1Ti">arrow::ArrayData::GetValues (C++ function)</a>, <a href="cpp/api/array.html#_CPPv4I0ENK5arrow9ArrayData9GetValuesEPK1Ti7int64_t">[1]</a>
 </li>
@@ -2979,7 +3064,7 @@ window.runMermaid = runMermaid;</script>
 </li>
       <li><a href="cpp/api/memory.html#_CPPv4I0ENK5arrow6Buffer7span_asENSt4spanIK1TEEv">arrow::Buffer::span_as (C++ function)</a>
 </li>
-      <li><a href="cpp/api/memory.html#_CPPv4N5arrow6Buffer11ToHexStringEv">arrow::Buffer::ToHexString (C++ function)</a>
+      <li><a href="cpp/api/memory.html#_CPPv4NK5arrow6Buffer11ToHexStringEv">arrow::Buffer::ToHexString (C++ function)</a>
 </li>
       <li><a href="cpp/api/memory.html#_CPPv4NK5arrow6Buffer8ToStringEv">arrow::Buffer::ToString (C++ function)</a>
 </li>
@@ -3040,6 +3125,8 @@ window.runMermaid = runMermaid;</script>
       <li><a href="cpp/api/array.html#_CPPv4N5arrow12ChunkedArray12ChunkedArrayE11ArrayVectorNSt10shared_ptrI8DataTypeEE">arrow::ChunkedArray::ChunkedArray (C++ function)</a>, <a href="cpp/api/array.html#_CPPv4N5arrow12ChunkedArray12ChunkedArrayENSt10shared_ptrI5ArrayEE">[1]</a>
 </li>
       <li><a href="cpp/api/array.html#_CPPv4NK5arrow12ChunkedArray6chunksEv">arrow::ChunkedArray::chunks (C++ function)</a>
+</li>
+      <li><a href="cpp/api/array.html#_CPPv4NK5arrow12ChunkedArray23ComputeLogicalNullCountEv">arrow::ChunkedArray::ComputeLogicalNullCount (C++ function)</a>
 </li>
       <li><a href="cpp/api/array.html#_CPPv4NK5arrow12ChunkedArray12device_typesEv">arrow::ChunkedArray::device_types (C++ function)</a>
 </li>
@@ -3677,11 +3764,13 @@ window.runMermaid = runMermaid;</script>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions8DefaultsEv">arrow::compute::RankOptions::Defaults (C++ function)</a>
 </li>
+      <li><a href="cpp/api/compute.html#_CPPv4NK5arrow7compute11RankOptions11GetSortKeysEv">arrow::compute::RankOptions::GetSortKeys (C++ function)</a>
+</li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions9kTypeNameE">arrow::compute::RankOptions::kTypeName (C++ member)</a>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions14null_placementE">arrow::compute::RankOptions::null_placement (C++ member)</a>
 </li>
-      <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions11RankOptionsE9SortOrder13NullPlacement10Tiebreaker">arrow::compute::RankOptions::RankOptions (C++ function)</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions11RankOptionsENSt6vectorI7SortKeyEE13NullPlacement10Tiebreaker">[1]</a>
+      <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions11RankOptionsE9SortOrder10Tiebreaker">arrow::compute::RankOptions::RankOptions (C++ function)</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions11RankOptionsE9SortOrder13NullPlacement10Tiebreaker">[1]</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions11RankOptionsENSt6vectorI7SortKeyEE10Tiebreaker">[2]</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions11RankOptionsENSt6vectorI7SortKeyEENSt8optionalI13NullPlacementEE10Tiebreaker">[3]</a>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11RankOptions9sort_keysE">arrow::compute::RankOptions::sort_keys (C++ member)</a>
 </li>
@@ -3701,11 +3790,13 @@ window.runMermaid = runMermaid;</script>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute19RankQuantileOptions8DefaultsEv">arrow::compute::RankQuantileOptions::Defaults (C++ function)</a>
 </li>
+      <li><a href="cpp/api/compute.html#_CPPv4NK5arrow7compute19RankQuantileOptions11GetSortKeysEv">arrow::compute::RankQuantileOptions::GetSortKeys (C++ function)</a>
+</li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute19RankQuantileOptions9kTypeNameE">arrow::compute::RankQuantileOptions::kTypeName (C++ member)</a>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute19RankQuantileOptions14null_placementE">arrow::compute::RankQuantileOptions::null_placement (C++ member)</a>
 </li>
-      <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute19RankQuantileOptions19RankQuantileOptionsE9SortOrder13NullPlacement">arrow::compute::RankQuantileOptions::RankQuantileOptions (C++ function)</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute19RankQuantileOptions19RankQuantileOptionsENSt6vectorI7SortKeyEE13NullPlacement">[1]</a>
+      <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute19RankQuantileOptions19RankQuantileOptionsE9SortOrderNSt8optionalI13NullPlacementEE">arrow::compute::RankQuantileOptions::RankQuantileOptions (C++ function)</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute19RankQuantileOptions19RankQuantileOptionsENSt6vectorI7SortKeyEENSt8optionalI13NullPlacementEE">[1]</a>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute19RankQuantileOptions9sort_keysE">arrow::compute::RankQuantileOptions::sort_keys (C++ member)</a>
 </li>
@@ -3833,6 +3924,8 @@ window.runMermaid = runMermaid;</script>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute14SelectKOptions8DefaultsEv">arrow::compute::SelectKOptions::Defaults (C++ function)</a>
 </li>
+      <li><a href="cpp/api/compute.html#_CPPv4NK5arrow7compute14SelectKOptions11GetSortKeysEv">arrow::compute::SelectKOptions::GetSortKeys (C++ function)</a>
+</li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute14SelectKOptions1kE">arrow::compute::SelectKOptions::k (C++ member)</a>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute14SelectKOptions9kTypeNameE">arrow::compute::SelectKOptions::kTypeName (C++ member)</a>
@@ -3899,13 +3992,17 @@ window.runMermaid = runMermaid;</script>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions8DefaultsEv">arrow::compute::SortOptions::Defaults (C++ function)</a>
 </li>
+      <li><a href="cpp/api/compute.html#_CPPv4NK5arrow7compute11SortOptions11GetSortKeysEv">arrow::compute::SortOptions::GetSortKeys (C++ function)</a>
+</li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions9kTypeNameE">arrow::compute::SortOptions::kTypeName (C++ member)</a>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions14null_placementE">arrow::compute::SortOptions::null_placement (C++ member)</a>
 </li>
+      <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptionsaSERK11SortOptions">arrow::compute::SortOptions::operator= (C++ function)</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptionsaSERR11SortOptions">[1]</a>
+</li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions9sort_keysE">arrow::compute::SortOptions::sort_keys (C++ member)</a>
 </li>
-      <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions11SortOptionsENSt6vectorI7SortKeyEE13NullPlacement">arrow::compute::SortOptions::SortOptions (C++ function)</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions11SortOptionsERK8Ordering">[1]</a>
+      <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions11SortOptionsENSt6vectorI7SortKeyEE">arrow::compute::SortOptions::SortOptions (C++ function)</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions11SortOptionsENSt6vectorI7SortKeyEENSt8optionalI13NullPlacementEE">[1]</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions11SortOptionsERK11SortOptions">[2]</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions11SortOptionsERK8Ordering">[3]</a>, <a href="cpp/api/compute.html#_CPPv4N5arrow7compute11SortOptions11SortOptionsERR11SortOptions">[4]</a>
 </li>
       <li><a href="cpp/api/compute.html#_CPPv4N5arrow7compute12SplitOptionsE">arrow::compute::SplitOptions (C++ class)</a>
 </li>
@@ -5943,14 +6040,14 @@ window.runMermaid = runMermaid;</script>
 </li>
       <li><a href="cpp/api/flight.html#_CPPv4N5arrow6flight17FlightCallOptions7timeoutE">arrow::flight::FlightCallOptions::timeout (C++ member)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="cpp/api/flight.html#_CPPv4N5arrow6flight17FlightCallOptions13write_optionsE">arrow::flight::FlightCallOptions::write_options (C++ member)</a>
 </li>
       <li><a href="cpp/api/flight.html#_CPPv4N5arrow6flight12FlightClientE">arrow::flight::FlightClient (C++ class)</a>
 </li>
       <li><a href="cpp/api/flight.html#_CPPv4N5arrow6flight12FlightClient12AuthenticateERK17FlightCallOptionsNSt10unique_ptrI17ClientAuthHandlerEE">arrow::flight::FlightClient::Authenticate (C++ function)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="cpp/api/flight.html#_CPPv4N5arrow6flight12FlightClient22AuthenticateBasicTokenERK17FlightCallOptionsRKNSt6stringERKNSt6stringE">arrow::flight::FlightClient::AuthenticateBasicToken (C++ function)</a>
 </li>
       <li><a href="cpp/api/flight.html#_CPPv4N5arrow6flight12FlightClient16CancelFlightInfoERK17FlightCallOptionsRK23CancelFlightInfoRequest">arrow::flight::FlightClient::CancelFlightInfo (C++ function)</a>
@@ -7336,6 +7433,8 @@ window.runMermaid = runMermaid;</script>
       <li><a href="cpp/api/filesystem.html#_CPPv4N5arrow2fs9S3Options14FromAssumeRoleERKNSt6stringERKNSt6stringERKNSt6stringEiRKNSt10shared_ptrIN3Aws3STS9STSClientEEE">arrow::fs::S3Options::FromAssumeRole (C++ function)</a>
 </li>
       <li><a href="cpp/api/filesystem.html#_CPPv4N5arrow2fs9S3Options29FromAssumeRoleWithWebIdentityEv">arrow::fs::S3Options::FromAssumeRoleWithWebIdentity (C++ function)</a>
+</li>
+      <li><a href="cpp/api/filesystem.html#_CPPv4N5arrow2fs9S3Options17FromUriAndOptionsERKN5arrow4util3UriERK24FileSystemFactoryOptionsPNSt6stringE">arrow::fs::S3Options::FromUriAndOptions (C++ function)</a>
 </li>
       <li><a href="cpp/api/filesystem.html#_CPPv4N5arrow2fs9S3Options14load_frequencyE">arrow::fs::S3Options::load_frequency (C++ member)</a>
 </li>
@@ -9028,6 +9127,8 @@ window.runMermaid = runMermaid;</script>
       <li><a href="cpp/api/table.html#_CPPv4NK5arrow5Table5SliceE7int64_t">arrow::Table::Slice (C++ function)</a>, <a href="cpp/api/table.html#_CPPv4NK5arrow5Table5SliceE7int64_t7int64_t">[1]</a>
 </li>
       <li><a href="cpp/api/table.html#_CPPv4NK5arrow5Table8ToStringEv">arrow::Table::ToString (C++ function)</a>
+</li>
+      <li><a href="cpp/api/table.html#_CPPv4NK5arrow5Table8ToTensorEbbP10MemoryPool">arrow::Table::ToTensor (C++ function)</a>
 </li>
       <li><a href="cpp/api/table.html#_CPPv4NK5arrow5Table8ValidateEv">arrow::Table::Validate (C++ function)</a>
 </li>
@@ -13280,6 +13381,8 @@ window.runMermaid = runMermaid;</script>
 </li>
       <li><a href="cpp/api/filesystem.html#_CPPv417FileSystemFromUriRKNSt6stringEPNSt6stringE">FileSystemFromUri (C++ function)</a>, <a href="cpp/api/filesystem.html#_CPPv417FileSystemFromUriRKNSt6stringERKN2io9IOContextEPNSt6stringE">[1]</a>
 </li>
+      <li><a href="cpp/api/filesystem.html#_CPPv427FileSystemFromUriAndOptionsRKNSt6stringERK24FileSystemFactoryOptionsPNSt6stringE">FileSystemFromUriAndOptions (C++ function)</a>, <a href="cpp/api/filesystem.html#_CPPv427FileSystemFromUriAndOptionsRKNSt6stringERK24FileSystemFactoryOptionsRKN2io9IOContextEPNSt6stringE">[1]</a>
+</li>
       <li><a href="cpp/api/filesystem.html#_CPPv423FileSystemFromUriOrPathRKNSt6stringEPNSt6stringE">FileSystemFromUriOrPath (C++ function)</a>, <a href="cpp/api/filesystem.html#_CPPv423FileSystemFromUriOrPathRKNSt6stringERKN2io9IOContextEPNSt6stringE">[1]</a>
 </li>
       <li><a href="python/generated/pyarrow.fs.FileSystemHandler.html#pyarrow.fs.FileSystemHandler">FileSystemHandler (class in pyarrow.fs)</a>
@@ -14651,6 +14754,8 @@ window.runMermaid = runMermaid;</script>
       <li><a href="python/generated/pyarrow.compute.hour.html#pyarrow.compute.hour">hour() (in module pyarrow.compute)</a>
 </li>
       <li><a href="python/generated/pyarrow.compute.hours_between.html#pyarrow.compute.hours_between">hours_between() (in module pyarrow.compute)</a>
+</li>
+      <li><a href="python/generated/pyarrow.compute.hypot.html#pyarrow.compute.hypot">hypot() (in module pyarrow.compute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -20502,6 +20607,8 @@ window.runMermaid = runMermaid;</script>
 </li>
         <li><a href="python/generated/pyarrow.SparseCSRMatrix.html#pyarrow.SparseCSRMatrix.to_tensor">(pyarrow.SparseCSRMatrix method)</a>
 </li>
+        <li><a href="python/generated/pyarrow.Table.html#pyarrow.Table.to_tensor">(pyarrow.Table method)</a>
+</li>
       </ul></li>
       <li><a href="python/generated/pyarrow.Array.html#pyarrow.Array.tolist">tolist() (pyarrow.Array method)</a>
 
@@ -22157,8 +22264,8 @@ window.runMermaid = runMermaid;</script>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="_static/scripts/bootstrap.js?digest=0790524f97105ba85085"></script>
-<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=0790524f97105ba85085"></script>
+  <script defer src="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -22193,7 +22300,7 @@ Apache Arrow, Arrow, Apache, the Apache logo, and the Apache Arrow project logo 
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.18.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
 </p></div>
       
     </div>

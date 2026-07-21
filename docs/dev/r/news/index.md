@@ -1,10 +1,65 @@
 # Changelog
 
-## arrow 24.0.0.9000
+## arrow 25.0.0.9000
 
-## arrow 24.0.0
+## arrow 25.0.0
 
-CRAN release: 2026-04-29
+CRAN release: 2026-07-16
+
+### Breaking changes
+
+- Arrow `uint64` types are now always converted to R `double` (numeric)
+  vectors, regardless of the values. Previously, small `uint64` values
+  were converted to R `integer`, which could cause inconsistent types
+  within list-columns when different list elements had different value
+  ranges ([\#50339](https://github.com/apache/arrow/issues/50339)).
+
+### New features
+
+- `Field` objects now support field-level metadata via `$metadata` and
+  `$with_metadata()`
+  ([@max-romagnoli](https://github.com/max-romagnoli),
+  [\#33390](https://github.com/apache/arrow/issues/33390)).
+- Parquet files now support list-columns of ordered factors (ordered
+  dictionaries)
+  ([\#49689](https://github.com/apache/arrow/issues/49689)).
+
+### Minor improvements and fixes
+
+- `Array$create()` now gives a clearer error message when given a
+  `POSIXct` object with an invalid timezone
+  ([\#40886](https://github.com/apache/arrow/issues/40886)).
+- Dictionary arrays with `large_string` value types now convert
+  correctly to R factors
+  ([\#39603](https://github.com/apache/arrow/issues/39603)).
+- [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+  now gives a clearer error message when providing a mix of `readr` and
+  Arrow options ([@Rich-T-kid](https://github.com/Rich-T-kid),
+  [\#33420](https://github.com/apache/arrow/issues/33420)).
+- [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md)
+  no longer triggers a C++ alignment warning from the Acero source node
+  ([\#46178](https://github.com/apache/arrow/issues/46178)).
+- `Schema` metadata partial matching on `$metadata$r` no longer errors
+  when other metadata keys start with “r”
+  ([\#50163](https://github.com/apache/arrow/issues/50163)).
+- [`to_arrow()`](https://arrow.apache.org/docs/r/reference/to_arrow.md)
+  now preserves
+  [`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html) when
+  converting from a dbplyr lazy table
+  ([\#40640](https://github.com/apache/arrow/issues/40640)).
+- [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md)
+  now correctly validates that `max_rows_per_group` is a positive number
+  ([\#40742](https://github.com/apache/arrow/issues/40742)).
+- Stale S3 connections no longer cause a segfault during garbage
+  collection ([\#50009](https://github.com/apache/arrow/issues/50009)).
+- Spurious warnings are no longer emitted when reading files with custom
+  schema metadata
+  ([\#48712](https://github.com/apache/arrow/issues/48712)).
+
+### Installation
+
+- The R package now builds under `r-universe/r-wasm`
+  ([\#49981](https://github.com/apache/arrow/issues/49981)).
 
 ## arrow 24.0.0
 
@@ -12,18 +67,18 @@ CRAN release: 2026-04-29
 
 ### New features
 
-- [`dplyr::when_any()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
+- [`dplyr::when_any()`](https://rdrr.io/pkg/dplyr/man/when-any-all.html)
   and
-  [`dplyr::when_all()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
+  [`dplyr::when_all()`](https://rdrr.io/pkg/dplyr/man/when-any-all.html)
   helper bindings
   ([\#49535](https://github.com/apache/arrow/issues/49535)).
-- [`dplyr::filter_out()`](https://dplyr.tidyverse.org/reference/filter.html)
+- [`dplyr::filter_out()`](https://rdrr.io/pkg/dplyr/man/filter.html)
   binding ([@larry77](https://github.com/larry77),
   [\#49256](https://github.com/apache/arrow/issues/49256)).
-- [`dplyr::recode_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html),
-  [`dplyr::replace_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html),
+- [`dplyr::recode_values()`](https://rdrr.io/pkg/dplyr/man/recode-and-replace-values.html),
+  [`dplyr::replace_values()`](https://rdrr.io/pkg/dplyr/man/recode-and-replace-values.html),
   and
-  [`dplyr::replace_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
+  [`dplyr::replace_when()`](https://rdrr.io/pkg/dplyr/man/case-and-replace-when.html)
   bindings ([\#49536](https://github.com/apache/arrow/issues/49536)).
 - [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
   gains a `preserve_order` argument to preserve row ordering within
@@ -178,7 +233,7 @@ CRAN release: 2025-07-24
   `S3FileSystem` to reduce I/O calls on cloud storage
   ([@HaochengLIU](https://github.com/HaochengLIU),
   [\#41998](https://github.com/apache/arrow/issues/41998)).
-- [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
+- [`case_when()`](https://rdrr.io/pkg/dplyr/man/case-and-replace-when.html)
   now correctly detects objects that are not in the global environment
   ([@etiennebacher](https://github.com/etiennebacher),
   [\#46667](https://github.com/apache/arrow/issues/46667)).
@@ -280,12 +335,12 @@ CRAN release: 2024-08-17
   user-defined functions (UDFs); for UDFs, see
   [`register_scalar_function()`](https://arrow.apache.org/docs/r/reference/register_scalar_function.md).
   ([\#41223](https://github.com/apache/arrow/issues/41223))
-- [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
-  expressions can now include aggregations, such as `x - mean(x)`.
+- [`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html) expressions
+  can now include aggregations, such as `x - mean(x)`.
   ([\#41350](https://github.com/apache/arrow/issues/41350))
-- [`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html)
-  supports more complex expressions, and correctly handles cases where
-  column names are reused in expressions.
+- [`summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html) supports
+  more complex expressions, and correctly handles cases where column
+  names are reused in expressions.
   ([\#41223](https://github.com/apache/arrow/issues/41223))
 - The `na_matches` argument to the `dplyr::*_join()` functions is now
   supported. This argument controls whether `NA` values are considered
@@ -572,7 +627,7 @@ CRAN release: 2023-08-30
   dplyr verbs ([@eitsupi](https://github.com/eitsupi),
   [\#35667](https://github.com/apache/arrow/issues/35667))
 - Binding for
-  [`dplyr::case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
+  [`dplyr::case_when()`](https://rdrr.io/pkg/dplyr/man/case-and-replace-when.html)
   now accepts `.default` parameter to match the update in dplyr 1.1.0
   ([\#35502](https://github.com/apache/arrow/issues/35502))
 
@@ -606,9 +661,9 @@ CRAN release: 2023-08-30
   return a timezone-aware timestamp if `%z` is part of the format string
   ([\#35671](https://github.com/apache/arrow/issues/35671))
 - Column ordering when combining
-  [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
-  and [`across()`](https://dplyr.tidyverse.org/reference/across.html)
-  now matches dplyr ([@eitsupi](https://github.com/eitsupi),
+  [`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html) and
+  [`across()`](https://rdrr.io/pkg/dplyr/man/across.html) now matches
+  dplyr ([@eitsupi](https://github.com/eitsupi),
   [\#35473](https://github.com/apache/arrow/issues/35473))
 
 ### Installation
@@ -731,7 +786,7 @@ CRAN release: 2023-05-05
   ([@eitsupi](https://github.com/eitsupi),
   [\#33631](https://github.com/apache/arrow/issues/33631),
   [\#34260](https://github.com/apache/arrow/issues/34260)).
-- The [`dplyr::n()`](https://dplyr.tidyverse.org/reference/context.html)
+- The [`dplyr::n()`](https://rdrr.io/pkg/dplyr/man/context.html)
   function is now mapped to the `count_all` kernel to improve
   performance and simplify the R implementation
   ([\#33892](https://github.com/apache/arrow/issues/33892),
@@ -812,17 +867,17 @@ CRAN release: 2023-02-12
 #### dplyr compatibility
 
 - New dplyr (1.1.0) function
-  [`join_by()`](https://dplyr.tidyverse.org/reference/join_by.html) has
-  been implemented for dplyr joins on Arrow objects (equality conditions
+  [`join_by()`](https://rdrr.io/pkg/dplyr/man/join_by.html) has been
+  implemented for dplyr joins on Arrow objects (equality conditions
   only). ([\#33664](https://github.com/apache/arrow/issues/33664))
 - Output is accurate when multiple
-  [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)/[`dplyr::summarise()`](https://dplyr.tidyverse.org/reference/summarise.html)
+  [`dplyr::group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html)/[`dplyr::summarise()`](https://rdrr.io/pkg/dplyr/man/summarise.html)
   calls are used.
   ([\#14905](https://github.com/apache/arrow/issues/14905))
-- [`dplyr::summarize()`](https://dplyr.tidyverse.org/reference/summarise.html)
+- [`dplyr::summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html)
   works with division when divisor is a variable.
   ([\#14933](https://github.com/apache/arrow/issues/14933))
-- [`dplyr::right_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html)
+- [`dplyr::right_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html)
   correctly coalesces keys.
   ([\#15077](https://github.com/apache/arrow/issues/15077))
 - Multiple changes to ensure compatibility with dplyr 1.1.0.
@@ -892,7 +947,7 @@ Minor improvements and fixes:
 - Update to ensure compatibility with changes in dev purrr
   ([\#14581](https://github.com/apache/arrow/issues/14581))
 - Fix to correctly handle `.data` pronoun in
-  [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
+  [`dplyr::group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html)
   ([\#14484](https://github.com/apache/arrow/issues/14484))
 
 ## arrow 10.0.0
@@ -903,22 +958,21 @@ CRAN release: 2022-10-26
 
 Several new functions can be used in queries:
 
-- [`dplyr::across()`](https://dplyr.tidyverse.org/reference/across.html)
-  can be used to apply the same computation across multiple columns, and
-  the [`where()`](https://tidyselect.r-lib.org/reference/where.html)
+- [`dplyr::across()`](https://rdrr.io/pkg/dplyr/man/across.html) can be
+  used to apply the same computation across multiple columns, and the
+  [`where()`](https://tidyselect.r-lib.org/reference/where.html)
   selection helper is supported in
-  [`across()`](https://dplyr.tidyverse.org/reference/across.html);
+  [`across()`](https://rdrr.io/pkg/dplyr/man/across.html);
 - [`add_filename()`](https://arrow.apache.org/docs/r/reference/add_filename.md)
   can be used to get the filename a row came from (only available when
   querying
   [`?Dataset`](https://arrow.apache.org/docs/r/reference/Dataset.md));
 - Added five functions in the `slice_*` family:
-  [`dplyr::slice_min()`](https://dplyr.tidyverse.org/reference/slice.html),
-  [`dplyr::slice_max()`](https://dplyr.tidyverse.org/reference/slice.html),
-  [`dplyr::slice_head()`](https://dplyr.tidyverse.org/reference/slice.html),
-  [`dplyr::slice_tail()`](https://dplyr.tidyverse.org/reference/slice.html),
-  and
-  [`dplyr::slice_sample()`](https://dplyr.tidyverse.org/reference/slice.html).
+  [`dplyr::slice_min()`](https://rdrr.io/pkg/dplyr/man/slice.html),
+  [`dplyr::slice_max()`](https://rdrr.io/pkg/dplyr/man/slice.html),
+  [`dplyr::slice_head()`](https://rdrr.io/pkg/dplyr/man/slice.html),
+  [`dplyr::slice_tail()`](https://rdrr.io/pkg/dplyr/man/slice.html), and
+  [`dplyr::slice_sample()`](https://rdrr.io/pkg/dplyr/man/slice.html).
 
 The package now has documentation that lists all `dplyr` methods and R
 function mappings that are supported on Arrow data, along with notes
@@ -940,16 +994,16 @@ A few new features and bugfixes were implemented for joins:
 Some changes to improve the consistency of the API:
 
 - In a future release, calling
-  [`dplyr::pull()`](https://dplyr.tidyverse.org/reference/pull.html)
-  will return a
+  [`dplyr::pull()`](https://rdrr.io/pkg/dplyr/man/pull.html) will return
+  a
   [`?ChunkedArray`](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md)
   instead of an R vector by default. The current default behavior is
   deprecated. To update to the new behavior now, specify
   `pull(as_vector = FALSE)` or set
   `options(arrow.pull_as_vector = FALSE)` globally.
 - Calling
-  [`dplyr::compute()`](https://dplyr.tidyverse.org/reference/compute.html)
-  on a query that is grouped returns a
+  [`dplyr::compute()`](https://rdrr.io/pkg/dplyr/man/compute.html) on a
+  query that is grouped returns a
   [`?Table`](https://arrow.apache.org/docs/r/reference/Table-class.md)
   instead of a query object.
 
@@ -1006,18 +1060,16 @@ CRAN release: 2022-08-10
 
 - New dplyr verbs:
   - [`dplyr::union`](https://generics.r-lib.org/reference/setops.html)
-    and
-    [`dplyr::union_all`](https://dplyr.tidyverse.org/reference/setops.html)
+    and [`dplyr::union_all`](https://rdrr.io/pkg/dplyr/man/setops.html)
     ([\#13090](https://github.com/apache/arrow/issues/13090))
   - [`dplyr::glimpse`](https://pillar.r-lib.org/reference/glimpse.html)
     ([\#13563](https://github.com/apache/arrow/issues/13563))
   - [`show_exec_plan()`](https://arrow.apache.org/docs/r/reference/show_exec_plan.md)
     can be added to the end of a dplyr pipeline to show the underlying
     plan, similar to
-    [`dplyr::show_query()`](https://dplyr.tidyverse.org/reference/explain.html).
-    [`dplyr::show_query()`](https://dplyr.tidyverse.org/reference/explain.html)
-    and
-    [`dplyr::explain()`](https://dplyr.tidyverse.org/reference/explain.html)
+    [`dplyr::show_query()`](https://rdrr.io/pkg/dplyr/man/explain.html).
+    [`dplyr::show_query()`](https://rdrr.io/pkg/dplyr/man/explain.html)
+    and [`dplyr::explain()`](https://rdrr.io/pkg/dplyr/man/explain.html)
     also work and show the same output, but may change in the future.
     ([\#13541](https://github.com/apache/arrow/issues/13541))
 - User-defined functions are supported in queries. Use
@@ -1169,9 +1221,9 @@ CRAN release: 2022-05-09
   - no longer need to materialize the entire result table before writing
     to a dataset if the query contains aggregations or joins.
   - supports
-    [`dplyr::rename_with()`](https://dplyr.tidyverse.org/reference/rename.html).
-  - [`dplyr::count()`](https://dplyr.tidyverse.org/reference/count.html)
-    returns an ungrouped dataframe.
+    [`dplyr::rename_with()`](https://rdrr.io/pkg/dplyr/man/rename.html).
+  - [`dplyr::count()`](https://rdrr.io/pkg/dplyr/man/count.html) returns
+    an ungrouped dataframe.
 - [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
   has more options for controlling row group and file sizes when writing
   partitioned datasets, such as `max_open_files`, `max_rows_per_file`,
@@ -1324,13 +1376,13 @@ CRAN release: 2022-02-10
   `week()`, more of the `is.*()` functions, and the label argument to
   `month()` have been implemented.
 - More complex expressions inside
-  [`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html),
-  such as `ifelse(n() > 1, mean(y), mean(z))`, are supported.
+  [`summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html), such as
+  `ifelse(n() > 1, mean(y), mean(z))`, are supported.
 - When adding columns in a dplyr pipeline, one can now use `tibble` and
   `data.frame` to create columns of tibbles or data.frames respectively
   (e.g. `... %>% mutate(df_col = tibble(a, b)) %>% ...`).
 - Dictionary columns (R `factor` type) are supported inside of
-  [`coalesce()`](https://dplyr.tidyverse.org/reference/coalesce.html).
+  [`coalesce()`](https://rdrr.io/pkg/dplyr/man/coalesce.html).
 - [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
   accepts the `partitioning` argument when reading Hive-style
   partitioned files, even though it is not required.
@@ -1433,13 +1485,13 @@ There are now two ways to query Arrow data:
 
 ### 1. Expanded Arrow-native queries: aggregation and joins
 
-[`dplyr::summarize()`](https://dplyr.tidyverse.org/reference/summarise.html),
+[`dplyr::summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html),
 both grouped and ungrouped, is now implemented for Arrow Datasets,
 Tables, and RecordBatches. Because data is scanned in chunks, you can
 aggregate over larger-than-memory datasets backed by many files.
 Supported aggregation functions include
-[`n()`](https://dplyr.tidyverse.org/reference/context.html),
-[`n_distinct()`](https://dplyr.tidyverse.org/reference/n_distinct.html),
+[`n()`](https://rdrr.io/pkg/dplyr/man/context.html),
+[`n_distinct()`](https://rdrr.io/pkg/dplyr/man/n_distinct.html),
 `min(),` [`max()`](https://rdrr.io/r/base/Extremes.html),
 [`sum()`](https://rdrr.io/r/base/sum.html),
 [`mean()`](https://rdrr.io/r/base/mean.html),
@@ -1453,30 +1505,28 @@ probability are also supported and currently return approximate results
 using the t-digest algorithm.
 
 Along with
-[`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html),
-you can also call
-[`count()`](https://dplyr.tidyverse.org/reference/count.html),
-[`tally()`](https://dplyr.tidyverse.org/reference/count.html), and
-[`distinct()`](https://dplyr.tidyverse.org/reference/distinct.html),
-which effectively wrap
-[`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html).
+[`summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html), you can
+also call [`count()`](https://rdrr.io/pkg/dplyr/man/count.html),
+[`tally()`](https://rdrr.io/pkg/dplyr/man/count.html), and
+[`distinct()`](https://rdrr.io/pkg/dplyr/man/distinct.html), which
+effectively wrap
+[`summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html).
 
 This enhancement does change the behavior of
-[`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html)
-and [`collect()`](https://dplyr.tidyverse.org/reference/compute.html) in
-some cases: see “Breaking changes” below for details.
+[`summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html) and
+[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) in some cases:
+see “Breaking changes” below for details.
 
 In addition to
-[`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html),
-mutating and filtering equality joins
-([`inner_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html),
-[`left_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html),
-[`right_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html),
-[`full_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html),
-[`semi_join()`](https://dplyr.tidyverse.org/reference/filter-joins.html),
-and
-[`anti_join()`](https://dplyr.tidyverse.org/reference/filter-joins.html))
-with are also supported natively in Arrow.
+[`summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html), mutating
+and filtering equality joins
+([`inner_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html),
+[`left_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html),
+[`right_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html),
+[`full_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html),
+[`semi_join()`](https://rdrr.io/pkg/dplyr/man/filter-joins.html), and
+[`anti_join()`](https://rdrr.io/pkg/dplyr/man/filter-joins.html)) with
+are also supported natively in Arrow.
 
 Grouped aggregation and (especially) joins should be considered somewhat
 experimental in this release. We expect them to work, but they may not
@@ -1525,24 +1575,24 @@ DuckDB, then evaluate the rest in Arrow.
 
 - Row order of data from a Dataset query is no longer deterministic. If
   you need a stable sort order, you should explicitly
-  [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html) the
-  query result. For calls to
-  [`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html),
-  you can set `options(arrow.summarise.sort = TRUE)` to match the
-  current `dplyr` behavior of sorting on the grouping columns.
-- [`dplyr::summarize()`](https://dplyr.tidyverse.org/reference/summarise.html)
+  [`arrange()`](https://rdrr.io/pkg/dplyr/man/arrange.html) the query
+  result. For calls to
+  [`summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html), you can
+  set `options(arrow.summarise.sort = TRUE)` to match the current
+  `dplyr` behavior of sorting on the grouping columns.
+- [`dplyr::summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html)
   on an in-memory Arrow Table or RecordBatch no longer eagerly
   evaluates. Call
-  [`compute()`](https://dplyr.tidyverse.org/reference/compute.html) or
-  [`collect()`](https://dplyr.tidyverse.org/reference/compute.html) to
-  evaluate the query.
+  [`compute()`](https://rdrr.io/pkg/dplyr/man/compute.html) or
+  [`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) to evaluate
+  the query.
 - [`head()`](https://rdrr.io/r/utils/head.html) and
   [`tail()`](https://rdrr.io/r/utils/head.html) also no longer eagerly
   evaluate, both for in-memory data and for Datasets. Also, because row
   order is no longer deterministic, they will effectively give you a
   random slice of data from somewhere in the dataset unless you
-  [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html) to
-  specify sorting.
+  [`arrange()`](https://rdrr.io/pkg/dplyr/man/arrange.html) to specify
+  sorting.
 - Simple Feature (SF) columns no longer save all of their metadata when
   converting to Arrow tables (and thus when saving to Parquet or
   Feather). This also includes any dataframe column that has attributes
@@ -1615,7 +1665,7 @@ DuckDB, then evaluate the rest in Arrow.
   an error
 - [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md)
   no longer errors when used with a grouped data.frame
-- [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
+- [`case_when()`](https://rdrr.io/pkg/dplyr/man/case-and-replace-when.html)
   now errors cleanly if an expression is not supported in Arrow
 - [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
   now works on CSVs without header rows
@@ -1649,8 +1699,8 @@ CRAN release: 2021-07-29
 ### More dplyr
 
 - There are now more than 250 compute functions available for use in
-  [`dplyr::filter()`](https://dplyr.tidyverse.org/reference/filter.html),
-  [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html), etc.
+  [`dplyr::filter()`](https://rdrr.io/pkg/dplyr/man/filter.html),
+  [`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html), etc.
   Additions in this release include:
 
   - String operations:
@@ -1674,22 +1724,22 @@ CRAN release: 2021-07-29
     [`trunc()`](https://rdrr.io/r/base/Round.html)
   - Conditional functions, with some limitations on input type in this
     release: [`ifelse()`](https://rdrr.io/r/base/ifelse.html) and
-    [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html)
-    for all but `Decimal` types;
-    [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
+    [`if_else()`](https://rdrr.io/pkg/dplyr/man/if_else.html) for all
+    but `Decimal` types;
+    [`case_when()`](https://rdrr.io/pkg/dplyr/man/case-and-replace-when.html)
     for logical, numeric, and temporal types only;
-    [`coalesce()`](https://dplyr.tidyverse.org/reference/coalesce.html)
-    for all but lists/structs. Note also that in this release,
+    [`coalesce()`](https://rdrr.io/pkg/dplyr/man/coalesce.html) for all
+    but lists/structs. Note also that in this release,
     factors/dictionaries are converted to strings in these functions.
   - `is.*` functions are supported and can be used inside
-    [`relocate()`](https://dplyr.tidyverse.org/reference/relocate.html)
+    [`relocate()`](https://rdrr.io/pkg/dplyr/man/relocate.html)
 
 - The print method for `arrow_dplyr_query` now includes the expression
   and the resulting type of columns derived by
-  [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html).
+  [`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html).
 
-- [`transmute()`](https://dplyr.tidyverse.org/reference/transmute.html)
-  now errors if passed arguments `.keep`, `.before`, or `.after`, for
+- [`transmute()`](https://rdrr.io/pkg/dplyr/man/transmute.html) now
+  errors if passed arguments `.keep`, `.before`, or `.after`, for
   consistency with the behavior of `dplyr` on `data.frame`s.
 
 ### CSV writing
@@ -1785,32 +1835,29 @@ CRAN release: 2021-04-27
 
 Many more `dplyr` verbs are supported on Arrow objects:
 
-- [`dplyr::mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
-  is now supported in Arrow for many applications. For queries on
-  `Table` and `RecordBatch` that are not yet supported in Arrow, the
-  implementation falls back to pulling data into an in-memory R
-  `data.frame` first, as in the previous release. For queries on
-  `Dataset` (which can be larger than memory), it raises an error if the
-  function is not implemented. The main
-  [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
+- [`dplyr::mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html) is now
+  supported in Arrow for many applications. For queries on `Table` and
+  `RecordBatch` that are not yet supported in Arrow, the implementation
+  falls back to pulling data into an in-memory R `data.frame` first, as
+  in the previous release. For queries on `Dataset` (which can be larger
+  than memory), it raises an error if the function is not implemented.
+  The main [`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html)
   features that cannot yet be called on Arrow objects are (1)
-  [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html) after
-  [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
-  (which is typically used in combination with aggregation) and (2)
-  queries that use
-  [`dplyr::across()`](https://dplyr.tidyverse.org/reference/across.html).
-- [`dplyr::transmute()`](https://dplyr.tidyverse.org/reference/transmute.html)
-  (which calls
-  [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html))
-- [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
-  now preserves the `.drop` argument and supports on-the-fly definition
-  of columns
-- [`dplyr::relocate()`](https://dplyr.tidyverse.org/reference/relocate.html)
-  to reorder columns
-- [`dplyr::arrange()`](https://dplyr.tidyverse.org/reference/arrange.html)
-  to sort rows
-- [`dplyr::compute()`](https://dplyr.tidyverse.org/reference/compute.html)
-  to evaluate the lazy expressions and return an Arrow Table. This is
+  [`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html) after
+  [`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html) (which is
+  typically used in combination with aggregation) and (2) queries that
+  use [`dplyr::across()`](https://rdrr.io/pkg/dplyr/man/across.html).
+- [`dplyr::transmute()`](https://rdrr.io/pkg/dplyr/man/transmute.html)
+  (which calls [`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html))
+- [`dplyr::group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html) now
+  preserves the `.drop` argument and supports on-the-fly definition of
+  columns
+- [`dplyr::relocate()`](https://rdrr.io/pkg/dplyr/man/relocate.html) to
+  reorder columns
+- [`dplyr::arrange()`](https://rdrr.io/pkg/dplyr/man/arrange.html) to
+  sort rows
+- [`dplyr::compute()`](https://rdrr.io/pkg/dplyr/man/compute.html) to
+  evaluate the lazy expressions and return an Arrow Table. This is
   equivalent to `dplyr::collect(as_data_frame = FALSE)`, which was added
   in 2.0.0.
 
@@ -1834,8 +1881,8 @@ verb:
   [`as.numeric()`](https://rdrr.io/r/base/numeric.html),
   [`as.character()`](https://rdrr.io/r/base/character.html), etc. are
   exposed as similar type-altering conveniences
-- [`dplyr::between()`](https://dplyr.tidyverse.org/reference/between.html);
-  the Arrow version also allows the `left` and `right` arguments to be
+- [`dplyr::between()`](https://rdrr.io/pkg/dplyr/man/between.html); the
+  Arrow version also allows the `left` and `right` arguments to be
   columns in the data and not just scalars
 - Additionally, any Arrow C++ compute function can be called inside a
   `dplyr` verb. This enables you to access Arrow functions that don’t
@@ -2057,10 +2104,10 @@ CRAN release: 2020-10-20
   [`tail()`](https://rdrr.io/r/utils/head.html), and take (`[`) methods.
   [`head()`](https://rdrr.io/r/utils/head.html) is optimized but the
   others may not be performant.
-- [`collect()`](https://dplyr.tidyverse.org/reference/compute.html)
-  gains an `as_data_frame` argument, default `TRUE` but when `FALSE`
-  allows you to evaluate the accumulated `select` and `filter` query but
-  keep the result in Arrow, not an R `data.frame`
+- [`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) gains an
+  `as_data_frame` argument, default `TRUE` but when `FALSE` allows you
+  to evaluate the accumulated `select` and `filter` query but keep the
+  result in Arrow, not an R `data.frame`
 - [`read_csv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
   supports specifying column types, both with a `Schema` and with the
   compact string representation for types used in the `readr` package.
@@ -2324,7 +2371,7 @@ for details.
 - Combine multiple datasets into a single queryable `UnionDataset` with
   the [`c()`](https://rdrr.io/r/base/c.html) method
 - Dataset filtering now treats `NA` as `FALSE`, consistent with
-  [`dplyr::filter()`](https://dplyr.tidyverse.org/reference/filter.html)
+  [`dplyr::filter()`](https://rdrr.io/pkg/dplyr/man/filter.html)
 - Dataset filtering is now correctly supported for all Arrow
   date/time/timestamp column types
 - [`vignette("dataset", package = "arrow")`](https://arrow.apache.org/docs/r/articles/dataset.md)
@@ -2387,12 +2434,11 @@ you work efficiently with large, multi-file datasets as a single entity.
 Explore a directory of data files with
 [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
 and then use `dplyr` methods to
-[`select()`](https://dplyr.tidyverse.org/reference/select.html),
-[`filter()`](https://dplyr.tidyverse.org/reference/filter.html), etc.
-Work will be done where possible in Arrow memory. When necessary, data
-is pulled into R for further computation. `dplyr` methods are
-conditionally loaded if you have `dplyr` available; it is not a hard
-dependency.
+[`select()`](https://rdrr.io/pkg/dplyr/man/select.html),
+[`filter()`](https://rdrr.io/pkg/dplyr/man/filter.html), etc. Work will
+be done where possible in Arrow memory. When necessary, data is pulled
+into R for further computation. `dplyr` methods are conditionally loaded
+if you have `dplyr` available; it is not a hard dependency.
 
 See
 [`vignette("dataset", package = "arrow")`](https://arrow.apache.org/docs/r/articles/dataset.md)

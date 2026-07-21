@@ -161,11 +161,13 @@ A few functions have aliases:
 `date32()` creates a datetime type with a "day" unit, like the R `Date`
 class. `date64()` has a "ms" unit.
 
-`uint32` (32 bit unsigned integer), `uint64` (64 bit unsigned integer),
-and `int64` (64-bit signed integer) types may contain values that exceed
-the range of R's `integer` type (32-bit signed integer). When these
-arrow objects are translated to R objects, `uint32` and `uint64` are
-converted to `double` ("numeric") and `int64` is converted to
+`uint64` (64 bit unsigned integer) is always converted to `double`
+("numeric") in R. Note that doubles cannot exactly represent all uint64
+values; precision may be lost for values above 2^53. `uint32` (32 bit
+unsigned integer) and `int64` (64-bit signed integer) types may contain
+values that exceed the range of R's `integer` type (32-bit signed
+integer). When they do, `uint32` is converted to `double` ("numeric")
+and `int64` is converted to
 [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html).
 For `int64` types, this conversion can be disabled (so that `int64`
 always yields a

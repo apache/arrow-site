@@ -23,6 +23,8 @@ arrow_with_s3()
 
 arrow_with_gcs()
 
+arrow_with_azure()
+
 arrow_with_json()
 ```
 

@@ -256,9 +256,9 @@ dataset_path <- file.path(tempdir(), "random_data")
 ```
 
 We can then use
-[`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
-function from dplyr to specify that the data will be partitioned using
-the `subset` column, and then pass the grouped data to
+[`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html) function
+from dplyr to specify that the data will be partitioned using the
+`subset` column, and then pass the grouped data to
 [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md):
 
 ``` r
@@ -335,11 +335,10 @@ dset |>
     ## 6      9 0.00557 -3.50
 
 Notice that we call
-[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) at the
-end of the pipeline. No actual computations are performed until
-[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) (or
-the related
-[`compute()`](https://dplyr.tidyverse.org/reference/compute.html)
+[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) at the end of
+the pipeline. No actual computations are performed until
+[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) (or the
+related [`compute()`](https://rdrr.io/pkg/dplyr/man/compute.html)
 function) is called. This “lazy evaluation” makes it possible for the
 Arrow C++ compute engine to optimize how the computations are performed.
 

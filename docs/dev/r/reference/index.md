@@ -219,12 +219,14 @@ Pass data to and from DuckDB
 
 ## File systems
 
-Functions for working with files on S3 and GCS
+Functions for working with files on S3, GCS, and Azure
 
 - [`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md)
   : Connect to an AWS S3 bucket
 - [`gs_bucket()`](https://arrow.apache.org/docs/r/reference/gs_bucket.md)
   : Connect to a Google Cloud Storage (GCS) bucket
+- [`az_container()`](https://arrow.apache.org/docs/r/reference/az_container.md)
+  : Connect to an Azure Blob Storage container
 - [`copy_files()`](https://arrow.apache.org/docs/r/reference/copy_files.md)
   : Copy files between FileSystems
 
@@ -254,6 +256,7 @@ Functions for working with files on S3 and GCS
   [`arrow_with_parquet()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_s3()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_gcs()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_azure()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_json()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   : Report information on the package's capabilities
 - [`cpu_count()`](https://arrow.apache.org/docs/r/reference/cpu_count.md)
@@ -424,6 +427,7 @@ datases in Arrow.
   [`LocalFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
   [`S3FileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
   [`GcsFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+  [`AzureFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
   [`SubTreeFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
   : FileSystem classes
 - [`FileInfo`](https://arrow.apache.org/docs/r/reference/FileInfo.md) :

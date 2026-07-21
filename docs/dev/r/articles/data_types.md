@@ -197,11 +197,11 @@ chunked_array(c(10L, 3L, 200L), type = int8())
     ## Error:
     ## ! Invalid: value outside of range
 
-When translating from Arrow to R, integer types alway translate to R
+When translating from Arrow to R, integer types always translate to R
 integers unless one of the following exceptions applies:
 
-- If the value of an Arrow uint32 or uint64 falls outside the range
-  allowed for R integers, the result will be a numeric vector in R
+- If the value of an Arrow uint32 falls outside the range allowed for R
+  integers, the result will be a numeric vector in R
 - If the value of an Arrow int64 variable falls outside the range
   allowed for R integers, the result will be a
   [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
@@ -210,6 +210,9 @@ integers unless one of the following exceptions applies:
   int64 type always yields a
   [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)
   vector in R regardless of the value
+- Arrow uint64 types are always converted to numeric (double) vectors
+  in R. Note that doubles cannot exactly represent all uint64 values;
+  precision may be lost for values above 2^53.
 
 ## Floating point numeric types
 
@@ -703,7 +706,7 @@ translated to Arrow list type (which is a “list of” some type).
 | uint8               | integer                   |
 | uint16              | integer                   |
 | uint32              | integer ¹                 |
-| uint64              | integer ¹                 |
+| uint64              | double                    |
 | float16             | \- ²                      |
 | float32             | double                    |
 | float64             | double                    |
@@ -729,9 +732,8 @@ translated to Arrow list type (which is a “list of” some type).
 | union               | \- ²                      |
 
 ¹: These integer types may contain values that exceed the range of R’s
-`integer` type (32 bit signed integer). When they do, `uint32` and
-`uint64` are converted to `double` (“numeric”) and `int64` is converted
-to
+`integer` type (32 bit signed integer). When they do, `uint32` is
+converted to `double` (“numeric”) and `int64` is converted to
 [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html).
 This conversion can be disabled (so that `int64` always yields a
 [`bit64::integer64`](https://bit64.r-lib.org/reference/bit64-package.html)

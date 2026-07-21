@@ -79,11 +79,10 @@ write_tsv_dataset(
   [Table](https://arrow.apache.org/docs/r/reference/Table-class.md),
   `arrow_dplyr_query`, or `data.frame`. If an `arrow_dplyr_query`, the
   query will be evaluated and the result will be written. This means
-  that you can
-  [`select()`](https://dplyr.tidyverse.org/reference/select.html),
-  [`filter()`](https://dplyr.tidyverse.org/reference/filter.html),
-  [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html), etc.
-  to transform the data before it is written if you need to.
+  that you can [`select()`](https://rdrr.io/pkg/dplyr/man/select.html),
+  [`filter()`](https://rdrr.io/pkg/dplyr/man/filter.html),
+  [`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html), etc. to
+  transform the data before it is written if you need to.
 
 - path:
 
@@ -94,8 +93,7 @@ write_tsv_dataset(
 
   `Partitioning` or a character vector of columns to use as partition
   keys (to be written as path segments). Default is to use the current
-  [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
-  columns.
+  [`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html) columns.
 
 - basename_template:
 
