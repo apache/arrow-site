@@ -2,9 +2,10 @@
 
 This will do the necessary configuration to create a (virtual) table in
 DuckDB that is backed by the Arrow object given. No data is copied or
-modified until [`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html)
-or [`compute()`](https://rdrr.io/pkg/dplyr/man/compute.html) are called
-or a query is run against the table.
+modified until
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) or
+[`compute()`](https://dplyr.tidyverse.org/reference/compute.html) are
+called or a query is run against the table.
 
 ## Usage
 
@@ -70,8 +71,8 @@ ds |>
 #>     mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
 #>   <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
 #> 1  19.7     6  145    175  3.62  2.77  15.5     0     1     5     6
-#> 2  27.3     4   79     66  4.08  1.94  18.9     1     1     4     1
-#> 3  16.4     8  276.   180  3.07  4.07  17.4     0     0     3     3
-#> 4  17.3     8  276.   180  3.07  3.73  17.6     0     0     3     3
-#> 5  15.2     8  276.   180  3.07  3.78  18       0     0     3     3
+#> 2  16.4     8  276.   180  3.07  4.07  17.4     0     0     3     3
+#> 3  17.3     8  276.   180  3.07  3.73  17.6     0     0     3     3
+#> 4  15.2     8  276.   180  3.07  3.78  18       0     0     3     3
+#> 5  27.3     4   79     66  4.08  1.94  18.9     1     1     4     1
 ```

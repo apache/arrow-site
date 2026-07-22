@@ -24,11 +24,11 @@ sw <- arrow_table(starwars, as_data_frame = FALSE)
 The arrow package provides support for the dplyr one-table verbs,
 allowing users to construct data analysis pipelines in a familiar way.
 The example below shows the use of
-[`filter()`](https://rdrr.io/pkg/dplyr/man/filter.html),
-[`rename()`](https://rdrr.io/pkg/dplyr/man/rename.html),
-[`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html),
-[`arrange()`](https://rdrr.io/pkg/dplyr/man/arrange.html) and
-[`select()`](https://rdrr.io/pkg/dplyr/man/select.html):
+[`filter()`](https://dplyr.tidyverse.org/reference/filter.html),
+[`rename()`](https://dplyr.tidyverse.org/reference/rename.html),
+[`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html),
+[`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html) and
+[`select()`](https://dplyr.tidyverse.org/reference/select.html):
 
 ``` r
 result <- sw |>
@@ -61,12 +61,13 @@ result
     ## See $.data for the source Arrow object
 
 To perform these computations and materialize the result, we call
-[`compute()`](https://rdrr.io/pkg/dplyr/man/compute.html) or
-[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html). The
+[`compute()`](https://dplyr.tidyverse.org/reference/compute.html) or
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html). The
 difference between the two determines what kind of object will be
 returned. Calling
-[`compute()`](https://rdrr.io/pkg/dplyr/man/compute.html) returns an
-Arrow Table, suitable for passing to other arrow or dplyr functions:
+[`compute()`](https://dplyr.tidyverse.org/reference/compute.html)
+returns an Arrow Table, suitable for passing to other arrow or dplyr
+functions:
 
 ``` r
 compute(result)
@@ -78,7 +79,8 @@ compute(result)
     ## $height_in <double>
     ## $mass_lbs <double>
 
-In contrast, [`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html)
+In contrast,
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html)
 returns an R data frame, suitable for viewing or passing to other R
 functions for analysis or visualization:
 
@@ -102,10 +104,10 @@ collect(result)
 
 The arrow package has broad support for single-table dplyr verbs,
 including those that compute aggregates. For example, it supports
-[`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html) and
-[`summarize()`](https://rdrr.io/pkg/dplyr/man/summarise.html), as well
-as commonly-used convenience functions such as
-[`count()`](https://rdrr.io/pkg/dplyr/man/count.html):
+[`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html) and
+[`summarize()`](https://dplyr.tidyverse.org/reference/summarise.html),
+as well as commonly-used convenience functions such as
+[`count()`](https://dplyr.tidyverse.org/reference/count.html):
 
 ``` r
 sw |>
@@ -143,15 +145,15 @@ sw |>
     ## 3 NA            4
 
 Note, however, that window functions such as
-[`ntile()`](https://rdrr.io/pkg/dplyr/man/ntile.html) are not yet
-supported.
+[`ntile()`](https://dplyr.tidyverse.org/reference/ntile.html) are not
+yet supported.
 
 ## Two-table dplyr verbs
 
 Equality joins
-(e.g. [`left_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html),
-[`inner_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html)) are
-supported for joining multiple tables. This is illustrated below:
+(e.g. [`left_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html),
+[`inner_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html))
+are supported for joining multiple tables. This is illustrated below:
 
 ``` r
 jedi <- data.frame(
@@ -254,9 +256,9 @@ To learn more, see
 For dplyr queries on Table objects, which are held in memory and should
 usually be representable as data frames, if the arrow package detects an
 unimplemented function within a dplyr verb, it automatically calls
-[`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) to return the
-data as an R data frame before processing that dplyr verb. As an
-example, neither [`lm()`](https://rdrr.io/r/stats/lm.html) nor
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) to
+return the data as an R data frame before processing that dplyr verb. As
+an example, neither [`lm()`](https://rdrr.io/r/stats/lm.html) nor
 [`residuals()`](https://rdrr.io/r/stats/residuals.html) are implemented,
 so if we write code that computes the residuals for a linear regression
 model, this automatic collection takes place:
@@ -308,7 +310,8 @@ sw2 |>
     ## ! Expression not supported in Arrow
     ## > Call collect() first to pull data into R.
 
-Calling [`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html) in the
+Calling
+[`collect()`](https://dplyr.tidyverse.org/reference/compute.html) in the
 middle of the pipeline fixes the issue:
 
 ``` r
@@ -353,7 +356,7 @@ sw |>
 ```
 
     ## duckdb is keeping downloaded extensions in a temporary directory:
-    ## i /tmp/RtmpRBVlpo/duckdb/extensions
+    ## i /tmp/RtmpLv6oju/duckdb/extensions
     ## This is removed when the R session ends, so extensions are re-downloaded each session.
     ## i To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 

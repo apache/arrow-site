@@ -4,10 +4,11 @@ This is a function which gives more details about the logical query plan
 that will be executed when evaluating an `arrow_dplyr_query` object. It
 calls the C++ `ExecPlan` object's print method. Functionally, it is
 similar to
-[`dplyr::explain()`](https://rdrr.io/pkg/dplyr/man/explain.html). This
-function is used as the
-[`dplyr::explain()`](https://rdrr.io/pkg/dplyr/man/explain.html) and
-[`dplyr::show_query()`](https://rdrr.io/pkg/dplyr/man/explain.html)
+[`dplyr::explain()`](https://dplyr.tidyverse.org/reference/explain.html).
+This function is used as the
+[`dplyr::explain()`](https://dplyr.tidyverse.org/reference/explain.html)
+and
+[`dplyr::show_query()`](https://dplyr.tidyverse.org/reference/explain.html)
 methods.
 
 ## Usage

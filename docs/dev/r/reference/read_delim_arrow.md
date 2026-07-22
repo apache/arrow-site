@@ -153,7 +153,7 @@ read_tsv_arrow(
   argument to `data.table::fread()`, or a [tidy selection
   specification](https://tidyselect.r-lib.org/reference/eval_select.html)
   of columns, as used in
-  [`dplyr::select()`](https://rdrr.io/pkg/dplyr/man/select.html).
+  [`dplyr::select()`](https://dplyr.tidyverse.org/reference/select.html).
 
 - na:
 

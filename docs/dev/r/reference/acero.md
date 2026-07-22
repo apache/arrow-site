@@ -19,116 +19,116 @@ To run the query, call either `compute()`, which returns an `arrow`
 [Table](https://arrow.apache.org/docs/r/reference/Table-class.md), or
 `collect()`, which pulls the resulting Table into an R `tibble`.
 
-- [`anti_join()`](https://rdrr.io/pkg/dplyr/man/filter-joins.html): the
-  `copy` argument is ignored
+- [`anti_join()`](https://dplyr.tidyverse.org/reference/filter-joins.html):
+  the `copy` argument is ignored
 
-- [`arrange()`](https://rdrr.io/pkg/dplyr/man/arrange.html)
+- [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html)
 
-- [`collapse()`](https://rdrr.io/pkg/dplyr/man/compute.html)
+- [`collapse()`](https://dplyr.tidyverse.org/reference/compute.html)
 
-- [`collect()`](https://rdrr.io/pkg/dplyr/man/compute.html)
+- [`collect()`](https://dplyr.tidyverse.org/reference/compute.html)
 
-- [`compute()`](https://rdrr.io/pkg/dplyr/man/compute.html)
+- [`compute()`](https://dplyr.tidyverse.org/reference/compute.html)
 
-- [`count()`](https://rdrr.io/pkg/dplyr/man/count.html)
+- [`count()`](https://dplyr.tidyverse.org/reference/count.html)
 
-- [`distinct()`](https://rdrr.io/pkg/dplyr/man/distinct.html):
+- [`distinct()`](https://dplyr.tidyverse.org/reference/distinct.html):
   `.keep_all = TRUE` returns a non-missing value if present, only
   returning missing values if all are missing.
 
-- [`explain()`](https://rdrr.io/pkg/dplyr/man/explain.html)
+- [`explain()`](https://dplyr.tidyverse.org/reference/explain.html)
 
-- [`filter()`](https://rdrr.io/pkg/dplyr/man/filter.html)
+- [`filter()`](https://dplyr.tidyverse.org/reference/filter.html)
 
-- [`filter_out()`](https://rdrr.io/pkg/dplyr/man/filter.html)
+- [`filter_out()`](https://dplyr.tidyverse.org/reference/filter.html)
 
-- [`full_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html): the
-  `copy` argument is ignored
+- [`full_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
+  the `copy` argument is ignored
 
 - [`glimpse()`](https://pillar.r-lib.org/reference/glimpse.html)
 
-- [`group_by()`](https://rdrr.io/pkg/dplyr/man/group_by.html)
+- [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
 
-- [`group_by_drop_default()`](https://rdrr.io/pkg/dplyr/man/group_by_drop_default.html)
+- [`group_by_drop_default()`](https://dplyr.tidyverse.org/reference/group_by_drop_default.html)
 
-- [`group_vars()`](https://rdrr.io/pkg/dplyr/man/group_data.html)
+- [`group_vars()`](https://dplyr.tidyverse.org/reference/group_data.html)
 
-- [`groups()`](https://rdrr.io/pkg/dplyr/man/group_data.html)
+- [`groups()`](https://dplyr.tidyverse.org/reference/group_data.html)
 
-- [`inner_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html): the
-  `copy` argument is ignored
+- [`inner_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
+  the `copy` argument is ignored
 
-- [`left_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html): the
-  `copy` argument is ignored
+- [`left_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
+  the `copy` argument is ignored
 
-- [`mutate()`](https://rdrr.io/pkg/dplyr/man/mutate.html)
+- [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
 
-- [`pull()`](https://rdrr.io/pkg/dplyr/man/pull.html): the `name`
-  argument is not supported; returns an R vector by default but this
-  behavior is deprecated and will return an Arrow
+- [`pull()`](https://dplyr.tidyverse.org/reference/pull.html): the
+  `name` argument is not supported; returns an R vector by default but
+  this behavior is deprecated and will return an Arrow
   [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md)
   in a future release. Provide `as_vector = TRUE/FALSE` to control this
   behavior, or set `options(arrow.pull_as_vector)` globally.
 
-- [`relocate()`](https://rdrr.io/pkg/dplyr/man/relocate.html)
+- [`relocate()`](https://dplyr.tidyverse.org/reference/relocate.html)
 
-- [`rename()`](https://rdrr.io/pkg/dplyr/man/rename.html)
+- [`rename()`](https://dplyr.tidyverse.org/reference/rename.html)
 
-- [`rename_with()`](https://rdrr.io/pkg/dplyr/man/rename.html)
+- [`rename_with()`](https://dplyr.tidyverse.org/reference/rename.html)
 
-- [`right_join()`](https://rdrr.io/pkg/dplyr/man/mutate-joins.html): the
-  `copy` argument is ignored
+- [`right_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html):
+  the `copy` argument is ignored
 
-- [`select()`](https://rdrr.io/pkg/dplyr/man/select.html)
+- [`select()`](https://dplyr.tidyverse.org/reference/select.html)
 
-- [`semi_join()`](https://rdrr.io/pkg/dplyr/man/filter-joins.html): the
-  `copy` argument is ignored
+- [`semi_join()`](https://dplyr.tidyverse.org/reference/filter-joins.html):
+  the `copy` argument is ignored
 
-- [`show_query()`](https://rdrr.io/pkg/dplyr/man/explain.html)
+- [`show_query()`](https://dplyr.tidyverse.org/reference/explain.html)
 
-- [`slice_head()`](https://rdrr.io/pkg/dplyr/man/slice.html): slicing
-  within groups not supported; Arrow datasets do not have row order, so
-  head is non-deterministic; `prop` only supported on queries where
+- [`slice_head()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; Arrow datasets do not have row
+  order, so head is non-deterministic; `prop` only supported on queries
+  where [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
+  evaluating
+
+- [`slice_max()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; `with_ties = TRUE` (dplyr
+  default) is not supported; `prop` only supported on queries where
   [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
   evaluating
 
-- [`slice_max()`](https://rdrr.io/pkg/dplyr/man/slice.html): slicing
-  within groups not supported; `with_ties = TRUE` (dplyr default) is not
-  supported; `prop` only supported on queries where
+- [`slice_min()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; `with_ties = TRUE` (dplyr
+  default) is not supported; `prop` only supported on queries where
   [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
   evaluating
 
-- [`slice_min()`](https://rdrr.io/pkg/dplyr/man/slice.html): slicing
-  within groups not supported; `with_ties = TRUE` (dplyr default) is not
-  supported; `prop` only supported on queries where
-  [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
+- [`slice_sample()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; `replace = TRUE` and the
+  `weight_by` argument not supported; `n` only supported on queries
+  where [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
   evaluating
 
-- [`slice_sample()`](https://rdrr.io/pkg/dplyr/man/slice.html): slicing
-  within groups not supported; `replace = TRUE` and the `weight_by`
-  argument not supported; `n` only supported on queries where
-  [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
+- [`slice_tail()`](https://dplyr.tidyverse.org/reference/slice.html):
+  slicing within groups not supported; Arrow datasets do not have row
+  order, so tail is non-deterministic; `prop` only supported on queries
+  where [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
   evaluating
 
-- [`slice_tail()`](https://rdrr.io/pkg/dplyr/man/slice.html): slicing
-  within groups not supported; Arrow datasets do not have row order, so
-  tail is non-deterministic; `prop` only supported on queries where
-  [`nrow()`](https://rdrr.io/r/base/nrow.html) is knowable without
-  evaluating
+- [`summarise()`](https://dplyr.tidyverse.org/reference/summarise.html):
+  window functions not currently supported; arguments `.drop = FALSE`
+  and `.groups = "rowwise"` not supported
 
-- [`summarise()`](https://rdrr.io/pkg/dplyr/man/summarise.html): window
-  functions not currently supported; arguments `.drop = FALSE` and
-  `.groups = "rowwise"` not supported
+- [`tally()`](https://dplyr.tidyverse.org/reference/count.html)
 
-- [`tally()`](https://rdrr.io/pkg/dplyr/man/count.html)
+- [`transmute()`](https://dplyr.tidyverse.org/reference/transmute.html)
 
-- [`transmute()`](https://rdrr.io/pkg/dplyr/man/transmute.html)
-
-- [`ungroup()`](https://rdrr.io/pkg/dplyr/man/group_by.html)
+- [`ungroup()`](https://dplyr.tidyverse.org/reference/group_by.html)
 
 - [`union()`](https://generics.r-lib.org/reference/setops.html)
 
-- [`union_all()`](https://rdrr.io/pkg/dplyr/man/setops.html)
+- [`union_all()`](https://dplyr.tidyverse.org/reference/setops.html)
 
 ## Function mappings
 
@@ -364,37 +364,37 @@ as `arrow_ascii_is_decimal`.
 
 ### dplyr
 
-- [`across()`](https://rdrr.io/pkg/dplyr/man/across.html)
+- [`across()`](https://dplyr.tidyverse.org/reference/across.html)
 
-- [`between()`](https://rdrr.io/pkg/dplyr/man/between.html)
+- [`between()`](https://dplyr.tidyverse.org/reference/between.html)
 
-- [`case_when()`](https://rdrr.io/pkg/dplyr/man/case-and-replace-when.html):
+- [`case_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html):
   `.ptype` and `.size` arguments not supported
 
-- [`coalesce()`](https://rdrr.io/pkg/dplyr/man/coalesce.html)
+- [`coalesce()`](https://dplyr.tidyverse.org/reference/coalesce.html)
 
-- [`desc()`](https://rdrr.io/pkg/dplyr/man/desc.html)
+- [`desc()`](https://dplyr.tidyverse.org/reference/desc.html)
 
-- [`if_all()`](https://rdrr.io/pkg/dplyr/man/across.html)
+- [`if_all()`](https://dplyr.tidyverse.org/reference/across.html)
 
-- [`if_any()`](https://rdrr.io/pkg/dplyr/man/across.html)
+- [`if_any()`](https://dplyr.tidyverse.org/reference/across.html)
 
-- [`if_else()`](https://rdrr.io/pkg/dplyr/man/if_else.html)
+- [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html)
 
-- [`n()`](https://rdrr.io/pkg/dplyr/man/context.html)
+- [`n()`](https://dplyr.tidyverse.org/reference/context.html)
 
-- [`n_distinct()`](https://rdrr.io/pkg/dplyr/man/n_distinct.html)
+- [`n_distinct()`](https://dplyr.tidyverse.org/reference/n_distinct.html)
 
-- [`recode_values()`](https://rdrr.io/pkg/dplyr/man/recode-and-replace-values.html):
+- [`recode_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html):
   `ptype` argument and `unmatched = "error"` not supported
 
-- [`replace_values()`](https://rdrr.io/pkg/dplyr/man/recode-and-replace-values.html)
+- [`replace_values()`](https://dplyr.tidyverse.org/reference/recode-and-replace-values.html)
 
-- [`replace_when()`](https://rdrr.io/pkg/dplyr/man/case-and-replace-when.html)
+- [`replace_when()`](https://dplyr.tidyverse.org/reference/case-and-replace-when.html)
 
-- [`when_all()`](https://rdrr.io/pkg/dplyr/man/when-any-all.html)
+- [`when_all()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
 
-- [`when_any()`](https://rdrr.io/pkg/dplyr/man/when-any-all.html)
+- [`when_any()`](https://dplyr.tidyverse.org/reference/when-any-all.html)
 
 ### hms
 
