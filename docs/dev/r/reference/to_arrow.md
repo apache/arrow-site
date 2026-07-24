@@ -46,7 +46,7 @@ ds |>
   to_arrow() |>
   collect()
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> i /tmp/Rtmpnqc8fm/duckdb/extensions
+#> i /tmp/Rtmpu7chEk/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> i To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 #> # A tibble: 3 x 2
