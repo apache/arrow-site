@@ -48,26 +48,56 @@ been made: we refer you to the [complete changelog][3].
 
 Note: we are planning to require C++20 starting from the next release.
 
-### Breaking/Major Changes
+### Breaking Changes and Deprecations
 
-- The documentation has been overhauled, in particular to make it clearer how
-  to use ADBC and where to download drivers.
-- We have stopped development on drivers for Apache DataFusion, BigQuery,
-  Databricks, and Snowflake. Existing packages will continue to be available,
-  but the code has been removed and we may archive pages on PyPI and other
-  package indices. All four of these systems now have ADBC drivers developed
-  by the vendors themselves or other third parties; see
-  [Drivers](https://arrow.apache.org/adbc/24/driver/index.html) in the
-  documentation for details.
-- Similarly, support for Amazon Redshift in the PostgreSQL driver has been
-  removed. This support was always experimental and incomplete, and a
-  dedicated driver has been available from a third party.
-- Java API definitions were narrowed so that `close` is only declared to throw
-  `AdbcException` as a checked
-  exception. ([#4451](https://github.com/apache/arrow-adbc/pull/4451))
-- The PostgreSQL driver now lazily initializes transactions to make it work
-  better with connection
-  pools. ([#4424](https://github.com/apache/arrow-adbc/pull/4424))
+Development of the ADBC drivers for Apache DataFusion, BigQuery, Databricks,
+and Snowflake has moved to the [ADBC Driver
+Foundry](https://adbc-drivers.org/), an independent, community-maintained
+project separate from Apache Arrow. The drivers remain available and continue
+to be developed there. No further releases of those drivers will come from
+this project, but existing packages will remain available, possibly as
+archived listings. For background, see [the ADBC documentation on driver
+development](https://arrow.apache.org/adbc/24/driver/authoring.html#why-the-driver-foundry-not-this-repository).
+Current driver locations and maintainer information are listed under
+[Drivers](https://arrow.apache.org/adbc/24/driver/index.html).
+
+Similarly, the experimental, incomplete support for Amazon Redshift in the
+PostgreSQL driver has been removed. A dedicated [ADBC driver for Amazon
+Redshift](https://adbc-drivers.org/drivers/redshift/) is available from the
+ADBC Driver Foundry.
+
+The ADBC drivers for Apache Arrow Flight SQL, PostgreSQL, and SQLite continue
+to be maintained and released by this project.
+
+Java API definitions were narrowed so that `close` is only declared to throw
+`AdbcException` as a checked
+exception. ([#4451](https://github.com/apache/arrow-adbc/pull/4451))
+
+The PostgreSQL driver now lazily initializes transactions to make it work
+better with connection
+pools. ([#4424](https://github.com/apache/arrow-adbc/pull/4424))
+
+### Documentation
+
+The documentation has been overhauled.
+([#4525](https://github.com/apache/arrow-adbc/pull/4525))
+
+- It is now organized around three common tasks: [finding and installing
+  drivers](https://arrow.apache.org/adbc/24/driver/index.html), [connecting
+  through a client
+  library](https://arrow.apache.org/adbc/24/client_libraries.html), and
+  [developing a
+  driver](https://arrow.apache.org/adbc/24/driver/authoring.html).
+- The revised docs emphasize ADBC's cross-language driver model: drivers are
+  typically distributed as shared libraries that can be used from any
+  supported language or client.
+- A new [Tools &
+  Integrations](https://arrow.apache.org/adbc/24/integrations.html) page
+  highlights tools and frameworks that integrate with ADBC. We welcome
+  contributions to add more integrations.
+- A new [Connection
+  Profiles](https://arrow.apache.org/adbc/24/connection_profiles.html) page
+  shows how to use reusable profiles to configure ADBC connections.
 
 ### Core APIs & Client Libraries
 
@@ -126,6 +156,11 @@ with dynamically loaded drivers and make certain conventions clearer
 [#4469](https://github.com/apache/arrow-adbc/pull/4469)).
 
 ### Drivers
+
+This project continues to maintain and release the ADBC drivers for Apache
+Arrow Flight SQL, PostgreSQL, and SQLite. As mentioned above, the DataFusion,
+BigQuery, Databricks, and Snowflake drivers are now maintained in the [ADBC
+Driver Foundry](https://adbc-drivers.org/), alongside many others.
 
 The Flight SQL driver now recognizes URIs with the `flightsql://` scheme
 ([#4488](https://github.com/apache/arrow-adbc/pull/4488)). It also has more
