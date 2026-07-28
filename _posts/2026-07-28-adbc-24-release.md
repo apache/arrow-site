@@ -50,7 +50,8 @@ been made: we refer you to the [complete changelog][3].
 
 Note: we are planning to require C++20 starting from the next release. Also,
 we will drop support for Python 3.10 no earlier than the release after next
-(i.e. no earlier than release 26), as the EOL for Python 3.10 is October 2026.
+i.e. no earlier than release 26. Release 26 is expected in about 3-4 months
+(October~November 2026), and the EOL for Python 3.10 is October 2026.
 
 ### Breaking Changes and Deprecations
 
