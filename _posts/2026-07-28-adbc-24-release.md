@@ -37,6 +37,7 @@ The subcomponents are versioned independently:
 - C/C++/GLib/Go/Python/Ruby: 1.12.0
 - C#: 0.24.0
 - Java: 0.24.0
+- JavaScript: 0.24.0
 - R: 0.24.0
 - Rust: 0.24.0
 
@@ -46,7 +47,9 @@ been made: we refer you to the [complete changelog][3].
 
 ## Release Highlights
 
-Note: we are planning to require C++20 starting from the next release.
+Note: we are planning to require C++20 starting from the next release. Also,
+we will drop support for Python 3.10 no earlier than the release after next
+(i.e. no earlier than release 26), as the EOL for Python 3.10 is October 2026.
 
 ### Breaking Changes and Deprecations
 
