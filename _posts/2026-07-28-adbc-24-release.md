@@ -79,25 +79,27 @@ pools. ([#4424](https://github.com/apache/arrow-adbc/pull/4424))
 
 ### Documentation
 
-The documentation has been overhauled.
+The documentation has been overhauled and is now organized around three common
+tasks: [finding and installing
+drivers](https://arrow.apache.org/adbc/24/driver/index.html), [connecting
+through a client
+library](https://arrow.apache.org/adbc/24/client_libraries.html), and
+[developing a
+driver](https://arrow.apache.org/adbc/24/driver/authoring.html).
 ([#4525](https://github.com/apache/arrow-adbc/pull/4525))
 
-- It is now organized around three common tasks: [finding and installing
-  drivers](https://arrow.apache.org/adbc/24/driver/index.html), [connecting
-  through a client
-  library](https://arrow.apache.org/adbc/24/client_libraries.html), and
-  [developing a
-  driver](https://arrow.apache.org/adbc/24/driver/authoring.html).
-- The revised docs emphasize ADBC's cross-language driver model: drivers are
-  typically distributed as shared libraries that can be used from any
-  supported language or client.
-- A new [Tools &
-  Integrations](https://arrow.apache.org/adbc/24/integrations.html) page
-  highlights tools and frameworks that integrate with ADBC. We welcome
-  contributions to add more integrations.
-- A new [Connection
-  Profiles](https://arrow.apache.org/adbc/24/connection_profiles.html) page
-  shows how to use reusable profiles to configure ADBC connections.
+The revised docs emphasize ADBC's cross-language driver model: drivers are
+typically distributed as shared libraries that can be used from any supported
+language or client.
+
+A new [Tools &
+Integrations](https://arrow.apache.org/adbc/24/integrations.html) page
+highlights tools and frameworks that integrate with ADBC. We welcome
+contributions to add more integrations.
+
+A new [Connection
+Profiles](https://arrow.apache.org/adbc/24/connection_profiles.html) page shows
+how to use reusable profiles to configure ADBC connections.
 
 ### Core APIs & Client Libraries
 
