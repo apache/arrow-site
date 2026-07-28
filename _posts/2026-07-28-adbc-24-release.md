@@ -26,7 +26,8 @@ limitations under the License.
 
 The Apache Arrow team is pleased to announce the version 24 release of
 the Apache Arrow ADBC libraries. This release includes [**57
-resolved issues**][1] from [**28 distinct contributors**][2].
+resolved issues**][1] and [**142** merged pull requests][2] from
+[**28 distinct contributors**](#contributors).
 
 This is a release of the **libraries**, which are at version 24.  The
 [**API specification**][specification] is versioned separately and is at
@@ -241,8 +242,8 @@ We welcome questions and contributions from all interested.  Issues
 can be filed on [GitHub][4], and questions can be directed to GitHub
 or the [Arrow mailing lists][5].
 
-[1]: https://github.com/apache/arrow-adbc/milestone/28
-[2]: #contributors
+[1]: https://github.com/apache/arrow-adbc/issues?q=is%3Aissue%20state%3Aclosed%20milestone%3A%22ADBC%20Libraries%2024%22
+[2]: https://github.com/apache/arrow-adbc/pulls?q=is%3Apr%20state%3Aclosed%20milestone%3A%22ADBC%20Libraries%2024%22%20-author%3Aapp%2Fdependabot
 [3]: https://github.com/apache/arrow-adbc/blob/apache-arrow-adbc-24/CHANGELOG.md
 [4]: https://github.com/apache/arrow-adbc/issues
 [5]: {% link community.md %}
