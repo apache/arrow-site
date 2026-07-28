@@ -26,7 +26,7 @@ limitations under the License.
 
 The Apache Arrow team is pleased to announce the version 24 release of
 the Apache Arrow ADBC libraries. This release includes [**57
-resolved issues**][1] and [**142** merged pull requests][2] from
+resolved issues**][1] and [**142 merged pull requests**][2] from
 [**28 distinct contributors**](#contributors).
 
 This is a release of the **libraries**, which are at version 24.  The
@@ -105,6 +105,12 @@ contributions to add more integrations.
 A new [Connection
 Profiles](https://arrow.apache.org/adbc/24/connection_profiles.html) page shows
 how to use reusable profiles to configure ADBC connections.
+
+The docs also describe how most drivers now recognize URIs with schemes
+matching their names, and how [driver managers can use the scheme to resolve
+the
+driver](https://arrow.apache.org/adbc/24/format/driver_manifests.html#resolving-a-driver-from-a-connection-uri)
+when it is not otherwise specified.
 
 ### Core APIs & Client Libraries
 
