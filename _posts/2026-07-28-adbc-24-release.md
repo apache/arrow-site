@@ -190,6 +190,7 @@ The SQLite driver now uses SQLite version 3.53.1 (up from 3.51.2)
 URIs with the `sqlite://` scheme
 ([#4463](https://github.com/apache/arrow-adbc/pull/4463)).
 
+<a id="contributors"></a>
 ## Contributors
 
 ```
