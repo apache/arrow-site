@@ -102,8 +102,8 @@ open_dataset(
 
   - "parquet"
 
-  - "ipc"/"arrow"/"feather", all aliases for each other; for Feather,
-    note that only version 2 files are supported
+  - "ipc"/"arrow" for the Arrow IPC format (also supported as "feather"
+    but this is deprecated)
 
   - "csv"/"text", aliases for the same thing (because comma is the
     default delimiter for text files
@@ -149,7 +149,7 @@ open_dataset(
   [`read_csv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md),
   [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md)
   and
-  [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
   on how to specify these).
 
 ## Value
@@ -271,7 +271,7 @@ open_dataset(tf2)
 } # }
 # This line will work
 open_dataset(tf2, format = "ipc")
-#> FileSystemDataset with 1 Feather file
+#> FileSystemDataset with 1 Arrow IPC file
 #> 11 columns
 #> mpg: double
 #> cyl: double

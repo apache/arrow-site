@@ -86,7 +86,7 @@ bucket path when listing a directory).
 With a `FileSystem` object, you can point to specific files in it with
 the `$path()` method and pass the result to file readers and writers
 ([`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md),
-[`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md),
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md),
 et al.).
 
 Often the reason users work with cloud storage in real world analysis is
@@ -187,7 +187,7 @@ especially when multiple file operations are required. However, in some
 cases you may want to download a file directly by specifying the URI.
 This is permitted by arrow, and functions like
 [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md),
-[`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md),
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md),
 [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
 etc will all accept URIs to cloud resources hosted on S3, GCS, or Azure.
 The format of an S3 URI is as follows:

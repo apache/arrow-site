@@ -102,8 +102,7 @@ argument. For example if the data were encoded as CSV files we could set
 supports several file formats including:
 
 - `"parquet"` (the default)
-- `"feather"` or `"ipc"` (aliases for `"arrow"`; as Feather version 2 is
-  the Arrow file format)
+- `"ipc"` or `"arrow"` (aliases for the Arrow IPC file format)
 - `"csv"` (comma-delimited files) and `"tsv"` (tab-delimited files)
 - `"text"` (generic text-delimited files - use the `delimiter` argument
   to specify which to use)
@@ -444,7 +443,7 @@ instead of a file path, or concatenate them with a command like
 ## Writing Datasets
 
 As you can see, querying a large Dataset can be made quite fast by
-storage in an efficient binary columnar format like Parquet or Feather
+storage in an efficient binary columnar format like Parquet or Arrow IPC
 and partitioning based on columns commonly used for filtering. However,
 data isn’t always stored that way. Sometimes you might start with one
 giant CSV. The first step in analyzing data is cleaning is up and
@@ -462,13 +461,13 @@ Assume that you have a version of the NYC Taxi data as CSV:
 ds <- open_dataset("nyc-taxi/csv/", format = "csv")
 ```
 
-You can write it to a new location and translate the files to the
-Feather format by calling
+You can write it to a new location and translate the files to the Arrow
+IPC format by calling
 [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
 on it:
 
 ``` r
-write_dataset(ds, "nyc-taxi/feather", format = "feather")
+write_dataset(ds, "nyc-taxi/ipc", format = "ipc")
 ```
 
 Next, let’s imagine that the `payment_type` column is something you
@@ -484,16 +483,16 @@ method:
 ``` r
 ds |>
   group_by(payment_type) |>
-  write_dataset("nyc-taxi/feather", format = "feather")
+  write_dataset("nyc-taxi/ipc", format = "ipc")
 ```
 
 This will write files to a directory tree that looks like this:
 
 ``` r
-system("tree nyc-taxi/feather")
+system("tree nyc-taxi/ipc")
 ```
 
-    ## feather
+    ## ipc
     ## ├── payment_type=1
     ## │   └── part-18.arrow
     ## ├── payment_type=2
@@ -524,7 +523,7 @@ when writing:
 ``` r
 ds |>
   filter(payment_type == "Cash") |>
-  write_dataset("nyc-taxi/feather", format = "feather")
+  write_dataset("nyc-taxi/ipc", format = "ipc")
 ```
 
 The other thing you can do when writing Datasets is select a subset of
@@ -536,7 +535,7 @@ in, so let’s drop it:
 ds |>
   group_by(payment_type) |>
   select(-vendor_id) |>
-  write_dataset("nyc-taxi/feather", format = "feather")
+  write_dataset("nyc-taxi/ipc", format = "ipc")
 ```
 
 Note that while you can select a subset of columns, you cannot currently

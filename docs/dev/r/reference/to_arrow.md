@@ -45,10 +45,14 @@ ds |>
   summarize(mean_mpg = mean(mpg, na.rm = TRUE)) |>
   to_arrow() |>
   collect()
-#> duckdb is keeping downloaded extensions in a temporary directory:
-#> i /tmp/Rtmp7MGChx/duckdb/extensions
-#> This is removed when the R session ends, so extensions are re-downloaded each session.
-#> i To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> i /tmp/RtmpbQIQ9D/duckdb
+#> This is removed when the R session ends.
+#> * Extensions are re-downloaded each session.
+#> * Secrets are lost.
+#> i Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> i Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> i See ?duckdb_storage for details and alternatives.
 #> # A tibble: 3 x 2
 #>     cyl mean_mpg
 #>   <dbl>    <dbl>

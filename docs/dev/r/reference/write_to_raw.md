@@ -2,7 +2,7 @@
 
 [`write_ipc_stream()`](https://arrow.apache.org/docs/r/reference/write_ipc_stream.md)
 and
-[`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
 write data to a sink and return the data (`data.frame`, `RecordBatch`,
 or `Table`) they were given. This function wraps those so that you can
 serialize data to a buffer and access that buffer as a `raw` vector in

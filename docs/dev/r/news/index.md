@@ -1137,9 +1137,9 @@ CRAN release: 2022-08-10
 ### Reading and writing
 
 - New functions
-  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
   and
-  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
   are added. These functions are almost the same as
   [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
   and
@@ -1148,9 +1148,9 @@ CRAN release: 2022-08-10
   Feather V1 files.
 - `read_arrow()` and `write_arrow()`, deprecated since 1.0.0 (July
   2020), have been removed. Instead of these, use the
-  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
   and
-  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
   for IPC files, or,
   [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
   and

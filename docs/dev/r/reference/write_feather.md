@@ -1,14 +1,17 @@
-# Write a Feather file (an Arrow IPC file)
+# Write a Feather file (deprecated)
 
-Feather provides binary columnar serialization for data frames. It is
-designed to make reading and writing data frames efficient, and to make
-sharing data across data analysis languages easy. `write_feather()` can
-write both the Feather Version 1 (V1), a legacy version available
-starting in 2016, and the Version 2 (V2), which is the Apache Arrow IPC
-file format. The default version is V2. V1 files are distinct from Arrow
-IPC files and lack many features, such as the ability to store all Arrow
-data tyeps, and compression support. `write_ipc_file()` can only write
-V2 files.
+`write_feather()` is deprecated and will be removed in a future release.
+Use
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
+instead.
+
+Column-oriented file format designed for fast reading and writing of
+data frames. Feather V2 is the Arrow IPC file format. Feather V1 is a
+legacy format available starting in 2016 that lacks many features, such
+as the ability to store all Arrow data types, and compression support.
+Feather V1 is deprecated; use
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
+for new files.
 
 ## Usage
 
@@ -17,14 +20,6 @@ write_feather(
   x,
   sink,
   version = 2,
-  chunk_size = 65536L,
-  compression = c("default", "lz4", "lz4_frame", "uncompressed", "zstd"),
-  compression_level = NULL
-)
-
-write_ipc_file(
-  x,
-  sink,
   chunk_size = 65536L,
   compression = c("default", "lz4", "lz4_frame", "uncompressed", "zstd"),
   compression_level = NULL
@@ -52,9 +47,9 @@ write_ipc_file(
 
 - chunk_size:
 
-  For V2 files, the number of rows that each chunk of data should have
-  in the file. Use a smaller `chunk_size` when you need faster random
-  row access. Default is 64K. This option is not supported for V1.
+  The number of rows that each chunk of data should have in the file.
+  Use a smaller `chunk_size` when you need faster random row access.
+  Default is 64K.
 
 - compression:
 
@@ -65,7 +60,7 @@ write_ipc_file(
   performance. "lz4" is shorthand for the "lz4_frame" codec. See
   [`codec_is_available()`](https://arrow.apache.org/docs/r/reference/codec_is_available.md)
   for details. `TRUE` and `FALSE` can also be used in place of "default"
-  and "uncompressed". This option is not supported for V1.
+  and "uncompressed".
 
 - compression_level:
 
@@ -81,25 +76,4 @@ the stream will be left open.
 
 ## See also
 
-[RecordBatchWriter](https://arrow.apache.org/docs/r/reference/RecordBatchWriter.md)
-for lower-level access to writing Arrow IPC data.
-
-[Schema](https://arrow.apache.org/docs/r/reference/Schema-class.md) for
-information about schemas and metadata handling.
-
-## Examples
-
-``` r
-# We recommend the ".arrow" extension for Arrow IPC files (Feather V2).
-tf1 <- tempfile(fileext = ".feather")
-tf2 <- tempfile(fileext = ".arrow")
-tf3 <- tempfile(fileext = ".arrow")
-on.exit({
-  unlink(tf1)
-  unlink(tf2)
-  unlink(tf3)
-})
-write_feather(mtcars, tf1, version = 1)
-write_feather(mtcars, tf2)
-write_ipc_file(mtcars, tf3)
-```
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)

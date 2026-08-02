@@ -3,9 +3,8 @@
 Apache Arrow defines two formats for [serializing data for interprocess
 communication
 (IPC)](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc):
-a "stream" format and a "file" format, known as Feather.
-`write_ipc_stream()` and
-[`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+a "stream" format and a "file" format. `write_ipc_stream()` and
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
 write those formats, respectively.
 
 ## Usage
@@ -30,8 +29,7 @@ write_ipc_stream(x, sink, ...)
 
 - ...:
 
-  extra parameters passed to
-  [`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md).
+  deprecated and ignored.
 
 ## Value
 
@@ -39,7 +37,7 @@ write_ipc_stream(x, sink, ...)
 
 ## See also
 
-[`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
 for writing IPC files.
 [`write_to_raw()`](https://arrow.apache.org/docs/r/reference/write_to_raw.md)
 to serialize data to a buffer.

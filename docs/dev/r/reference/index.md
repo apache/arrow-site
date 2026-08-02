@@ -42,8 +42,9 @@ Read files in a variety of formats in as tibbles or Arrow Tables.
 - [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md)
   : Read a Parquet file
 - [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
-  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
-  : Read a Feather file (an Arrow IPC file)
+  : Read a Feather file (deprecated)
+- [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
+  : Read an Arrow IPC file
 - [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
   : Read Arrow IPC stream format
 - [`read_json_arrow()`](https://arrow.apache.org/docs/r/reference/read_json_arrow.md)
@@ -58,8 +59,9 @@ Write to files in a variety of formats.
 - [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md)
   : Write Parquet file to disk
 - [`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
-  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
-  : Write a Feather file (an Arrow IPC file)
+  : Write a Feather file (deprecated)
+- [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
+  : Write an Arrow IPC file
 - [`write_ipc_stream()`](https://arrow.apache.org/docs/r/reference/write_ipc_stream.md)
   : Write Arrow IPC stream format
 - [`write_to_raw()`](https://arrow.apache.org/docs/r/reference/write_to_raw.md)

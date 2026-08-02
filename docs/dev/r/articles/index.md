@@ -5,7 +5,8 @@
 - [Reading and writing data
   files](https://arrow.apache.org/docs/r/articles/read_write.md):
 
-  Learn how to read and write CSV, Parquet, and Feather files with arrow
+  Learn how to read and write CSV, Parquet, and Arrow IPC files with
+  arrow
 
 - [Data analysis with dplyr
   syntax](https://arrow.apache.org/docs/r/articles/data_wrangling.md):
