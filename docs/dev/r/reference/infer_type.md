@@ -1,13 +1,11 @@
 # Infer the arrow Array type from an R object
 
-`type()` is deprecated in favor of `infer_type()`.
+Infer the arrow Array type from an R object
 
 ## Usage
 
 ``` r
 infer_type(x, ...)
-
-type(x)
 ```
 
 ## Arguments

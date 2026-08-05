@@ -9,8 +9,6 @@ diagnostics.
 ``` r
 arrow_info()
 
-arrow_available()
-
 arrow_with_acero()
 
 arrow_with_dataset()
