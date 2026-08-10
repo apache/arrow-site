@@ -151,6 +151,15 @@ short description of your use case.
   directly on top of Amazon S3. Our approach is simple: ingest the OpenTelemetry data in an S3 bucket as
   Parquet files in Iceberg table format and query them using DuckDB with milliseond retrieval and zero egress cost.
   Parquet is converted to Arrow format in-memory enhancing both speed and efficiency.
+* **[IceGate][63]:** IceGate is an open source observability data lake engine
+  written in Rust. It receives OpenTelemetry logs, traces, metrics, and events,
+  stores them as Apache Iceberg tables on object storage, and serves them through
+  Apache Arrow Flight SQL and HTTP APIs compatible with existing open source
+  observability clients. IceGate uses Apache Arrow as its in-memory format on both
+  the ingest and query paths, Apache Parquet for its write-ahead log and Iceberg
+  data files, Apache Arrow Flight SQL for BI and ad-hoc SQL clients over gRPC,
+  Apache OpenDAL for S3-compatible access, and Apache DataFusion for query
+  execution.
 * **[InAccel][29]:** A machine learning acceleration framework which leverages
   FPGAs-as-a-service. InAccel supports dataframes backed by Apache Arrow to
   serve as input for our implemented ML algorithms. Those dataframes can be
@@ -314,3 +323,4 @@ short description of your use case.
 [60]: https://iomete.com
 [61]: https://github.com/Eventual-Inc/Daft
 [62]: https://github.com/lakehq/sail
+[63]: https://icegate.tech
