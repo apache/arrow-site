@@ -1,4 +1,117 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2026-08-14T15:15:07-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow 25.0.1 Release</title><link href="https://arrow.apache.org/blog/2026/08/10/25.0.1-release/" rel="alternate" type="text/html" title="Apache Arrow 25.0.1 Release" /><published>2026-08-10T00:00:00-04:00</published><updated>2026-08-10T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2026/08/10/25.0.1-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/08/10/25.0.1-release/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2026-08-14T23:31:26-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow nanoarrow 0.9.0 Release</title><link href="https://arrow.apache.org/blog/2026/08/14/nanoarrow-0.9.0-release/" rel="alternate" type="text/html" title="Apache Arrow nanoarrow 0.9.0 Release" /><published>2026-08-14T00:00:00-04:00</published><updated>2026-08-14T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2026/08/14/nanoarrow-0.9.0-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/08/14/nanoarrow-0.9.0-release/"><![CDATA[<!--
+
+-->
+<p>The Apache Arrow team is pleased to announce the 0.9.0 release of
+Apache Arrow nanoarrow. This release consists of 38 resolved GitHub issues from
+5 contributors.</p>
+<h2>Release Highlights</h2>
+<p>In addition to a number of bugfixes and minor build system improvements, we
+added several new features in nanoarrow 0.9.0.</p>
+<ul>
+<li>Dictionary decoding support in IPC reader</li>
+<li>Reference-counted array/buffer support</li>
+<li>LZ4 decompression support in R and Python bindings</li>
+</ul>
+<p>See the
+<a href="https://github.com/apache/arrow-nanoarrow/blob/apache-arrow-nanoarrow-0.9.0/CHANGELOG.md">Changelog</a>
+for a detailed list of contributions to this release.</p>
+<h2>Features</h2>
+<h3>Dictionary decode support</h3>
+<p>Whereas the nanoarrow IPC reader suppports most Arrow IPC features, dictionary support
+was a long requested gap in the reader functionality (mostly requested by users of
+the <a href="https://github.com/paleolimbot/duckdb-nanoarrow">DuckDB nanoarrow extension</a>, which uses nanoarrow's reader). Dictionary encoding is used to reduce the size of frequently
+repeated values and is the serialized equivalent of the &quot;dictionary&quot; data type that
+is exposed in most Arrow implementations.</p>
+<p>In nanoarrow 0.9.0 built with the IPC feature enabled, streams that include the most
+common forms of dictionary encoding (i.e., dictionary replacement) should now work
+out of the box. This includes nested/complex dictionary types and dictionary
+replacement but does not include &quot;delta&quot; dictionaries (i.e., dictionaires that
+grow larger as more values are encountered in the encoded values).</p>
+<p>In R this is accessible via <code>read_nanoarrow()</code>; in Python this is accessible via
+<code>nanoarrow.ArrayStream.from_readable()</code>; in C this is available via the
+higher level <code>ArrowIpcArrayStreamReader</code> API. Lower level users of the
+<code>ArrowIpcDecoder</code> will have to update existing usage to use the
+<code>ArrowIpcDecoder...WithDictionaries()</code> variants of some functions
+to support input with dictionary schemas or batches.</p>
+<h3>Reference-counted array/buffer support</h3>
+<p>In previous versions (since the introduction of the IPC reader), the
+<code>ArrowIpcSharedBuffer</code> has supported reading IPC streams and sharing an
+underlying set of data buffers for a group of arrays; however, this wasn't
+quite sufficient for the more complex case of decoding a dictionary and
+attaching cheaply-cloned shared &quot;values&quot; arrays for potentially many batches.
+Version 0.9.0 moves this functionality to the <code>ArrowSharedBuffer</code> and expands it
+to support moving all of an array's buffers into a shared state that can be
+more cheaply cloned.</p>
+<h3>LZ4 decompression support in R and Python</h3>
+<p>While LZ4 decompression support was has long been available via the pluggable decoder
+framework (and available since 0.8.0 as a built-in compile time option), reading
+IPC streams with LZ4 buffer compression was not possible in the R or Python bindings.
+In 0.9.0, the requisite configuration options were added such that the packages are
+built with LZ4 when it is available on the system.</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">io</span>
+<span class="kn">import</span> <span class="n">nanoarrow</span> <span class="k">as</span> <span class="n">na</span>
+<span class="kn">import</span> <span class="n">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
+
+<span class="n">buf</span> <span class="o">=</span> <span class="n">io</span><span class="p">.</span><span class="nc">BytesIO</span><span class="p">()</span>
+<span class="n">batch</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="nf">record_batch</span><span class="p">({</span><span class="sh">"</span><span class="s">x</span><span class="sh">"</span><span class="p">:</span> <span class="nf">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">)})</span>
+<span class="k">with</span> <span class="n">pa</span><span class="p">.</span><span class="n">ipc</span><span class="p">.</span><span class="nf">new_stream</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">batch</span><span class="p">.</span><span class="n">schema</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">pa</span><span class="p">.</span><span class="n">ipc</span><span class="p">.</span><span class="nc">IpcWriteOptions</span><span class="p">(</span><span class="n">compression</span><span class="o">=</span><span class="sh">"</span><span class="s">lz4</span><span class="sh">"</span><span class="p">))</span> <span class="k">as</span> <span class="n">w</span><span class="p">:</span>
+    <span class="n">w</span><span class="p">.</span><span class="nf">write_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+
+<span class="n">buf</span><span class="p">.</span><span class="nf">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">na</span><span class="p">.</span><span class="n">ArrayStream</span><span class="p">.</span><span class="nf">from_readable</span><span class="p">(</span><span class="n">buf</span><span class="p">).</span><span class="nf">read_all</span><span class="p">()</span>
+<span class="c1"># nanoarrow.Array&lt;non-nullable struct&lt;x: int64&gt;&gt;[1000]
+# {'x': 0}
+# {'x': 1}
+# {'x': 2}
+# {'x': 3}
+# {'x': 4}
+# {'x': 5}
+# {'x': 6}
+# {'x': 7}
+# {'x': 8}
+# {'x': 9}
+# ...and 990 more items
+</span></code></pre></div></div>
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">library</span><span class="p">(</span><span class="n">nanoarrow</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">reticulate</span><span class="p">)</span><span class="w">
+
+</span><span class="c1"># IPC Write with compression not available in arrow/R</span><span class="w">
+</span><span class="n">pa</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">reticulate</span><span class="o">::</span><span class="n">import</span><span class="p">(</span><span class="s2">"pyarrow"</span><span class="p">)</span><span class="w">
+</span><span class="n">io</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">reticulate</span><span class="o">::</span><span class="n">import</span><span class="p">(</span><span class="s2">"io"</span><span class="p">)</span><span class="w">
+
+</span><span class="n">buf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">io</span><span class="o">$</span><span class="n">BytesIO</span><span class="p">()</span><span class="w">
+</span><span class="n">batch</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">record_batch</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="m">1000</span><span class="p">)</span><span class="w">
+</span><span class="n">writer</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pa</span><span class="o">$</span><span class="n">ipc</span><span class="o">$</span><span class="n">new_stream</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">batch</span><span class="o">$</span><span class="n">schema</span><span class="p">,</span><span class="w"> </span><span class="n">options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pa</span><span class="o">$</span><span class="n">ipc</span><span class="o">$</span><span class="n">IpcWriteOptions</span><span class="p">(</span><span class="n">compression</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"lz4"</span><span class="p">))</span><span class="w">
+</span><span class="n">writer</span><span class="o">$</span><span class="n">write_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span><span class="w">
+</span><span class="n">writer</span><span class="o">$</span><span class="n">close</span><span class="p">()</span><span class="w">
+
+</span><span class="n">nanoarrow</span><span class="o">::</span><span class="n">read_nanoarrow</span><span class="p">(</span><span class="nf">as.raw</span><span class="p">(</span><span class="n">buf</span><span class="o">$</span><span class="n">getvalue</span><span class="p">()))</span><span class="w"> </span><span class="o">|&gt;</span><span class="w">
+  </span><span class="n">tibble</span><span class="o">::</span><span class="n">as_tibble</span><span class="p">()</span><span class="w">
+</span><span class="c1">#&gt; # A tibble: 1,000 × 1</span><span class="w">
+</span><span class="c1">#&gt;        x</span><span class="w">
+</span><span class="c1">#&gt;    &lt;int&gt;</span><span class="w">
+</span><span class="c1">#&gt;  1     1</span><span class="w">
+</span><span class="c1">#&gt;  2     2</span><span class="w">
+</span><span class="c1">#&gt;  3     3</span><span class="w">
+</span><span class="c1">#&gt;  4     4</span><span class="w">
+</span><span class="c1">#&gt;  5     5</span><span class="w">
+</span><span class="c1">#&gt;  6     6</span><span class="w">
+</span><span class="c1">#&gt;  7     7</span><span class="w">
+</span><span class="c1">#&gt;  8     8</span><span class="w">
+</span><span class="c1">#&gt;  9     9</span><span class="w">
+</span><span class="c1">#&gt; 10    10</span><span class="w">
+</span><span class="c1">#&gt; # ℹ 990 more rows</span><span class="w">
+</span></code></pre></div></div>
+<h2>Contributors</h2>
+<p>This release consists of contributions from 5 contributors in addition
+to the invaluable advice and support of the Apache Arrow community.</p>
+<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="console"><span class="gp">$</span><span class="w"> </span>git shortlog <span class="nt">-sn</span> apache-arrow-nanoarrow-0.9.0.dev..apache-arrow-nanoarrow-0.9.0
+<span class="go">    36  Dewey Dunnington
+     2  Andrew Kane
+     2  Bryce Mecum
+     1  Michael Osipov
+     1  Oliver Borchert
+</span></code></pre></div></div>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the 0.9.0 release of Apache Arrow nanoarrow. This release consists of 38 resolved GitHub issues from 5 contributors. Release Highlights In addition to a number of bugfixes and minor build system improvements, we added several new features in nanoarrow 0.9.0. Dictionary decoding support in IPC reader Reference-counted array/buffer support LZ4 decompression support in R and Python bindings See the Changelog for a detailed list of contributions to this release. Features Dictionary decode support Whereas the nanoarrow IPC reader suppports most Arrow IPC features, dictionary support was a long requested gap in the reader functionality (mostly requested by users of the DuckDB nanoarrow extension, which uses nanoarrow's reader). Dictionary encoding is used to reduce the size of frequently repeated values and is the serialized equivalent of the &quot;dictionary&quot; data type that is exposed in most Arrow implementations. In nanoarrow 0.9.0 built with the IPC feature enabled, streams that include the most common forms of dictionary encoding (i.e., dictionary replacement) should now work out of the box. This includes nested/complex dictionary types and dictionary replacement but does not include &quot;delta&quot; dictionaries (i.e., dictionaires that grow larger as more values are encountered in the encoded values). In R this is accessible via read_nanoarrow(); in Python this is accessible via nanoarrow.ArrayStream.from_readable(); in C this is available via the higher level ArrowIpcArrayStreamReader API. Lower level users of the ArrowIpcDecoder will have to update existing usage to use the ArrowIpcDecoder...WithDictionaries() variants of some functions to support input with dictionary schemas or batches. Reference-counted array/buffer support In previous versions (since the introduction of the IPC reader), the ArrowIpcSharedBuffer has supported reading IPC streams and sharing an underlying set of data buffers for a group of arrays; however, this wasn't quite sufficient for the more complex case of decoding a dictionary and attaching cheaply-cloned shared &quot;values&quot; arrays for potentially many batches. Version 0.9.0 moves this functionality to the ArrowSharedBuffer and expands it to support moving all of an array's buffers into a shared state that can be more cheaply cloned. LZ4 decompression support in R and Python While LZ4 decompression support was has long been available via the pluggable decoder framework (and available since 0.8.0 as a built-in compile time option), reading IPC streams with LZ4 buffer compression was not possible in the R or Python bindings. In 0.9.0, the requisite configuration options were added such that the packages are built with LZ4 when it is available on the system. import io import nanoarrow as na import pyarrow as pa buf = io.BytesIO() batch = pa.record_batch({"x": range(1000)}) with pa.ipc.new_stream(buf, batch.schema, options=pa.ipc.IpcWriteOptions(compression="lz4")) as w: w.write_batch(batch) buf.seek(0) na.ArrayStream.from_readable(buf).read_all() # nanoarrow.Array&lt;non-nullable struct&lt;x: int64&gt;&gt;[1000] # {'x': 0} # {'x': 1} # {'x': 2} # {'x': 3} # {'x': 4} # {'x': 5} # {'x': 6} # {'x': 7} # {'x': 8} # {'x': 9} # ...and 990 more items library(nanoarrow) library(reticulate) # IPC Write with compression not available in arrow/R pa &lt;- reticulate::import("pyarrow") io &lt;- reticulate::import("io") buf &lt;- io$BytesIO() batch &lt;- arrow::record_batch(x = 1:1000) writer &lt;- pa$ipc$new_stream(buf, batch$schema, options = pa$ipc$IpcWriteOptions(compression = "lz4")) writer$write_batch(batch) writer$close() nanoarrow::read_nanoarrow(as.raw(buf$getvalue())) |&gt; tibble::as_tibble() #&gt; # A tibble: 1,000 × 1 #&gt; x #&gt; &lt;int&gt; #&gt; 1 1 #&gt; 2 2 #&gt; 3 3 #&gt; 4 4 #&gt; 5 5 #&gt; 6 6 #&gt; 7 7 #&gt; 8 8 #&gt; 9 9 #&gt; 10 10 #&gt; # ℹ 990 more rows Contributors This release consists of contributions from 5 contributors in addition to the invaluable advice and support of the Apache Arrow community. $ git shortlog -sn apache-arrow-nanoarrow-0.9.0.dev..apache-arrow-nanoarrow-0.9.0 36 Dewey Dunnington 2 Andrew Kane 2 Bryce Mecum 1 Michael Osipov 1 Oliver Borchert]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow 25.0.1 Release</title><link href="https://arrow.apache.org/blog/2026/08/10/25.0.1-release/" rel="alternate" type="text/html" title="Apache Arrow 25.0.1 Release" /><published>2026-08-10T00:00:00-04:00</published><updated>2026-08-10T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2026/08/10/25.0.1-release</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/08/10/25.0.1-release/"><![CDATA[<!--
 
 -->
 <p>The Apache Arrow team is pleased to announce the 25.0.1 release.
@@ -1374,46 +1487,4 @@ number of bigger contributions in the past year.</p>
 <li>GH-301: [Vector] Allow adding a vector at the end of VectorSchemaRoot by @axreldable in <a href="https://github.com/apache/arrow-java/pull/1013">#1013</a></li>
 <li>GH-552: [Vector] Add absent methods to the UnionFixedSizeListWriter by @axreldable in <a href="https://github.com/apache/arrow-java/pull/1052">#1052</a></li>
 </ul>
-<p><strong>Full Changelog</strong>: <a href="https://github.com/apache/arrow-java/commits/v19.0.0">changelog</a></p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the v19.0.0 release of Apache Arrow Java. Changelog What's Changed Breaking Changes GH-774: Consoliate BitVectorHelper.getValidityBufferSize and BaseValueVector.getValidityBufferSizeFromCount by @rtadepalli in #775 GH-586: Override fixedSizeBinary method for UnionMapWriter by @axreldable in #885 GH-891: Add ExtensionTypeWriterFactory to TransferPair by @jhrotko in #892 GH-948: Use buffer indexing for UUID vector by @jhrotko in #949 GH-139: [Flight] Stop return null from MetadataAdapter.getAll(String) and getAllByte(String) by @axreldable in #1016 New Features and Enhancements GH-52: Make RangeEqualsVisitor of RunEndEncodedVector more efficient by @ViggoC in #761 GH-765: Do not close/free imported BaseStruct objects by @pepijnve in #766 GH-79: Move splitAndTransferValidityBuffer to BaseValueVector by @rtadepalli in #777 GH-731: Avro adapter, output dictionary-encoded fields as enums by @martin-traverse in #779 GH-725: Added ExtensionReader by @xxlaykxx in #726 GH-882: Add support for loading native library from a user specified location by @pepijnve in #883 GH-109: Implement Vector Validators for StringView by @ViggoC in #886 GH-900: Fix gandiva groupId in arrow-bom by @XN137 in #901 GH-762: Implement VectorAppender for RunEndEncodedVector by @ViggoC in #884 GH-825: Add UUID canonical extension type by @jhrotko in #903 GH-110: Flight SQL JDBC related StringView components implementation by @ViggoC in #905 GH-863: [JDBC] Suppress benign exceptions from gRPC layer on ArrowFlightSqlClientHandler#close by @ennuite in #910 GH-929: Add UUID support in JDBC driver by @xborder in #930 GH-952: Add OAuth support by @xborder in #953 GH-946: Add Variant extension type support by @tmater in #947 GH-130: Fix AutoCloseables to work with @nullable structures by @axreldable in #1017 GH-1038: Trim object memory for ArrowBuf by @lriggs in #1044 GH-1061: Add codegen classifier jar for arrow-vector. by @lriggs in #1062 GH-301: [Vector] Allow adding a vector at the end of VectorSchemaRoot by @axreldable in #1013 GH-552: [Vector] Add absent methods to the UnionFixedSizeListWriter by @axreldable in #1052 Full Changelog: changelog]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow Go 18.5.2 Release</title><link href="https://arrow.apache.org/blog/2026/03/04/arrow-go-18.5.2/" rel="alternate" type="text/html" title="Apache Arrow Go 18.5.2 Release" /><published>2026-03-04T00:00:00-05:00</published><updated>2026-03-04T00:00:00-05:00</updated><id>https://arrow.apache.org/blog/2026/03/04/arrow-go-18.5.2</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/03/04/arrow-go-18.5.2/"><![CDATA[<!--
-
--->
-<p>The Apache Arrow team is pleased to announce the v18.5.2 release of Apache Arrow Go.
-This patch release covers 16 commits from 6 distinct contributors.</p>
-<h2>Contributors</h2>
-<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="console"><span class="gp">$</span><span class="w"> </span>git shortlog <span class="nt">-sn</span> v18.5.1..v18.5.2
-<span class="go">    11	Matt Topol
-     2	daniel-adam-tfs
-     1	Evan Todd
-     1	Rusty Conover
-     1	Stas Spiridonov
-     1	William
-</span></code></pre></div></div>
-<h2>Changelog</h2>
-<h3>What's Changed</h3>
-<ul>
-<li>chore: bump parquet-testing submodule by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/633">#633</a></li>
-<li>fix(arrow/array): handle empty binary values correctly in BinaryBuilder by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/634">#634</a></li>
-<li>test(arrow/array): add test to binary builder by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/636">#636</a></li>
-<li>fix(parquet): decryption of V2 data pages by @daniel-adam-tfs in <a href="https://github.com/apache/arrow-go/pull/596">#596</a></li>
-<li>perf(arrow): Reduce the amount of allocated objects by @spiridonov in <a href="https://github.com/apache/arrow-go/pull/645">#645</a></li>
-<li>fix(parquet/file): regression with decompressing data by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/652">#652</a></li>
-<li>fix(arrow/compute): take on record/array with nested struct by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/653">#653</a></li>
-<li>fix(parquet/file): write large string values by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/655">#655</a></li>
-<li>ci: ensure extra GC cycle for flaky tests by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/661">#661</a></li>
-<li>fix(arrow/array): handle exponent notation for unmarshal int by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/662">#662</a></li>
-<li>fix(flight/flightsql/driver): fix <code>time.Time</code> params by @etodd in <a href="https://github.com/apache/arrow-go/pull/666">#666</a></li>
-<li>fix(parquet): bss encoding and tests on big endian systems by @daniel-adam-tfs in <a href="https://github.com/apache/arrow-go/pull/663">#663</a></li>
-<li>fix(parquet/pqarrow): selective column reading of complex map column by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/668">#668</a></li>
-<li>feat(arrow/ipc): support custom_metadata on RecordBatch messages by @rustyconover in <a href="https://github.com/apache/arrow-go/pull/669">#669</a></li>
-<li>feat: Support setting IPC options in FlightSQL call options by @peasee in <a href="https://github.com/apache/arrow-go/pull/674">#674</a></li>
-<li>chore(dev/release): embed hash of source tarball into email by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/675">#675</a></li>
-<li>chore(arrow): bump PkgVersion to 18.5.2 by @zeroshade in <a href="https://github.com/apache/arrow-go/pull/676">#676</a></li>
-</ul>
-<h3>New Contributors</h3>
-<ul>
-<li>@spiridonov made their first contribution in <a href="https://github.com/apache/arrow-go/pull/645">#645</a></li>
-<li>@etodd made their first contribution in <a href="https://github.com/apache/arrow-go/pull/666">#666</a></li>
-<li>@rustyconover made their first contribution in <a href="https://github.com/apache/arrow-go/pull/669">#669</a></li>
-<li>@peasee made their first contribution in <a href="https://github.com/apache/arrow-go/pull/674">#674</a></li>
-</ul>
-<p><strong>Full Changelog</strong>: <a href="https://github.com/apache/arrow-go/compare/v18.5.1...v18.5.2">https://github.com/apache/arrow-go/compare/v18.5.1...v18.5.2</a></p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the v18.5.2 release of Apache Arrow Go. This patch release covers 16 commits from 6 distinct contributors. Contributors $ git shortlog -sn v18.5.1..v18.5.2 11 Matt Topol 2 daniel-adam-tfs 1 Evan Todd 1 Rusty Conover 1 Stas Spiridonov 1 William Changelog What's Changed chore: bump parquet-testing submodule by @zeroshade in #633 fix(arrow/array): handle empty binary values correctly in BinaryBuilder by @zeroshade in #634 test(arrow/array): add test to binary builder by @zeroshade in #636 fix(parquet): decryption of V2 data pages by @daniel-adam-tfs in #596 perf(arrow): Reduce the amount of allocated objects by @spiridonov in #645 fix(parquet/file): regression with decompressing data by @zeroshade in #652 fix(arrow/compute): take on record/array with nested struct by @zeroshade in #653 fix(parquet/file): write large string values by @zeroshade in #655 ci: ensure extra GC cycle for flaky tests by @zeroshade in #661 fix(arrow/array): handle exponent notation for unmarshal int by @zeroshade in #662 fix(flight/flightsql/driver): fix time.Time params by @etodd in #666 fix(parquet): bss encoding and tests on big endian systems by @daniel-adam-tfs in #663 fix(parquet/pqarrow): selective column reading of complex map column by @zeroshade in #668 feat(arrow/ipc): support custom_metadata on RecordBatch messages by @rustyconover in #669 feat: Support setting IPC options in FlightSQL call options by @peasee in #674 chore(dev/release): embed hash of source tarball into email by @zeroshade in #675 chore(arrow): bump PkgVersion to 18.5.2 by @zeroshade in #676 New Contributors @spiridonov made their first contribution in #645 @etodd made their first contribution in #666 @rustyconover made their first contribution in #669 @peasee made their first contribution in #674 Full Changelog: https://github.com/apache/arrow-go/compare/v18.5.1...v18.5.2]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/apache/arrow-java/commits/v19.0.0">changelog</a></p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the v19.0.0 release of Apache Arrow Java. Changelog What's Changed Breaking Changes GH-774: Consoliate BitVectorHelper.getValidityBufferSize and BaseValueVector.getValidityBufferSizeFromCount by @rtadepalli in #775 GH-586: Override fixedSizeBinary method for UnionMapWriter by @axreldable in #885 GH-891: Add ExtensionTypeWriterFactory to TransferPair by @jhrotko in #892 GH-948: Use buffer indexing for UUID vector by @jhrotko in #949 GH-139: [Flight] Stop return null from MetadataAdapter.getAll(String) and getAllByte(String) by @axreldable in #1016 New Features and Enhancements GH-52: Make RangeEqualsVisitor of RunEndEncodedVector more efficient by @ViggoC in #761 GH-765: Do not close/free imported BaseStruct objects by @pepijnve in #766 GH-79: Move splitAndTransferValidityBuffer to BaseValueVector by @rtadepalli in #777 GH-731: Avro adapter, output dictionary-encoded fields as enums by @martin-traverse in #779 GH-725: Added ExtensionReader by @xxlaykxx in #726 GH-882: Add support for loading native library from a user specified location by @pepijnve in #883 GH-109: Implement Vector Validators for StringView by @ViggoC in #886 GH-900: Fix gandiva groupId in arrow-bom by @XN137 in #901 GH-762: Implement VectorAppender for RunEndEncodedVector by @ViggoC in #884 GH-825: Add UUID canonical extension type by @jhrotko in #903 GH-110: Flight SQL JDBC related StringView components implementation by @ViggoC in #905 GH-863: [JDBC] Suppress benign exceptions from gRPC layer on ArrowFlightSqlClientHandler#close by @ennuite in #910 GH-929: Add UUID support in JDBC driver by @xborder in #930 GH-952: Add OAuth support by @xborder in #953 GH-946: Add Variant extension type support by @tmater in #947 GH-130: Fix AutoCloseables to work with @nullable structures by @axreldable in #1017 GH-1038: Trim object memory for ArrowBuf by @lriggs in #1044 GH-1061: Add codegen classifier jar for arrow-vector. by @lriggs in #1062 GH-301: [Vector] Allow adding a vector at the end of VectorSchemaRoot by @axreldable in #1013 GH-552: [Vector] Add absent methods to the UnionFixedSizeListWriter by @axreldable in #1052 Full Changelog: changelog]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
