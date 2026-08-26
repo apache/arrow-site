@@ -4,6 +4,13 @@
 
 ## arrow 25.0.1
 
+CRAN release: 2026-08-23
+
+### Minor improvements and fixes
+
+- Improved mimalloc memory allocator configuration on macOS
+  ([\#50428](https://github.com/apache/arrow/issues/50428)).
+
 ## arrow 25.0.0
 
 CRAN release: 2026-07-16

@@ -3,7 +3,7 @@
 The Arrow R package uses several additional development tools:
 
 - [`air`](https://posit-dev.github.io/air/) for code styling
-- [`lintr`](https://github.com/r-lib/lintr) for code analysis
+- [`jarl`](https://etiennebacher.github.io/jarl/) for code analysis
 - [`pkgdown`](https://pkgdown.r-lib.org) for building the website
 - [`roxygen2`](https://roxygen2.r-lib.org) for documenting the package
   - the R documentation uses the
@@ -11,12 +11,14 @@ The Arrow R package uses several additional development tools:
     tag introduced in `roxygen2` version 7.1.2
 
 Instructions for installing `air` can be found at
-<https://posit-dev.github.io/air/cli.html>.
+<https://posit-dev.github.io/air/cli.html>, and instructions for
+installing `jarl` can be found at
+<https://etiennebacher.github.io/jarl/#installation>.
 
 You can install all the other additional dependencies by running:
 
 ``` r
-install.packages(c("lintr", "pkgdown", "roxygen2"))
+install.packages(c("pkgdown", "roxygen2"))
 ```
 
 The `arrow/r` directory contains a `Makefile` to help with some common
@@ -71,7 +73,7 @@ request with annotations.
 You can automatically change the formatting of the code in the package
 using the [air](https://posit-dev.github.io/air/cli.html) formatter.
 
-The `air` formatter will fix many styling errors, thought not all lintr
+The `air` formatter will fix many styling errors, though not all `jarl`
 errors are automatically fixable with `air`. The list of files we
 intentionally do not style is in the `exclude` field in `r/air.toml`.
 
@@ -84,14 +86,12 @@ From the command line, run `air`:
 
     air format
 
-In R, run `lintr`:
+From the command line, run `jarl`:
 
-``` r
-lintr::lint_package()
-```
+    jarl check .
 
-Note: To run lintr, we require the `cyclocomp` package to be installed
-first.
+Some `jarl` findings can be fixed automatically with
+`jarl check --fix .`.
 
 ### C++ code
 
