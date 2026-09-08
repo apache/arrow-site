@@ -67,6 +67,11 @@ short description of your use case.
   the ArcGIS suite of products to perform and automate spatial analysis, data management,
   and conversion tasks (license required). ArcPy supports Arrow Tables as input
   and output.
+* **[ArrowMetal][64]:** Apache Arrow compute on Apple silicon GPUs through Metal. Arrow
+  buffers live in unified memory the GPU reads in place, so the kernels (reductions, filters,
+  group-bys, sorts, joins, string and temporal functions, covering the Arrow compute function
+  set) run without a copy in either direction. Data crosses through the C Data, C Stream and
+  C Device Data interfaces, with bindings for Swift, Python, C, Rust, Go, TypeScript and R.
 * **[AWS Data Wrangler][34]:** Extends the power of Pandas library to AWS connecting 
   DataFrames and AWS data related services such as Amazon Redshift, AWS Glue, Amazon Athena, 
   Amazon EMR, Amazon QuickSight, etc.
@@ -324,3 +329,4 @@ short description of your use case.
 [61]: https://github.com/Eventual-Inc/Daft
 [62]: https://github.com/lakehq/sail
 [63]: https://icegate.tech
+[64]: https://arrowmetal.org
