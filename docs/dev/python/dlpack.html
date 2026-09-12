@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>The DLPack Protocol &#8212; Apache Arrow v26.0.0.dev234</title>
+    <title>The DLPack Protocol &#8212; Apache Arrow v26.0.0.dev244</title>
   
   
   
@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="../_static/documentation_options.js?v=f664b252"></script>
+    <script src="../_static/documentation_options.js?v=137a85cf"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="26.0.0.dev234" />
+  <meta name="docsearch:version" content="26.0.0.dev244" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -156,8 +156,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v26.0.0.dev234 - Home"/>
-    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v26.0.0.dev234 - Home"/>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v26.0.0.dev244 - Home"/>
+    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v26.0.0.dev244 - Home"/>
   
   
 </a></div>
@@ -1605,28 +1605,44 @@ and more about DLPack in the
 <a class="reference external" href="https://dmlc.github.io/dlpack/latest/python_spec.html#python-spec">Python Specification for DLPack</a>.</p>
 <section id="implementation-of-dlpack-in-pyarrow">
 <h2>Implementation of DLPack in PyArrow<a class="headerlink" href="#implementation-of-dlpack-in-pyarrow" title="Link to this heading">#</a></h2>
-<p>The producing side of the DLPack Protocol is implemented for <code class="docutils literal notranslate"><span class="pre">pa.Array</span></code>
-and can be used to interchange data between PyArrow and other tensor
-libraries. Supported data types are integer, unsigned integer and float. The
-protocol has no missing data support meaning PyArrow arrays with
-missing values cannot be transferred through the DLPack
-protocol. Currently, the Arrow implementation of the protocol only supports
+<p>The protocol is implemented for <code class="docutils literal notranslate"><span class="pre">pa.Array</span></code> and <code class="docutils literal notranslate"><span class="pre">pa.Tensor</span></code> with different behaviors.
+<code class="docutils literal notranslate"><span class="pre">pa.Tensor</span></code> can produce and consume all shapes and strides of a generic DLPack tensor.
+<code class="docutils literal notranslate"><span class="pre">pa.Array</span></code> on the other hand is purposely limited to produce and consume 1-dimensional
+contiguous tensors (where the only dimension is the array’s length).
+The only exception is <code class="docutils literal notranslate"><span class="pre">pa.FixedShapeTensorArray</span></code>, which is designed to represent
+tensors and supports more generic shapes and strides.
+It can produce and consume DLPack tensors whose outermost dimension has the largest
+stride, that dimension being mapped to the array’s length.</p>
+<p>For both <code class="docutils literal notranslate"><span class="pre">pa.Tensor</span></code> and <code class="docutils literal notranslate"><span class="pre">pa.Array</span></code>, only numeric data types are supported: integer,
+unsigned integer and float.</p>
+<p>Some array types can be understood as some form of tensor.
+For instance, a nested fixed size list of a numeric data type has the same memory
+representation as a row major tensor.
+It is possible to get a (zero-copy) tensor from such an array using
+<code class="docutils literal notranslate"><span class="pre">array.to_tensor()</span></code>, and then use DLPack on the resulting tensor.</p>
+<p>The DLPack protocol fails on arrays with nulls, though these can be ignored with
+an explicit conversion to a tensor using <code class="docutils literal notranslate"><span class="pre">array.to_tensor(allow_nulls=True)</span></code>.
+In that case, the null entries hold an unspecified value.
+This is free, compared to <code class="docutils literal notranslate"><span class="pre">pa.compute.fill_null</span></code> which explicitly modifies the
+array data to replace the null values.</p>
+<p>Currently, the Arrow implementation of the protocol only supports
 data on a CPU device.</p>
 <p>Data interchange syntax of the protocol includes</p>
 <ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">from_dlpack(x)</span></code>: consuming an array object that implements a
-<code class="docutils literal notranslate"><span class="pre">__dlpack__</span></code> method and creating a new array while sharing the
+<li><p><code class="docutils literal notranslate"><span class="pre">from_dlpack(x,</span> <span class="pre">/,</span> <span class="pre">*,</span> <span class="pre">device=None,</span> <span class="pre">copy=None)</span></code>: consuming an array object that
+implements a <code class="docutils literal notranslate"><span class="pre">__dlpack__</span></code> method and creating a new array while sharing the
 memory.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">__dlpack__(self,</span> <span class="pre">stream=None)</span></code> and <code class="docutils literal notranslate"><span class="pre">__dlpack_device__</span></code>:
+<li><p><code class="docutils literal notranslate"><span class="pre">__dlpack__(self,</span> <span class="pre">*,</span> <span class="pre">stream=None,</span> <span class="pre">max_version=None,</span> <span class="pre">dl_device=None,</span> <span class="pre">copy=None)</span></code>
+and <code class="docutils literal notranslate"><span class="pre">__dlpack_device__</span></code>:
 producing a PyCapsule with the DLPack struct which is called from
-within <code class="docutils literal notranslate"><span class="pre">from_dlpack(x)</span></code>.</p></li>
+within <code class="docutils literal notranslate"><span class="pre">from_dlpack(x)</span></code>.
+This method is intended for library authors.</p></li>
 </ol>
-<p>PyArrow implements the second part of the protocol
-(<code class="docutils literal notranslate"><span class="pre">__dlpack__(self,</span> <span class="pre">stream=None)</span></code> and <code class="docutils literal notranslate"><span class="pre">__dlpack_device__</span></code>) and can
-thus be consumed by libraries implementing <code class="docutils literal notranslate"><span class="pre">from_dlpack</span></code>.</p>
 </section>
 <section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">#</a></h2>
+<section id="producing">
+<h3>Producing<a class="headerlink" href="#producing" title="Link to this heading">#</a></h3>
 <p>Convert a PyArrow CPU array into a NumPy array:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -1657,6 +1673,75 @@ thus be consumed by libraries implementing <code class="docutils literal notrans
 <span class="go">Array([2, 0, 2, 4], dtype=int32)</span>
 </pre></div>
 </div>
+<p>Arrays with a tensor memory layout, such as fixed size lists of a numeric type, need an
+explicit conversion to a <code class="docutils literal notranslate"><span class="pre">pa.Tensor</span></code>, which exports its full multi-dimensional shape:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">list_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">]],</span>
+<span class="gp">... </span>                      <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float64</span><span class="p">(),</span> <span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">list_array</span><span class="o">.</span><span class="n">to_tensor</span><span class="p">()</span>
+<span class="go">&lt;pyarrow.Tensor&gt;</span>
+<span class="go">type: double</span>
+<span class="go">shape: (3, 2)</span>
+<span class="go">strides: (16, 8)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">list_array</span><span class="o">.</span><span class="n">to_tensor</span><span class="p">())</span>
+<span class="go">array([[1., 2.],</span>
+<span class="go">       [3., 4.],</span>
+<span class="go">       [5., 6.]])</span>
+</pre></div>
+</div>
+<p>A <code class="docutils literal notranslate"><span class="pre">pa.FixedShapeTensorArray</span></code> exports directly, the array length becoming the outermost
+dimension, followed by the shape of the element tensors:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">nested</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]],</span> <span class="p">[[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">]]],</span>
+<span class="gp">... </span>                  <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">(),</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">FixedShapeTensorArray</span><span class="o">.</span><span class="n">from_tensor</span><span class="p">(</span><span class="n">nested</span><span class="o">.</span><span class="n">to_tensor</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_array</span><span class="o">.</span><span class="n">type</span>
+<span class="go">FixedShapeTensorType(extension&lt;arrow.fixed_shape_tensor[value_type=int32, shape=[2,2], permutation=[0,1]]&gt;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">tensor_array</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(2, 2, 2)</span>
+</pre></div>
+</div>
+<p>Arrays with nulls are rejected, unless the conversion to a tensor explicitly allows
+them, in which case the null entries hold an unspecified value:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">array_with_nulls</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">pa</span><span class="o">.</span><span class="n">int32</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">array_with_nulls</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">pyarrow.lib.ArrowTypeError</span>: <span class="n">Can only use DLPack on arrays with no nulls.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">array_with_nulls</span><span class="o">.</span><span class="n">to_tensor</span><span class="p">(</span><span class="n">allow_nulls</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="go">array([2, ..., 4], dtype=int32)</span>
+</pre></div>
+</div>
+</section>
+<section id="consuming">
+<h3>Consuming<a class="headerlink" href="#consuming" title="Link to this heading">#</a></h3>
+<p>Any object implementing the DLPack protocol can be imported, without copying the data:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">Array</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]))</span>
+<span class="go">&lt;pyarrow.lib.Int64Array object at ...&gt;</span>
+<span class="go">[</span>
+<span class="go">  2,</span>
+<span class="go">  0,</span>
+<span class="go">  2,</span>
+<span class="go">  4</span>
+<span class="go">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pa</span><span class="o">.</span><span class="n">Tensor</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]],</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
+<span class="go">&lt;pyarrow.Tensor&gt;</span>
+<span class="go">type: int32</span>
+<span class="go">shape: (2, 2)</span>
+<span class="go">strides: (8, 4)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">pa.Array.from_dlpack</span></code> only accepts 1-dimensional contiguous tensors.
+Multi-dimensional data can be imported as a <code class="docutils literal notranslate"><span class="pre">pa.FixedShapeTensorArray</span></code>, the outermost
+dimension becoming the length of the array:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">FixedShapeTensorArray</span><span class="o">.</span><span class="n">from_dlpack</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">array</span><span class="o">.</span><span class="n">type</span>
+<span class="go">FixedShapeTensorType(extension&lt;arrow.fixed_shape_tensor[value_type=int32, shape=[2,2], permutation=[0,1]]&gt;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+<span class="go">3</span>
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 
@@ -1708,7 +1793,11 @@ thus be consumed by libraries implementing <code class="docutils literal notrans
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-of-dlpack-in-pyarrow">Implementation of DLPack in PyArrow</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#producing">Producing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#consuming">Consuming</a></li>
+</ul>
+</li>
 </ul>
   </nav></div>
 
