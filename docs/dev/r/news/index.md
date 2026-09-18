@@ -2,6 +2,19 @@
 
 ## arrow 25.0.1.9000
 
+### Minor improvements and fixes
+
+- Factor levels inside list columns are now unified across the whole
+  column when converting to R, so data read in multiple batches
+  (e.g. via
+  [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
+  or
+  [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md))
+  produces valid factors that can be unnested. Similarly, `int64` and
+  `uint32` values inside list columns are converted to a single R type
+  across the column
+  ([\#50514](https://github.com/apache/arrow/issues/50514)).
+
 ## arrow 25.0.1
 
 CRAN release: 2026-08-23

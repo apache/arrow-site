@@ -78,14 +78,25 @@ csv_convert_options(
 
 - timestamp_parsers:
 
-  User-defined timestamp parsers. If more than one parser is specified,
-  the CSV conversion logic will try parsing values starting from the
-  beginning of this vector. Possible values are (a) `NULL`, the default,
-  which uses the ISO-8601 parser; (b) a character vector of
-  [strptime](https://rdrr.io/r/base/strptime.html) parse strings; or (c)
-  a list of
-  [TimestampParser](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
-  objects.
+  User-defined timestamp parsers, tried in order when inferring column
+  types and when converting columns of type
+  [`timestamp()`](https://arrow.apache.org/docs/r/reference/data-type.md).
+  Possible values are:
+
+  - `NULL`: the default, which uses the ISO-8601 parser
+
+  - a character vector of
+    [strptime](https://rdrr.io/r/base/strptime.html) parse strings
+
+  - a list of
+    [TimestampParser](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
+    objects and/or parse strings
+
+  Supplying parsers replaces the default ISO-8601 parser rather than
+  adding to it. If none of the parsers match a value during type
+  inference, the column is read as a string without error; to get an
+  error instead, specify the column as a timestamp in `col_types`. These
+  parsers are not used for date columns.
 
 - decimal_point:
 
