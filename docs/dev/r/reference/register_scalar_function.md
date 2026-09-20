@@ -52,7 +52,10 @@ register_scalar_function(name, fun, in_type, out_type, auto_convert = FALSE)
   determine if this function is appropriate for a given set of
   arguments. If this function is appropriate for more than one
   signature, pass a [`list()`](https://rdrr.io/r/base/list.html) of the
-  above.
+  above. Arguments are passed to `fun` by position, so if the schema (or
+  field) is named, the names must match the argument names of `fun`
+  (after `context`). Fields that would be passed to `...` in `fun` can
+  be named anything.
 
 - out_type:
 
