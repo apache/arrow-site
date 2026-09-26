@@ -39,11 +39,12 @@ end
 
 desc "Serve site locally"
 task :serve => webpacked_js do
-  sh("jekyll",
-     "serve",
-     "--incremental",
-     "--livereload",
-     "--host", ENV["HOST"] || "127.0.0.1")
+  command_line = ["jekyll", "serve"]
+  command_line << "--incremental"
+  command_line << "--livereload"
+  command_line << "--host=#{ENV["HOST"] || "127.0.0.1"}"
+  command_line << "--future"
+  sh(*command_line)
 end
 
 task :default => :serve
