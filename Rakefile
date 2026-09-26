@@ -58,7 +58,5 @@ task :generate => webpacked_js do
   command_line << "--config=_config.yml,#{extra_config}" if extra_config
   destination = ENV["JEKYLL_DESTINATION"]
   command_line << "--destination=#{destination}" if destination
-  future = ENV["JEKYLL_FUTURE"]
-  command_line << "--future" if future
   sh(*command_line)
 end

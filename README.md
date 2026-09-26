@@ -63,12 +63,6 @@ site locally:
 bundle exec rake
 ```
 
-To include posts with future dates:
-
-```shell
-JEKYLL_FUTURE=1 bundle exec rake
-```
-
 ## Deployment
 
 ### apache/arrow-site
