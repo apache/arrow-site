@@ -1,4 +1,216 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2026-09-25T23:18:17-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow Go 18.8.0 Release</title><link href="https://arrow.apache.org/blog/2026/09/08/arrow-go-18.8.0/" rel="alternate" type="text/html" title="Apache Arrow Go 18.8.0 Release" /><published>2026-09-08T00:00:00-04:00</published><updated>2026-09-08T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2026/09/08/arrow-go-18.8.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/09/08/arrow-go-18.8.0/"><![CDATA[<!--
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://arrow.apache.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://arrow.apache.org/" rel="alternate" type="text/html" /><updated>2026-09-29T06:55:45-04:00</updated><id>https://arrow.apache.org/feed.xml</id><title type="html">Apache Arrow</title><subtitle>Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics. It specifies a standardized language-independent column-oriented memory format for flat and nested data, organized for efficient analytic operations on modern hardware. It also provides computational libraries and zero-copy streaming messaging and interprocess communication. Languages currently supported include C, C++, C#, Go, Java, JavaScript, MATLAB, Python, R, Ruby, and Rust.</subtitle><entry><title type="html">Apache Arrow Rust 60.0.0 Release</title><link href="https://arrow.apache.org/blog/2026/09/29/arrow-rs-60.0.0/" rel="alternate" type="text/html" title="Apache Arrow Rust 60.0.0 Release" /><published>2026-09-29T00:00:00-04:00</published><updated>2026-09-29T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2026/09/29/arrow-rs-60.0.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/09/29/arrow-rs-60.0.0/"><![CDATA[<!--
+
+-->
+<p>The Apache Arrow team is pleased to announce that the v60.0.0 release of Apache Arrow
+Rust is now available on crates.io (<a href="https://crates.io/crates/arrow">arrow</a> and <a href="https://crates.io/crates/parquet">parquet</a>) and as <a href="https://dist.apache.org/repos/dist/release/arrow/arrow-rs-60.0.0">source download</a>.</p>
+<p>See the <a href="https://github.com/apache/arrow-rs/blob/60.0.0/CHANGELOG.md">60.0.0 changelog</a> for a full list of changes.</p>
+<h2>Highlights</h2>
+<p>This release includes new Parquet encoding support, a sustained effort to remove
+panics from the codebase, a large number of kernel performance improvements, and
+many bug fixes across decimals, take/filter, and FFI.</p>
+<p>MSRV is bumped to 1.88,
+<code>rand</code> upgraded to 0.10, <code>object_store</code> to 0.14.1, and several long-deprecated
+items have been removed. See the <a href="https://github.com/apache/arrow-rs/blob/60.0.0/CHANGELOG.md">60.0.0 changelog</a> for the full breaking
+changes list.</p>
+<h2>New Features</h2>
+<h3>Parquet ALP Encoder/Decoder Support</h3>
+<p><a href="https://github.com/sdf-jkl">@sdf-jkl</a> added support for the <a href="https://parquet.apache.org/blog/2026/09/22/alp-adaptive-lossless-floating-point-encoding-in-apache-parquet/">Adaptive Lossless Floating-Point (ALP)</a>
+encoding in Parquet (<a href="https://github.com/apache/arrow-rs/pull/9372">#9372</a>). ALP is a high-performance encoding for
+floating-point columns that enables compact storage, fast decoding and single value random-access.
+This makes arrow-rs the first Parquet implementations to support ALP,
+keeping the <a href="https://crates.io/crates/parquet">parquet</a> crate aligned with the latest Parquet specification.</p>
+<h3>Parquet Page Index Improvements</h3>
+<p><a href="https://github.com/etseidl">@etseidl</a> made several improvements to Parquet page index handling: a new
+<a href="https://docs.rs/parquet/60.0.0/parquet/file/metadata/page_index/struct.PageIndex.html"><code>PageIndex</code></a> struct encapsulating column and offset indexes (<a href="https://github.com/apache/arrow-rs/pull/10719">#10719</a>), new
+<a href="https://docs.rs/parquet/60.0.0/parquet/file/metadata/page_index/struct.PageIndexBuilder.html"><code>PageIndexBuilder</code></a> and <a href="https://docs.rs/parquet/60.0.0/parquet/file/metadata/page_index/trait.PageIndexProvider.html"><code>PageIndexProvider</code></a> types (<a href="https://github.com/apache/arrow-rs/pull/10842">#10842</a>), and page index
+decoders are now public (<a href="https://github.com/apache/arrow-rs/pull/10899">#10899</a>). One major use case enabled by these
+changes is supplying external or cached <code>PageIndex</code>es directly to the reader
+(for example, indexes previously fetched and stored outside the file),
+avoiding redundant I/O on repeated scans. This also opens the door for
+selective population of the page indexes which will help reduce the latency
+of filtered scans against very wide tables.</p>
+<h3>Parquet NDV Statistics, FILE Logical Type, and IEEE 754 Total Order</h3>
+<p><a href="https://github.com/Rich-T-kid">@Rich-T-kid</a> implemented writing num distinct values (NDV) statistics in the
+Parquet writer (<a href="https://github.com/apache/arrow-rs/pull/10654">#10654</a>) and added row-group-level distinct counts to
+<code>StatisticsConverter</code> (<a href="https://github.com/apache/arrow-rs/pull/10652">#10652</a>). Query engines use these to make better
+planning decisions such as join strategy selection and filter selectivity
+estimates.</p>
+<p><a href="https://github.com/brkyvz">@brkyvz</a> added support for the <code>FILE</code> logical type (<a href="https://github.com/apache/arrow-rs/pull/10109">#10109</a>). <a href="https://github.com/etseidl">@etseidl</a>
+implemented <a href="https://issues.apache.org/jira/browse/PARQUET-2249">PARQUET-2249</a> IEEE 754 total order for floating-point comparisons
+(<a href="https://github.com/apache/arrow-rs/pull/9619">#9619</a>) and the corresponding <code>INT96</code> timestamp <code>ColumnOrder</code> (<a href="https://github.com/apache/arrow-rs/pull/10106">#10106</a>).
+<a href="https://github.com/etseidl">@etseidl</a> also removed the previous limit of 32,768 row groups per file
+(<a href="https://github.com/apache/arrow-rs/pull/10149">#10149</a>).</p>
+<h3>New <code>arrow-cmp</code> Crate</h3>
+<p><a href="https://github.com/Rich-T-kid">@Rich-T-kid</a> introduced the <a href="https://crates.io/crates/arrow-cmp"><code>arrow-cmp</code></a> crate (<a href="https://github.com/apache/arrow-rs/pull/10325">#10325</a>), splitting
+comparison kernel logic out of <a href="https://crates.io/crates/arrow-ord"><code>arrow-ord</code></a> into its own focused crate. This
+gives users a more targeted dependency for Arrow comparison operations without
+pulling in the broader <code>arrow-ord</code> crate.</p>
+<h2>Panic Elimination</h2>
+<p>A lot of work went into converting panics into proper <code>Result</code> returns this
+release. <a href="https://github.com/emilk">@emilk</a> fixed <code>try_</code> functions still panicking in edge cases (<a href="https://github.com/apache/arrow-rs/pull/10730">#10730</a>,
+<a href="https://github.com/apache/arrow-rs/pull/10755">#10755</a>) and removed panics from <code>GenericByteArray::from_iter_values</code> (<a href="https://github.com/apache/arrow-rs/pull/10729">#10729</a>).
+<a href="https://github.com/bit2swaz">@bit2swaz</a> replaced panics with errors in IPC schema and footer parsing
+(<a href="https://github.com/apache/arrow-rs/pull/10647">#10647</a>, <a href="https://github.com/apache/arrow-rs/pull/10744">#10744</a>) and closed an FFI <code>Drop</code> soundness hole (<a href="https://github.com/apache/arrow-rs/pull/10431">#10431</a>).
+<a href="https://github.com/Rich-T-kid">@Rich-T-kid</a> fixed a potential use-after-free in <code>Buffer::shrink_to_fit</code> (<a href="https://github.com/apache/arrow-rs/pull/10932">#10932</a>)
+and converted <code>MutableBuffer</code> panicking callsites to fallible methods (<a href="https://github.com/apache/arrow-rs/pull/10641">#10641</a>,
+<a href="https://github.com/apache/arrow-rs/pull/10317">#10317</a>). <a href="https://github.com/okhsunrog">@okhsunrog</a> made <code>interleave</code>/<code>concat</code> return errors on dictionary key
+overflow (<a href="https://github.com/apache/arrow-rs/pull/10675">#10675</a>). <a href="https://github.com/ranflarion">@ranflarion</a> converted a Parquet buffer push panic into an
+error (<a href="https://github.com/apache/arrow-rs/pull/10564">#10564</a>) and <a href="https://github.com/dhruvxvaishnav">@dhruvxvaishnav</a> did the same for invalid dictionary index
+bit widths (<a href="https://github.com/apache/arrow-rs/pull/10725">#10725</a>).</p>
+<h2>Performance Improvements</h2>
+<p>This release has a large number of performance improvements across kernels,
+casting, and Parquet I/O.</p>
+<h3>Take/Filter Kernel Improvements</h3>
+<p><a href="https://github.com/Rich-T-kid">@Rich-T-kid</a> landed a series of take/filter kernel speedups this release:
+<code>take</code> on <code>FixedSizeList</code> is up to <strong>3.3x faster</strong> (<a href="https://github.com/apache/arrow-rs/pull/10441">#10441</a>), <code>take</code> on
+<code>List&lt;T&gt;</code> up to <strong>1.8x faster</strong> (<a href="https://github.com/apache/arrow-rs/pull/10812">#10812</a>), <code>take</code> on boolean and null buffers
+up to <strong>1.7x faster</strong> (<a href="https://github.com/apache/arrow-rs/pull/10813">#10813</a>), and <code>filter</code> on <code>FixedSizeBinary</code> up to
+<strong>1.4x faster</strong> (<a href="https://github.com/apache/arrow-rs/pull/10993">#10993</a>). A <code>NullBuffer::expand</code> rewrite for aligned counts
+delivers up to <strong>143x faster</strong> buffer expansion (<a href="https://github.com/apache/arrow-rs/pull/10976">#10976</a>, <a href="https://github.com/apache/arrow-rs/pull/10980">#10980</a>).</p>
+<p><a href="https://github.com/YUZHEthefool">@YUZHEthefool</a> improved <code>rank</code> on <code>StringViewArray</code> by up to <strong>3.2x faster</strong>
+via prefix key caching (<a href="https://github.com/apache/arrow-rs/pull/10605">#10605</a>). <a href="https://github.com/giladkl">@giladkl</a> made equality/inequality
+comparisons of byte-view arrays against short scalars up to <strong>2.5x faster</strong>
+(<a href="https://github.com/apache/arrow-rs/pull/10689">#10689</a>). <a href="https://github.com/cakeni">@cakeni</a> replaced <code>BufferBuilder</code> with <code>Vec</code> across
+<code>concat_elements</code>, <code>take_run</code>, <code>substring</code>, and other kernels
+(<a href="https://github.com/apache/arrow-rs/pull/10629">#10629</a>-<a href="https://github.com/apache/arrow-rs/pull/10634">#10634</a>), and <a href="https://github.com/kowanietz">@kowanietz</a> did the same for primitive unary
+operations (<a href="https://github.com/apache/arrow-rs/pull/10783">#10783</a>) and fixed-size binary take (<a href="https://github.com/apache/arrow-rs/pull/10773">#10773</a>), cutting
+unnecessary allocations across the board. <a href="https://github.com/haohuaijin">@haohuaijin</a> fixed in-place
+bitwise ops corrupting bits outside the requested range (<a href="https://github.com/apache/arrow-rs/pull/10444">#10444</a>).</p>
+<h3>Decimal Casting</h3>
+<p><a href="https://github.com/neilconway">@neilconway</a> made decimal parsing dramatically faster across the board. A
+foundational rewrite of the decimal-from-string path (<a href="https://github.com/apache/arrow-rs/pull/10668">#10668</a>) alone delivers
+<strong>up to ~8x faster</strong> casting from strings to <code>Decimal128</code> and up to <strong>92% lower parsing time</strong>
+on individual parse microbenchmarks. A follow-up pass for separate
+integer/fractional digit scanning (<a href="https://github.com/apache/arrow-rs/pull/10974">#10974</a>) added another <strong>5–15%</strong> on top,
+and skipping redundant precision checks (<a href="https://github.com/apache/arrow-rs/pull/10998">#10998</a>) added up to <strong>~10%</strong> more.
+Formatting <code>i256</code> without <code>num-bigint</code> (<a href="https://github.com/apache/arrow-rs/pull/11000">#11000</a>) rounds things out with
+<strong>~1.8x faster</strong> <code>Decimal256</code> formatting for typical 38-digit values.</p>
+<h3>Parquet Reading Improvements</h3>
+<p>Plain Parquet string column reads into dictionary arrays are <strong>~1.5x faster</strong>
+(<a href="https://github.com/apache/arrow-rs/pull/10614">#10614</a>). <a href="https://github.com/adriangb">@adriangb</a> sped up <code>DELTA_BYTE_ARRAY</code> shared-prefix decoding by
+scanning a block at a time (<a href="https://github.com/apache/arrow-rs/pull/10549">#10549</a>), reaching <strong>up to 19x faster</strong> on the
+prefix-scan microbenchmark and <strong>4.2x faster</strong> end-to-end for small
+shared-prefix strings. <a href="https://github.com/haohuaijin">@haohuaijin</a> removed redundant copies in Parquet
+mask-backed intersection/union (<a href="https://github.com/apache/arrow-rs/pull/10446">#10446</a>), delivering <strong>2–6x faster</strong> mask
+operations depending on alignment. <a href="https://github.com/hhhizzz">@hhhizzz</a> fixed cached Mask reads crossing
+unloaded sparse pages (<a href="https://github.com/apache/arrow-rs/pull/10735">#10735</a>).</p>
+<h3>Binary Size Reduction</h3>
+<p><a href="https://github.com/alamb">@alamb</a> reduced binary size by about <strong>2%</strong> by monomorphizing <code>PrimitiveArray</code>
+to <code>ArrayData</code> conversion and <code>Debug</code> formatting helpers (<a href="https://github.com/apache/arrow-rs/pull/10893">#10893</a>, <a href="https://github.com/apache/arrow-rs/pull/10890">#10890</a>) —
+the Debug change alone cut <strong>~12% of LLVM IR</strong> from the <code>cast_kernels</code> binary.</p>
+<h2>Bug Fixes</h2>
+<p><a href="https://github.com/neilconway">@neilconway</a> fixed a cluster of decimal bugs including incorrect <code>Decimal256</code>
+casting to signed integers (<a href="https://github.com/apache/arrow-rs/pull/10857">#10857</a>), wrong min/max statistics for <code>BYTE_ARRAY</code>
+decimals (<a href="https://github.com/apache/arrow-rs/pull/10861">#10861</a>), mismatched scales in <code>make_comparator</code> (<a href="https://github.com/apache/arrow-rs/pull/10864">#10864</a>),
+formatting bugs (<a href="https://github.com/apache/arrow-rs/pull/10869">#10869</a>), and a spurious assert when <code>scale == precision</code>
+(<a href="https://github.com/apache/arrow-rs/pull/10875">#10875</a>).</p>
+<p><a href="https://github.com/yongster">@yongster</a> fixed <code>take</code> for null indices in dense union and run-end encoded
+arrays (<a href="https://github.com/apache/arrow-rs/pull/10909">#10909</a>).</p>
+<p><a href="https://github.com/1fanwang">@1fanwang</a> and <a href="https://github.com/tpoterba">@tpoterba</a> fixed <code>take</code> and <code>interleave</code> on zero-width
+<code>FixedSizeListArray</code> (<a href="https://github.com/apache/arrow-rs/pull/10915">#10915</a>, <a href="https://github.com/apache/arrow-rs/pull/11026">#11026</a>).</p>
+<p><a href="https://github.com/jaideeppyne">@jaideeppyne</a> fixed struct <code>ArrayData</code> slicing double-counting the offset
+(<a href="https://github.com/apache/arrow-rs/pull/10835">#10835</a>, <a href="https://github.com/apache/arrow-rs/pull/10934">#10934</a>). <a href="https://github.com/linhongyu510">@linhongyu510</a> fixed struct null validation not
+accounting for parent offsets (<a href="https://github.com/apache/arrow-rs/pull/10970">#10970</a>).</p>
+<p><a href="https://github.com/PlenoraETL">@PlenoraETL</a> made the IPC reader return an error for a <code>DictionaryBatch</code>
+missing its data instead of silently producing wrong results (<a href="https://github.com/apache/arrow-rs/pull/11020">#11020</a>).
+<a href="https://github.com/bit2swaz">@bit2swaz</a> made <code>FFI_ArrowSchema::with_metadata</code> <code>unsafe</code> to close a
+soundness gap (<a href="https://github.com/apache/arrow-rs/pull/10764">#10764</a>).</p>
+<p><a href="https://github.com/adriangb">@adriangb</a> fixed <code>DELTA_BYTE_ARRAY</code> deduplication for values larger than
+the page size limit (<a href="https://github.com/apache/arrow-rs/pull/10505">#10505</a>).</p>
+<h2>Other Notable Changes</h2>
+<ul>
+<li><a href="https://github.com/adamreeve">@adamreeve</a> added round-trip support for <code>Dictionary(_, Utf8View/BinaryView)</code>
+columns in Parquet (<a href="https://github.com/apache/arrow-rs/pull/10831">#10831</a>)</li>
+<li><a href="https://github.com/ranflarion">@ranflarion</a> improved Parquet bloom filters: populate from the dictionary
+while a column is dictionary encoded (<a href="https://github.com/apache/arrow-rs/pull/10966">#10966</a>) and added a writer option to
+skip bloom filters for all-dictionary column chunks (<a href="https://github.com/apache/arrow-rs/pull/10963">#10963</a>)</li>
+<li><a href="https://github.com/haohuaijin">@haohuaijin</a> added row-group-local <code>RowSelection</code> support to the push
+decoder (<a href="https://github.com/apache/arrow-rs/pull/10702">#10702</a>)</li>
+<li><a href="https://github.com/1fanwang">@1fanwang</a> added <code>Utf8View</code> and <code>BinaryView</code> support to <code>substring</code> (<a href="https://github.com/apache/arrow-rs/pull/10672">#10672</a>)</li>
+<li><a href="https://github.com/etseidl">@etseidl</a> removed previously deprecated Parquet functions (<a href="https://github.com/apache/arrow-rs/pull/10565">#10565</a>) and
+deprecated <code>ColumnOrder::sort_order_for_type</code> (<a href="https://github.com/apache/arrow-rs/pull/10104">#10104</a>) as a follow-up to
+the INT96/IEEE 754 correctness work — both are breaking changes users will
+notice at compile time.</li>
+</ul>
+<h2>Thanks to Our Contributors</h2>
+<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="console"><span class="gp">$</span><span class="w"> </span>git shortlog <span class="nt">-sn</span> 59.2.0..60.0.0
+<span class="go">    38  Richard Baah
+    22  Jeffrey Vo
+    19  Andrew Lamb
+    17  Emil Ernerfeldt
+    16  Neil Conway
+    12  Adrian Garcia Badaracco
+    11  WaterWhisperer
+    11  cakeni
+    10  Ed Seidl
+     8  Kosta Tarasov
+     6  Huaijin
+     6  ranflarion
+     5  Aditya Mishra
+     5  yongster
+     4  Stefan Wang
+     3  Abhishek
+     3  Dhruv Vaishnav
+     3  Thefool
+     3  WissssleyL
+     2  Andrea Bozzo
+     2  Bharadwaj Pendyala
+     2  Emily Matheys
+     2  Ethan Tang
+     2  Giladi
+     2  Jaideep Pyne
+     2  Oleks V
+     2  Peter L
+     2  Peter Lee
+     2  Xinyao Zhang
+     2  Yiming Qiao
+     2  hylin
+     2  pawan
+     1  AarryaSaraf
+     1  Adam Reeve
+     1  Adam Reichold
+     1  Alexander Rafferty
+     1  Ali Asghar
+     1  Ben Kowanietz
+     1  Burak Yavuz
+     1  Chao Sun
+     1  Congxian Qiu
+     1  Connor Tsui
+     1  Danila Gornushko
+     1  Fredrik Fornwall
+     1  Han You
+     1  Haresh Khanna
+     1  Harshal Joshi
+     1  Huang Qiwei
+     1  Johan Vaz
+     1  Jonas Dedden
+     1  Jordan Epstein
+     1  Langning Zhang
+     1  Liam Bao
+     1  Marcelo Tesla
+     1  Marco Bonamente
+     1  Michal Piatkowski
+     1  MsfPablo
+     1  Narendran K T
+     1  Nuno Faria
+     1  Phoenix
+     1  Qi Zhu
+     1  Raghvendra Singh
+     1  Raz Luvaton
+     1  Seowoo Jang
+     1  Thor
+     1  Tim Poterba
+     1  Yin Li
+     1  anchor
+     1  kowanietz
+     1  linfeng
+     1  subotac
+     1  wterrr
+     1  yanglongwei
+     1  张跃哲
+</span></code></pre></div></div>
+<p>Thanks to everyone who contributed bug reports, reviews, and pull requests for
+this release!</p>]]></content><author><name>Richard Baah &amp; pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce that the v60.0.0 release of Apache Arrow Rust is now available on crates.io (arrow and parquet) and as source download. See the 60.0.0 changelog for a full list of changes. Highlights This release includes new Parquet encoding support, a sustained effort to remove panics from the codebase, a large number of kernel performance improvements, and many bug fixes across decimals, take/filter, and FFI. MSRV is bumped to 1.88, rand upgraded to 0.10, object_store to 0.14.1, and several long-deprecated items have been removed. See the 60.0.0 changelog for the full breaking changes list. New Features Parquet ALP Encoder/Decoder Support @sdf-jkl added support for the Adaptive Lossless Floating-Point (ALP) encoding in Parquet (#9372). ALP is a high-performance encoding for floating-point columns that enables compact storage, fast decoding and single value random-access. This makes arrow-rs the first Parquet implementations to support ALP, keeping the parquet crate aligned with the latest Parquet specification. Parquet Page Index Improvements @etseidl made several improvements to Parquet page index handling: a new PageIndex struct encapsulating column and offset indexes (#10719), new PageIndexBuilder and PageIndexProvider types (#10842), and page index decoders are now public (#10899). One major use case enabled by these changes is supplying external or cached PageIndexes directly to the reader (for example, indexes previously fetched and stored outside the file), avoiding redundant I/O on repeated scans. This also opens the door for selective population of the page indexes which will help reduce the latency of filtered scans against very wide tables. Parquet NDV Statistics, FILE Logical Type, and IEEE 754 Total Order @Rich-T-kid implemented writing num distinct values (NDV) statistics in the Parquet writer (#10654) and added row-group-level distinct counts to StatisticsConverter (#10652). Query engines use these to make better planning decisions such as join strategy selection and filter selectivity estimates. @brkyvz added support for the FILE logical type (#10109). @etseidl implemented PARQUET-2249 IEEE 754 total order for floating-point comparisons (#9619) and the corresponding INT96 timestamp ColumnOrder (#10106). @etseidl also removed the previous limit of 32,768 row groups per file (#10149). New arrow-cmp Crate @Rich-T-kid introduced the arrow-cmp crate (#10325), splitting comparison kernel logic out of arrow-ord into its own focused crate. This gives users a more targeted dependency for Arrow comparison operations without pulling in the broader arrow-ord crate. Panic Elimination A lot of work went into converting panics into proper Result returns this release. @emilk fixed try_ functions still panicking in edge cases (#10730, #10755) and removed panics from GenericByteArray::from_iter_values (#10729). @bit2swaz replaced panics with errors in IPC schema and footer parsing (#10647, #10744) and closed an FFI Drop soundness hole (#10431). @Rich-T-kid fixed a potential use-after-free in Buffer::shrink_to_fit (#10932) and converted MutableBuffer panicking callsites to fallible methods (#10641, #10317). @okhsunrog made interleave/concat return errors on dictionary key overflow (#10675). @ranflarion converted a Parquet buffer push panic into an error (#10564) and @dhruvxvaishnav did the same for invalid dictionary index bit widths (#10725). Performance Improvements This release has a large number of performance improvements across kernels, casting, and Parquet I/O. Take/Filter Kernel Improvements @Rich-T-kid landed a series of take/filter kernel speedups this release: take on FixedSizeList is up to 3.3x faster (#10441), take on List&lt;T&gt; up to 1.8x faster (#10812), take on boolean and null buffers up to 1.7x faster (#10813), and filter on FixedSizeBinary up to 1.4x faster (#10993). A NullBuffer::expand rewrite for aligned counts delivers up to 143x faster buffer expansion (#10976, #10980). @YUZHEthefool improved rank on StringViewArray by up to 3.2x faster via prefix key caching (#10605). @giladkl made equality/inequality comparisons of byte-view arrays against short scalars up to 2.5x faster (#10689). @cakeni replaced BufferBuilder with Vec across concat_elements, take_run, substring, and other kernels (#10629-#10634), and @kowanietz did the same for primitive unary operations (#10783) and fixed-size binary take (#10773), cutting unnecessary allocations across the board. @haohuaijin fixed in-place bitwise ops corrupting bits outside the requested range (#10444). Decimal Casting @neilconway made decimal parsing dramatically faster across the board. A foundational rewrite of the decimal-from-string path (#10668) alone delivers up to ~8x faster casting from strings to Decimal128 and up to 92% lower parsing time on individual parse microbenchmarks. A follow-up pass for separate integer/fractional digit scanning (#10974) added another 5–15% on top, and skipping redundant precision checks (#10998) added up to ~10% more. Formatting i256 without num-bigint (#11000) rounds things out with ~1.8x faster Decimal256 formatting for typical 38-digit values. Parquet Reading Improvements Plain Parquet string column reads into dictionary arrays are ~1.5x faster (#10614). @adriangb sped up DELTA_BYTE_ARRAY shared-prefix decoding by scanning a block at a time (#10549), reaching up to 19x faster on the prefix-scan microbenchmark and 4.2x faster end-to-end for small shared-prefix strings. @haohuaijin removed redundant copies in Parquet mask-backed intersection/union (#10446), delivering 2–6x faster mask operations depending on alignment. @hhhizzz fixed cached Mask reads crossing unloaded sparse pages (#10735). Binary Size Reduction @alamb reduced binary size by about 2% by monomorphizing PrimitiveArray to ArrayData conversion and Debug formatting helpers (#10893, #10890) — the Debug change alone cut ~12% of LLVM IR from the cast_kernels binary. Bug Fixes @neilconway fixed a cluster of decimal bugs including incorrect Decimal256 casting to signed integers (#10857), wrong min/max statistics for BYTE_ARRAY decimals (#10861), mismatched scales in make_comparator (#10864), formatting bugs (#10869), and a spurious assert when scale == precision (#10875). @yongster fixed take for null indices in dense union and run-end encoded arrays (#10909). @1fanwang and @tpoterba fixed take and interleave on zero-width FixedSizeListArray (#10915, #11026). @jaideeppyne fixed struct ArrayData slicing double-counting the offset (#10835, #10934). @linhongyu510 fixed struct null validation not accounting for parent offsets (#10970). @PlenoraETL made the IPC reader return an error for a DictionaryBatch missing its data instead of silently producing wrong results (#11020). @bit2swaz made FFI_ArrowSchema::with_metadata unsafe to close a soundness gap (#10764). @adriangb fixed DELTA_BYTE_ARRAY deduplication for values larger than the page size limit (#10505). Other Notable Changes @adamreeve added round-trip support for Dictionary(_, Utf8View/BinaryView) columns in Parquet (#10831) @ranflarion improved Parquet bloom filters: populate from the dictionary while a column is dictionary encoded (#10966) and added a writer option to skip bloom filters for all-dictionary column chunks (#10963) @haohuaijin added row-group-local RowSelection support to the push decoder (#10702) @1fanwang added Utf8View and BinaryView support to substring (#10672) @etseidl removed previously deprecated Parquet functions (#10565) and deprecated ColumnOrder::sort_order_for_type (#10104) as a follow-up to the INT96/IEEE 754 correctness work — both are breaking changes users will notice at compile time. Thanks to Our Contributors $ git shortlog -sn 59.2.0..60.0.0 38 Richard Baah 22 Jeffrey Vo 19 Andrew Lamb 17 Emil Ernerfeldt 16 Neil Conway 12 Adrian Garcia Badaracco 11 WaterWhisperer 11 cakeni 10 Ed Seidl 8 Kosta Tarasov 6 Huaijin 6 ranflarion 5 Aditya Mishra 5 yongster 4 Stefan Wang 3 Abhishek 3 Dhruv Vaishnav 3 Thefool 3 WissssleyL 2 Andrea Bozzo 2 Bharadwaj Pendyala 2 Emily Matheys 2 Ethan Tang 2 Giladi 2 Jaideep Pyne 2 Oleks V 2 Peter L 2 Peter Lee 2 Xinyao Zhang 2 Yiming Qiao 2 hylin 2 pawan 1 AarryaSaraf 1 Adam Reeve 1 Adam Reichold 1 Alexander Rafferty 1 Ali Asghar 1 Ben Kowanietz 1 Burak Yavuz 1 Chao Sun 1 Congxian Qiu 1 Connor Tsui 1 Danila Gornushko 1 Fredrik Fornwall 1 Han You 1 Haresh Khanna 1 Harshal Joshi 1 Huang Qiwei 1 Johan Vaz 1 Jonas Dedden 1 Jordan Epstein 1 Langning Zhang 1 Liam Bao 1 Marcelo Tesla 1 Marco Bonamente 1 Michal Piatkowski 1 MsfPablo 1 Narendran K T 1 Nuno Faria 1 Phoenix 1 Qi Zhu 1 Raghvendra Singh 1 Raz Luvaton 1 Seowoo Jang 1 Thor 1 Tim Poterba 1 Yin Li 1 anchor 1 kowanietz 1 linfeng 1 subotac 1 wterrr 1 yanglongwei 1 张跃哲 Thanks to everyone who contributed bug reports, reviews, and pull requests for this release!]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Apache Arrow Go 18.8.0 Release</title><link href="https://arrow.apache.org/blog/2026/09/08/arrow-go-18.8.0/" rel="alternate" type="text/html" title="Apache Arrow Go 18.8.0 Release" /><published>2026-09-08T00:00:00-04:00</published><updated>2026-09-08T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2026/09/08/arrow-go-18.8.0</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/09/08/arrow-go-18.8.0/"><![CDATA[<!--
 
 -->
 <p>The Apache Arrow team is pleased to announce the v18.8.0 release of Apache Arrow Go.
@@ -1218,436 +1430,4 @@ milestone</a>.</p>
 <h2>Getting Involved</h2>
 <p>We welcome questions and contributions from all interested.  Issues
 can be filed on <a href="https://github.com/apache/arrow-adbc/issues">GitHub</a>, and questions can be directed to GitHub
-or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the version 23 release of the Apache Arrow ADBC libraries. This release includes 41 resolved issues from 20 distinct contributors. This is a release of the libraries, which are at version 23. The API specification is versioned separately and is at version 1.1.0. The subcomponents are versioned independently: C/C++/GLib/Go/Python/Ruby: 1.11.0 C#: 0.23.0 Java: 0.23.0 R: 0.23.0 Rust: 0.23.0 The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights A breaking change has been made to the Rust APIs (pre-1.0): returned RecordBatchReaders are now type-erased and boxed for caller flexibility; this also fixes the returned reader lifetime accidentally being tied to input argument lifetimes (#3904). A driver manager for Node.js is now available from NPM (#4046, #4091, #4116, #4125, etc.). The C++ and Rust driver managers now support connection profiles (#3876, #3973, #4080, #4083 etc.). (Note that other bindings that use the C++ driver manager, including GLib/Ruby, Go, Java, Python, R, and so on, inherit this support.) The Go APIs have added interfaces that always take a context.Context for consistency, and to make sure context like telemetry traces propagate properly (#4009). The Python driver manager has added specific parameters for using connection profiles as well (#4078, #4118). Also, non-string option values are directly accepted for convenience (#4088). adbc_get_statistics has been added (#4129). The JNI bindings (allowing use of C/C++/Go/Rust/etc. drivers from Java) now support more functions (GetObjects, GetInfo, ExecuteSchema, etc.) (#3966, #3972, #4056). Packages are now being uploaded to Homebrew (#4131). Python wheels now require manylinux_2_28, up from manylinux2010, following PyArrow (#4146). On macOS, macOS 12 is now the minimum version due to upgrading to Go 1.25+ (including on conda-forge, where the packages previously pinned Go 1.24 to avoid this). The PostgreSQL driver tries to reconcile Arrow NA arrays with PostgreSQL types when binding (#4098). Also, a bug in conversion from Arrow decimals to PostgreSQL numerics has been fixed (#3787). The SQLite driver now enables various optional features, like math functions (#4147). Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-arrow-adbc-22..apache-arrow-adbc-23 35 David Li 12 Kent Wu 10 Matt Topol 8 eitsupi 6 Bryce Mecum 5 Bruce Irschick 4 Mandukhai Alimaa 3 Emil Sadek 3 Tornike Gurgenidze 2 Dewey Dunnington 2 Felipe Oliveira Carvalho 2 eric-wang-1990 1 Curt Hagenlocher 1 Ian Cook 1 Madhavendra Rathore 1 Mila Page 1 Pavel Agafonov 1 Roshan Banisetti 1 davidhcoe 1 oglego Roadmap We are working on the next revision of the API standard, focusing on missing features (primarily metadata/catalog data). We welcome anyone interested in contributing. Current progress can be found in the 1.2.0 specification milestone. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Community Highlights 2025</title><link href="https://arrow.apache.org/blog/2026/03/19/arrow-2025-highlights/" rel="alternate" type="text/html" title="Community Highlights 2025" /><published>2026-03-19T00:00:00-04:00</published><updated>2026-03-19T00:00:00-04:00</updated><id>https://arrow.apache.org/blog/2026/03/19/arrow-2025-highlights</id><content type="html" xml:base="https://arrow.apache.org/blog/2026/03/19/arrow-2025-highlights/"><![CDATA[<!--
-
--->
-<p>As you may have read in a previous blog post <sup class="footnote-ref"><a href="#fn1" id="fnref1">1</a></sup>, the Apache Arrow project
-recently turned 10 years old. We are grateful to everyone who helped us
-achieve this milestone, and we wanted to celebrate the community's
-accomplishments, by publishing our community highlights from 2025.</p>
-<p>We were inspired by the research by Dr Cat Hicks et al <sup class="footnote-ref"><a href="#fn2" id="fnref2">2</a></sup>, who found
-that concrete evidence of progress and accomplishments is instrumental
-to motivation and collaboration in developer teams. We think the same
-should hold for open source.</p>
-<hr />
-<h2>New contributors</h2>
-<p>It has been great to see many new contributors joining the project
-in the past year, with over 300 such individuals observed across the main
-Apache Arrow language implementations.</p>
-<table class="table">
-  <caption>Number of new contributors per repository.</caption>
-  <thead style="background-color: #e9ecef">
-    <tr>
-      <th>Repository/Implementation</th>
-      <th>Number of new contributors</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>arrow</td>
-      <td>125</td>
-    </tr>
-    <tr>
-      <td>arrow-rs</td>
-      <td>132</td>
-    </tr>
-    <tr>
-      <td>arrow-java</td>
-      <td>28</td>
-    </tr>
-    <tr>
-      <td>arrow-go</td>
-      <td>35</td>
-    </tr>
-  </tbody>
-</table>
-<p>Worth highlighting is <a href="https://github.com/alinaliBQ">alinaliBQ</a> who
-has been very active on the C++ Flight SQL ODBC Driver work together
-with <a href="https://github.com/justing-bq">justing-bq</a>.</p>
-<p><a href="https://github.com/AntoinePrv">AntoinePrv</a> has done a huge amount of
-work on the C++ Parquet implementation and <a href="https://github.com/andishgar">andishgar</a>
-in the C++ Statistics area.</p>
-<p><a href="https://github.com/rmnskb">rmnskb</a> got involved with PyArrow in
-EuroPython sprints and has contributed multiple PRs since then. On the
-same event <a href="https://github.com/paddyroddy">paddyroddy</a> also started with
-his first contribution and helped on the Python packaging side further on.</p>
-<p><a href="https://github.com/sdf-jkl">sdf-jkl</a>, <a href="https://github.com/liamzwbao">liamzwbao</a>,
-<a href="https://github.com/friendlymatthew">friendlymatthew</a>, and
-<a href="https://github.com/klion26">klion26</a> helped drive early Variant
-functionality in the Rust Parquet implementation and contributed a number
-of follow-up improvements.</p>
-<p><a href="https://github.com/jecsand838">jecsand838</a> drove major improvements to the
-Rust <code>arrow-avro</code> crate, work highlighted in the
-<a href="https://arrow.apache.org/blog/2025/10/23/introducing-arrow-avro/">Introducing Arrow Avro</a>
-blog post.</p>
-<table class="table">
-  <caption>Notable New Contributors in apache/arrow for 2025.</caption>
-  <thead style="background-color: #e9ecef">
-    <tr>
-      <th>Author</th>
-      <th>Number of prs</th>
-      <th>Number of line changes (+ and -)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>alinaliBQ</td>
-      <td>36</td>
-      <td>15754</td>
-    </tr>
-    <tr>
-      <td>andishgar</td>
-      <td>19</td>
-      <td>2926</td>
-    </tr>
-    <tr>
-      <td>AntoinePrv</td>
-      <td>8</td>
-      <td>79257</td>
-    </tr>
-    <tr>
-      <td>rmnskb</td>
-      <td>7</td>
-      <td>550</td>
-    </tr>
-    <tr>
-      <td>justing-bq</td>
-      <td>4</td>
-      <td>12607</td>
-    </tr>
-  </tbody>
-</table>
-<table class="table">
-  <caption>Notable New Contributors in apache/arrow-rs for 2025.</caption>
-  <thead style="background-color: #e9ecef">
-    <tr>
-      <th>Author</th>
-      <th>Number of prs</th>
-      <th>Number of line changes (+ and -)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>scovich</td>
-      <td>50</td>
-      <td>21006</td>
-    </tr>
-    <tr>
-      <td>jecsand838</td>
-      <td>38</td>
-      <td>26753</td>
-    </tr>
-    <tr>
-      <td>friendlymatthew</td>
-      <td>33</td>
-      <td>7203</td>
-    </tr>
-    <tr>
-      <td>sdf-jkl</td>
-      <td>4</td>
-      <td>388</td>
-    </tr>
-    <tr>
-      <td>rambleraptor</td>
-      <td>4</td>
-      <td>333</td>
-    </tr>
-  </tbody>
-</table>
-<table class="table">
-  <caption>Notable New Contributors in apache/arrow-go for 2025.</caption>
-  <thead style="background-color: #e9ecef">
-    <tr>
-      <th>Author</th>
-      <th>Number of prs</th>
-      <th>Number of line changes (+ and -)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Mandukhai-Alimaa</td>
-      <td>6</td>
-      <td>1392</td>
-    </tr>
-    <tr>
-      <td>hamilton-earthscope</td>
-      <td>5</td>
-      <td>2998</td>
-    </tr>
-  </tbody>
-</table>
-<h2>Release, Packaging and CI</h2>
-<p>A lot of work has been done around the Continuous Integration and
-Developer Tools area. Ensuring a project with the reach of Arrow is properly working
-requires validation on a huge matrix of operating systems, architectures, libraries,
-versions. Needless to say that maintenance work has tremendous importance for the
-health of the project and the positive contributor experience.</p>
-<p>The most active contributors in the main repository are the ones contributing
-heavily on those areas while also providing the most review capacity. Shout out
-to <a href="https://github.com/kou">kou</a> and <a href="https://github.com/raulcd">raulcd</a> for
-taking such good care of the project and devoting countless hours so that everything
-runs smoothly.</p>
-<p>Notable contributions worth mentioning are enhanced release automation and
-reproducible builds for sources, migrating remaining AppVeyor and Azure jobs
-to GitHub actions, improving dev experience with more pre-commit checks instead
-of custom made linting tools.</p>
-<p>Moving some implementations out of the main repository (apache/arrow on GitHub)
-helped with easier releases and maintenance of the main repository and also of
-separate language implementations. The current apache/arrow repo now holds the format
-specification, C++ implementation together with all the bindings to it (Python, R, Ruby
-and C GLib). Other languages now live in their own apache/ repos namely
-<a href="https://github.com/apache/arrow-java">apache/arrow-java</a>,
-<a href="https://github.com/apache/arrow-js">apache/arrow-js</a>,
-<a href="https://github.com/apache/arrow-rs">apache/arrow-rs</a>,
-<a href="https://github.com/apache/arrow-go">apache/arrow-go</a>,
-<a href="https://github.com/apache/arrow-nanoarrow">apache/arrow-nanoarrow</a>,
-<a href="https://github.com/apache/arrow-dotnet">apache/arrow-dotnet</a> and
-<a href="https://github.com/apache/arrow-swift">apache/arrow-swift</a>.</p>
-<table class="table">
-  <caption>Notable Contributors in apache/arrow for 2025.</caption>
-  <thead style="background-color: #e9ecef">
-    <tr>
-      <th>Author</th>
-      <th>Number of prs</th>
-      <th>Number of line changes (+ and -)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>kou</td>
-      <td>221</td>
-      <td>141015</td>
-    </tr>
-    <tr>
-      <td>AntoinePrv</td>
-      <td>8</td>
-      <td>79257</td>
-    </tr>
-    <tr>
-      <td>raulcd</td>
-      <td>110</td>
-      <td>46645</td>
-    </tr>
-    <tr>
-      <td>pitrou</td>
-      <td>101</td>
-      <td>36585</td>
-    </tr>
-    <tr>
-      <td>jbonofre</td>
-      <td>1</td>
-      <td>20061</td>
-    </tr>
-  </tbody>
-</table>
-<table class="table">
-  <caption>Notable Components in apache/arrow for 2025.</caption>
-  <thead style="background-color: #e9ecef">
-    <tr>
-      <th>Component label</th>
-      <th>Number of merged prs</th>
-      <th>Number of line changes (+ and -)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Parquet</td>
-      <td>100</td>
-      <td>103828</td>
-    </tr>
-    <tr>
-      <td>C++</td>
-      <td>387</td>
-      <td>82744</td>
-    </tr>
-    <tr>
-      <td>FlightRPC</td>
-      <td>43</td>
-      <td>52659</td>
-    </tr>
-    <tr>
-      <td>CI</td>
-      <td>237</td>
-      <td>42249</td>
-    </tr>
-    <tr>
-      <td>Ruby</td>
-      <td>74</td>
-      <td>20676</td>
-    </tr>
-  </tbody>
-</table>
-<h2>Migration of infrastructure from Voltron Data</h2>
-<p>As Voltron Data has wound down its operations in 2025, the Arrow project
-had to migrate benchmarking infrastructure and nightly report from
-Voltron-managed services to an Arrow-managed AWS account. This work has been
-driven by <a href="https://github.com/rok">rok</a>.</p>
-<h2>Closing of Stale issues</h2>
-<p><a href="https://github.com/thisisnic">thisisnic</a> was working on closing of stale
-issues in the apache/arrow repository which helped surfacing important
-issues that were overlooked or forgotten.</p>
-<h2>Code contributions</h2>
-<h3>C++ implementation</h3>
-<p>Community support for maintenance and development of the Acero C++
-is continuing with multiple bigger contributions in 2025 done by
-<a href="https://github.com/pitrou">pitrou</a> and <a href="https://github.com/zanmato1984">zanmato1984</a>.</p>
-<p>Many kernels have been moved from the integrated compute module into
-a separate, optional package for improvement of modularity and distribution
-size when optional compute functionality is not being used. The work has
-been done by <a href="https://github.com/raulcd">raulcd</a>.</p>
-<h3>Arrow C++ Parquet implementation</h3>
-<p>There have been multiple contributions to fix and improve fuzzing
-support for Parquet. Fuzzing work is led by <a href="https://github.com/pitrou">pitrou</a>
-who is also one of the most active members of the community guiding other
-developers and supporting us with abundant review capacity.</p>
-<p>Multiple newer types have also been supported in the last year,
-namely: VARIANT, UUID, GEOMETRY and GEOGRAPHY contributed
-by <a href="https://github.com/neilechao">neilechao</a> and
-<a href="https://github.com/paleolimbot">paleolimbot</a>.</p>
-<p>An important feature added has also been Content-Defined Chunking
-which improves deduplication of Parquet files with mostly identical
-contents, by choosing data page boundaries based on actual contents
-rather than a number of values <sup class="footnote-ref"><a href="#fn3" id="fnref3">3</a></sup>. This work has been done by
-<a href="https://github.com/kszucs">kszucs</a>.</p>
-<p>There have been improvements in the Parquet encryption support for
-most of the releases in the last year. These efforts have been
-driven mostly by <a href="https://github.com/EnricoMi">EnricoMi</a>,
-<a href="https://github.com/pitrou">pitrou</a>, <a href="https://github.com/adamreeve">adamreeve</a>
-and <a href="https://github.com/kapoisu">kapoisu</a>.</p>
-<h3>PyArrow</h3>
-<p>A lot of work has been put into adding type annotations. It all
-started in July at EuroPython sprints and the code is now ready to be
-reviewed and merged. Some more review capacity will be needed to get
-this over the finish line. The work has been championed by
-<a href="https://github.com/rok">rok</a>.</p>
-<h3>Rust</h3>
-<p>Arrow Rust community invested heavily in the Rust parquet reader for
-which they created several blog posts <sup class="footnote-ref"><a href="#fn4" id="fnref4">4</a></sup>, <sup class="footnote-ref"><a href="#fn5" id="fnref5">5</a></sup>. The work has been
-championed by <a href="https://github.com/alamb">alamb</a> and
-<a href="https://github.com/etseidl">etseidl</a>.</p>
-<table class="table">
-  <caption>Notable Components in apache/arrow-rs for 2025.</caption>
-  <thead style="background-color: #e9ecef">
-    <tr>
-      <th>component</th>
-      <th>merged_prs</th>
-      <th>line_changes</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>parquet</td>
-      <td>333</td>
-      <td>140958</td>
-    </tr>
-    <tr>
-      <td>arrow</td>
-      <td>436</td>
-      <td>76590</td>
-    </tr>
-    <tr>
-      <td>parquet-variant</td>
-      <td>125</td>
-      <td>41832</td>
-    </tr>
-    <tr>
-      <td>api-change</td>
-      <td>59</td>
-      <td>33938</td>
-    </tr>
-    <tr>
-      <td>arrow-avro</td>
-      <td>48</td>
-      <td>29487</td>
-    </tr>
-  </tbody>
-</table>
-<h3>Java</h3>
-<p>The biggest changes in apache/arrow-java for 2025 have been connected
-to Flight and Avro components plus Sphinx support due to the Java
-implementation being moved into a separate Apache repository.
-Contributors involved in the above are <a href="https://github.com/lidavidm">lidavidm</a>
-and <a href="https://github.com/martin-traverse">martin-traverse</a>.</p>
-<h3>Go</h3>
-<p>There has been a lot of work related to new variant type in the
-Parquet implementation done in apache/arrow-go all by
-<a href="https://github.com/zeroshade">zeroshade</a>.</p>
-<p>Noticeable emphasis was also visible on performance-focused PRs leading to
-the addition of row seeking, bloom filter reading/writing, and reduction of
-allocations in the Parquet library along with significant optimization work
-in the <code>compute.Take</code> kernels. Shout out to <a href="https://github.com/pixelherodev">pixelherodev</a>
-and <a href="https://github.com/hamilton-earthscope">hamilton-earthscope</a> for the
-emphasis they placed on improving performance.</p>
-<table class="table">
-  <caption>Notable Components in apache/arrow-go for 2025.</caption>
-  <thead style="background-color: #e9ecef">
-    <tr>
-      <th>component</th>
-      <th>merged_prs</th>
-      <th>line_changes</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>parquet</td>
-      <td>34</td>
-      <td>27056</td>
-    </tr>
-    <tr>
-      <td>arrow</td>
-      <td>33</td>
-      <td>14235</td>
-    </tr>
-  </tbody>
-</table>
-<h3>Nanoarrow</h3>
-<p>Bigger work in nanoarrow include Decimal32/64 and ListView/LargeListView support,
-LZ4 and ZSTD decompression in the IPC reader, and broader packaging via Conan, Homebrew,
-and vcpkg. Contributors driving most above are <a href="https://github.com/paleolimbot">paleolimbot</a>
-and <a href="https://github.com/WillAyd">WillAyd</a>.</p>
-<hr />
-<h2>Arrow Summit 25</h2>
-<p>One last thing to highlight would be our first Arrow Summit 25 that
-was held in Paris in October 2025. The event was a great success and
-it brought users, contributors and maintainers together. It
-definitely was a highlight of the year for many of us. Thanks to
-<a href="https://github.com/raulcd">raulcd</a> and <a href="https://github.com/pitrou">pitrou</a>
-for organizing the event.</p>
-<img src="/img/arrow_summit.jpeg" alt="Arrow Summit 25 group picture" width="100%">
-<hr />
-<h2>Thank you!</h2>
-<p>We would like to thank every single contributor to Apache Arrow for
-being a part of this great community and project! Hope this blog
-post helps to validate all the work you have done and motivates us
-to continue collaborating and growing together!</p>
-<hr />
-<br>
-<p>The Notebooks with the analysis for this blog post can be found
-in <sup class="footnote-ref"><a href="#fn6" id="fnref6">6</a></sup>.</p>
-<p>Note not all language implementations are mentioned. Some due to being
-moved into a separate repository in 2025 resulting in missing information
-for large amount of merged pull requests. Others due to having lower
-number of bigger contributions in the past year.</p>
-<hr />
-<section class="footnotes">
-<ol>
-<li id="fn1">
-<p><a href="https://arrow.apache.org/blog/2026/02/12/arrow-anniversary/">Apache Arrow is 10 years old 🎉</a> <a href="#fnref1" class="footnote-backref">↩</a></p>
-</li>
-<li id="fn2">
-<p><a href="https://ieeexplore.ieee.org/abstract/document/10491133">Developer Thriving: Four Sociocognitive Factors That Create Resilient Productivity on Software Teams</a> <a href="#fnref2" class="footnote-backref">↩</a></p>
-</li>
-<li id="fn3">
-<p><a href="https://huggingface.co/blog/parquet-cdc">Parquet Content-Defined Chunking</a> <a href="#fnref3" class="footnote-backref">↩</a></p>
-</li>
-<li id="fn4">
-<p><a href="https://arrow.apache.org/blog/2025/12/11/parquet-late-materialization-deep-dive/">A Practical Dive Into Late Materialization in arrow-rs Parquet Reads</a> <a href="#fnref4" class="footnote-backref">↩</a></p>
-</li>
-<li id="fn5">
-<p><a href="https://arrow.apache.org/blog/2025/10/23/rust-parquet-metadata/">3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust</a> <a href="#fnref5" class="footnote-backref">↩</a></p>
-</li>
-<li id="fn6">
-<p><a href="https://github.com/arrow-maintenance/explorations/tree/main/yearly_highlights">arrow-maintenance/explorations</a> <a href="#fnref6" class="footnote-backref">↩</a></p>
-</li>
-</ol>
-</section>]]></content><author><name>pmc</name></author><category term="arrow" /><summary type="html"><![CDATA[As you may have read in a previous blog post 1, the Apache Arrow project recently turned 10 years old. We are grateful to everyone who helped us achieve this milestone, and we wanted to celebrate the community's accomplishments, by publishing our community highlights from 2025. We were inspired by the research by Dr Cat Hicks et al 2, who found that concrete evidence of progress and accomplishments is instrumental to motivation and collaboration in developer teams. We think the same should hold for open source. New contributors It has been great to see many new contributors joining the project in the past year, with over 300 such individuals observed across the main Apache Arrow language implementations. Number of new contributors per repository. Repository/Implementation Number of new contributors arrow 125 arrow-rs 132 arrow-java 28 arrow-go 35 Worth highlighting is alinaliBQ who has been very active on the C++ Flight SQL ODBC Driver work together with justing-bq. AntoinePrv has done a huge amount of work on the C++ Parquet implementation and andishgar in the C++ Statistics area. rmnskb got involved with PyArrow in EuroPython sprints and has contributed multiple PRs since then. On the same event paddyroddy also started with his first contribution and helped on the Python packaging side further on. sdf-jkl, liamzwbao, friendlymatthew, and klion26 helped drive early Variant functionality in the Rust Parquet implementation and contributed a number of follow-up improvements. jecsand838 drove major improvements to the Rust arrow-avro crate, work highlighted in the Introducing Arrow Avro blog post. Notable New Contributors in apache/arrow for 2025. Author Number of prs Number of line changes (+ and -) alinaliBQ 36 15754 andishgar 19 2926 AntoinePrv 8 79257 rmnskb 7 550 justing-bq 4 12607 Notable New Contributors in apache/arrow-rs for 2025. Author Number of prs Number of line changes (+ and -) scovich 50 21006 jecsand838 38 26753 friendlymatthew 33 7203 sdf-jkl 4 388 rambleraptor 4 333 Notable New Contributors in apache/arrow-go for 2025. Author Number of prs Number of line changes (+ and -) Mandukhai-Alimaa 6 1392 hamilton-earthscope 5 2998 Release, Packaging and CI A lot of work has been done around the Continuous Integration and Developer Tools area. Ensuring a project with the reach of Arrow is properly working requires validation on a huge matrix of operating systems, architectures, libraries, versions. Needless to say that maintenance work has tremendous importance for the health of the project and the positive contributor experience. The most active contributors in the main repository are the ones contributing heavily on those areas while also providing the most review capacity. Shout out to kou and raulcd for taking such good care of the project and devoting countless hours so that everything runs smoothly. Notable contributions worth mentioning are enhanced release automation and reproducible builds for sources, migrating remaining AppVeyor and Azure jobs to GitHub actions, improving dev experience with more pre-commit checks instead of custom made linting tools. Moving some implementations out of the main repository (apache/arrow on GitHub) helped with easier releases and maintenance of the main repository and also of separate language implementations. The current apache/arrow repo now holds the format specification, C++ implementation together with all the bindings to it (Python, R, Ruby and C GLib). Other languages now live in their own apache/ repos namely apache/arrow-java, apache/arrow-js, apache/arrow-rs, apache/arrow-go, apache/arrow-nanoarrow, apache/arrow-dotnet and apache/arrow-swift. Notable Contributors in apache/arrow for 2025. Author Number of prs Number of line changes (+ and -) kou 221 141015 AntoinePrv 8 79257 raulcd 110 46645 pitrou 101 36585 jbonofre 1 20061 Notable Components in apache/arrow for 2025. Component label Number of merged prs Number of line changes (+ and -) Parquet 100 103828 C++ 387 82744 FlightRPC 43 52659 CI 237 42249 Ruby 74 20676 Migration of infrastructure from Voltron Data As Voltron Data has wound down its operations in 2025, the Arrow project had to migrate benchmarking infrastructure and nightly report from Voltron-managed services to an Arrow-managed AWS account. This work has been driven by rok. Closing of Stale issues thisisnic was working on closing of stale issues in the apache/arrow repository which helped surfacing important issues that were overlooked or forgotten. Code contributions C++ implementation Community support for maintenance and development of the Acero C++ is continuing with multiple bigger contributions in 2025 done by pitrou and zanmato1984. Many kernels have been moved from the integrated compute module into a separate, optional package for improvement of modularity and distribution size when optional compute functionality is not being used. The work has been done by raulcd. Arrow C++ Parquet implementation There have been multiple contributions to fix and improve fuzzing support for Parquet. Fuzzing work is led by pitrou who is also one of the most active members of the community guiding other developers and supporting us with abundant review capacity. Multiple newer types have also been supported in the last year, namely: VARIANT, UUID, GEOMETRY and GEOGRAPHY contributed by neilechao and paleolimbot. An important feature added has also been Content-Defined Chunking which improves deduplication of Parquet files with mostly identical contents, by choosing data page boundaries based on actual contents rather than a number of values 3. This work has been done by kszucs. There have been improvements in the Parquet encryption support for most of the releases in the last year. These efforts have been driven mostly by EnricoMi, pitrou, adamreeve and kapoisu. PyArrow A lot of work has been put into adding type annotations. It all started in July at EuroPython sprints and the code is now ready to be reviewed and merged. Some more review capacity will be needed to get this over the finish line. The work has been championed by rok. Rust Arrow Rust community invested heavily in the Rust parquet reader for which they created several blog posts 4, 5. The work has been championed by alamb and etseidl. Notable Components in apache/arrow-rs for 2025. component merged_prs line_changes parquet 333 140958 arrow 436 76590 parquet-variant 125 41832 api-change 59 33938 arrow-avro 48 29487 Java The biggest changes in apache/arrow-java for 2025 have been connected to Flight and Avro components plus Sphinx support due to the Java implementation being moved into a separate Apache repository. Contributors involved in the above are lidavidm and martin-traverse. Go There has been a lot of work related to new variant type in the Parquet implementation done in apache/arrow-go all by zeroshade. Noticeable emphasis was also visible on performance-focused PRs leading to the addition of row seeking, bloom filter reading/writing, and reduction of allocations in the Parquet library along with significant optimization work in the compute.Take kernels. Shout out to pixelherodev and hamilton-earthscope for the emphasis they placed on improving performance. Notable Components in apache/arrow-go for 2025. component merged_prs line_changes parquet 34 27056 arrow 33 14235 Nanoarrow Bigger work in nanoarrow include Decimal32/64 and ListView/LargeListView support, LZ4 and ZSTD decompression in the IPC reader, and broader packaging via Conan, Homebrew, and vcpkg. Contributors driving most above are paleolimbot and WillAyd. Arrow Summit 25 One last thing to highlight would be our first Arrow Summit 25 that was held in Paris in October 2025. The event was a great success and it brought users, contributors and maintainers together. It definitely was a highlight of the year for many of us. Thanks to raulcd and pitrou for organizing the event. Thank you! We would like to thank every single contributor to Apache Arrow for being a part of this great community and project! Hope this blog post helps to validate all the work you have done and motivates us to continue collaborating and growing together! The Notebooks with the analysis for this blog post can be found in 6. Note not all language implementations are mentioned. Some due to being moved into a separate repository in 2025 resulting in missing information for large amount of merged pull requests. Others due to having lower number of bigger contributions in the past year. Apache Arrow is 10 years old 🎉 ↩ Developer Thriving: Four Sociocognitive Factors That Create Resilient Productivity on Software Teams ↩ Parquet Content-Defined Chunking ↩ A Practical Dive Into Late Materialization in arrow-rs Parquet Reads ↩ 3x-9x Faster Apache Parquet Footer Metadata Using a Custom Thrift Parser in Rust ↩ arrow-maintenance/explorations ↩]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
+or the <a href="/community/">Arrow mailing lists</a>.</p>]]></content><author><name>pmc</name></author><category term="release" /><summary type="html"><![CDATA[The Apache Arrow team is pleased to announce the version 23 release of the Apache Arrow ADBC libraries. This release includes 41 resolved issues from 20 distinct contributors. This is a release of the libraries, which are at version 23. The API specification is versioned separately and is at version 1.1.0. The subcomponents are versioned independently: C/C++/GLib/Go/Python/Ruby: 1.11.0 C#: 0.23.0 Java: 0.23.0 R: 0.23.0 Rust: 0.23.0 The release notes below are not exhaustive and only expose selected highlights of the release. Many other bugfixes and improvements have been made: we refer you to the complete changelog. Release Highlights A breaking change has been made to the Rust APIs (pre-1.0): returned RecordBatchReaders are now type-erased and boxed for caller flexibility; this also fixes the returned reader lifetime accidentally being tied to input argument lifetimes (#3904). A driver manager for Node.js is now available from NPM (#4046, #4091, #4116, #4125, etc.). The C++ and Rust driver managers now support connection profiles (#3876, #3973, #4080, #4083 etc.). (Note that other bindings that use the C++ driver manager, including GLib/Ruby, Go, Java, Python, R, and so on, inherit this support.) The Go APIs have added interfaces that always take a context.Context for consistency, and to make sure context like telemetry traces propagate properly (#4009). The Python driver manager has added specific parameters for using connection profiles as well (#4078, #4118). Also, non-string option values are directly accepted for convenience (#4088). adbc_get_statistics has been added (#4129). The JNI bindings (allowing use of C/C++/Go/Rust/etc. drivers from Java) now support more functions (GetObjects, GetInfo, ExecuteSchema, etc.) (#3966, #3972, #4056). Packages are now being uploaded to Homebrew (#4131). Python wheels now require manylinux_2_28, up from manylinux2010, following PyArrow (#4146). On macOS, macOS 12 is now the minimum version due to upgrading to Go 1.25+ (including on conda-forge, where the packages previously pinned Go 1.24 to avoid this). The PostgreSQL driver tries to reconcile Arrow NA arrays with PostgreSQL types when binding (#4098). Also, a bug in conversion from Arrow decimals to PostgreSQL numerics has been fixed (#3787). The SQLite driver now enables various optional features, like math functions (#4147). Contributors $ git shortlog --perl-regexp --author='^((?!dependabot\[bot\]).*)$' -sn apache-arrow-adbc-22..apache-arrow-adbc-23 35 David Li 12 Kent Wu 10 Matt Topol 8 eitsupi 6 Bryce Mecum 5 Bruce Irschick 4 Mandukhai Alimaa 3 Emil Sadek 3 Tornike Gurgenidze 2 Dewey Dunnington 2 Felipe Oliveira Carvalho 2 eric-wang-1990 1 Curt Hagenlocher 1 Ian Cook 1 Madhavendra Rathore 1 Mila Page 1 Pavel Agafonov 1 Roshan Banisetti 1 davidhcoe 1 oglego Roadmap We are working on the next revision of the API standard, focusing on missing features (primarily metadata/catalog data). We welcome anyone interested in contributing. Current progress can be found in the 1.2.0 specification milestone. Getting Involved We welcome questions and contributions from all interested. Issues can be filed on GitHub, and questions can be directed to GitHub or the Arrow mailing lists.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" /><media:content medium="image" url="https://arrow.apache.org/img/arrow-logo_horizontal_black-txt_white-bg.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
