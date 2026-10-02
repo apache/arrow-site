@@ -478,6 +478,23 @@ the NYC taxi data example, if you wanted to keep <code>month</code> as a
 string instead of an integer.</p>
 </div>
 <div class="section level3">
+<h3 id="record-which-file-each-row-came-from">Record which file each row came from<a class="anchor" aria-label="anchor" href="#record-which-file-each-row-came-from"></a>
+</h3>
+<p>Partitioning only recovers information encoded in directory names. If
+you need the full path of the file each row was read from, use
+<code><a href="../reference/add_filename.html">add_filename()</a></code> inside a query on the Dataset:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ds</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="../reference/add_filename.html">add_filename</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>This is handy when you have opened a single partition directory
+directly (for example, <code>open_dataset("nyc-taxi/year=2015")</code>),
+since in that case the partition columns above that directory (here,
+<code>year</code>) are not inferred and you may want to recover them
+from the path. See <code><a href="../reference/add_filename.html">add_filename()</a></code> for details and
+limitations.</p>
+</div>
+<div class="section level3">
 <h3 id="work-with-multiple-data-sources">Work with multiple data sources<a class="anchor" aria-label="anchor" href="#work-with-multiple-data-sources"></a>
 </h3>
 <p>Another feature of Datasets is that they can be composed of multiple
@@ -505,11 +522,11 @@ Dataset or another tabular data object—an Arrow Table or RecordBatch, or
 an R data frame—and write it to a different file format, partitioned
 into multiple files.</p>
 <p>Assume that you have a version of the NYC Taxi data as CSV:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_dataset.html">open_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/csv/"</span>, format <span class="op">=</span> <span class="st">"csv"</span><span class="op">)</span></span></code></pre></div>
 <p>You can write it to a new location and translate the files to the
 Arrow IPC format by calling <code><a href="../reference/write_dataset.html">write_dataset()</a></code> on it:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="va">ds</span>, <span class="st">"nyc-taxi/ipc"</span>, format <span class="op">=</span> <span class="st">"ipc"</span><span class="op">)</span></span></code></pre></div>
 <p>Next, let’s imagine that the <code>payment_type</code> column is
 something you often filter on, so you want to partition the data by that
@@ -518,12 +535,12 @@ variable. By doing so you ensure that a filter like
 where <code>payment_type</code> is always <code>"Cash"</code>.</p>
 <p>One natural way to express the columns you want to partition on is to
 use the <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by()</a></code> method:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ds</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">payment_type</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/ipc"</span>, format <span class="op">=</span> <span class="st">"ipc"</span><span class="op">)</span></span></code></pre></div>
 <p>This will write files to a directory tree that looks like this:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/system.html" class="external-link">system</a></span><span class="op">(</span><span class="st">"tree nyc-taxi/ipc"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## ipc</span></span>
 <span><span class="co">## ├── payment_type=1</span></span>
@@ -547,7 +564,7 @@ segments, i.e. <code>Cash</code> rather than
 you ever care about, and you just want to drop the rest and have a
 smaller working set. For this, you can <code><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter()</a></code> them out
 when writing:</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ds</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">payment_type</span> <span class="op">==</span> <span class="st">"Cash"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi/ipc"</span>, format <span class="op">=</span> <span class="st">"ipc"</span><span class="op">)</span></span></code></pre></div>
@@ -555,7 +572,7 @@ when writing:</p>
 of columns or reorder them. Suppose you never care about
 <code>vendor_id</code>, and being a string column, it can take up a lot
 of space when you read it in, so let’s drop it:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ds</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">payment_type</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="op">-</span><span class="va">vendor_id</span><span class="op">)</span> <span class="op">|&gt;</span></span>

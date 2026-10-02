@@ -64,11 +64,10 @@ To run the query, call either `compute()`, which returns an `arrow`
 - [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
 
 - [`pull()`](https://dplyr.tidyverse.org/reference/pull.html): the
-  `name` argument is not supported; returns an R vector by default but
-  this behavior is deprecated and will return an Arrow
+  `name` argument is not supported; returns an R vector by default.
+  Provide `as_vector = FALSE` to return an Arrow
   [ChunkedArray](https://arrow.apache.org/docs/r/reference/ChunkedArray-class.md)
-  in a future release. Provide `as_vector = TRUE/FALSE` to control this
-  behavior, or set `options(arrow.pull_as_vector)` globally.
+  instead, or set `options(arrow.pull_as_vector = FALSE)` globally.
 
 - [`relocate()`](https://dplyr.tidyverse.org/reference/relocate.html)
 
@@ -142,7 +141,7 @@ both `str_sub()` and
 [`stringr::str_sub()`](https://stringr.tidyverse.org/reference/str_sub.html)
 work.
 
-In addition to these functions, you can call any of Arrow's 254 compute
+In addition to these functions, you can call any of Arrow's 283 compute
 functions directly. Arrow has many functions that don't map to an
 existing R function. In other cases where there is an R function
 mapping, you can still call the Arrow function directly if you don't

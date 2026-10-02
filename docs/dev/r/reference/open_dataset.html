@@ -237,7 +237,9 @@ partition columns, do that using <code><a href="https://dplyr.tidyverse.org/refe
 dataset.). If you provide a <code>Schema</code> and the names match what is detected,
 it will use the types defined by the Schema. In the example file path above,
 you could provide a Schema to specify that "month" should be <code><a href="data-type.html">int8()</a></code>
-instead of the <code><a href="data-type.html">int32()</a></code> it will be parsed as by default.</p>
+instead of the <code><a href="data-type.html">int32()</a></code> it will be parsed as by default. This is also
+useful for keeping leading zeros, so that a value such as <code>001</code> isn't
+parsed as the integer <code>1</code>.</p>
 <p>If your file paths do not appear to be Hive-style, or if you pass
 <code>hive_style = FALSE</code>, the <code>partitioning</code> argument will be used to create
 Directory partitioning. A character vector of names is required to create
@@ -246,9 +248,25 @@ column types, as described above. If neither are provided, no partitioning
 information will be taken from the file paths.</p>
     </div>
     <div class="section level2">
+    <h2 id="adding-the-source-filename-as-a-column">Adding the source filename as a column<a class="anchor" aria-label="anchor" href="#adding-the-source-filename-as-a-column"></a></h2>
+
+
+
+<p>Partitioning only recovers information encoded in directory names. If you
+need to know which file each row came from, call <code><a href="add_filename.html">add_filename()</a></code> inside a
+<code>dplyr</code> query on the dataset:</p>
+<p></p><div class="sourceCode r"><pre><code><span><span class="fu"><a href="../reference/open_dataset.html">open_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="../reference/add_filename.html">add_filename</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre><p></p></div>
+<p>This is useful, for example, when you have opened a subdirectory of a
+partitioned dataset directly (so the partition columns above that directory
+are not inferred) and want to recover the partition values from the path.
+See <code><a href="add_filename.html">add_filename()</a></code> for details and limitations.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><a href="https://arrow.apache.org/docs/r/articles/dataset.html">
-datasets article</a></p></div>
+datasets article</a>, <code><a href="add_filename.html">add_filename()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -366,6 +384,19 @@ datasets article</a></p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Temp: int32</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Month: int8</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Day: int8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> See $metadata for additional Schema metadata</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Specifying the type also keeps leading zeros, so "001" stays a string</span></span></span>
+<span class="r-in"><span><span class="co"># instead of becoming the integer 1</span></span></span>
+<span class="r-in"><span><span class="va">products</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, product_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"001"</span>, <span class="st">"002"</span>, <span class="st">"010"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">tf4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="va">products</span>, <span class="va">tf4</span>, partitioning <span class="op">=</span> <span class="st">"product_id"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">open_dataset</span><span class="op">(</span><span class="va">tf4</span>, partitioning <span class="op">=</span> <span class="fu"><a href="schema.html">schema</a></span><span class="op">(</span>product_id <span class="op">=</span> <span class="fu"><a href="data-type.html">string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> FileSystemDataset with 3 Parquet files</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 columns</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x: int32</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> product_id: string</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> See $metadata for additional Schema metadata</span>
 </code></pre></div>

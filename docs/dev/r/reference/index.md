@@ -188,6 +188,12 @@ Functionality for computing values on Arrow data objects.
   [`arrow-dplyr`](https://arrow.apache.org/docs/r/reference/acero.md) :
   Functions available in Arrow dplyr queries
 
+- [`add_filename()`](https://arrow.apache.org/docs/r/reference/add_filename.md)
+  : Add the data filename as a column
+
+- [`cast()`](https://arrow.apache.org/docs/r/reference/cast.md) : Change
+  the type of an array or column
+
 - [`call_function()`](https://arrow.apache.org/docs/r/reference/call_function.md)
   : Call an Arrow compute function
 

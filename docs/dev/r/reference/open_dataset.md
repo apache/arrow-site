@@ -202,7 +202,8 @@ example file path above, you could provide a Schema to specify that
 [`int8()`](https://arrow.apache.org/docs/r/reference/data-type.md)
 instead of the
 [`int32()`](https://arrow.apache.org/docs/r/reference/data-type.md) it
-will be parsed as by default.
+will be parsed as by default. This is also useful for keeping leading
+zeros, so that a value such as `001` isn't parsed as the integer `1`.
 
 If your file paths do not appear to be Hive-style, or if you pass
 `hive_style = FALSE`, the `partitioning` argument will be used to create
@@ -211,10 +212,29 @@ create partitions; you may instead provide a `Schema` to map those names
 to desired column types, as described above. If neither are provided, no
 partitioning information will be taken from the file paths.
 
+## Adding the source filename as a column
+
+Partitioning only recovers information encoded in directory names. If
+you need to know which file each row came from, call
+[`add_filename()`](https://arrow.apache.org/docs/r/reference/add_filename.md)
+inside a `dplyr` query on the dataset:
+
+    open_dataset("nyc-taxi") |>
+      mutate(file = add_filename()) |>
+      collect()
+
+This is useful, for example, when you have opened a subdirectory of a
+partitioned dataset directly (so the partition columns above that
+directory are not inferred) and want to recover the partition values
+from the path. See
+[`add_filename()`](https://arrow.apache.org/docs/r/reference/add_filename.md)
+for details and limitations.
+
 ## See also
 
 [datasets
-article](https://arrow.apache.org/docs/r/articles/dataset.html)
+article](https://arrow.apache.org/docs/r/articles/dataset.html),
+[`add_filename()`](https://arrow.apache.org/docs/r/reference/add_filename.md)
 
 ## Examples
 
@@ -332,6 +352,19 @@ open_dataset(tf3, partitioning = schema(Month = int8(), Day = int8()))
 #> Temp: int32
 #> Month: int8
 #> Day: int8
+#> 
+#> See $metadata for additional Schema metadata
+
+# Specifying the type also keeps leading zeros, so "001" stays a string
+# instead of becoming the integer 1
+products <- data.frame(x = 1:3, product_id = c("001", "002", "010"))
+tf4 <- tempfile()
+write_dataset(products, tf4, partitioning = "product_id")
+open_dataset(tf4, partitioning = schema(product_id = string()))
+#> FileSystemDataset with 3 Parquet files
+#> 2 columns
+#> x: int32
+#> product_id: string
 #> 
 #> See $metadata for additional Schema metadata
 ```

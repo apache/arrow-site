@@ -2,8 +2,65 @@
 
 ## arrow 25.0.1.9000
 
+### Breaking changes
+
+- The `.data.frame` argument to
+  [`map_batches()`](https://arrow.apache.org/docs/r/reference/map_batches.md),
+  deprecated since 9.0.0, has been removed. Call
+  [`collect()`](https://dplyr.tidyverse.org/reference/compute.html) on
+  the result to get a data frame
+  ([\#51655](https://github.com/apache/arrow/issues/51655)).
+- [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  and
+  [`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+  now warn that they are deprecated. Use
+  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
+  and
+  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
+  instead. Similarly, `format = "feather"` in
+  [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+  and
+  [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
+  is deprecated in favour of `format = "ipc"`, and extra arguments
+  passed via `...` to
+  [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
+  and
+  [`write_ipc_stream()`](https://arrow.apache.org/docs/r/reference/write_ipc_stream.md)
+  are deprecated and ignored
+  ([\#49237](https://github.com/apache/arrow/issues/49237)).
+- [`register_scalar_function()`](https://arrow.apache.org/docs/r/reference/register_scalar_function.md)
+  now errors if the names in `in_type` do not match the argument names
+  of `fun`, instead of silently ignoring them
+  ([\#37761](https://github.com/apache/arrow/issues/37761)).
+
+### New features
+
+- New `AzureFileSystem` class and
+  [`az_container()`](https://arrow.apache.org/docs/r/reference/az_container.md)
+  helper for working with Azure Blob Storage, analogous to
+  `S3FileSystem` and
+  [`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md).
+  See
+  [`vignette("install", package = "arrow")`](https://arrow.apache.org/docs/r/articles/install.md)
+  for how to enable Azure support when building from source
+  ([@marberts](https://github.com/marberts),
+  [\#32123](https://github.com/apache/arrow/issues/32123)).
+
 ### Minor improvements and fixes
 
+- Variables with the same name as a function, such as `date`, can now be
+  used in dplyr verbs
+  ([\#39688](https://github.com/apache/arrow/issues/39688)).
+- Reading Parquet files with `float16` columns now returns the correct
+  values ([\#50378](https://github.com/apache/arrow/issues/50378)).
+- [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html) now
+  works when one branch is a bare `NA` and the other is a date or
+  timestamp ([\#38358](https://github.com/apache/arrow/issues/38358)).
+- [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html) with
+  [`if_any()`](https://dplyr.tidyverse.org/reference/across.html) or
+  [`if_all()`](https://dplyr.tidyverse.org/reference/across.html) now
+  gives the new column the correct name
+  ([\#34860](https://github.com/apache/arrow/issues/34860)).
 - Factor levels inside list columns are now unified across the whole
   column when converting to R, so data read in multiple batches
   (e.g. via
@@ -14,6 +71,21 @@
   `uint32` values inside list columns are converted to a single R type
   across the column
   ([\#50514](https://github.com/apache/arrow/issues/50514)).
+- [`pull()`](https://dplyr.tidyverse.org/reference/pull.html) on Arrow
+  data no longer warns about a future change of default. The planned
+  switch to returning a `ChunkedArray` has been dropped, so
+  [`pull()`](https://dplyr.tidyverse.org/reference/pull.html) will keep
+  returning an R vector by default; use `as_vector = FALSE` or
+  `options(arrow.pull_as_vector = FALSE)` to get a `ChunkedArray`
+  ([\#51655](https://github.com/apache/arrow/issues/51655)).
+- `str_replace()` with an `NA` replacement now returns `NA` for matched
+  elements, matching stringr
+  ([@Gosling-dude](https://github.com/Gosling-dude),
+  [\#33432](https://github.com/apache/arrow/issues/33432)).
+- [`summarise()`](https://dplyr.tidyverse.org/reference/summarise.html)
+  after
+  [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html) now
+  works ([\#45373](https://github.com/apache/arrow/issues/45373)).
 
 ## arrow 25.0.1
 

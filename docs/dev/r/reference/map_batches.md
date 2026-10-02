@@ -12,7 +12,7 @@ in Arrow after it.
 ## Usage
 
 ``` r
-map_batches(X, FUN, ..., .schema = NULL, .lazy = TRUE, .data.frame = NULL)
+map_batches(X, FUN, ..., .schema = NULL, .lazy = TRUE)
 ```
 
 ## Arguments
@@ -43,10 +43,6 @@ map_batches(X, FUN, ..., .schema = NULL, .lazy = TRUE, .data.frame = NULL)
   Use `TRUE` to evaluate `FUN` lazily as batches are read from the
   result; use `FALSE` to evaluate `FUN` on all batches before returning
   the reader.
-
-- .data.frame:
-
-  Deprecated argument, ignored
 
 ## Value
 
