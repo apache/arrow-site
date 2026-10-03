@@ -101,6 +101,10 @@ short description of your use case.
 * **[Dask][15]:** Python library for parallel and distributed execution of
   dynamic task graphs. Dask supports using pyarrow for accessing Parquet
   files
+* **[dataHabibi](https://datahabibi.ae/):** Dubai property analytics platform
+  using PyArrow in its Python data pipeline to process registered Dubai Land
+  Department transactions for building-level prices, rental yields and
+  housing forecasts.
 * **[Data Preview][31]:** Data Preview is a Visual Studio Code extension
   for viewing text and binary data files. Data Preview uses Arrow JS API
   for loading, transforming and saving Arrow data files and schemas.
