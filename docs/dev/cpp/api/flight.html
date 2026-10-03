@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Arrow Flight RPC &#8212; Apache Arrow v26.0.0.dev333</title>
+    <title>Arrow Flight RPC &#8212; Apache Arrow v26.0.0.dev347</title>
   
   
   
@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=4c3868c6"></script>
+    <script src="../../_static/documentation_options.js?v=555745fc"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -64,7 +64,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="26.0.0.dev333" />
+  <meta name="docsearch:version" content="26.0.0.dev347" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -155,8 +155,8 @@
       
     
     
-    <img src="../../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v26.0.0.dev333 - Home"/>
-    <img src="../../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v26.0.0.dev333 - Home"/>
+    <img src="../../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v26.0.0.dev347 - Home"/>
+    <img src="../../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v26.0.0.dev347 - Home"/>
   
   
 </a></div>
@@ -962,12 +962,16 @@
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.exp.html">pyarrow.compute.exp</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.expm1.html">pyarrow.compute.expm1</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.hypot.html">pyarrow.compute.hypot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.modulo.html">pyarrow.compute.modulo</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.modulo_checked.html">pyarrow.compute.modulo_checked</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.multiply.html">pyarrow.compute.multiply</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.multiply_checked.html">pyarrow.compute.multiply_checked</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.negate.html">pyarrow.compute.negate</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.negate_checked.html">pyarrow.compute.negate_checked</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.power.html">pyarrow.compute.power</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.power_checked.html">pyarrow.compute.power_checked</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.remainder.html">pyarrow.compute.remainder</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.remainder_checked.html">pyarrow.compute.remainder_checked</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.sign.html">pyarrow.compute.sign</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.sqrt.html">pyarrow.compute.sqrt</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../python/generated/pyarrow.compute.sqrt_checked.html">pyarrow.compute.sqrt_checked</a></li>
@@ -3755,10 +3759,24 @@ error codes.</p>
 </section>
 <section id="implementing-custom-transports">
 <h2>Implementing Custom Transports<a class="headerlink" href="#implementing-custom-transports" title="Link to this heading">#</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>doxygenfile: Cannot find file “arrow/flight/transport.h </p>
-</div>
+<p>Internal (but not private) interface for implementing alternate network transports in Flight. </p>
+<p>To implement a transport, implement ServerTransport and ClientTransport, and register the desired URI schemes with TransportRegistry. Flight takes care of most of the per-RPC details; transports only handle connections and providing a I/O stream implementation (TransportDataStream).</p>
+<p>On the server side:</p>
+<p><ol class="arabic simple">
+<li><p>Applications subclass FlightServerBase and override RPC handlers.</p></li>
+<li><p>FlightServerBase::Init will look up and create a ServerTransport based on the scheme of the Location given to it.</p></li>
+<li><p>The ServerTransport will start the actual server. (For instance, for gRPC, it creates a gRPC server and registers a gRPC service.) That server will handle connections.</p></li>
+<li><p>The transport should forward incoming calls to the server to the RPC handlers defined on ServerTransport, which implements the actual RPC handler using the interfaces here. Any I/O the RPC handler needs to do is managed by transport-specific implementations of TransportDataStream.</p></li>
+<li><p>ServerTransport calls FlightServerBase for the actual application logic.</p></li>
+</ol>
+</p>
+<p>On the client side:</p>
+<p><ol class="arabic simple">
+<li><p>Applications create a FlightClient with a Location.</p></li>
+<li><p>FlightClient will look up and create a ClientTransport based on the scheme of the Location given to it.</p></li>
+<li><p>When calling a method on FlightClient, FlightClient will delegate to the ClientTransport. There is some indirection, e.g. for DoGet, FlightClient only requests that the ClientTransport start the call and provide it with an I/O stream. The “Flight implementation” itself still lives in FlightClient. </p></li>
+</ol>
+</p>
 </section>
 </section>
 
