@@ -214,6 +214,10 @@ short description of your use case.
 * **[Quilt Data][13]:** Quilt is a data package manager, designed to make
   managing data as easy as managing code. It supports Parquet format via
   pyarrow for data access.
+* **[Query.Farm][65]:** Builds open-source DuckDB extensions. [Airport][66]
+  uses Apache Arrow Flight and the Arrow C++ library to query remote data services
+  from DuckDB SQL. [VGI][67] uses Arrow IPC to exchange tabular data between DuckDB
+  and workers written in Python, TypeScript, Go, and Rust.
 * **[Ray][5]:** A flexible, high-performance distributed execution framework
   with a focus on machine learning and AI applications. Uses Arrow to
   efficiently store Python data structures containing large arrays of numerical
@@ -330,3 +334,6 @@ short description of your use case.
 [62]: https://github.com/lakehq/sail
 [63]: https://icegate.tech
 [64]: https://arrowmetal.org
+[65]: https://query.farm/
+[66]: https://query.farm/products/extensions/airport/
+[67]: https://query.farm/vgi/
