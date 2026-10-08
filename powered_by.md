@@ -214,7 +214,7 @@ short description of your use case.
 * **[Query.Farm][65]:** Builds open-source data tools on Apache Arrow. [Airport][66]
   uses Apache Arrow Flight and the Arrow C++ library to query remote data services
   from DuckDB SQL. [VGI][67] uses Arrow IPC to exchange tabular data between DuckDB
-  and workers written in Python, TypeScript, Go, and Rust. [vgi-rpc][68] is a
+  and workers written in Python, TypeScript, Go, Rust, Java, C#, and C++. [vgi-rpc][68] is a
   transport-agnostic RPC framework that uses Arrow IPC as its wire format.
   [Grainlift][69] serves ADBC drivers over the network, so applications use a single
   ADBC driver while results stream back as Arrow record batches.
