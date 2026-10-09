@@ -211,6 +211,9 @@ short description of your use case.
   Polars is built upon Apache Arrow and uses its columnar memory, compute kernels,
   and several IO utilities. Polars is written in Rust and available in Rust and Python.
 * **[protarrow][55]:** A Python library for converting from Apache Arrow to Protocol Buffers and back. 
+* **[Query.Farm][65]:** [Airport][66] uses Apache Arrow Flight and the Arrow C++
+  library to query remote data services from DuckDB SQL. [VGI][67] uses Arrow IPC
+  to exchange tabular data between DuckDB and workers written in many languages.
 * **[Quilt Data][13]:** Quilt is a data package manager, designed to make
   managing data as easy as managing code. It supports Parquet format via
   pyarrow for data access.
@@ -330,3 +333,6 @@ short description of your use case.
 [62]: https://github.com/lakehq/sail
 [63]: https://icegate.tech
 [64]: https://arrowmetal.org
+[65]: https://query.farm/
+[66]: https://query.farm/products/extensions/airport/
+[67]: https://query.farm/vgi/
