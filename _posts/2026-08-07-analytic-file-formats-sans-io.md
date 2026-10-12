@@ -26,146 +26,51 @@ limitations under the License.
 -->
 
 Opening a file, constructing a reader, and calling `next()` is a wonderfully
-simple interface. It is also where many analytic file libraries accidentally
-make a much larger architectural decision: **the decoder, rather than the
-application, controls I/O**.
+simple interface. The reader handles fetching, buffering, and decoding, and
+many applications need nothing more. The boundary becomes harder to work with
+when the application already has a storage runtime, buffer manager, cache, or
+scheduler of its own.
 
-That choice works well until the decoder is embedded in a system with its own
-storage runtime, buffer manager, cache, or scheduler. Such a system may want to
-race object-store reads, use `io_uring`, account for every buffered byte, or
-reuse pages that are already resident in memory. If the file reader performs
-I/O internally, the application is limited to the policies anticipated by the
-library author.
+Consider a query engine scanning several Parquet files under a shared memory
+budget. It wants to serve cached ranges immediately, prioritize reads for one
+query, and overlap decoding with remote I/O. To coordinate that work, it needs
+to know both **what bytes the decoder needs** and **when decoding can proceed**.
+A storage callback exposes some of this information, but the rest may remain
+inside the reader's control loop.
 
-This post presents a different foundation for analytic file readers: **Sans
-I/O**. A Sans I/O decoder contains all the knowledge needed to interpret a file,
-but never reads the file itself. It reports which byte ranges it needs, and the
-application decides how to obtain them.
+A **Sans I/O** decoder makes that boundary explicit. It interprets bytes but
+never fetches them. When it cannot continue, it returns the byte ranges it
+needs; the application supplies buffers and decides when to resume decoding.
+Familiar blocking and asynchronous readers can be adapters around this core.
 
-> **The core idea:** format knowledge belongs in the decoder; I/O policy belongs
-> in the application.
+> **The core idea:** the decoder determines its byte dependencies; the
+> application schedules the I/O that satisfies them.
 
-This post distills our CIDR 2027 paper, *Implementing Analytic File Formats Sans
-I/O*, and describes the production implementation in the [Apache Arrow Rust
-Parquet reader][arrow-rs-parquet].
-
-## A Parquet reader is a small query engine
-
-[Apache Parquet] is a good example of why the I/O boundary matters. Reading a
-Parquet file is not a single sequential operation. Even a simplified decoder
-alternates between I/O and CPU work across at least nine states.
-
-The two diagrams in this post are reproduced from the paper under [CC BY 4.0].
-
-<figure class="centered">
-  <img src="{{ site.baseurl }}/img/sans-io-analytic-formats/parquet-state-machine.png"
-       alt="Parquet decoding alternates between I/O and CPU stages for the file footer, metadata, optional pruning structures, and data pages"
-       width="520" class="img-fluid">
-  <figcaption>Figure 1 (paper Figure 2): The Parquet decoding state machine. Pink states perform I/O, yellow states perform CPU work, and dashed states are optional.</figcaption>
-</figure>
-
-The footer reveals where the file metadata lives. The metadata identifies row
-groups and column chunks. Bloom filters and page indexes may eliminate some of
-those chunks, and only then does the decoder know which data pages survive. The
-answer to "what bytes are needed next?" therefore depends on information
-decoded in earlier states, along with the query's projection, filters, and
-limit.
-
-There are several valid ways to orchestrate these reads:
-
-- Prefetch the next predicted range while the CPU decodes the current one.
-- Coalesce nearby ranges to reduce request count, at the cost of reading and
-  buffering extra bytes.
-- Interleave or race remote reads to reduce tail latency.
-- Skip indexes that cannot help the current query or maintenance task.
-- Reuse pages already owned by the application's buffer manager.
-
-The best choice depends on the environment. Local NVMe, remote object storage,
-an in-memory cache, `mmap`, RDMA, `O_DIRECT`, and `io_uring` have very different
-latency, concurrency, alignment, and memory requirements. There is no single
-read policy that is best for all of them.
-
-## The hidden policy inside a pull API
-
-Most analytic file libraries expose a pull interface modeled after a database
-iterator. For example, the main Parquet Java API is conceptually as simple as:
-
-```java
-ParquetReader<Group> reader = ParquetReader.builder(
-    new GroupReadSupport(), path
-).build();
-
-Group record;
-while ((record = reader.read()) != null) {
-  process(record);
-}
-```
-
-The caller sees records, not reads. When the decoder needs another page, it
-internally calls methods such as `seek` and `readFully` on a
-`SeekableInputStream`. This is convenient for both the library implementer and
-applications whose own execution model is also an iterator.
-
-However, a replaceable storage interface is not the same thing as Sans I/O. A
-callback such as `read_at(offset, length)` lets the application choose *where*
-bytes come from, but the decoder still chooses *which* ranges to read, *when*
-to issue each request, and often *where* to buffer the result.
-
-This has two important consequences:
-
-1. **I/O optimization is limited to what the reader implements.** Adding a
-   new policy such as read racing or a workload-specific prefetcher requires a
-   change inside the format library.
-2. **Memory ownership becomes blurred.** Either the reader maintains a sizable
-   private buffer pool, or the application adapts its own buffer manager to the
-   reader's I/O abstraction. Both make global memory accounting harder.
-
-### Async is useful, but it is not Sans I/O
-
-An asynchronous reader can return control while an I/O operation is pending,
-so a thread does not need to sit idle. That changes *how execution waits*. It
-does not necessarily change *who owns the I/O policy*.
-
-In most async readers, a future or stream still computes and issues reads
-internally. The caller can await the result, but cannot inspect the decoder's
-future byte requirements or substitute a different schedule for those reads.
-By contrast, a Sans I/O decoder reports those requirements as data. It can be
-driven by synchronous code, async code, a thread pool, a custom runtime, or no
-runtime at all.
+Sans I/O is an established pattern in [network protocol libraries][sans-io].
+This post explores its application to analytic file formats, using the
+[Apache Arrow Rust Parquet reader][arrow-rs-parquet]. The benefit is a reusable
+decoder that can fit different execution and storage policies. Performance
+still depends on the policy, workload, and implementation.
 
 ## The Sans I/O contract
 
-We call an analytic file decoder Sans I/O if it performs no I/O, directly or
-indirectly, and communicates all byte requirements to its caller.
+The decoder performs no I/O, including through callbacks. Each time the
+application asks it to advance, it does one of three things:
 
-<figure class="centered">
-  <img src="{{ site.baseurl }}/img/sans-io-analytic-formats/architecture.png"
-       alt="Side-by-side comparison of an integrated decoder, where I/O is orchestrated by the library and performed through a storage callback, and a Sans I/O decoder, where I/O is orchestrated and performed by the application"
-       class="img-fluid">
-  <figcaption>Figure 2 (paper Figure 1): An integrated reader accepts a storage callback but owns the read schedule. A Sans I/O reader leaves both orchestration and execution of I/O to the application.</figcaption>
-</figure>
-
-The contract has a small feedback loop. Each time the application asks the
-decoder to advance, the decoder does one of three things:
-
-1. Produces a decoded batch.
+1. Produces decoded data.
 2. Reports that decoding is finished.
-3. Returns the precise byte ranges needed to make progress.
+3. Returns the byte ranges needed to make progress.
 
-For the third outcome, the application fetches those ranges using any strategy
-and pushes the resulting buffers into the decoder. It may supply more data than
-was requested, which permits prefetching. The decoder keeps all format
-semantics, including pruning and the order in which metadata must be decoded,
-while the host owns concurrency, caching, request coalescing, retries, memory,
-and cost.
-
-In simplified Rust, the interaction looks like this:
+For the third outcome, the application obtains the bytes from storage or a
+cache, supplies them to the decoder, and tries again. Errors propagate through
+the API as usual. In simplified Rust, with application-provided `fetch` and
+`consume` helpers, the interaction looks like this:
 
 ```rust
 loop {
     match decoder.try_decode()? {
         DecodeResult::NeedsData(ranges) => {
-            // Any storage API, cache, runtime, or policy can be used here.
+            // Fetch or reuse one buffer for each logical range, in order.
             let buffers = io_policy.fetch(&ranges)?;
             decoder.push_ranges(ranges, buffers)?;
         }
@@ -175,43 +80,164 @@ loop {
 }
 ```
 
+The logical ranges describe the decoder's requirements, not necessarily the
+physical reads. A policy can merge nearby ranges into one storage request and
+return slices of the resulting buffer. It can also retain extra bytes in a
+cache for later requests. The decoder does not need to know which happened.
+
+<figure class="centered">
+  <img src="{{ site.baseurl }}/img/sans-io-analytic-formats/architecture.png"
+       alt="An integrated reader invokes a storage callback from its decoding loop; a Sans I/O decoder returns byte requirements for the application to schedule and supply"
+       class="img-fluid">
+  <figcaption>Figure 1: Moving byte requests out of the decoder's control loop gives the application an explicit boundary for scheduling I/O and decoding.</figcaption>
+</figure>
+
 This is a push-style storage API: the application asks the decoder to advance,
-then pushes bytes into it when requested. "Push" here describes the boundary
-between storage and decoding, not the execution model used by the rest of the
-query engine.
+then pushes bytes into it. "Push" describes the boundary between storage and
+decoding, not the execution model of the rest of the query engine.
+
+## A Parquet reader is a small query engine
+
+Streaming CSV and JSON parsers already use a similar pattern: accept a byte
+chunk, emit records or tokens, and ask for more input. Their next input is
+usually the next chunk in the stream. [Apache Parquet] requires a more complex
+conversation because its reads are non-sequential and depend on earlier data.
+
+<figure class="centered">
+  <img src="{{ site.baseurl }}/img/sans-io-analytic-formats/parquet-state-machine.png"
+       alt="Parquet decoding alternates between I/O and CPU stages for the file footer, metadata, optional pruning structures, and data pages"
+       width="520" class="img-fluid">
+  <figcaption>Figure 2: A simplified Parquet decoding state machine. Pink states perform I/O, yellow states perform CPU work, and dashed states are optional.</figcaption>
+</figure>
+
+The file's trailing footer tells the reader how much metadata to fetch. That
+metadata locates row groups and column chunks. Optional Bloom filters and page
+indexes can help eliminate row groups or pages before reading their data.
+Evaluating a predicate on one column can further reduce which pages are needed
+from another. The next byte requirements therefore depend on previously
+decoded information, as well as the query's projection and filters.
+
+A reusable decoder must preserve these dependencies while letting the host
+choose how to satisfy them. Query planning still supplies choices such as
+columns, row selections, and predicates; the decoder handles the format logic
+needed to execute that selection. Separating I/O does not require giving up
+filter pushdown or moving Parquet parsing into the application.
+
+## Why not just use a storage callback or async reader?
+
+A replaceable storage interface is already powerful. A `read_at(offset,
+length)` callback can serve cache hits, retry failures, or race reads against
+multiple replicas. An async implementation can queue requests in a shared
+scheduler and return futures for their results. These optimizations do not
+inherently require Sans I/O; the [Arrow Rust design discussion][async-callback]
+explicitly considered such an arrangement.
+
+The distinction is which decisions the public API exposes. A storage callback
+sees requests when the reader issues them. It does not, by itself, expose a
+separate operation to advance format processing, obtain ready-to-decode work,
+or discover requirements beyond the reader's current suspension point. A
+batched or asynchronous callback can offer substantial scheduling control, but
+that control still depends on the reader's buffering and execution contract.
+
+Async changes how execution waits. Sans I/O makes the decoder's byte
+dependencies and resumption points explicit, independently of any particular
+I/O interface. The host can keep pending requirements as ordinary data and
+advance each decoder when its scheduler is ready. Reproducing this boundary
+with callbacks is possible, but can require coordinating channels, futures,
+and polling around the reader's control loop.
+
+If a reader's existing callbacks and buffering policy fit the application,
+there is no need to replace them. Sans I/O is useful when the application needs
+the lower-level boundary as a supported library API.
+
+## Where the boundary helps in practice
+
+Two discussions that motivated the Arrow Rust work show why that boundary
+matters.
+
+In [the original design issue][io-motivation], an InfluxDB developer described
+buffering entire files in memory or on local SSD because the reader did not
+expose enough information to coordinate more selective prefetching. The
+alternative was a series of smaller reads interleaved with decoding, a poor
+fit for high-latency remote storage. Whole-file buffering was a workable
+integration strategy, but it consumed resources and gave up some of the
+benefits of reading only selected columns and pages.
+
+A [separate discussion about incremental decoding][incremental-decoding]
+described the memory cost of buffering the pages for all selected columns in a
+row group. A later [production report][wide-column-report] highlighted the
+problem for columns containing very large values. A storage callback can
+change how the bytes arrive, but it cannot change a decoder's requirement to
+buffer that set of pages before making progress. This case also illustrates a
+limit of the abstraction: exposing byte requests alone does not make a decoder
+incremental at every page boundary.
+
+### Overlapping decoding and reads
+
+Arrow Rust provides a concrete example of a richer boundary through
+[`try_next_reader`]. Once the required data is available, this method returns a
+`ParquetRecordBatchReader` over buffered data. The application can then:
+
+1. Send that reader to a CPU worker to produce batches.
+2. Advance the push decoder to discover the next set of byte requirements.
+3. Schedule those reads while the worker decodes the preceding data.
+4. Limit the number of active readers and pending reads according to its
+   memory and CPU budgets.
+
+This gives the scheduler separate handles for batch decoding and further I/O.
+An ordinary storage callback cannot create that handoff on its own: the reader
+also needs to expose a suitable unit of decoding work. Our [example
+driver][prototype driver] demonstrates the handoff; a production scheduler
+would also bound the worker queue and preserve batch order where required.
+
+A decoder integrated into a database can implement the same overlap. The
+reason to expose it in a shared library is to let other systems use that
+format implementation with their own scheduling policy.
 
 ## Putting the design into arrow-rs
 
-The [`ParquetPushDecoder`] implementation was released in `arrow-rs` `57.1.0`.
-It was motivated by two related problems: maintaining parallel synchronous and
-asynchronous readers, and repeated requests from users who needed more control
-over Parquet I/O.
+The APIs described here are available in `arrow-rs` `57.1.0`.
+[`ParquetPushDecoder`] preserves decoding state between calls to [`try_decode`]
+and returns `NeedsData(Vec<Range<u64>>)` when bytes are missing. [`push_ranges`]
+accepts reference-counted `Bytes` buffers, allowing the caller to share
+resident input without copying it at the API boundary. Decompression and
+construction of Arrow arrays can still require allocations.
 
-A Sans I/O Parquet decoder cannot simply pause in the middle of a normal
-function and wait for a read. It must preserve enough state to explain what it
-needs and later resume after the caller supplies the bytes. The arrow-rs
-implementation therefore models decoding as an explicit state machine. Its
-[`try_decode`] method advances until it produces a batch, finishes, or
-returns `NeedsData(Vec<Range<u64>>)`. [`push_ranges`] adds reference-counted
-`Bytes` buffers without prescribing how they were fetched.
+The earlier loop starts after file metadata is available. Footer and metadata
+decoding use the same pattern through [`ParquetMetaDataPushDecoder`], so the
+application can control fetching from the first footer read onward.
 
-The explicit state machine pays off in reuse. The existing asynchronous
-[`ParquetRecordBatchStream`] was [rewritten as a thin adapter][pr-8159] around
-the push decoder: it fetches each `NeedsData` request through
-`AsyncFileReader`, pushes
-the buffers back, and exposes the familiar stream API. Applications that do
-not need custom I/O still get a convenient reader, while format behavior lives
-in one decoder core.
+The existing asynchronous [`ParquetRecordBatchStream`] was [rewritten as an
+adapter][pr-8159] around the push decoder. It fetches `NeedsData` requests
+through `AsyncFileReader`, supplies the buffers, and exposes the familiar
+stream API. This consolidates decoding control flow while retaining a
+convenient entry point for applications that do not need custom orchestration.
 
-The decoding loop shown earlier starts after the file metadata is available. Footer and metadata
-decoding follow the same pattern through [`ParquetMetaDataPushDecoder`], so the
-application can control I/O from the first footer read through the final data
-page.
+## What the decoder can tell a prefetcher
+
+`NeedsData` describes what is missing at the current decoding step. It is not
+a complete plan for all future reads. If a predicate has not yet been
+evaluated, the decoder may not know which pages of another column will survive.
+A range-only interface also does not tell the host whether a request is for
+metadata, a predicate column, or output data.
+
+There are several levels of prefetching. A host can read ahead around a known
+range, or speculatively fetch a larger file tail to avoid a second metadata
+read. With `try_next_reader`, it can discover later requirements while earlier
+batches are being decoded. More selective lookahead may need additional
+format-aware planning APIs that expose candidate ranges and their dependencies.
+Those candidates can change after pruning; a scheduler must distinguish them
+from ranges required to make progress now.
+
+Sans I/O therefore gives a prefetcher a place to operate, but does not supply
+all the information a sophisticated prefetcher needs. Useful format knowledge
+must remain accessible through the library's API rather than be reconstructed
+in every storage adapter.
 
 ## One decoder, many I/O policies
 
-To demonstrate what the separation enables, our [prototype driver] uses the
-same Arrow Rust decoder with four deliberately different policies:
+Our [example driver][prototype driver] uses the same decoder with four I/O
+policies. They illustrate different choices at this boundary:
 
 <div class="table-responsive">
 <table class="table">
@@ -219,148 +245,157 @@ same Arrow Rust decoder with four deliberately different policies:
     <tr>
       <th>Policy</th>
       <th>Physical reads</th>
-      <th>Primary benefit</th>
+      <th>When to consider it</th>
       <th>Primary cost</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>Exact range</td>
-      <td>Read exactly the requested ranges</td>
-      <td>Minimum over-read and buffering</td>
+      <td>Read only the requested ranges</td>
+      <td>Low-latency storage or expensive over-reading</td>
       <td>Potentially many requests</td>
     </tr>
     <tr>
       <td>Request coalescing</td>
-      <td>Merge adjacent or nearby ranges</td>
-      <td>Fewer physical requests</td>
+      <td>Merge adjacent or nearby ranges, then return slices</td>
+      <td>High per-request overhead and small gaps between ranges</td>
       <td>Extra bytes and buffering</td>
     </tr>
     <tr>
       <td>Read-ahead</td>
-      <td>Extend requested ranges and retain unused bytes</td>
-      <td>Fewer future stalls and more cache hits</td>
-      <td>More bandwidth and memory</td>
+      <td>Extend requested ranges and cache unused bytes</td>
+      <td>Likely reuse of nearby bytes and available memory</td>
+      <td>Wasted bandwidth and memory when predictions miss</td>
     </tr>
     <tr>
       <td>Full-file cache</td>
-      <td>Fetch the file once and return zero-copy slices</td>
-      <td>Zero-copy hits on subsequent requests (models a buffer manager or hot cache)</td>
-      <td>Buffers the entire file</td>
+      <td>Fetch once and return shared slices</td>
+      <td>Small files, repeated scans, or already-resident data</td>
+      <td>Retains the entire file</td>
     </tr>
   </tbody>
 </table>
 </div>
 
-These policies optimize different things; the point is not that one always
-wins. The point is that none requires a second Parquet implementation. A local
-backend can use `io_uring`; an object-store backend can coalesce or race reads;
-a database cache can return already-resident buffers by reference. The decoder
-continues to request the same logical ranges and decode the same format.
+The tradeoff is between request overhead, extra bytes read, and retained
+memory. Coalescing is attractive when the avoided request costs more than
+reading the intervening bytes. Read-ahead depends on those bytes being useful
+soon enough to justify retaining them. Full-file caching can be appropriate
+for a small hot file and wasteful for a large selective scan.
 
-This separation also makes measurement clearer. The application can account
-independently for logical ranges requested by the decoder, physical storage
-requests after policy decisions, bytes over-read, and peak buffered memory.
+These are composable choices: a host might satisfy cache hits first and
+coalesce only the misses. The examples show that policies can change without
+changing the decoder; they do not establish a universally faster policy.
 
-## What existing readers expose
+## Building on existing designs
 
-We surveyed eight production-grade open-source analytic file readers. The
-snapshot below reflects the versions examined for the paper in mid-2026. Every
-reader offered an integrated I/O path; only Arrow Rust offered a production
-public Sans I/O API, while cuDF exposed an experimental hybrid path.
+The separation has substantial precedent. Beyond [networking Sans I/O][sans-io]
+and streaming parsers, [`parquet2`][parquet2] separates reading compressed pages
+from decompression and deserialization, leaving parallelism to its users.
+[Polars' Parquet implementation][polars-parquet] also exposes distinct reading,
+compression, and page modules. These are useful forms of separation, with
+boundaries at different levels of the read pipeline.
 
-<div class="table-responsive">
-<table class="table">
-  <thead>
-    <tr>
-      <th>Implementation</th>
-      <th>Format</th>
-      <th>Public Sans I/O path</th>
-      <th>Prefetch / coalescing</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td>Apache Arrow C++</td><td>Parquet</td><td>No</td><td>Internal and external</td></tr>
-    <tr><td>Apache Parquet Java</td><td>Parquet</td><td>No</td><td>Internal</td></tr>
-    <tr><td>Apache Arrow Go</td><td>Parquet</td><td>No</td><td>None</td></tr>
-    <tr><td>Apache Arrow Rust</td><td>Parquet</td><td>Yes</td><td>External</td></tr>
-    <tr><td>cuDF (RAPIDS)</td><td>Parquet</td><td>Experimental</td><td>Internal; experimental external path</td></tr>
-    <tr><td>hyparquet</td><td>Parquet</td><td>No</td><td>Internal</td></tr>
-    <tr><td>Vortex</td><td>Vortex</td><td>No</td><td>Internal and external</td></tr>
-    <tr><td>Lance</td><td>Lance</td><td>No</td><td>Internal and external</td></tr>
-  </tbody>
-</table>
-</div>
+cuDF's [experimental hybrid scan reader][cudf-hybrid] exposes methods to obtain
+page-index and column-chunk byte ranges and to supply buffers for processing.
+It illustrates how explicit byte dependencies can support a staged scan API,
+even when the interface is specific to a particular execution environment.
 
-Many of these are well-designed readers with extensible storage interfaces,
-zero-copy buffers, and sophisticated prefetchers. The distinction is about
-control: even when the byte source is pluggable, an integrated decoder still
-decides the read schedule. Some systems, including DuckDB and Polars, go
-further and maintain embedded readers tightly coupled to their own runtimes and
-buffer managers. Those readers can be very effective, but their format logic
-is not available as a reusable public library.
+Page-level building blocks let the host assemble its own scan control loop.
+The push decoder keeps that format-dependent state machine in the library,
+exposing its byte requirements across metadata, filtering, and data decoding.
+This packages established separation-of-concerns ideas into a reusable API for
+a format whose future reads depend on earlier results. Integrated readers can
+also provide sophisticated scheduling; the useful boundary depends on which
+parts of the scan the host needs to control.
 
-## Why streaming CSV and JSON already look familiar
-
-Sans I/O is not a new idea. The term came from the Python networking community,
-where protocol libraries such as `h11` and `h2` operate as state machines over
-caller-provided bytes. Streaming CSV and JSON parsers commonly use the same
-shape: accept a byte chunk, emit records or tokens, and report when more input
-is needed.
-
-These formats have an easier answer to "what bytes are needed next?": usually,
-the next bytes in the stream. Analytic formats such as Parquet must request
-non-contiguous footers, metadata blocks, indexes, and selected pages. The idea
-is the same, but the API must communicate byte ranges rather than simply ask
-for another sequential chunk.
-
-## Tradeoffs and design guidance
+## Costs and open challenges
 
 Sans I/O moves complexity to an explicit boundary; it does not make that
 complexity disappear.
 
-- **The decoder is harder to implement.** State that was implicit in a call
-  stack or async future must become an explicit, testable state machine.
-- **The host must drive the feedback loop.** Applications with no special I/O
-  requirements should not have to write that loop themselves, so libraries
-  should ship synchronous and asynchronous adapters.
-- **Performance is not automatic.** Sans I/O enables a system-specific policy;
-  the application still has to choose and implement a good one.
-- **The boundary must preserve zero-copy operation.** Callers should be able to
-  provide reference-counted or otherwise borrowed resident buffers, including
-  data fetched speculatively.
+- **State-machine complexity.** A decoder must preserve partially completed
+  work, buffer references, and error state across resumptions. A refactor must
+  retain the existing reader's handling of nested data, dictionaries, filters,
+  and optional indexes. Shared conformance tests help keep adapters consistent.
+- **Buffer ownership and accounting.** Reference-counted input avoids copies,
+  but a small slice can keep a large allocation alive. The host must account
+  for caches, outstanding reads, decoder inputs, decompression buffers, and
+  output batches. Arrow Rust's [`buffered_bytes`] reports unconsumed input
+  bytes, not total memory usage.
+- **Backpressure and read granularity.** The host can stop advancing decoders
+  or issuing speculative reads when its budget is full. It must still allow
+  enough memory to satisfy a decoder's next dependency set. In the version
+  described here, a step can require pages across the selected columns of a
+  row group; reducing output batch size alone does not bound input buffering.
+- **Concurrency and cancellation.** The host must track outstanding reads and
+  their destination decoders, handle completions, and serialize mutation of
+  each decoder. On cancellation, it must cancel or disregard pending results
+  and release its buffers. Dropping the decoder alone does not cancel I/O
+  owned by the application.
+- **Preserving performance.** Matching a tuned integrated reader requires
+  preserving effective pruning, coalescing, CPU/I/O overlap, and buffer reuse.
+  Extra allocations, tiny requests, or excessive task handoffs can erase the
+  benefits. The boundary makes these policies replaceable, not automatically
+  efficient.
 
-For new analytic formats, we recommend making the Sans I/O state machine the
-decoder core, then layering blocking, async, memory-mapped, and prefetching
-readers on top. Format-specific choices such as pruning remain inside that
-core. Storage-specific choices such as request size, concurrency, caching, and
-buffer ownership remain outside.
+High-level adapters remain essential. Most users should be able to select a
+file and iterate over batches without implementing a scheduler.
+
+## A shared boundary across formats
+
+The same architectural pattern could help hosts integrate Parquet, Lance,
+Vortex, and future formats with a common cache, request scheduler, and memory
+budget. Each decoder would explain its byte dependencies; the host would reuse
+its storage machinery across them.
+
+That is an architectural direction, not a claim that one standardized API
+already fits every format. A common interface would need to specify file
+identity, range and buffer lifetimes, errors, and cancellation. It would also
+need room for optional lookahead and format-specific capabilities such as
+pruning and decoding work on accelerators. Flattening everything to an
+unannotated list of ranges could hide information the scheduler needs.
+
+For libraries intended to serve several host systems, a practical starting
+point is an I/O-free decoder core with useful planning hooks and convenient
+adapters. Existing libraries can expose that boundary incrementally while
+keeping their optimized high-level readers.
 
 ## Conclusion
 
-A file reader API is more than a convenience wrapper. It determines whether a
-database can combine shared, well-tested format logic with the I/O and memory
-architecture that makes the database distinctive.
+A file reader API determines how easily an application can combine shared
+format logic with its own storage and execution model. Sans I/O makes byte
+dependencies explicit and lets the host decide how to satisfy them. Arrow
+Rust shows how this can coexist with a familiar asynchronous reader and expose
+additional control to applications that need it.
 
-Tightly integrated readers are easy to start with and remain useful as
-adapters. But when they are the only API, applications must either accept the
-reader's policy or build another decoder. Sans I/O provides a third option: one
-reusable implementation of the format, with I/O orchestration owned by each
-host system. That is a better fit for the increasingly composable data systems
-being built around Arrow and Parquet.
+The goal is to make a well-tested decoder reusable across systems with
+different scheduling, caching, and memory requirements, while preserving the
+format knowledge that makes selective reads effective.
 
-The paper *Implementing Analytic File Formats Sans I/O* is by Andrew Lamb,
-Xudong Wang, Neil Conway, and Daniël Heres and appears at CIDR 2027. The paper
-is licensed under [CC BY 4.0]. We thank InfluxData, Massive, and Coralogix for
-supporting this work.
+This post is based on *Implementing Analytic File Formats Sans I/O*, by Andrew
+Lamb, Xudong Wang, Neil Conway, and Daniël Heres. The two diagrams are reproduced
+from that manuscript under [CC BY 4.0]. We thank InfluxData, Massive, and
+Coralogix for supporting this work.
 
 [Apache Parquet]: https://parquet.apache.org/
 [arrow-rs-parquet]: https://github.com/apache/arrow-rs/tree/57.1.0/parquet
+[sans-io]: https://sans-io.readthedocs.io/
 [`ParquetPushDecoder`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html
 [`try_decode`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html#method.try_decode
+[`try_next_reader`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html#method.try_next_reader
 [`push_ranges`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html#method.push_ranges
+[`buffered_bytes`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html#method.buffered_bytes
 [`ParquetRecordBatchStream`]: https://docs.rs/parquet/57.1.0/parquet/arrow/async_reader/struct.ParquetRecordBatchStream.html
 [pr-8159]: https://github.com/apache/arrow-rs/pull/8159
 [`ParquetMetaDataPushDecoder`]: https://docs.rs/parquet/57.1.0/parquet/file/metadata/struct.ParquetMetaDataPushDecoder.html
+[io-motivation]: https://github.com/apache/arrow-rs/issues/7983
+[async-callback]: https://github.com/apache/arrow-rs/issues/7983#issuecomment-3165065017
+[incremental-decoding]: https://github.com/apache/arrow-rs/issues/6946
+[wide-column-report]: https://github.com/apache/arrow-rs/issues/6946#issuecomment-5061172503
 [prototype driver]: https://github.com/xudong963/push_decoder_policies
+[parquet2]: https://docs.rs/crate/parquet2/0.17.2
+[polars-parquet]: https://github.com/pola-rs/polars/tree/1b83c09eed30fd2fb4c59f26a1bc2d8c09cad22b/crates/polars-parquet/src/parquet
+[cudf-hybrid]: https://github.com/NVIDIA/cudf/blob/4f4de11b87d5f639d51f1ace71dbb3c19eaa15dc/cpp/include/cudf/io/experimental/hybrid_scan.hpp
 [CC BY 4.0]: https://creativecommons.org/licenses/by/4.0/
