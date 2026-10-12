@@ -2,7 +2,7 @@
 layout: post
 title: "Implementing Analytic File Formats Sans I/O"
 description: "Why separating Parquet decoding from storage I/O makes analytic file readers more composable, and how arrow-rs puts the design into practice"
-date: "2026-08-07 00:00:00"
+date: "2026-10-12 00:00:00"
 author: "Andrew Lamb, Xudong Wang, Neil Conway, and Daniël Heres"
 categories: [parquet, arrow]
 ---
