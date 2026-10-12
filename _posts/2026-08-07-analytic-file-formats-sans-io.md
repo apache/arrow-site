@@ -155,7 +155,7 @@ the lower-level boundary as a supported library API.
 Two discussions that motivated the Arrow Rust work show why that boundary
 matters.
 
-In [the original design issue][io-motivation], an InfluxDB developer described
+In [the original design issue][io-motivation], Andrew described
 buffering entire files in memory or on local SSD because the reader did not
 expose enough information to coordinate more selective prefetching. The
 alternative was a series of smaller reads interleaved with decoding, a poor
