@@ -310,38 +310,27 @@ a format whose future reads depend on earlier results. Integrated readers can
 also provide sophisticated scheduling; the useful boundary depends on which
 parts of the scan the host needs to control.
 
-## Costs and open challenges
+## Tradeoffs and design guidance
 
 Sans I/O moves complexity to an explicit boundary; it does not make that
 complexity disappear.
 
-- **State-machine complexity.** A decoder must preserve partially completed
-  work, buffer references, and error state across resumptions. A refactor must
-  retain the existing reader's handling of nested data, dictionaries, filters,
-  and optional indexes. Shared conformance tests help keep adapters consistent.
-- **Buffer ownership and accounting.** Reference-counted input avoids copies,
-  but a small slice can keep a large allocation alive. The host must account
-  for caches, outstanding reads, decoder inputs, decompression buffers, and
-  output batches. Arrow Rust's [`buffered_bytes`] reports unconsumed input
-  bytes, not total memory usage.
-- **Backpressure and read granularity.** The host can stop advancing decoders
-  or issuing speculative reads when its budget is full. It must still allow
-  enough memory to satisfy a decoder's next dependency set. In the version
-  described here, a step can require pages across the selected columns of a
-  row group; reducing output batch size alone does not bound input buffering.
-- **Concurrency and cancellation.** The host must track outstanding reads and
-  their destination decoders, handle completions, and serialize mutation of
-  each decoder. On cancellation, it must cancel or disregard pending results
-  and release its buffers. Dropping the decoder alone does not cancel I/O
-  owned by the application.
-- **Preserving performance.** Matching a tuned integrated reader requires
-  preserving effective pruning, coalescing, CPU/I/O overlap, and buffer reuse.
-  Extra allocations, tiny requests, or excessive task handoffs can erase the
-  benefits. The boundary makes these policies replaceable, not automatically
-  efficient.
+- **The decoder is harder to implement.** State that was implicit in a call
+  stack or async future must become an explicit, testable state machine.
+- **The host must drive the feedback loop.** Applications with no special I/O
+  requirements should not have to write that loop themselves, so libraries
+  should ship synchronous and asynchronous adapters.
+- **Performance is not automatic.** Sans I/O enables a system-specific policy;
+  the application still has to choose and implement a good one.
+- **The boundary must preserve zero-copy operation.** Callers should be able to
+  provide reference-counted or otherwise borrowed resident buffers, including
+  data fetched speculatively.
 
-High-level adapters remain essential. Most users should be able to select a
-file and iterate over batches without implementing a scheduler.
+For new analytic formats, we recommend making the Sans I/O state machine the
+decoder core, then layering blocking, async, memory-mapped, and prefetching
+readers on top. Format-specific choices such as pruning remain inside that
+core. Storage-specific choices such as request size, concurrency, caching, and
+buffer ownership remain outside.
 
 ## A shared boundary across formats
 
@@ -386,7 +375,6 @@ Coralogix for supporting this work.
 [`try_decode`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html#method.try_decode
 [`try_next_reader`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html#method.try_next_reader
 [`push_ranges`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html#method.push_ranges
-[`buffered_bytes`]: https://docs.rs/parquet/57.1.0/parquet/arrow/push_decoder/struct.ParquetPushDecoder.html#method.buffered_bytes
 [`ParquetRecordBatchStream`]: https://docs.rs/parquet/57.1.0/parquet/arrow/async_reader/struct.ParquetRecordBatchStream.html
 [pr-8159]: https://github.com/apache/arrow-rs/pull/8159
 [`ParquetMetaDataPushDecoder`]: https://docs.rs/parquet/57.1.0/parquet/file/metadata/struct.ParquetMetaDataPushDecoder.html
