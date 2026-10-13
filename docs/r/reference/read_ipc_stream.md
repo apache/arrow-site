@@ -3,9 +3,8 @@
 Apache Arrow defines two formats for [serializing data for interprocess
 communication
 (IPC)](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc):
-a "stream" format and a "file" format, known as Feather.
-`read_ipc_stream()` and
-[`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+a "stream" format and a "file" format. `read_ipc_stream()` and
+[`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
 read those formats, respectively.
 
 ## Usage
@@ -32,8 +31,7 @@ read_ipc_stream(file, as_data_frame = TRUE, ...)
 
 - ...:
 
-  extra parameters passed to
-  [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md).
+  deprecated and ignored.
 
 ## Value
 
@@ -49,7 +47,7 @@ the Table before processing.
 
 ## See also
 
-[`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+[`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
 for writing IPC files.
 [RecordBatchReader](https://arrow.apache.org/docs/r/reference/RecordBatchReader.md)
 for a lower-level interface.

@@ -42,8 +42,9 @@ Read files in a variety of formats in as tibbles or Arrow Tables.
 - [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md)
   : Read a Parquet file
 - [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
-  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
-  : Read a Feather file (an Arrow IPC file)
+  : Read a Feather file (deprecated)
+- [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
+  : Read an Arrow IPC file
 - [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
   : Read Arrow IPC stream format
 - [`read_json_arrow()`](https://arrow.apache.org/docs/r/reference/read_json_arrow.md)
@@ -58,8 +59,9 @@ Write to files in a variety of formats.
 - [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md)
   : Write Parquet file to disk
 - [`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
-  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
-  : Write a Feather file (an Arrow IPC file)
+  : Write a Feather file (deprecated)
+- [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
+  : Write an Arrow IPC file
 - [`write_ipc_stream()`](https://arrow.apache.org/docs/r/reference/write_ipc_stream.md)
   : Write Arrow IPC stream format
 - [`write_to_raw()`](https://arrow.apache.org/docs/r/reference/write_to_raw.md)
@@ -159,8 +161,7 @@ combining Arrow data containers.
 - [`as_data_type()`](https://arrow.apache.org/docs/r/reference/as_data_type.md)
   : Convert an object to an Arrow DataType
 - [`infer_type()`](https://arrow.apache.org/docs/r/reference/infer_type.md)
-  [`type()`](https://arrow.apache.org/docs/r/reference/infer_type.md) :
-  Infer the arrow Array type from an R object
+  : Infer the arrow Array type from an R object
 
 ## Fields and schemas
 
@@ -186,6 +187,12 @@ Functionality for computing values on Arrow data objects.
   [`arrow-verbs`](https://arrow.apache.org/docs/r/reference/acero.md)
   [`arrow-dplyr`](https://arrow.apache.org/docs/r/reference/acero.md) :
   Functions available in Arrow dplyr queries
+
+- [`add_filename()`](https://arrow.apache.org/docs/r/reference/add_filename.md)
+  : Add the data filename as a column
+
+- [`cast()`](https://arrow.apache.org/docs/r/reference/cast.md) : Change
+  the type of an array or column
 
 - [`call_function()`](https://arrow.apache.org/docs/r/reference/call_function.md)
   : Call an Arrow compute function
@@ -219,12 +226,14 @@ Pass data to and from DuckDB
 
 ## File systems
 
-Functions for working with files on S3 and GCS
+Functions for working with files on S3, GCS, and Azure
 
 - [`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md)
   : Connect to an AWS S3 bucket
 - [`gs_bucket()`](https://arrow.apache.org/docs/r/reference/gs_bucket.md)
   : Connect to a Google Cloud Storage (GCS) bucket
+- [`az_container()`](https://arrow.apache.org/docs/r/reference/az_container.md)
+  : Connect to an Azure Blob Storage container
 - [`copy_files()`](https://arrow.apache.org/docs/r/reference/copy_files.md)
   : Copy files between FileSystems
 
@@ -247,13 +256,13 @@ Functions for working with files on S3 and GCS
 ## Arrow Configuration
 
 - [`arrow_info()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
-  [`arrow_available()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_acero()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_dataset()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_substrait()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_parquet()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_s3()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_gcs()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
+  [`arrow_with_azure()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   [`arrow_with_json()`](https://arrow.apache.org/docs/r/reference/arrow_info.md)
   : Report information on the package's capabilities
 - [`cpu_count()`](https://arrow.apache.org/docs/r/reference/cpu_count.md)
@@ -424,6 +433,7 @@ datases in Arrow.
   [`LocalFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
   [`S3FileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
   [`GcsFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
+  [`AzureFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
   [`SubTreeFileSystem`](https://arrow.apache.org/docs/r/reference/FileSystem.md)
   : FileSystem classes
 - [`FileInfo`](https://arrow.apache.org/docs/r/reference/FileInfo.md) :

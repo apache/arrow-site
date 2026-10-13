@@ -1,18 +1,20 @@
-# Read a Feather file (an Arrow IPC file)
+# Read a Feather file (deprecated)
 
-Feather provides binary columnar serialization for data frames. It is
-designed to make reading and writing data frames efficient, and to make
-sharing data across data analysis languages easy. `read_feather()` can
-read both the Feather Version 1 (V1), a legacy version available
-starting in 2016, and the Version 2 (V2), which is the Apache Arrow IPC
-file format. `read_ipc_file()` is an alias of `read_feather()`.
+`read_feather()` is deprecated and will be removed in a future release.
+Use
+[`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
+instead.
+
+`read_feather()` can read both the Feather V1 format (a legacy format
+which is also being deprecated) and the Feather V2 format (which is the
+Arrow IPC format).
+[`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
+can also read both formats.
 
 ## Usage
 
 ``` r
 read_feather(file, col_select = NULL, as_data_frame = TRUE, mmap = TRUE)
-
-read_ipc_file(file, col_select = NULL, as_data_frame = TRUE, mmap = TRUE)
 ```
 
 ## Arguments
@@ -51,21 +53,4 @@ otherwise
 
 ## See also
 
-[FeatherReader](https://arrow.apache.org/docs/r/reference/FeatherReader.md)
-and
-[RecordBatchReader](https://arrow.apache.org/docs/r/reference/RecordBatchReader.md)
-for lower-level access to reading Arrow IPC data.
-
-## Examples
-
-``` r
-# We recommend the ".arrow" extension for Arrow IPC files (Feather V2).
-tf <- tempfile(fileext = ".arrow")
-on.exit(unlink(tf))
-write_feather(mtcars, tf)
-df <- read_feather(tf)
-dim(df)
-#> [1] 32 11
-# Can select columns
-df <- read_feather(tf, col_select = starts_with("d"))
-```
+[`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)

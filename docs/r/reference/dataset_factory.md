@@ -46,8 +46,8 @@ dataset_factory(
 
   - "parquet"
 
-  - "ipc"/"arrow"/"feather", all aliases for each other; for Feather,
-    note that only version 2 files are supported
+  - "ipc"/"arrow" for the Arrow IPC format (also supported as "feather"
+    but this is deprecated)
 
   - "csv"/"text", aliases for the same thing (because comma is the
     default delimiter for text files

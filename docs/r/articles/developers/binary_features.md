@@ -27,11 +27,11 @@ to provide users with a fully-featured experience out of the box.
 
 ### Current binary feature set
 
-| Platform              | S3  | GCS | Configured in                        |
-|-----------------------|-----|-----|--------------------------------------|
-| macOS (ARM64, x86_64) | ON  | ON  | `dev/tasks/r/github.packages.yml`    |
-| Windows               | ON  | ON  | `ci/scripts/PKGBUILD`                |
-| Linux (x86_64)        | ON  | ON  | `compose.yaml` (`ubuntu-cpp-static`) |
+| Platform              | S3  | GCS | Azure |
+|-----------------------|-----|-----|-------|
+| macOS (ARM64, x86_64) | ON  | ON  | ON    |
+| Windows               | ON  | ON  | OFF   |
+| Linux (x86_64)        | ON  | ON  | ON    |
 
 ### Exceptions to our build defaults
 
@@ -44,6 +44,11 @@ it in our prebuilt binaries because:
     on user machines
 3.  **Parity across platforms** - users get the same features regardless
     of OS
+
+Azure is always set to OFF for Windows because of a low-level
+incompatibility with MinGW. The `azure-identity-cpp` SDK for Azure
+relies on the Windows Implementation Library (WIL), and this lacks
+stable support for MinGW.
 
 ## Feature configuration in source builds of libarrow
 
@@ -84,11 +89,14 @@ enabled (via `$ARROW_DEFAULT_PARAM=ON`):
 | Feature  | CMake Flag          | Default                |
 |----------|---------------------|------------------------|
 | S3       | `ARROW_S3`          | `$ARROW_DEFAULT_PARAM` |
+| Azure    | `ARROW_AZURE`       | `$ARROW_DEFAULT_PARAM` |
 | Jemalloc | `ARROW_JEMALLOC`    | `$ARROW_DEFAULT_PARAM` |
 | Brotli   | `ARROW_WITH_BROTLI` | `$ARROW_DEFAULT_PARAM` |
 | BZ2      | `ARROW_WITH_BZ2`    | `$ARROW_DEFAULT_PARAM` |
 | Zlib     | `ARROW_WITH_ZLIB`   | `$ARROW_DEFAULT_PARAM` |
 | Zstd     | `ARROW_WITH_ZSTD`   | `$ARROW_DEFAULT_PARAM` |
+
+Note that `ARROW_AZURE` is always OFF on Windows.
 
 ### Features that require explicit opt-in
 

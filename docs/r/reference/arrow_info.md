@@ -9,8 +9,6 @@ diagnostics.
 ``` r
 arrow_info()
 
-arrow_available()
-
 arrow_with_acero()
 
 arrow_with_dataset()
@@ -22,6 +20,8 @@ arrow_with_parquet()
 arrow_with_s3()
 
 arrow_with_gcs()
+
+arrow_with_azure()
 
 arrow_with_json()
 ```

@@ -111,12 +111,12 @@ array$type
 as.vector(array)
 #> [1] "2022-01-02 03:45:00 UTC"
 
-temp_feather <- tempfile()
-write_feather(arrow_table(col = array), temp_feather)
-read_feather(temp_feather)
+temp_ipc <- tempfile()
+write_ipc_file(arrow_table(col = array), temp_ipc)
+read_ipc_file(temp_ipc)
 #> # A tibble: 1 x 1
 #>   col                
 #>   <dttm>             
 #> 1 2022-01-02 03:45:00
-unlink(temp_feather)
+unlink(temp_ipc)
 ```

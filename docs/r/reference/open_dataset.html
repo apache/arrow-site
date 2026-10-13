@@ -30,7 +30,7 @@ Dataset, then use dplyr methods to query it."><meta property="og:image" content=
     <a class="navbar-brand me-2" href="../index.html">Arrow R Package</a>
 
     <span class="version">
-      <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">25.0.1</small>
+      <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.0.0</small>
     </span>
 
 
@@ -49,7 +49,7 @@ Dataset, then use dplyr methods to query it."><meta property="og:image" content=
     <li><a class="dropdown-item" href="../articles/data_wrangling.html">Data analysis with dplyr syntax</a></li>
     <li><a class="dropdown-item" href="../articles/dataset.html">Working with multi-file data sets</a></li>
     <li><a class="dropdown-item" href="../articles/python.html">Integrating Arrow, Python, and R</a></li>
-    <li><a class="dropdown-item" href="../articles/fs.html">Using cloud storage (S3, GCS)</a></li>
+    <li><a class="dropdown-item" href="../articles/fs.html">Using cloud storage (S3, GCS, Azure)</a></li>
     <li><a class="dropdown-item" href="../articles/flight.html">Connecting to a Flight server</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Arrow concepts</h6></li>
@@ -161,8 +161,8 @@ memory).</p></dd>
 <dd><p>A <a href="FileFormat.html">FileFormat</a> object, or a string identifier of the format of
 the files in <code>x</code>. This argument is ignored when <code>sources</code> is a list of <code>Dataset</code> objects.
 Currently supported values:</p><ul><li><p>"parquet"</p></li>
-<li><p>"ipc"/"arrow"/"feather", all aliases for each other; for Feather, note that
-only version 2 files are supported</p></li>
+<li><p>"ipc"/"arrow" for the Arrow IPC format (also supported as "feather" but
+this is deprecated)</p></li>
 <li><p>"csv"/"text", aliases for the same thing (because comma is the default
 delimiter for text files</p></li>
 <li><p>"tsv", equivalent to passing <code>format = "text", delimiter = "\t"</code></p></li>
@@ -198,7 +198,7 @@ yourself).</p></li>
 <dd><p>additional arguments passed to <code><a href="dataset_factory.html">dataset_factory()</a></code> when <code>sources</code>
 is a directory path/URI or vector of file paths/URIs, otherwise ignored.
 These may include <code>format</code> to indicate the file format, or other
-format-specific options (see <code><a href="read_delim_arrow.html">read_csv_arrow()</a></code>, <code><a href="read_parquet.html">read_parquet()</a></code> and <code><a href="read_feather.html">read_feather()</a></code> on how to specify these).</p></dd>
+format-specific options (see <code><a href="read_delim_arrow.html">read_csv_arrow()</a></code>, <code><a href="read_parquet.html">read_parquet()</a></code> and <code><a href="read_ipc_file.html">read_ipc_file()</a></code> on how to specify these).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -237,7 +237,9 @@ partition columns, do that using <code><a href="https://dplyr.tidyverse.org/refe
 dataset.). If you provide a <code>Schema</code> and the names match what is detected,
 it will use the types defined by the Schema. In the example file path above,
 you could provide a Schema to specify that "month" should be <code><a href="data-type.html">int8()</a></code>
-instead of the <code><a href="data-type.html">int32()</a></code> it will be parsed as by default.</p>
+instead of the <code><a href="data-type.html">int32()</a></code> it will be parsed as by default. This is also
+useful for keeping leading zeros, so that a value such as <code>001</code> isn't
+parsed as the integer <code>1</code>.</p>
 <p>If your file paths do not appear to be Hive-style, or if you pass
 <code>hive_style = FALSE</code>, the <code>partitioning</code> argument will be used to create
 Directory partitioning. A character vector of names is required to create
@@ -246,9 +248,25 @@ column types, as described above. If neither are provided, no partitioning
 information will be taken from the file paths.</p>
     </div>
     <div class="section level2">
+    <h2 id="adding-the-source-filename-as-a-column">Adding the source filename as a column<a class="anchor" aria-label="anchor" href="#adding-the-source-filename-as-a-column"></a></h2>
+
+
+
+<p>Partitioning only recovers information encoded in directory names. If you
+need to know which file each row came from, call <code><a href="add_filename.html">add_filename()</a></code> inside a
+<code>dplyr</code> query on the dataset:</p>
+<p></p><div class="sourceCode r"><pre><code><span><span class="fu"><a href="../reference/open_dataset.html">open_dataset</a></span><span class="op">(</span><span class="st">"nyc-taxi"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="../reference/add_filename.html">add_filename</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre><p></p></div>
+<p>This is useful, for example, when you have opened a subdirectory of a
+partitioned dataset directly (so the partition columns above that directory
+are not inferred) and want to recover the partition values from the path.
+See <code><a href="add_filename.html">add_filename()</a></code> for details and limitations.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><a href="https://arrow.apache.org/docs/r/articles/dataset.html">
-datasets article</a></p></div>
+datasets article</a>, <code><a href="add_filename.html">add_filename()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -305,7 +323,7 @@ datasets article</a></p></div>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span><span class="co"># This line will work</span></span></span>
 <span class="r-in"><span><span class="fu">open_dataset</span><span class="op">(</span><span class="va">tf2</span>, format <span class="op">=</span> <span class="st">"ipc"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> FileSystemDataset with 1 Feather file</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> FileSystemDataset with 1 Arrow IPC file</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 11 columns</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> mpg: double</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> cyl: double</span>
@@ -366,6 +384,19 @@ datasets article</a></p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Temp: int32</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Month: int8</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Day: int8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> See $metadata for additional Schema metadata</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Specifying the type also keeps leading zeros, so "001" stays a string</span></span></span>
+<span class="r-in"><span><span class="co"># instead of becoming the integer 1</span></span></span>
+<span class="r-in"><span><span class="va">products</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, product_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"001"</span>, <span class="st">"002"</span>, <span class="st">"010"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">tf4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="write_dataset.html">write_dataset</a></span><span class="op">(</span><span class="va">products</span>, <span class="va">tf4</span>, partitioning <span class="op">=</span> <span class="st">"product_id"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">open_dataset</span><span class="op">(</span><span class="va">tf4</span>, partitioning <span class="op">=</span> <span class="fu"><a href="schema.html">schema</a></span><span class="op">(</span>product_id <span class="op">=</span> <span class="fu"><a href="data-type.html">string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> FileSystemDataset with 3 Parquet files</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 columns</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x: int32</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> product_id: string</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> See $metadata for additional Schema metadata</span>
 </code></pre></div>

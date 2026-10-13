@@ -108,6 +108,40 @@ prepending a fixed base path
 
 - `project_id`: the project to use for creating buckets.
 
+`AzureFileSystem$create()` takes following required argument:
+
+- `account_name`: Azure Blob Storage account name.
+
+`AzureFileSystem$create()` takes following optional arguments:
+
+- `account_key`: Account key of the storage account. Cannot be used with
+  `sas_token`.
+
+- `blob_storage_authority`: Hostname of the blob service, defaulting to
+  `"blob.core.windows.net"`.
+
+- `blob_storage_scheme`: Either `"http"` or `"https"` (the default).
+
+- `client_id`: The client/application ID for Azure Active Directory
+  authentication. If used with `client_secret` and `tenant_id` then it
+  is the application ID for a registered Azure AD application.
+  Otherwise, it is the client ID of a user-assigned managed identity.
+
+- `client_secret`: Client secret for Azure Active Directory
+  authentication. Must be provided with both `client_id` and
+  `tenant_id`.
+
+- `dfs_storage_authority`: Hostname of the data lake (gen 2) service,
+  defaulting to `"dfs.core.windows.net"`.
+
+- `dfs_storage_scheme`: Either `"http"` or `"https"` (the default).
+
+- `sas_token`: Shared access signature (SAS) token for the storage
+  account. Cannot be used with `account key`.
+
+- `tenant_id`: Tenant ID for Azure Active Directory authentication. Must
+  be provided with both `client_id` and `client_secret`.
+
 ## Methods
 
 - `path(x)`: Create a `SubTreeFileSystem` from the current `FileSystem`
@@ -198,3 +232,10 @@ using the environment variable `ARROW_S3_LOG_LEVEL` (e.g.,
 prior to running any code that interacts with S3. Possible values
 include 'FATAL' (the default), 'ERROR', 'WARN', 'INFO', 'DEBUG'
 (recommended), 'TRACE', and 'OFF'.
+
+On `AzureFileSystem`, passing no arguments for authentication uses the
+`AzureDefaultCredential` for authentication, so that several
+authentication types are tried until one succeeds.
+
+`AzureFileSystem` is not presently supported on Windows due to upstream
+compatibility issues between the Azure C++ SDK and the MinGW toolchain.

@@ -226,7 +226,9 @@ open_tsv_dataset(
 - convert_options:
 
   see [CSV conversion
-  options](https://arrow.apache.org/docs/r/reference/csv_convert_options.md)
+  options](https://arrow.apache.org/docs/r/reference/csv_convert_options.md).
+  If given, this overrides any conversion options provided in other
+  arguments (e.g. `na`, `col_types`, `timestamp_parsers`, etc.).
 
 - read_options:
 
@@ -235,9 +237,10 @@ open_tsv_dataset(
 
 - timestamp_parsers:
 
-  User-defined timestamp parsers. If more than one parser is specified,
-  the CSV conversion logic will try parsing values starting from the
-  beginning of this vector. Possible values are:
+  User-defined timestamp parsers, tried in order when inferring column
+  types and when converting columns of type
+  [`timestamp()`](https://arrow.apache.org/docs/r/reference/data-type.md).
+  Possible values are:
 
   - `NULL`: the default, which uses the ISO-8601 parser
 
@@ -246,7 +249,13 @@ open_tsv_dataset(
 
   - a list of
     [TimestampParser](https://arrow.apache.org/docs/r/reference/CsvReadOptions.md)
-    objects
+    objects and/or parse strings
+
+  Supplying parsers replaces the default ISO-8601 parser rather than
+  adding to it. If none of the parsers match a value during type
+  inference, the column is read as a string without error; to get an
+  error instead, specify the column as a timestamp in `col_types`. These
+  parsers are not used for date columns.
 
 - quoted_na:
 
