@@ -25,6 +25,14 @@ limitations under the License.
 {% endcomment %}
 -->
 
+<style>
+  .sans-io-code .highlight { margin: 0; background: transparent; }
+  .sans-io-code pre { margin: 0; }
+  .sans-io-code .c1 { color: #5c6370; }
+  .sans-io-code .mi { color: #006b6b; }
+  .sans-io-code .nb { color: #006b8f; }
+</style>
+
 A **Sans I/O** decoder interprets bytes but never fetches them. When it cannot
 continue, it returns the byte ranges it needs; the application supplies buffers
 and decides when to resume decoding. This exposes a boundary where an
@@ -49,11 +57,12 @@ application asks it to advance, it does one of three things:
 [`push_ranges`]. In simplified Rust, with application-provided `fetch` and
 `consume` helpers:
 
-```rust
+<div class="sans-io-code p-3 mb-4 bg-light border rounded">
+{% highlight rust %}
 loop {
     match decoder.try_decode()? {
         DecodeResult::NeedsData(ranges) => {
-            // Return one buffer for each logical range, in order.
+            // One buffer per logical range, in order.
             let buffers = io_policy.fetch(&ranges)?;
             decoder.push_ranges(ranges, buffers)?;
         }
@@ -61,7 +70,8 @@ loop {
         DecodeResult::Finished => break,
     }
 }
-```
+{% endhighlight %}
+</div>
 
 These APIs are available in `arrow-rs` `57.1.0`, the version linked here.
 The loop starts after file metadata is available; footer and metadata decoding
@@ -105,33 +115,77 @@ information; the basic push loop does not provide a complete future read plan.
 
 ## From logical ranges to physical reads
 
-The ranges in `NeedsData` specify the decoder's requirements. They need not map
-one-to-one to storage requests. Consider an illustrative request for
-`100..200` and `220..300`, using exclusive end offsets:
+Suppose `NeedsData` asks for two parts of a file: `100..200` (100 bytes)
+and `220..300` (80 bytes). The end offset is excluded in this notation.
+The 20-byte gap at `200..220` is not needed by the decoder.
 
-| Policy | Physical reads | Bytes fetched | Buffers supplied to the decoder |
-| --- | --- | --- | --- |
-| Exact ranges | `100..200`, `220..300` | 180 | The two fetched buffers |
-| Coalesced range | `100..300` | 200 | Slices `0..100` and `120..200` of the fetched buffer |
+The application could issue two reads, fetching exactly 180 bytes. Alternatively,
+it could **combine them into one read of `100..300`**, fetching 200 bytes.
+This saves one storage request at the cost of reading the 20-byte gap.
 
-For this particular request, a coalescing policy could use the following code.
-`read_range` is an application helper returning a reference-counted `Bytes`
-buffer:
+After the combined read, the returned buffer starts at index **0**, which
+corresponds to file offset **100**. To locate a file byte in that buffer,
+subtract 100 from its file offset:
 
-```rust
+<div class="table-responsive">
+  <table class="table table-bordered">
+    <caption class="sr-only">File offsets and buffer indices for a combined read of bytes 100 through 299.</caption>
+    <thead class="thead-light">
+      <tr>
+        <th scope="col">Part of the read</th>
+        <th scope="col">File offsets</th>
+        <th scope="col">Buffer indices</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">First requested range</th>
+        <td><code class="text-dark text-nowrap">100..200</code></td>
+        <td><code class="text-dark text-nowrap">0..100</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Unneeded gap</th>
+        <td><code class="text-dark text-nowrap">200..220</code></td>
+        <td><code class="text-dark text-nowrap">100..120</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Second requested range</th>
+        <td><code class="text-dark text-nowrap">220..300</code></td>
+        <td><code class="text-dark text-nowrap">120..200</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+The application then supplies just the two requested parts to the decoder.
+Here, `read_range` is an application helper returning a reference-counted
+`Bytes` buffer:
+
+<div class="sans-io-code p-3 mb-4 bg-light border rounded">
+{% highlight rust %}
+// 1. One storage read returns 200 bytes, including the gap.
 let buffer = read_range(100..300)?;
+//
+// 2. Slice with BUFFER indices, which start at zero.
+//    File offset 100 -> index 0; offset 220 -> index 120.
+let first = buffer.slice(0..100);     // File bytes 100..200
+let second = buffer.slice(120..200); // File bytes 220..300
+//
+// 3. Match FILE ranges to slices, in the same order.
+//    Omit the gap at buffer indices 100..120.
 decoder.push_ranges(
-    vec![100..200, 220..300],
-    vec![buffer.slice(0..100), buffer.slice(120..200)],
+    vec![100..200, 220..300], // Original file offsets
+    vec![first, second],     // Matching slices
 )?;
-```
+{% endhighlight %}
+</div>
 
-The decoder receives the same logical bytes in both cases. Coalescing replaces
-two storage reads with one by fetching the 20-byte gap. The slices share the
-allocation without copying their contents. Whether saving a request outweighs
-reading extra bytes depends on the storage system; this example demonstrates
-the mechanism, not a measured speedup. Decoding and decompression can still
-allocate output buffers.
+The decoder receives the same two byte ranges as it would with separate reads.
+Both slices share the fetched allocation without copying their contents;
+decoding and decompression can still allocate output buffers. Whether saving
+a request outweighs reading extra bytes depends on the storage system. This
+example shows how the application controls that tradeoff, not a measured
+speedup.
 
 A cache fits at the same boundary. If `100..300` is already resident, the host
 can supply those slices without another read. If it fetches beyond the current
