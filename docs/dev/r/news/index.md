@@ -1,6 +1,8 @@
 # Changelog
 
-## arrow 25.0.1.9000
+## arrow 26.0.0.9000
+
+## arrow 26.0.0
 
 ### Breaking changes
 
