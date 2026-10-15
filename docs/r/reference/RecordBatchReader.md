@@ -3,10 +3,9 @@
 Apache Arrow defines two formats for [serializing data for interprocess
 communication
 (IPC)](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc):
-a "stream" format and a "file" format, known as Feather.
-`RecordBatchStreamReader` and `RecordBatchFileReader` are interfaces for
-accessing record batches from input sources in those formats,
-respectively.
+a "stream" format and a "file" format. `RecordBatchStreamReader` and
+`RecordBatchFileReader` are interfaces for accessing record batches from
+input sources in those formats, respectively.
 
 For guidance on how to use these classes, see the examples section.
 
@@ -50,7 +49,7 @@ object and take a single argument, named according to the class:
 
 [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
 and
-[`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+[`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
 provide a much simpler interface for reading data from these formats and
 are sufficient for many use cases.
 

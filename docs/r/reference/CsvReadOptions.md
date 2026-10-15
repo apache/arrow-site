@@ -111,19 +111,23 @@ argument.
   The default (`FALSE`) means that the reader will instead raise an
   error.
 
-- `timestamp_parsers` User-defined timestamp parsers. If more than one
-  parser is specified, the CSV conversion logic will try parsing values
-  starting from the beginning of this vector. Possible values are (a)
-  `NULL`, the default, which uses the ISO-8601 parser; (b) a character
-  vector of [strptime](https://rdrr.io/r/base/strptime.html) parse
-  strings; or (c) a list of TimestampParser objects.
+- `timestamp_parsers` User-defined timestamp parsers, tried in order
+  when inferring column types and when converting timestamp columns.
+  Possible values are (a) `NULL`, the default, which uses the ISO-8601
+  parser; (b) a character vector of
+  [strptime](https://rdrr.io/r/base/strptime.html) parse strings; or (c)
+  a list of TimestampParser objects and/or parse strings. Supplying
+  parsers replaces the default ISO-8601 parser; see
+  [`read_delim_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md)
+  for details.
 
 - `decimal_point` Character to use for decimal point in floating point
   numbers. Default: "."
 
 `TimestampParser$create()` takes an optional `format` string argument.
 See [`strptime()`](https://rdrr.io/r/base/strptime.html) for example
-syntax. The default is to use an ISO-8601 format parser.
+syntax. The default is to use an ISO-8601 format parser, which is useful
+as a fallback at the end of a list of `timestamp_parsers`.
 
 The `CsvWriteOptions$create()` factory method takes the following
 arguments:

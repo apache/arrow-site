@@ -1,10 +1,159 @@
 # Changelog
 
+## arrow 26.0.0
+
+### Breaking changes
+
+- The `.data.frame` argument to
+  [`map_batches()`](https://arrow.apache.org/docs/r/reference/map_batches.md),
+  deprecated since 9.0.0, has been removed. Call
+  [`collect()`](https://dplyr.tidyverse.org/reference/compute.html) on
+  the result to get a data frame
+  ([\#51655](https://github.com/apache/arrow/issues/51655)).
+- [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  and
+  [`write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+  now warn that they are deprecated. Use
+  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
+  and
+  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
+  instead. Similarly, `format = "feather"` in
+  [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+  and
+  [`write_dataset()`](https://arrow.apache.org/docs/r/reference/write_dataset.md)
+  is deprecated in favour of `format = "ipc"`, and extra arguments
+  passed via `...` to
+  [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
+  and
+  [`write_ipc_stream()`](https://arrow.apache.org/docs/r/reference/write_ipc_stream.md)
+  are deprecated and ignored
+  ([\#49237](https://github.com/apache/arrow/issues/49237)).
+- [`register_scalar_function()`](https://arrow.apache.org/docs/r/reference/register_scalar_function.md)
+  now errors if the names in `in_type` do not match the argument names
+  of `fun`, instead of silently ignoring them
+  ([\#37761](https://github.com/apache/arrow/issues/37761)).
+
+### New features
+
+- New `AzureFileSystem` class and
+  [`az_container()`](https://arrow.apache.org/docs/r/reference/az_container.md)
+  helper for working with Azure Blob Storage, analogous to
+  `S3FileSystem` and
+  [`s3_bucket()`](https://arrow.apache.org/docs/r/reference/s3_bucket.md).
+  See
+  [`vignette("install", package = "arrow")`](https://arrow.apache.org/docs/r/articles/install.md)
+  for how to enable Azure support when building from source
+  ([@marberts](https://github.com/marberts),
+  [\#32123](https://github.com/apache/arrow/issues/32123)).
+
+### Minor improvements and fixes
+
+- Variables with the same name as a function, such as `date`, can now be
+  used in dplyr verbs
+  ([\#39688](https://github.com/apache/arrow/issues/39688)).
+- Reading Parquet files with `float16` columns now returns the correct
+  values ([\#50378](https://github.com/apache/arrow/issues/50378)).
+- [`if_else()`](https://dplyr.tidyverse.org/reference/if_else.html) now
+  works when one branch is a bare `NA` and the other is a date or
+  timestamp ([\#38358](https://github.com/apache/arrow/issues/38358)).
+- [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html) with
+  [`if_any()`](https://dplyr.tidyverse.org/reference/across.html) or
+  [`if_all()`](https://dplyr.tidyverse.org/reference/across.html) now
+  gives the new column the correct name
+  ([\#34860](https://github.com/apache/arrow/issues/34860)).
+- Factor levels inside list columns are now unified across the whole
+  column when converting to R, so data read in multiple batches
+  (e.g. via
+  [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
+  or
+  [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md))
+  produces valid factors that can be unnested. Similarly, `int64` and
+  `uint32` values inside list columns are converted to a single R type
+  across the column
+  ([\#50514](https://github.com/apache/arrow/issues/50514)).
+- [`pull()`](https://dplyr.tidyverse.org/reference/pull.html) on Arrow
+  data no longer warns about a future change of default. The planned
+  switch to returning a `ChunkedArray` has been dropped, so
+  [`pull()`](https://dplyr.tidyverse.org/reference/pull.html) will keep
+  returning an R vector by default; use `as_vector = FALSE` or
+  `options(arrow.pull_as_vector = FALSE)` to get a `ChunkedArray`
+  ([\#51655](https://github.com/apache/arrow/issues/51655)).
+- `str_replace()` with an `NA` replacement now returns `NA` for matched
+  elements, matching stringr
+  ([@Gosling-dude](https://github.com/Gosling-dude),
+  [\#33432](https://github.com/apache/arrow/issues/33432)).
+- [`summarise()`](https://dplyr.tidyverse.org/reference/summarise.html)
+  after
+  [`arrange()`](https://dplyr.tidyverse.org/reference/arrange.html) now
+  works ([\#45373](https://github.com/apache/arrow/issues/45373)).
+
 ## arrow 25.0.1
 
-## arrow 24.0.0
+CRAN release: 2026-08-23
 
-CRAN release: 2026-04-29
+### Minor improvements and fixes
+
+- Improved mimalloc memory allocator configuration on macOS
+  ([\#50428](https://github.com/apache/arrow/issues/50428)).
+
+## arrow 25.0.0
+
+CRAN release: 2026-07-16
+
+### Breaking changes
+
+- Arrow `uint64` types are now always converted to R `double` (numeric)
+  vectors, regardless of the values. Previously, small `uint64` values
+  were converted to R `integer`, which could cause inconsistent types
+  within list-columns when different list elements had different value
+  ranges ([\#50339](https://github.com/apache/arrow/issues/50339)).
+
+### New features
+
+- `Field` objects now support field-level metadata via `$metadata` and
+  `$with_metadata()`
+  ([@max-romagnoli](https://github.com/max-romagnoli),
+  [\#33390](https://github.com/apache/arrow/issues/33390)).
+- Parquet files now support list-columns of ordered factors (ordered
+  dictionaries)
+  ([\#49689](https://github.com/apache/arrow/issues/49689)).
+
+### Minor improvements and fixes
+
+- `Array$create()` now gives a clearer error message when given a
+  `POSIXct` object with an invalid timezone
+  ([\#40886](https://github.com/apache/arrow/issues/40886)).
+- Dictionary arrays with `large_string` value types now convert
+  correctly to R factors
+  ([\#39603](https://github.com/apache/arrow/issues/39603)).
+- [`open_dataset()`](https://arrow.apache.org/docs/r/reference/open_dataset.md)
+  now gives a clearer error message when providing a mix of `readr` and
+  Arrow options ([@Rich-T-kid](https://github.com/Rich-T-kid),
+  [\#33420](https://github.com/apache/arrow/issues/33420)).
+- [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md)
+  no longer triggers a C++ alignment warning from the Acero source node
+  ([\#46178](https://github.com/apache/arrow/issues/46178)).
+- `Schema` metadata partial matching on `$metadata$r` no longer errors
+  when other metadata keys start with “r”
+  ([\#50163](https://github.com/apache/arrow/issues/50163)).
+- [`to_arrow()`](https://arrow.apache.org/docs/r/reference/to_arrow.md)
+  now preserves
+  [`group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
+  when converting from a dbplyr lazy table
+  ([\#40640](https://github.com/apache/arrow/issues/40640)).
+- [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md)
+  now correctly validates that `max_rows_per_group` is a positive number
+  ([\#40742](https://github.com/apache/arrow/issues/40742)).
+- Stale S3 connections no longer cause a segfault during garbage
+  collection ([\#50009](https://github.com/apache/arrow/issues/50009)).
+- Spurious warnings are no longer emitted when reading files with custom
+  schema metadata
+  ([\#48712](https://github.com/apache/arrow/issues/48712)).
+
+### Installation
+
+- The R package now builds under `r-universe/r-wasm`
+  ([\#49981](https://github.com/apache/arrow/issues/49981)).
 
 ## arrow 24.0.0
 
@@ -1082,9 +1231,9 @@ CRAN release: 2022-08-10
 ### Reading and writing
 
 - New functions
-  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
   and
-  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
   are added. These functions are almost the same as
   [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
   and
@@ -1093,9 +1242,9 @@ CRAN release: 2022-08-10
   Feather V1 files.
 - `read_arrow()` and `write_arrow()`, deprecated since 1.0.0 (July
   2020), have been removed. Instead of these, use the
-  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_feather.md)
+  [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md)
   and
-  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_feather.md)
+  [`write_ipc_file()`](https://arrow.apache.org/docs/r/reference/write_ipc_file.md)
   for IPC files, or,
   [`read_ipc_stream()`](https://arrow.apache.org/docs/r/reference/read_ipc_stream.md)
   and

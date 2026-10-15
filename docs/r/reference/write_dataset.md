@@ -136,7 +136,7 @@ write_dataset(
   additional format-specific arguments. For available Parquet options,
   see
   [`write_parquet()`](https://arrow.apache.org/docs/r/reference/write_parquet.md).
-  The available Feather options are:
+  The available IPC options are:
 
   - `use_legacy_format` logical: write data formatted so that Arrow
     libraries versions 0.14 and lower can read it. Default is `FALSE`.

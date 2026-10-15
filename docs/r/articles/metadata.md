@@ -124,17 +124,16 @@ tb$metadata$new_key <- "new value"
 ```
 
 Metadata attached to a Schema is preserved when writing the Table to
-Arrow/Feather or Parquet formats. When reading those files into R, or
-when calling
-[`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html) on a
-Table or RecordBatch, the column attributes are restored to the columns
-of the resulting `data.frame`. This means that custom data types,
-including `haven::labelled`, `vctrs` annotations, and others, are
+Arrow IPC or Parquet formats. When reading those files into R, or when
+calling [`as.data.frame()`](https://rdrr.io/r/base/as.data.frame.html)
+on a Table or RecordBatch, the column attributes are restored to the
+columns of the resulting `data.frame`. This means that custom data
+types, including `haven::labelled`, `vctrs` annotations, and others, are
 preserved when doing a round-trip through Arrow.
 
 Note that the attributes stored in `$metadata[["r"]]` are only
-understood by R. If you write a `data.frame` with `haven` columns to a
-Feather file and read that in Pandas, the `haven` metadata won’t be
+understood by R. If you write a `data.frame` with `haven` columns to an
+Arrow IPC file and read that in Pandas, the `haven` metadata won’t be
 recognized there. Similarly, Pandas writes its own custom metadata,
 which the R package does not consume. You are free, however, to define
 custom metadata conventions for your application and assign any (string)

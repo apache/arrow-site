@@ -148,10 +148,9 @@ types](https://arrow.apache.org/docs/r/articles/data_types.md) article.
 One of the main ways to use arrow is to read and write data files in
 several common formats. The arrow package supplies extremely fast CSV
 reading and writing capabilities, but in addition supports data formats
-like Parquet and Arrow (also called Feather) that are not widely
-supported in other packages. In addition, the arrow package supports
-multi-file data sets in which a single rectangular data set is stored
-across multiple files.
+like Parquet and Arrow IPC that are not widely supported in other
+packages. In addition, the arrow package supports multi-file data sets
+in which a single rectangular data set is stored across multiple files.
 
 ### Individual files
 
@@ -160,8 +159,8 @@ several functions you can use:
 
 - [`read_parquet()`](https://arrow.apache.org/docs/r/reference/read_parquet.md):
   read a file in Parquet format
-- [`read_feather()`](https://arrow.apache.org/docs/r/reference/read_feather.md):
-  read a file in Arrow/Feather format
+- [`read_ipc_file()`](https://arrow.apache.org/docs/r/reference/read_ipc_file.md):
+  read a file in Arrow IPC format
 - [`read_delim_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md):
   read a delimited text file
 - [`read_csv_arrow()`](https://arrow.apache.org/docs/r/reference/read_delim_arrow.md):
