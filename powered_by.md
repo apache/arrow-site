@@ -244,6 +244,10 @@ short description of your use case.
 * **[Squey][57]:** Squey is an open-source visualization software designed to interactively
   explore and understand large amounts of columnar data.
   It uses Apache Arrow C++ library (with Arrow Compute) to import and export Parquet files.
+* **[Supermetal][68]:** A change data capture (CDC) platform that synchronizes data
+  between databases, data warehouses, and lakehouses. Supermetal uses Apache Arrow's
+  Rust implementation to represent snapshots and database changes and to write
+  Parquet files for loading into data warehouses and lakes.
 * **[TileDB][32]:** TileDB is an open-source, cloud-optimized engine for storing
   and accessing dense/sparse multi-dimensional arrays and dataframes. It is an
   embeddable C++ library that works on Linux, macOS, and Windows, which comes
@@ -336,3 +340,4 @@ short description of your use case.
 [65]: https://query.farm/
 [66]: https://query.farm/products/extensions/airport/
 [67]: https://query.farm/vgi/
+[68]: https://supermetal.io/
