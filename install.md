@@ -120,6 +120,7 @@ sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
 sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
 sudo dnf install -y arrow-flight-sql-devel # For Apache Arrow Flight SQL C++
 sudo dnf install -y arrow-flight-sql-glib-devel # For Apache Arrow Flight SQL GLib (C)
+sudo dnf install -y arrow-flight-sql-odbc-libs # For Apache Arrow Flight SQL ODBC C++
 sudo dnf install -y gandiva-devel # For Apache Gandiva C++
 sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
 sudo dnf install -y parquet-devel # For Apache Parquet C++
