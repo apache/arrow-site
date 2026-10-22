@@ -697,20 +697,20 @@ functions.
 
 ### tidyselect
 
-- [`all_of()`](https://tidyselect.r-lib.org/reference/all_of.html)
+- [`all_of()`](https://rdrr.io/pkg/tidyselect/man/all_of.html)
 
-- [`contains()`](https://tidyselect.r-lib.org/reference/starts_with.html)
+- [`contains()`](https://rdrr.io/pkg/tidyselect/man/starts_with.html)
 
-- [`ends_with()`](https://tidyselect.r-lib.org/reference/starts_with.html)
+- [`ends_with()`](https://rdrr.io/pkg/tidyselect/man/starts_with.html)
 
-- [`everything()`](https://tidyselect.r-lib.org/reference/everything.html)
+- [`everything()`](https://rdrr.io/pkg/tidyselect/man/everything.html)
 
-- [`last_col()`](https://tidyselect.r-lib.org/reference/everything.html)
+- [`last_col()`](https://rdrr.io/pkg/tidyselect/man/everything.html)
 
-- [`matches()`](https://tidyselect.r-lib.org/reference/starts_with.html)
+- [`matches()`](https://rdrr.io/pkg/tidyselect/man/starts_with.html)
 
-- [`num_range()`](https://tidyselect.r-lib.org/reference/starts_with.html)
+- [`num_range()`](https://rdrr.io/pkg/tidyselect/man/starts_with.html)
 
-- [`one_of()`](https://tidyselect.r-lib.org/reference/one_of.html)
+- [`one_of()`](https://rdrr.io/pkg/tidyselect/man/one_of.html)
 
-- [`starts_with()`](https://tidyselect.r-lib.org/reference/starts_with.html)
+- [`starts_with()`](https://rdrr.io/pkg/tidyselect/man/starts_with.html)

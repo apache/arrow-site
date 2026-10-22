@@ -122,7 +122,7 @@ job](https://github.com/apache/arrow/blob/main/dev/tasks/r/github.linux.arrow.ve
 `ci/scripts/PKGBUILD`, `r/DESCRIPTION`, and `r/NEWS.md`.
 
 (CRAN-only releases) Rebuild news page with
-[`pkgdown::build_news()`](https://pkgdown.r-lib.org/reference/build_news.html)
+[`pkgdown::build_news()`](https://rdrr.io/pkg/pkgdown/man/build_news.html)
 and submit a PR to the asf-site branch of the docs site with the
 contents of `arrow/r/docs/news/index.html` replacing the current
 contents of `arrow-site/docs/r/news/index.html`.

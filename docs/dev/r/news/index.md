@@ -1056,7 +1056,7 @@ Several new functions can be used in queries:
 
 - [`dplyr::across()`](https://dplyr.tidyverse.org/reference/across.html)
   can be used to apply the same computation across multiple columns, and
-  the [`where()`](https://tidyselect.r-lib.org/reference/where.html)
+  the [`where()`](https://rdrr.io/pkg/tidyselect/man/where.html)
   selection helper is supported in
   [`across()`](https://dplyr.tidyverse.org/reference/across.html);
 - [`add_filename()`](https://arrow.apache.org/docs/r/reference/add_filename.md)
