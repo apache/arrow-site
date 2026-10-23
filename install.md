@@ -119,16 +119,15 @@ sudo dnf install -y arrow-acero-devel # For Apache Arrow Acero C++
 sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
 sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
 sudo dnf install -y arrow-flight-sql-devel # For Apache Arrow Flight SQL C++
+# NOTE: The ODBC driver for Apache Arrow Flight SQL is only available as RPM, not on DEB-based platforms
+{% assign arrow_version = site.data.versions['current'].number | split: '.' -%}
+{% assign arrow_so_version = arrow_version[0] | times: 100 | plus: arrow_version[1] -%}
+sudo dnf install -y arrow{{arrow_so_version}}-flight-sql-odbc-libs # For Apache Arrow Flight SQL ODBC Driver
 sudo dnf install -y arrow-flight-sql-glib-devel # For Apache Arrow Flight SQL GLib (C)
 sudo dnf install -y gandiva-devel # For Apache Gandiva C++
 sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
 sudo dnf install -y parquet-devel # For Apache Parquet C++
 sudo dnf install -y parquet-glib-devel # For Apache Parquet GLib (C)
-```
-
-```shell
-sudo dnf install -y arrow<version>-flight-sql-odbc-libs # For Apache Arrow Flight SQL ODBC Driver
-# Example for 26.0.0 release: sudo dnf install -y arrow2600-flight-sql-odbc-libs
 ```
 
 CentOS 7 and Red Hat Enterprise Linux 7:
