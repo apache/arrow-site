@@ -40,7 +40,7 @@ remotes::install_github("r-lib/roxygen2")
 ```
 
 You can use `devtools::document()` and
-[`pkgdown::build_site()`](https://rdrr.io/pkg/pkgdown/man/build_site.html)
+[`pkgdown::build_site()`](https://pkgdown.r-lib.org/reference/build_site.html)
 to rebuild the documentation and preview the results.
 
 ``` r
