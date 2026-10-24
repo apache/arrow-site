@@ -273,6 +273,10 @@ short description of your use case.
   high-bandwidth output path for downstream analytics. This makes it easy and
   efficient to access security data via pyarrow and other available bindings.
 
+* **[Wordfully](https://wordfully.ai):** Uses PyArrow to represent batches of evaluation records
+  in its Python processing jobs. Arrow IPC passes those batches to other workers while preserving
+  their column names and data types, without serializing each record as JSON.
+
 [1]: https://www.apache.org/foundation/marks/
 [2]: https://www.apache.org/foundation/marks/faq/
 [3]: https://parquet.apache.org/
