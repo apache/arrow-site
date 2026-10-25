@@ -309,27 +309,27 @@ also includes <a href="https://crates.io/crates/parquet-variant" target="_blank"
 values, <a href="https://docs.rs/parquet/latest/parquet/variant/struct.VariantArray.html" target="_blank" rel="noopener"><code>VariantArray</code></a> for working with arrays of <code>Variant</code> values in Apache
 Arrow, computation kernels for converting to/from JSON and Arrow types,
 extracting paths, and shredding values.</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"> <span class="c1">// Use the VariantArrayBuilder to build a VariantArray</span>
-<span class="k">let</span> <span class="k">mut</span> <span class="n">builder</span> <span class="o">=</span> <span class="nn">VariantArrayBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
-<span class="n">builder</span><span class="nf">.new_object</span><span class="p">()</span><span class="nf">.with_field</span><span class="p">(</span><span class="s">"name"</span><span class="p">,</span> <span class="s">"Alice"</span><span class="p">)</span><span class="nf">.finish</span><span class="p">();</span> <span class="c1">// row 1: {"name": "Alice"}</span>
-<span class="n">builder</span><span class="nf">.append_value</span><span class="p">(</span><span class="s">"such wow"</span><span class="p">);</span> <span class="c1">// row 2: "such wow" (a string)</span>
-<span class="k">let</span> <span class="n">array</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.build</span><span class="p">();</span>
+<pre><code class="language-rust"> // Use the VariantArrayBuilder to build a VariantArray
+let mut builder = VariantArrayBuilder::new(3);
+builder.new_object().with_field("name", "Alice").finish(); // row 1: {"name": "Alice"}
+builder.append_value("such wow"); // row 2: "such wow" (a string)
+let array = builder.build();
 
-<span class="c1">// Since VariantArray is an ExtensionType, it needs to be converted</span>
-<span class="c1">// to an ArrayRef and Field with the appropriate metadata</span>
-<span class="c1">// before it can be written to a Parquet file</span>
-<span class="k">let</span> <span class="n">field</span> <span class="o">=</span> <span class="n">array</span><span class="nf">.field</span><span class="p">(</span><span class="s">"data"</span><span class="p">);</span>
-<span class="k">let</span> <span class="n">array</span> <span class="o">=</span> <span class="nn">ArrayRef</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="n">array</span><span class="p">);</span>
-<span class="c1">// create a RecordBatch with the VariantArray</span>
-<span class="k">let</span> <span class="n">schema</span> <span class="o">=</span> <span class="nn">Schema</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="nd">vec!</span><span class="p">[</span><span class="n">field</span><span class="p">]);</span>
-<span class="k">let</span> <span class="n">batch</span> <span class="o">=</span> <span class="nn">RecordBatch</span><span class="p">::</span><span class="nf">try_new</span><span class="p">(</span><span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">schema</span><span class="p">),</span> <span class="nd">vec!</span><span class="p">[</span><span class="n">array</span><span class="p">])</span><span class="o">?</span><span class="p">;</span>
+// Since VariantArray is an ExtensionType, it needs to be converted
+// to an ArrayRef and Field with the appropriate metadata
+// before it can be written to a Parquet file
+let field = array.field("data");
+let array = ArrayRef::from(array);
+// create a RecordBatch with the VariantArray
+let schema = Schema::new(vec![field]);
+let batch = RecordBatch::try_new(Arc::new(schema), vec![array])?;
 
-<span class="c1">// Now you can write the RecordBatch to the Parquet file, as normal</span>
-<span class="k">let</span> <span class="n">file</span> <span class="o">=</span> <span class="nn">std</span><span class="p">::</span><span class="nn">fs</span><span class="p">::</span><span class="nn">File</span><span class="p">::</span><span class="nf">create</span><span class="p">(</span><span class="s">"variant.parquet"</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<span class="k">let</span> <span class="k">mut</span> <span class="n">writer</span> <span class="o">=</span> <span class="nn">ArrowWriter</span><span class="p">::</span><span class="nf">try_new</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">batch</span><span class="nf">.schema</span><span class="p">(),</span> <span class="nb">None</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<span class="n">writer</span><span class="nf">.write</span><span class="p">(</span><span class="o">&amp;</span><span class="n">batch</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-<span class="n">writer</span><span class="nf">.close</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
-</code></pre></div></div>
+// Now you can write the RecordBatch to the Parquet file, as normal
+let file = std::fs::File::create("variant.parquet")?;
+let mut writer = ArrowWriter::try_new(file, batch.schema(), None)?;
+writer.write(&amp;batch)?;
+writer.close()?;
+</code></pre>
 <p>This support is being integrated into query engines, such as
 <a href="https://github.com/friendlymatthew" target="_blank" rel="noopener">@friendlymatthew</a>'s <a href="https://github.com/datafusion-contrib/datafusion-variant" target="_blank" rel="noopener"><code>datafusion-variant</code></a> crate to integrate into DataFusion
 and <a href="https://github.com/delta-io/delta-rs/issues/3637" target="_blank" rel="noopener">delta-rs</a>. While this support is still experimental, we believe the APIs
@@ -352,8 +352,8 @@ contributed by Kyle Barron (<a href="https://github.com/kylebarron" target="_bla
 Kaushik Srinivasan (<a href="https://github.com/kaushiksrini" target="_blank" rel="noopener">@kaushiksrini</a>), and Blake Orth (<a href="https://github.com/BlakeOrth" target="_blank" rel="noopener">@BlakeOrth</a>).</p>
 <p>Please see the <a href="https://github.com/apache/arrow-rs/issues/8373" target="_blank" rel="noopener">Implement Geometry and Geography type support in Parquet</a> tracking ticket for more details.</p>
 <h2>Thanks to Our Contributors</h2>
-<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="console"><span class="gp">$</span><span class="w"> </span>git shortlog <span class="nt">-sn</span> 56.0.0..57.0.0
-<span class="go">    36  Matthijs Brobbel
+<pre><code class="language-console">$ git shortlog -sn 56.0.0..57.0.0
+    36  Matthijs Brobbel
     20  Andrew Lamb
     13  Ryan Johnson
     11  Ed Seidl
@@ -396,7 +396,7 @@ Kaushik Srinivasan (<a href="https://github.com/kaushiksrini" target="_blank" re
      1  ding-young
      1  kosiew
      1  张林伟
-</span></code></pre></div></div>
+</code></pre>
 
       </main>
     </div>

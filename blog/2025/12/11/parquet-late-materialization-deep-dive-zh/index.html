@@ -317,21 +317,21 @@
 <strong>合并</strong>：<code>selection = selection.and_then(selection_b)</code>；投影列现在只解码极小的行集。</li>
 </ol>
 <p><strong>代码位置和草图</strong>：</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Close to the flow in read_plan.rs (simplified)</span>
-<span class="k">let</span> <span class="k">mut</span> <span class="n">builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">batch_size</span><span class="p">);</span>
+<pre><code class="language-rust">// Close to the flow in read_plan.rs (simplified)
+let mut builder = ReadPlanBuilder::new(batch_size);
 
-<span class="c1">// 1) Inject external pruning (e.g., Page Index):</span>
-<span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_selection</span><span class="p">(</span><span class="n">page_index_selection</span><span class="p">);</span>
+// 1) Inject external pruning (e.g., Page Index):
+builder = builder.with_selection(page_index_selection);
 
-<span class="c1">// 2) Append predicates serially:</span>
-<span class="k">for</span> <span class="n">predicate</span> <span class="k">in</span> <span class="n">predicates</span> <span class="p">{</span>
-    <span class="n">builder</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.with_predicate</span><span class="p">(</span><span class="n">predicate</span><span class="p">);</span> <span class="c1">// internally uses RowSelection::and_then</span>
-<span class="p">}</span>
+// 2) Append predicates serially:
+for predicate in predicates {
+    builder = builder.with_predicate(predicate); // internally uses RowSelection::and_then
+}
 
-<span class="c1">// 3) Build readers; all ArrayReaders share the final selection strategy</span>
-<span class="k">let</span> <span class="n">plan</span> <span class="o">=</span> <span class="n">builder</span><span class="nf">.build</span><span class="p">();</span>
-<span class="k">let</span> <span class="n">reader</span> <span class="o">=</span> <span class="nn">ParquetRecordBatchReader</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">array_reader</span><span class="p">,</span> <span class="n">plan</span><span class="p">);</span>
-</code></pre></div></div>
+// 3) Build readers; all ArrayReaders share the final selection strategy
+let plan = builder.build();
+let reader = ParquetRecordBatchReader::new(array_reader, plan);
+</code></pre>
 <p>我画了一个简单的流程图来说明这个流程，帮助你理解：</p>
 <figure style="text-align: center;">
   <img src="/img/late-materialization/fig2.jpg" alt="Predicate-first pipeline flow" width="100%" class="img-responsive">
@@ -365,16 +365,16 @@
 </ol>
 <p><strong>结果</strong>：<code>[Skip 100, Select 10, Skip 90]</code>。</p>
 <p>下面是代码示例：</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: Skip 100 rows, then take the next 10</span>
-<span class="k">let</span> <span class="n">a</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">50</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
-<span class="k">let</span> <span class="n">b</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span><span class="nf">.into</span><span class="p">();</span>
-<span class="k">let</span> <span class="n">result</span> <span class="o">=</span> <span class="n">a</span><span class="nf">.and_then</span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span>
-<span class="c1">// Result should be: Skip 100, Select 10, Skip 40</span>
-<span class="nd">assert_eq!</span><span class="p">(</span>
-    <span class="nn">Vec</span><span class="p">::</span><span class="o">&lt;</span><span class="n">RowSelector</span><span class="o">&gt;</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="n">result</span><span class="p">),</span>
-    <span class="nd">vec!</span><span class="p">[</span><span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">)]</span>
-<span class="p">);</span>
-</code></pre></div></div>
+<pre><code class="language-rust">// Example: Skip 100 rows, then take the next 10
+let a: RowSelection = vec![RowSelector::skip(100), RowSelector::select(50)].into();
+let b: RowSelection = vec![RowSelector::select(10), RowSelector::skip(40)].into();
+let result = a.and_then(&amp;b);
+// Result should be: Skip 100, Select 10, Skip 40
+assert_eq!(
+    Vec::&lt;RowSelector&gt;::from(result),
+    vec![RowSelector::skip(100), RowSelector::select(10), RowSelector::skip(40)]
+);
+</code></pre>
 <figure style="text-align: center;">
   <img src="/img/late-materialization/fig3.jpg" alt="RowSelection logical AND walkthrough" width="100%" class="img-responsive">
 </figure>
@@ -420,17 +420,17 @@
 </figure>
 <p><strong>修复：</strong></p>
 <p>我们目前的解决方案既保守又稳健：<strong>如果我们检测到页修剪，我们就禁用位掩码并强制回退到 RLE。</strong> 在未来，我们希望扩展位掩码逻辑以使其感知页修剪（见 <a href="https://github.com/apache/arrow-rs/issues/8845" target="_blank" rel="noopener">#arrow-rs/8845</a>）。</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Auto prefers bitmask, but... wait, offset_index says page pruning is on.</span>
-<span class="k">let</span> <span class="n">policy</span> <span class="o">=</span> <span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Auto</span> <span class="p">{</span> <span class="n">threshold</span><span class="p">:</span> <span class="mi">32</span> <span class="p">};</span>
-<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nn">ReadPlanBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span><span class="nf">.with_row_selection_policy</span><span class="p">(</span><span class="n">policy</span><span class="p">);</span>
-<span class="k">let</span> <span class="n">plan_builder</span> <span class="o">=</span> <span class="nf">override_selector_strategy_if_needed</span><span class="p">(</span>
-    <span class="n">plan_builder</span><span class="p">,</span>
-    <span class="o">&amp;</span><span class="n">projection_mask</span><span class="p">,</span>
-    <span class="nf">Some</span><span class="p">(</span><span class="n">offset_index</span><span class="p">),</span> <span class="c1">// page index enables page pruning</span>
-<span class="p">);</span>
-<span class="c1">// ...so we play it safe and switch to Selectors (RLE).</span>
-<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">plan_builder</span><span class="nf">.row_selection_policy</span><span class="p">(),</span> <span class="o">&amp;</span><span class="nn">RowSelectionPolicy</span><span class="p">::</span><span class="n">Selectors</span><span class="p">);</span>
-</code></pre></div></div>
+<pre><code class="language-rust">// Auto prefers bitmask, but... wait, offset_index says page pruning is on.
+let policy = RowSelectionPolicy::Auto { threshold: 32 };
+let plan_builder = ReadPlanBuilder::new(1024).with_row_selection_policy(policy);
+let plan_builder = override_selector_strategy_if_needed(
+    plan_builder,
+    &amp;projection_mask,
+    Some(offset_index), // page index enables page pruning
+);
+// ...so we play it safe and switch to Selectors (RLE).
+assert_eq!(plan_builder.row_selection_policy(), &amp;RowSelectionPolicy::Selectors);
+</code></pre>
 <h3>3.2 页修剪（Page Pruning）</h3>
 <p>终极的性能胜利是<strong>根本不进行 I/O 或解码</strong>。但是在现实世界中（特别是对象存储），发出一百万个微小的读取请求是<strong>性能杀手</strong>。<code>arrow-rs</code> 使用 Parquet <a href="https://parquet.apache.org/docs/file-format/pageindex/" target="_blank" rel="noopener">PageIndex</a> 来精确计算哪些页包含我们实际需要的数据。对于选择性极高的谓词，跳过页可以节省大量的 I/O，即使底层存储客户端合并了相邻的范围请求。另一个主要的胜利是减少了 CPU：<strong>我们完全跳过了对完全修剪页的解压和解码的繁重工作。</strong></p>
 <ul>
@@ -440,20 +440,20 @@
 <strong>实现</strong>：<a href="https://github.com/apache/arrow-rs/blob/ce4edd53203eb4bca96c10ebf3d2118299dad006/parquet/src/arrow/arrow_reader/selection.rs#L204" target="_blank" rel="noopener"><code>RowSelection::scan_ranges</code></a> 使用每个页的元数据（<code>first_row_index</code> 和 <code>compressed_page_size</code>）进行计算，找出哪些范围是完全跳过的，仅返回所需的 <code>(offset, length)</code> 列表。</li>
 </ul>
 <p>下面的代码示例说明了页跳过：</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="c1">// Example: two pages; page0 covers 0..100, page1 covers 100..200</span>
-<span class="k">let</span> <span class="n">locations</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
-    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">0</span> <span class="p">},</span>
-    <span class="n">PageLocation</span> <span class="p">{</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">compressed_page_size</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">first_row_index</span><span class="p">:</span> <span class="mi">100</span> <span class="p">},</span>
-<span class="p">];</span>
-<span class="c1">// RowSelection wants 150..160; page0 is total junk, only read page1</span>
-<span class="k">let</span> <span class="n">sel</span><span class="p">:</span> <span class="n">RowSelection</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span>
-    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">150</span><span class="p">),</span>
-    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">select</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
-    <span class="nn">RowSelector</span><span class="p">::</span><span class="nf">skip</span><span class="p">(</span><span class="mi">40</span><span class="p">),</span>
-<span class="p">]</span><span class="nf">.into</span><span class="p">();</span>
-<span class="k">let</span> <span class="n">ranges</span> <span class="o">=</span> <span class="n">sel</span><span class="nf">.scan_ranges</span><span class="p">(</span><span class="o">&amp;</span><span class="n">locations</span><span class="p">);</span>
-<span class="nd">assert_eq!</span><span class="p">(</span><span class="n">ranges</span><span class="nf">.len</span><span class="p">(),</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// Only request page1</span>
-</code></pre></div></div>
+<pre><code class="language-rust">// Example: two pages; page0 covers 0..100, page1 covers 100..200
+let locations = vec![
+    PageLocation { offset: 0, compressed_page_size: 10, first_row_index: 0 },
+    PageLocation { offset: 10, compressed_page_size: 10, first_row_index: 100 },
+];
+// RowSelection wants 150..160; page0 is total junk, only read page1
+let sel: RowSelection = vec![
+    RowSelector::skip(150),
+    RowSelector::select(10),
+    RowSelector::skip(40),
+].into();
+let ranges = sel.scan_ranges(&amp;locations);
+assert_eq!(ranges.len(), 1); // Only request page1
+</code></pre>
 <p>下图说明了使用 RLE 选择进行的页跳过。第一页既不读取也不解码，因为没有行被选中。第二页被读取并完全解压（例如，zstd），然后只解码所需的行。第三页被完全解压和解码，因为所有行都被选中。</p>
 <figure style="text-align: center;">
   <img src="/img/late-materialization/fig4.jpg" alt="Page-level scan range calculation" width="100%" class="img-responsive">

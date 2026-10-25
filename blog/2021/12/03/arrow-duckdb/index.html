@@ -288,57 +288,57 @@
 <h3>R</h3>
 <p>Both Arrow and DuckDB support dplyr pipelines for people more comfortable with using dplyr for their data analysis. The Arrow package includes two helper functions that allow us to pass data back and forth between Arrow and DuckDB (<code>to_duckdb()</code> and <code>to_arrow()</code>).
 This is especially useful in cases where something is supported in one of Arrow or DuckDB but not the other. For example, if you find a complex dplyr pipeline where the SQL translation doesn't work with DuckDB, use <code>to_arrow()</code> before the pipeline to use the Arrow engine. Or, if you have a function (e.g., windowed aggregates) that aren't yet implemented in Arrow, use <code>to_duckdb()</code> to use the DuckDB engine. All while not paying any cost to (re)serialize the data when you pass it back and forth!</p>
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="R"><span class="n">library</span><span class="p">(</span><span class="n">duckdb</span><span class="p">)</span><span class="w">
-</span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">)</span><span class="w">
-</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">)</span><span class="w">
+<pre><code class="language-R">library(duckdb)
+library(arrow)
+library(dplyr)
 
-</span><span class="c1"># Open dataset using year,month folder partition</span><span class="w">
-</span><span class="n">ds</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">open_dataset</span><span class="p">(</span><span class="s2">"nyc-taxi"</span><span class="p">,</span><span class="w"> </span><span class="n">partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"year"</span><span class="p">,</span><span class="w"> </span><span class="s2">"month"</span><span class="p">))</span><span class="w">
+# Open dataset using year,month folder partition
+ds &lt;- arrow::open_dataset("nyc-taxi", partitioning = c("year", "month"))
 
-</span><span class="n">ds</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="c1"># Look only at 2015 on, where the number of passenger is positive, the trip distance is</span><span class="w">
-  </span><span class="c1"># greater than a quarter mile, and where the fare amount is positive</span><span class="w">
-  </span><span class="n">filter</span><span class="p">(</span><span class="n">year</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">2014</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">passenger_count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">trip_distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0.25</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">fare_amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="c1"># Pass off to DuckDB</span><span class="w">
-  </span><span class="n">to_duckdb</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">group_by</span><span class="p">(</span><span class="n">passenger_count</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">mutate</span><span class="p">(</span><span class="n">tip_pct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tip_amount</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">fare_amount</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">summarise</span><span class="p">(</span><span class="w">
-    </span><span class="n">fare_amount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">fare_amount</span><span class="p">,</span><span class="w"> </span><span class="n">na.rm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">),</span><span class="w">
-    </span><span class="n">tip_amount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">tip_amount</span><span class="p">,</span><span class="w"> </span><span class="n">na.rm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">),</span><span class="w">
-    </span><span class="n">tip_pct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">tip_pct</span><span class="p">,</span><span class="w"> </span><span class="n">na.rm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
-  </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">arrange</span><span class="p">(</span><span class="n">passenger_count</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">collect</span><span class="p">()</span><span class="w">
-</span></code></pre></div></div>
+ds %&gt;%
+  # Look only at 2015 on, where the number of passenger is positive, the trip distance is
+  # greater than a quarter mile, and where the fare amount is positive
+  filter(year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0) %&gt;%
+  # Pass off to DuckDB
+  to_duckdb() %&gt;%
+  group_by(passenger_count) %&gt;%
+  mutate(tip_pct = tip_amount / fare_amount) %&gt;%
+  summarise(
+    fare_amount = mean(fare_amount, na.rm = TRUE),
+    tip_amount = mean(tip_amount, na.rm = TRUE),
+    tip_pct = mean(tip_pct, na.rm = TRUE)
+  ) %&gt;%
+  arrange(passenger_count) %&gt;%
+  collect()
+</code></pre>
 <h3>Python</h3>
 <p>The workflow in Python is as simple as it is in R. In this example we use DuckDB's Relational API.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">duckdb</span>
-<span class="kn">import</span> <span class="n">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
-<span class="kn">import</span> <span class="n">pyarrow.dataset</span> <span class="k">as</span> <span class="n">ds</span>
+<pre><code class="language-python">import duckdb
+import pyarrow as pa
+import pyarrow.dataset as ds
 
-<span class="c1"># Open dataset using year,month folder partition
-</span><span class="n">nyc</span> <span class="o">=</span> <span class="n">ds</span><span class="p">.</span><span class="nf">dataset</span><span class="p">(</span><span class="sh">'</span><span class="s">nyc-taxi/</span><span class="sh">'</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="p">[</span><span class="sh">"</span><span class="s">year</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">month</span><span class="sh">"</span><span class="p">])</span>
+# Open dataset using year,month folder partition
+nyc = ds.dataset('nyc-taxi/', partitioning=["year", "month"])
 
-<span class="c1"># We transform the nyc dataset into a DuckDB relation
-</span><span class="n">nyc</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="nf">arrow</span><span class="p">(</span><span class="n">nyc</span><span class="p">)</span>
+# We transform the nyc dataset into a DuckDB relation
+nyc = duckdb.arrow(nyc)
 
-<span class="c1"># Run same query again
-</span><span class="n">nyc</span><span class="p">.</span><span class="nf">filter</span><span class="p">(</span><span class="sh">"</span><span class="s">year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0</span><span class="sh">"</span><span class="p">)</span>
-    <span class="p">.</span><span class="nf">aggregate</span><span class="p">(</span><span class="sh">"</span><span class="s">SELECT AVG(fare_amount), AVG(tip_amount), AVG(tip_amount / fare_amount) as tip_pct</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">passenger_count</span><span class="sh">"</span><span class="p">).</span><span class="nf">arrow</span><span class="p">()</span>
-</code></pre></div></div>
+# Run same query again
+nyc.filter("year &gt; 2014 &amp; passenger_count &gt; 0 &amp; trip_distance &gt; 0.25 &amp; fare_amount &gt; 0")
+    .aggregate("SELECT AVG(fare_amount), AVG(tip_amount), AVG(tip_amount / fare_amount) as tip_pct","passenger_count").arrow()
+</code></pre>
 <h2>DuckDB and Arrow: The Basics</h2>
 <p>In this section, we will look at some basic examples of the code needed to read and output Arrow tables in both Python and R.</p>
 <h4>Setup</h4>
 <p>First we need to install DuckDB and Arrow. The installation process for both libraries in Python and R is shown below.</p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="bash"><span class="c"># Python Install</span>
-pip <span class="nb">install </span>duckdb
-pip <span class="nb">install </span>pyarrow
-</code></pre></div></div>
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="R"><span class="c1"># R Install</span><span class="w">
-</span><span class="n">install.packages</span><span class="p">(</span><span class="s2">"duckdb"</span><span class="p">)</span><span class="w">
-</span><span class="n">install.packages</span><span class="p">(</span><span class="s2">"arrow"</span><span class="p">)</span><span class="w">
-</span></code></pre></div></div>
+<pre><code class="language-bash"># Python Install
+pip install duckdb
+pip install pyarrow
+</code></pre>
+<pre><code class="language-R"># R Install
+install.packages("duckdb")
+install.packages("arrow")
+</code></pre>
 <p>To execute the sample-examples in this section, we need to download the following custom parquet files:</p>
 <ul>
 <li><a href="https://github.com/duckdb/duckdb-web/blob/master/_posts/data/integers.parquet?raw=true" target="_blank" rel="noopener">https://github.com/duckdb/duckdb-web/blob/master/_posts/data/integers.parquet?raw=true</a></li>
@@ -349,94 +349,94 @@ pip <span class="nb">install </span>pyarrow
 <ol>
 <li>
 <p>Through the Relational API</p>
-<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="py"><span class="c1"># Reads Parquet File to an Arrow Table
-</span><span class="n">arrow_table</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="nf">read_table</span><span class="p">(</span><span class="sh">'</span><span class="s">integers.parquet</span><span class="sh">'</span><span class="p">)</span>
+<pre><code class="language-py"># Reads Parquet File to an Arrow Table
+arrow_table = pq.read_table('integers.parquet')
 
-<span class="c1"># Transforms Arrow Table -&gt; DuckDB Relation
-</span><span class="n">rel_from_arrow</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="nf">arrow</span><span class="p">(</span><span class="n">arrow_table</span><span class="p">)</span>
+# Transforms Arrow Table -&gt; DuckDB Relation
+rel_from_arrow = duckdb.arrow(arrow_table)
 
-<span class="c1"># we can run a SQL query on this and print the result
-</span><span class="nf">print</span><span class="p">(</span><span class="n">rel_from_arrow</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="sh">'</span><span class="s">arrow_table</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">SELECT SUM(data) FROM arrow_table WHERE data &gt; 50</span><span class="sh">'</span><span class="p">).</span><span class="nf">fetchone</span><span class="p">())</span>
+# we can run a SQL query on this and print the result
+print(rel_from_arrow.query('arrow_table', 'SELECT SUM(data) FROM arrow_table WHERE data &gt; 50').fetchone())
 
-<span class="c1"># Transforms DuckDB Relation -&gt; Arrow Table
-</span><span class="n">arrow_table_from_duckdb</span> <span class="o">=</span> <span class="n">rel_from_arrow</span><span class="p">.</span><span class="nf">arrow</span><span class="p">()</span>
-</code></pre></div></div>
+# Transforms DuckDB Relation -&gt; Arrow Table
+arrow_table_from_duckdb = rel_from_arrow.arrow()
+</code></pre>
 </li>
 <li>
 <p>By using replacement scans and querying the object directly with SQL:</p>
-<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="py"><span class="c1"># Reads Parquet File to an Arrow Table
-</span><span class="n">arrow_table</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="nf">read_table</span><span class="p">(</span><span class="sh">'</span><span class="s">integers.parquet</span><span class="sh">'</span><span class="p">)</span>
+<pre><code class="language-py"># Reads Parquet File to an Arrow Table
+arrow_table = pq.read_table('integers.parquet')
 
-<span class="c1"># Gets Database Connection
-</span><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="nf">connect</span><span class="p">()</span>
+# Gets Database Connection
+con = duckdb.connect()
 
-<span class="c1"># we can run a SQL query on this and print the result
-</span><span class="nf">print</span><span class="p">(</span><span class="n">con</span><span class="p">.</span><span class="nf">execute</span><span class="p">(</span><span class="sh">'</span><span class="s">SELECT SUM(data) FROM arrow_table WHERE data &gt; 50</span><span class="sh">'</span><span class="p">).</span><span class="nf">fetchone</span><span class="p">())</span>
+# we can run a SQL query on this and print the result
+print(con.execute('SELECT SUM(data) FROM arrow_table WHERE data &gt; 50').fetchone())
 
-<span class="c1"># Transforms Query Result from DuckDB to Arrow Table
+# Transforms Query Result from DuckDB to Arrow Table
 # We can directly read the arrow object through DuckDB's replacement scans.
-</span><span class="n">con</span><span class="p">.</span><span class="nf">execute</span><span class="p">(</span><span class="sh">"</span><span class="s">SELECT * FROM arrow_table</span><span class="sh">"</span><span class="p">).</span><span class="nf">fetch_arrow_table</span><span class="p">()</span>
-</code></pre></div></div>
+con.execute("SELECT * FROM arrow_table").fetch_arrow_table()
+</code></pre>
 </li>
 </ol>
 <p>It is possible to transform both DuckDB Relations and Query Results back to Arrow.</p>
 <h4>R</h4>
 <p>In R, you can interact with Arrow data in DuckDB by registering the table as a view (an alternative is to use dplyr as shown above).</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">library</span><span class="p">(</span><span class="n">duckdb</span><span class="p">)</span><span class="w">
-</span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">)</span><span class="w">
-</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">)</span><span class="w">
+<pre><code class="language-r">library(duckdb)
+library(arrow)
+library(dplyr)
 
-</span><span class="c1"># Reads Parquet File to an Arrow Table</span><span class="w">
-</span><span class="n">arrow_table</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">arrow</span><span class="o">::</span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">"integers.parquet"</span><span class="p">,</span><span class="w"> </span><span class="n">as_data_frame</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+# Reads Parquet File to an Arrow Table
+arrow_table &lt;- arrow::read_parquet("integers.parquet", as_data_frame = FALSE)
 
-</span><span class="c1"># Gets Database Connection</span><span class="w">
-</span><span class="n">con</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">dbConnect</span><span class="p">(</span><span class="n">duckdb</span><span class="o">::</span><span class="n">duckdb</span><span class="p">())</span><span class="w">
+# Gets Database Connection
+con &lt;- dbConnect(duckdb::duckdb())
 
-</span><span class="c1"># Registers arrow table as a DuckDB view</span><span class="w">
-</span><span class="n">arrow</span><span class="o">::</span><span class="n">to_duckdb</span><span class="p">(</span><span class="n">arrow_table</span><span class="p">,</span><span class="w"> </span><span class="n">table_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"arrow_table"</span><span class="p">,</span><span class="w"> </span><span class="n">con</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">con</span><span class="p">)</span><span class="w">
+# Registers arrow table as a DuckDB view
+arrow::to_duckdb(arrow_table, table_name = "arrow_table", con = con)
 
-</span><span class="c1"># we can run a SQL query on this and print the result</span><span class="w">
-</span><span class="n">print</span><span class="p">(</span><span class="n">dbGetQuery</span><span class="p">(</span><span class="n">con</span><span class="p">,</span><span class="w"> </span><span class="s2">"SELECT SUM(data) FROM arrow_table WHERE data &gt; 50"</span><span class="p">))</span><span class="w">
+# we can run a SQL query on this and print the result
+print(dbGetQuery(con, "SELECT SUM(data) FROM arrow_table WHERE data &gt; 50"))
 
-</span><span class="c1"># Transforms Query Result from DuckDB to Arrow Table</span><span class="w">
-</span><span class="n">result</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">dbSendQuery</span><span class="p">(</span><span class="n">con</span><span class="p">,</span><span class="w"> </span><span class="s2">"SELECT * FROM arrow_table"</span><span class="p">)</span><span class="w">
-</span></code></pre></div></div>
+# Transforms Query Result from DuckDB to Arrow Table
+result &lt;- dbSendQuery(con, "SELECT * FROM arrow_table")
+</code></pre>
 <h3>Streaming Data from/to Arrow</h3>
 <p>In the previous section, we depicted how to interact with Arrow tables. However, Arrow also allows users to interact with the data in a streaming fashion. Either consuming it (e.g., from an Arrow Dataset) or producing it (e.g., returning a RecordBatchReader). And of course, DuckDB is able to consume Datasets and produce RecordBatchReaders. This example uses the NYC Taxi Dataset, stored in Parquet files partitioned by year and month, which we can download through the Arrow R package:</p>
-<div class="language-R highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="R"><span class="n">arrow</span><span class="o">::</span><span class="n">copy_files</span><span class="p">(</span><span class="s2">"s3://ursa-labs-taxi-data"</span><span class="p">,</span><span class="w"> </span><span class="s2">"nyc-taxi"</span><span class="p">)</span><span class="w">
-</span></code></pre></div></div>
+<pre><code class="language-R">arrow::copy_files("s3://ursa-labs-taxi-data", "nyc-taxi")
+</code></pre>
 <h4>Python</h4>
-<div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="py"><span class="c1"># Reads dataset partitioning it in year/month folder
-</span><span class="n">nyc_dataset</span> <span class="o">=</span> <span class="n">ds</span><span class="p">.</span><span class="nf">dataset</span><span class="p">(</span><span class="sh">'</span><span class="s">nyc-taxi/</span><span class="sh">'</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="p">[</span><span class="sh">"</span><span class="s">year</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">month</span><span class="sh">"</span><span class="p">])</span>
+<pre><code class="language-py"># Reads dataset partitioning it in year/month folder
+nyc_dataset = ds.dataset('nyc-taxi/', partitioning=["year", "month"])
 
-<span class="c1"># Gets Database Connection
-</span><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="nf">connect</span><span class="p">()</span>
+# Gets Database Connection
+con = duckdb.connect()
 
-<span class="n">query</span> <span class="o">=</span> <span class="n">con</span><span class="p">.</span><span class="nf">execute</span><span class="p">(</span><span class="sh">"</span><span class="s">SELECT * FROM nyc_dataset</span><span class="sh">"</span><span class="p">)</span>
-<span class="c1"># DuckDB's queries can now produce a Record Batch Reader
-</span><span class="n">record_batch_reader</span> <span class="o">=</span> <span class="n">query</span><span class="p">.</span><span class="nf">fetch_record_batch</span><span class="p">()</span>
-<span class="c1"># Which means we can stream the whole query per batch.
+query = con.execute("SELECT * FROM nyc_dataset")
+# DuckDB's queries can now produce a Record Batch Reader
+record_batch_reader = query.fetch_record_batch()
+# Which means we can stream the whole query per batch.
 # This retrieves the first batch
-</span><span class="n">chunk</span> <span class="o">=</span> <span class="n">record_batch_reader</span><span class="p">.</span><span class="nf">read_next_batch</span><span class="p">()</span>
-</code></pre></div></div>
+chunk = record_batch_reader.read_next_batch()
+</code></pre>
 <h4>R</h4>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="c1"># Reads dataset partitioning it in year/month folder</span><span class="w">
-</span><span class="n">nyc_dataset</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">open_dataset</span><span class="p">(</span><span class="s2">"nyc-taxi/"</span><span class="p">,</span><span class="w"> </span><span class="n">partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"year"</span><span class="p">,</span><span class="w"> </span><span class="s2">"month"</span><span class="p">))</span><span class="w">
+<pre><code class="language-r"># Reads dataset partitioning it in year/month folder
+nyc_dataset = open_dataset("nyc-taxi/", partitioning = c("year", "month"))
 
-</span><span class="c1"># Gets Database Connection</span><span class="w">
-</span><span class="n">con</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">dbConnect</span><span class="p">(</span><span class="n">duckdb</span><span class="o">::</span><span class="n">duckdb</span><span class="p">())</span><span class="w">
+# Gets Database Connection
+con &lt;- dbConnect(duckdb::duckdb())
 
-</span><span class="c1"># We can use the same function as before to register our arrow dataset</span><span class="w">
-</span><span class="n">duckdb</span><span class="o">::</span><span class="n">duckdb_register_arrow</span><span class="p">(</span><span class="n">con</span><span class="p">,</span><span class="w"> </span><span class="s2">"nyc"</span><span class="p">,</span><span class="w"> </span><span class="n">nyc_dataset</span><span class="p">)</span><span class="w">
+# We can use the same function as before to register our arrow dataset
+duckdb::duckdb_register_arrow(con, "nyc", nyc_dataset)
 
-</span><span class="n">res</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">dbSendQuery</span><span class="p">(</span><span class="n">con</span><span class="p">,</span><span class="w"> </span><span class="s2">"SELECT * FROM nyc"</span><span class="p">,</span><span class="w"> </span><span class="n">arrow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
-</span><span class="c1"># DuckDB's queries can now produce a Record Batch Reader</span><span class="w">
-</span><span class="n">record_batch_reader</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">duckdb</span><span class="o">::</span><span class="n">duckdb_fetch_record_batch</span><span class="p">(</span><span class="n">res</span><span class="p">)</span><span class="w">
+res &lt;- dbSendQuery(con, "SELECT * FROM nyc", arrow = TRUE)
+# DuckDB's queries can now produce a Record Batch Reader
+record_batch_reader &lt;- duckdb::duckdb_fetch_record_batch(res)
 
-</span><span class="c1"># Which means we can stream the whole query per batch.</span><span class="w">
-</span><span class="c1"># This retrieves the first batch</span><span class="w">
-</span><span class="n">cur_batch</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">record_batch_reader</span><span class="o">$</span><span class="n">read_next_batch</span><span class="p">()</span><span class="w">
-</span></code></pre></div></div>
+# Which means we can stream the whole query per batch.
+# This retrieves the first batch
+cur_batch &lt;- record_batch_reader$read_next_batch()
+</code></pre>
 <p>The preceding R code shows in low-level detail how the data is streaming. We provide the helper <code>to_arrow()</code> in the Arrow package which is a wrapper around this that makes it easy to incorporate this streaming into a dplyr pipeline. <sup class="footnote-ref"><a href="#fn1" id="fnref1">1</a></sup></p>
 <h2>Benchmark Comparison</h2>
 <p>Here we demonstrate in a simple benchmark the performance difference between querying Arrow datasets with DuckDB and querying Arrow datasets with Pandas.
@@ -445,29 +445,29 @@ For both the Projection and Filter pushdown comparison, we will use Arrow tables
 <p>For the comparison with Pandas, note that DuckDB runs in parallel, while pandas only support single-threaded execution. Besides that, one should note that we are comparing automatic optimizations. DuckDB's query optimizer can automatically push down filters and projections. This automatic optimization is not supported in pandas, but it is possible for users to manually perform some of these predicate and filter pushdowns by manually specifying them them in the <code>read_parquet()</code> call.</p>
 <h3>Projection Pushdown</h3>
 <p>In this example we run a simple aggregation on two columns of our lineitem table.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="c1"># DuckDB
-</span><span class="n">lineitem</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="nf">read_table</span><span class="p">(</span><span class="sh">'</span><span class="s">lineitemsf1.snappy.parquet</span><span class="sh">'</span><span class="p">)</span>
-<span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="nf">connect</span><span class="p">()</span>
+<pre><code class="language-python"># DuckDB
+lineitem = pq.read_table('lineitemsf1.snappy.parquet')
+con = duckdb.connect()
 
-<span class="c1"># Transforms Query Result from DuckDB to Arrow Table
-</span><span class="n">con</span><span class="p">.</span><span class="nf">execute</span><span class="p">(</span><span class="sh">"""</span><span class="s">SELECT sum(l_extendedprice * l_discount) AS revenue
+# Transforms Query Result from DuckDB to Arrow Table
+con.execute("""SELECT sum(l_extendedprice * l_discount) AS revenue
                 FROM
-                lineitem;</span><span class="sh">"""</span><span class="p">).</span><span class="nf">fetch_arrow_table</span><span class="p">()</span>
+                lineitem;""").fetch_arrow_table()
 
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="c1"># Pandas
-</span><span class="n">arrow_table</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="nf">read_table</span><span class="p">(</span><span class="sh">'</span><span class="s">lineitemsf1.snappy.parquet</span><span class="sh">'</span><span class="p">)</span>
+</code></pre>
+<pre><code class="language-python"># Pandas
+arrow_table = pq.read_table('lineitemsf1.snappy.parquet')
 
-<span class="c1"># Converts an Arrow table to a Dataframe
-</span><span class="n">df</span> <span class="o">=</span> <span class="n">arrow_table</span><span class="p">.</span><span class="nf">to_pandas</span><span class="p">()</span>
+# Converts an Arrow table to a Dataframe
+df = arrow_table.to_pandas()
 
-<span class="c1"># Runs aggregation
-</span><span class="n">res</span> <span class="o">=</span>  <span class="n">pd</span><span class="p">.</span><span class="nc">DataFrame</span><span class="p">({</span><span class="sh">'</span><span class="s">sum</span><span class="sh">'</span><span class="p">:</span> <span class="p">[(</span><span class="n">df</span><span class="p">.</span><span class="n">l_extendedprice</span> <span class="o">*</span> <span class="n">df</span><span class="p">.</span><span class="n">l_discount</span><span class="p">).</span><span class="nf">sum</span><span class="p">()]})</span>
+# Runs aggregation
+res =  pd.DataFrame({'sum': [(df.l_extendedprice * df.l_discount).sum()]})
 
-<span class="c1"># Creates an Arrow Table from a Dataframe
-</span><span class="n">new_table</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="n">Table</span><span class="p">.</span><span class="nf">from_pandas</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+# Creates an Arrow Table from a Dataframe
+new_table = pa.Table.from_pandas(res)
 
-</code></pre></div></div>
+</code></pre>
 <table>
 <thead>
 <tr>
@@ -489,38 +489,38 @@ For both the Projection and Filter pushdown comparison, we will use Arrow tables
 <p>The lineitem table is composed of 16 columns, however, to execute this query only two columns <code>l_extendedprice</code> and  *  <code>l_discount</code> are necessary. Since DuckDB can push down the projection of these columns, it is capable of executing this query about one order of magnitude faster than Pandas.</p>
 <h3>Filter Pushdown</h3>
 <p>For our filter pushdown we repeat the same aggregation used in the previous section, but add filters on 4 more columns.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="c1"># DuckDB
-</span><span class="n">lineitem</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="nf">read_table</span><span class="p">(</span><span class="sh">'</span><span class="s">lineitemsf1.snappy.parquet</span><span class="sh">'</span><span class="p">)</span>
+<pre><code class="language-python"># DuckDB
+lineitem = pq.read_table('lineitemsf1.snappy.parquet')
 
-<span class="c1"># Get database connection
-</span><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="nf">connect</span><span class="p">()</span>
+# Get database connection
+con = duckdb.connect()
 
-<span class="c1"># Transforms Query Result from DuckDB to Arrow Table
-</span><span class="n">con</span><span class="p">.</span><span class="nf">execute</span><span class="p">(</span><span class="sh">"""</span><span class="s">SELECT sum(l_extendedprice * l_discount) AS revenue
+# Transforms Query Result from DuckDB to Arrow Table
+con.execute("""SELECT sum(l_extendedprice * l_discount) AS revenue
         FROM
             lineitem
         WHERE
-            l_shipdate &gt;= CAST(</span><span class="sh">'</span><span class="s">1994-01-01</span><span class="sh">'</span><span class="s"> AS date)
-            AND l_shipdate &lt; CAST(</span><span class="sh">'</span><span class="s">1995-01-01</span><span class="sh">'</span><span class="s"> AS date)
+            l_shipdate &gt;= CAST('1994-01-01' AS date)
+            AND l_shipdate &lt; CAST('1995-01-01' AS date)
             AND l_discount BETWEEN 0.05
             AND 0.07
-            AND l_quantity &lt; 24; </span><span class="sh">"""</span><span class="p">).</span><span class="nf">fetch_arrow_table</span><span class="p">()</span>
+            AND l_quantity &lt; 24; """).fetch_arrow_table()
 
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="c1"># Pandas
-</span><span class="n">arrow_table</span> <span class="o">=</span> <span class="n">pq</span><span class="p">.</span><span class="nf">read_table</span><span class="p">(</span><span class="sh">'</span><span class="s">lineitemsf1.snappy.parquet</span><span class="sh">'</span><span class="p">)</span>
+</code></pre>
+<pre><code class="language-python"># Pandas
+arrow_table = pq.read_table('lineitemsf1.snappy.parquet')
 
-<span class="n">df</span> <span class="o">=</span> <span class="n">arrow_table</span><span class="p">.</span><span class="nf">to_pandas</span><span class="p">()</span>
-<span class="n">filtered_df</span> <span class="o">=</span> <span class="n">lineitem</span><span class="p">[</span>
-        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_shipdate</span> <span class="o">&gt;=</span> <span class="sh">"</span><span class="s">1994-01-01</span><span class="sh">"</span><span class="p">)</span> <span class="o">&amp;</span>
-        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_shipdate</span> <span class="o">&lt;</span> <span class="sh">"</span><span class="s">1995-01-01</span><span class="sh">"</span><span class="p">)</span> <span class="o">&amp;</span>
-        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_discount</span> <span class="o">&gt;=</span> <span class="mf">0.05</span><span class="p">)</span> <span class="o">&amp;</span>
-        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_discount</span> <span class="o">&lt;=</span> <span class="mf">0.07</span><span class="p">)</span> <span class="o">&amp;</span>
-        <span class="p">(</span><span class="n">lineitem</span><span class="p">.</span><span class="n">l_quantity</span> <span class="o">&lt;</span> <span class="mi">24</span><span class="p">)]</span>
+df = arrow_table.to_pandas()
+filtered_df = lineitem[
+        (lineitem.l_shipdate &gt;= "1994-01-01") &amp;
+        (lineitem.l_shipdate &lt; "1995-01-01") &amp;
+        (lineitem.l_discount &gt;= 0.05) &amp;
+        (lineitem.l_discount &lt;= 0.07) &amp;
+        (lineitem.l_quantity &lt; 24)]
 
-<span class="n">res</span> <span class="o">=</span>  <span class="n">pd</span><span class="p">.</span><span class="nc">DataFrame</span><span class="p">({</span><span class="sh">'</span><span class="s">sum</span><span class="sh">'</span><span class="p">:</span> <span class="p">[(</span><span class="n">filtered_df</span><span class="p">.</span><span class="n">l_extendedprice</span> <span class="o">*</span> <span class="n">filtered_df</span><span class="p">.</span><span class="n">l_discount</span><span class="p">).</span><span class="nf">sum</span><span class="p">()]})</span>
-<span class="n">new_table</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="n">Table</span><span class="p">.</span><span class="nf">from_pandas</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
-</code></pre></div></div>
+res =  pd.DataFrame({'sum': [(filtered_df.l_extendedprice * filtered_df.l_discount).sum()]})
+new_table = pa.Table.from_pandas(res)
+</code></pre>
 <table>
 <thead>
 <tr>
@@ -542,53 +542,53 @@ For both the Projection and Filter pushdown comparison, we will use Arrow tables
 <p>The difference now between DuckDB and Pandas is more drastic, being two orders of magnitude faster than Pandas. Again, since both the filter and projection are pushed down to Arrow, DuckDB reads less data than Pandas, which can't automatically perform this optimization.</p>
 <h3>Streaming</h3>
 <p>As demonstrated before, DuckDB is capable of consuming and producing Arrow data in a streaming fashion. In this section we run a simple benchmark, to showcase the benefits in speed and memory usage when comparing it to full materialization and Pandas. This example uses the full NYC taxi dataset which you can download</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="c1"># DuckDB
+<pre><code class="language-python"># DuckDB
 # Open dataset using year,month folder partition
-</span><span class="n">nyc</span> <span class="o">=</span> <span class="n">ds</span><span class="p">.</span><span class="nf">dataset</span><span class="p">(</span><span class="sh">'</span><span class="s">nyc-taxi/</span><span class="sh">'</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="p">[</span><span class="sh">"</span><span class="s">year</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">month</span><span class="sh">"</span><span class="p">])</span>
+nyc = ds.dataset('nyc-taxi/', partitioning=["year", "month"])
 
-<span class="c1"># Get database connection
-</span><span class="n">con</span> <span class="o">=</span> <span class="n">duckdb</span><span class="p">.</span><span class="nf">connect</span><span class="p">()</span>
+# Get database connection
+con = duckdb.connect()
 
-<span class="c1"># Run query that selects part of the data
-</span><span class="n">query</span> <span class="o">=</span> <span class="n">con</span><span class="p">.</span><span class="nf">execute</span><span class="p">(</span><span class="sh">"</span><span class="s">SELECT total_amount, passenger_count,year FROM nyc where total_amount &gt; 100 and year &gt; 2014</span><span class="sh">"</span><span class="p">)</span>
+# Run query that selects part of the data
+query = con.execute("SELECT total_amount, passenger_count,year FROM nyc where total_amount &gt; 100 and year &gt; 2014")
 
-<span class="c1"># Create Record Batch Reader from Query Result.
+# Create Record Batch Reader from Query Result.
 # "fetch_record_batch()" also accepts an extra parameter related to the desired produced chunk size.
-</span><span class="n">record_batch_reader</span> <span class="o">=</span> <span class="n">query</span><span class="p">.</span><span class="nf">fetch_record_batch</span><span class="p">()</span>
+record_batch_reader = query.fetch_record_batch()
 
-<span class="c1"># Retrieve all batch chunks
-</span><span class="n">chunk</span> <span class="o">=</span> <span class="n">record_batch_reader</span><span class="p">.</span><span class="nf">read_next_batch</span><span class="p">()</span>
-<span class="k">while</span> <span class="nf">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-    <span class="n">chunk</span> <span class="o">=</span> <span class="n">record_batch_reader</span><span class="p">.</span><span class="nf">read_next_batch</span><span class="p">()</span>
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="c1"># Pandas
+# Retrieve all batch chunks
+chunk = record_batch_reader.read_next_batch()
+while len(chunk) &gt; 0:
+    chunk = record_batch_reader.read_next_batch()
+</code></pre>
+<pre><code class="language-python"># Pandas
 # We must exclude one of the columns of the NYC dataset due to an unimplemented cast in Arrow.
-</span><span class="n">working_columns</span> <span class="o">=</span> <span class="p">[</span><span class="sh">"</span><span class="s">vendor_id</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">pickup_at</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">dropoff_at</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">passenger_count</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">trip_distance</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">pickup_longitude</span><span class="sh">"</span><span class="p">,</span>
-    <span class="sh">"</span><span class="s">pickup_latitude</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">store_and_fwd_flag</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">dropoff_longitude</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">dropoff_latitude</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">payment_type</span><span class="sh">"</span><span class="p">,</span>
-    <span class="sh">"</span><span class="s">fare_amount</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">extra</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">mta_tax</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">tip_amount</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">tolls_amount</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">total_amount</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">year</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">month</span><span class="sh">"</span><span class="p">]</span>
+working_columns = ["vendor_id","pickup_at","dropoff_at","passenger_count","trip_distance","pickup_longitude",
+    "pickup_latitude","store_and_fwd_flag","dropoff_longitude","dropoff_latitude","payment_type",
+    "fare_amount","extra","mta_tax","tip_amount","tolls_amount","total_amount","year", "month"]
 
-<span class="c1"># Open dataset using year,month folder partition
-</span><span class="n">nyc_dataset</span> <span class="o">=</span> <span class="n">ds</span><span class="p">.</span><span class="nf">dataset</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="p">[</span><span class="sh">"</span><span class="s">year</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">month</span><span class="sh">"</span><span class="p">])</span>
-<span class="c1"># Generate a scanner to skip problematic column
-</span><span class="n">dataset_scanner</span> <span class="o">=</span> <span class="n">nyc_dataset</span><span class="p">.</span><span class="nf">scanner</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">working_columns</span><span class="p">)</span>
+# Open dataset using year,month folder partition
+nyc_dataset = ds.dataset(dir, partitioning=["year", "month"])
+# Generate a scanner to skip problematic column
+dataset_scanner = nyc_dataset.scanner(columns=working_columns)
 
-<span class="c1"># Materialize dataset to an Arrow Table
-</span><span class="n">nyc_table</span> <span class="o">=</span> <span class="n">dataset_scanner</span><span class="p">.</span><span class="nf">to_table</span><span class="p">()</span>
+# Materialize dataset to an Arrow Table
+nyc_table = dataset_scanner.to_table()
 
-<span class="c1"># Generate Dataframe from Arow Table
-</span><span class="n">nyc_df</span> <span class="o">=</span> <span class="n">nyc_table</span><span class="p">.</span><span class="nf">to_pandas</span><span class="p">()</span>
+# Generate Dataframe from Arow Table
+nyc_df = nyc_table.to_pandas()
 
-<span class="c1"># Apply Filter
-</span><span class="n">filtered_df</span> <span class="o">=</span> <span class="n">nyc_df</span><span class="p">[</span>
-    <span class="p">(</span><span class="n">nyc_df</span><span class="p">.</span><span class="n">total_amount</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span> <span class="o">&amp;</span>
-    <span class="p">(</span><span class="n">nyc_df</span><span class="p">.</span><span class="n">year</span> <span class="o">&gt;</span><span class="mi">2014</span><span class="p">)]</span>
+# Apply Filter
+filtered_df = nyc_df[
+    (nyc_df.total_amount &gt; 100) &amp;
+    (nyc_df.year &gt;2014)]
 
-<span class="c1"># Apply Projection
-</span><span class="n">res</span> <span class="o">=</span> <span class="n">filtered_df</span><span class="p">[[</span><span class="sh">"</span><span class="s">total_amount</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">passenger_count</span><span class="sh">"</span><span class="p">,</span><span class="sh">"</span><span class="s">year</span><span class="sh">"</span><span class="p">]]</span>
+# Apply Projection
+res = filtered_df[["total_amount", "passenger_count","year"]]
 
-<span class="c1"># Transform Result back to an Arrow Table
-</span><span class="n">new_table</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="n">Table</span><span class="p">.</span><span class="nf">from_pandas</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
-</code></pre></div></div>
+# Transform Result back to an Arrow Table
+new_table = pa.Table.from_pandas(res)
+</code></pre>
 <table>
 <thead>
 <tr>

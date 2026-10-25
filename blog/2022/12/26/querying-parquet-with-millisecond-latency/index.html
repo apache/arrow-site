@@ -293,7 +293,7 @@
 <li>Each <code>RowGroup</code> contains a single <code>ColumnChunk</code> for each column in the schema</li>
 </ul>
 <p>For example, the following diagram illustrates a Parquet file with three columns "A", "B" and "C" stored in two <code>RowGroup</code>s for a total of 6 <code>ColumnChunk</code>s.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+<pre><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃┏━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━┓          ┃
 ┃┃┌ ─ ─ ─ ─ ─ ─ ┌ ─ ─ ─ ─ ─ ─ ┐┌ ─ ─ ─ ─ ─ ─  ┃          ┃
 ┃┃             │                            │ ┃          ┃
@@ -321,7 +321,7 @@
 ┃┃ (Column "A")   (Column "B")  (Column "C")  ┃          ┃
 ┃┗━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━┛          ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-</code></pre></div></div>
+</code></pre>
 <p>The logical values for a <code>ColumnChunk</code> are written using one of the many <a href="https://parquet.apache.org/docs/file-format/data-pages/encodings/" target="_blank" rel="noopener">available encodings</a> into one or more Data Pages appended sequentially in the file. At the end of a Parquet file is a footer, which contains important metadata, such as:</p>
 <ul>
 <li>The file’s schema information such as column names and types</li>
@@ -336,7 +336,7 @@
 </li>
 </ul>
 <p>For example, the logical structure of 2 Row Groups and 6 <code>ColumnChunk</code>s in the previous diagram might be stored in a Parquet file as shown in the following diagram (not to scale). The pages for the <code>ColumnChunk</code>s come first, followed by the footer. The data, the effectiveness of the encoding scheme, and the settings of the Parquet encoder determine the number of and size of the pages needed for each <code>ColumnChunk</code>. In this case, <code>ColumnChunk</code> 1 required 2 pages while <code>ColumnChunk</code> 6 required only 1 page. In addition to other information, the footer contains the locations of each Data Page and the types of the columns.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+<pre><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐  ┃
 ┃ Data Page for ColumnChunk 1 ("A")             ◀─┃─ ─ ─│
 ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘  ┃
@@ -402,7 +402,7 @@
 ┃┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃ ┃
 ┃┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-</code></pre></div></div>
+</code></pre>
 <p>There are many important criteria to consider when creating Parquet files such as how to optimally order/cluster data and structure it into <code>RowGroup</code>s and Data Pages. Such “physical design” considerations are complex, worthy of their own series of articles, and not addressed in this blog post. Instead, we focus on how to use the available structure to make queries very fast.</p>
 <h1>Optimizing queries</h1>
 <p>In any query processing system, the following techniques generally improve performance:</p>
@@ -435,7 +435,7 @@
 <strong>Increases query latency</strong>: Subsequent processing steps (like filtering or aggregation) can only begin once the entire <code>RowGroup</code> (or <code>ColumnChunk</code>) is decoded.</li>
 </ul>
 <p>As such, the best Parquet readers support “streaming” data out in by producing configurable sized batches of rows on demand. The batch size must be large enough to amortize decode overhead, but small enough for efficient memory usage and to allow downstream processing to begin concurrently while the subsequent batch is decoded.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+<pre><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃
 ┃ Data Page for ColumnChunk 1 │◀┃─                   ┌── ─── ─── ─── ─── ┐
 ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  ┃ │   ┏━━━━━━━┓        ┌ ─ ┐ ┌ ─ ┐ ┌ ─ ┐ │
@@ -459,7 +459,7 @@
       Parquet file                                    Smaller in memory
                                                          batches for
                                                          processing
-</code></pre></div></div>
+</code></pre>
 <p>While streaming is not a complicated feature to explain, the stateful nature of decoding, especially across multiple columns and <a href="https://arrow.apache.org/blog/2022/10/05/arrow-parquet-encoding-part-1/">arbitrarily nested data</a>, where the relationship between rows and values is not fixed, requires <a href="https://github.com/apache/arrow-rs/blob/b7af85cb8dfe6887bb3fd43d1d76f659473b6927/parquet/src/arrow/record_reader/mod.rs" target="_blank" rel="noopener">complex intermediate buffering</a> and significant engineering effort to handle correctly.</p>
 <h2>Dictionary preservation</h2>
 <p>Dictionary Encoding, also called <a href="https://pandas.pydata.org/docs/user_guide/categorical.html" target="_blank" rel="noopener">categorical</a> encoding, is a technique where each value in a column is not stored directly, but instead, an index in a separate list called a “Dictionary” is stored. This technique achieves many of the benefits of <a href="https://en.wikipedia.org/wiki/Third_normal_form#:~:text=Third%20normal%20form%20(3NF)%20is,in%201971%20by%20Edgar%20F." target="_blank" rel="noopener">third normal form</a> for columns that have repeated values (low <a href="https://www.influxdata.com/glossary/cardinality/" target="_blank" rel="noopener">cardinality</a>) and is especially effective for columns of strings such as “City”.</p>
@@ -470,11 +470,11 @@
 <h1>Projection pushdown</h1>
 <p>The most basic Parquet optimization, and the one most commonly described for Parquet files, is <em>projection pushdown</em>, which reduces both I/Oand CPU requirements. Projection in this context means “selecting some but not all of the columns.” Given how Parquet organizes data, it is straightforward to read and decode only the <code>ColumnChunk</code>s required for the referenced columns.</p>
 <p>For example, consider a SQL query of the form</p>
-<div class="language-SQL highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="SQL">SELECT B from table where A &gt; 35
-</code></pre></div></div>
+<pre><code class="language-SQL">SELECT B from table where A &gt; 35
+</code></pre>
 <p>This query only needs data for columns A and B (and not C) and the projection can be “pushed down” to the Parquet reader.</p>
 <p>Specifically, using the information in the footer, the Parquet reader can entirely skip fetching (I/O) and decoding (CPU) the Data Pages that store data for column C (<code>ColumnChunk</code> 3 and <code>ColumnChunk</code> 6 in our example).</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                             ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+<pre><code>                             ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
                              ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐┃
                        ┌─────▶ Data Page for ColumnChunk 1 ("A") ┃
                        │     ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
@@ -509,14 +509,14 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
                              ┃ Data Page for ColumnChunk 6 ("C") ┃
                              ┃└ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘┃
                              ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-</code></pre></div></div>
+</code></pre>
 <h1>Predicate pushdown</h1>
 <p>Similar to projection pushdown, <strong>predicate</strong> pushdown also avoids fetching and decoding data from Parquet files, but does so using filter expressions. This technique typically requires closer integration with a query engine such as <a href="https://arrow.apache.org/datafusion/">DataFusion</a>, to determine valid predicates and evaluate them during the scan. Unfortunately without careful API design, the Parquet decoder and query engine can end up tightly coupled, preventing reuse (e.g. there are different Impala and Spark implementations in <a href="https://docs.cloudera.com/documentation/enterprise/6/6.3/topics/cdh_ig_predicate_pushdown_parquet.html#concept_pgs_plb_mgb" target="_blank" rel="noopener">Cloudera Parquet Predicate Pushdown docs</a>). The Rust Parquet reader uses the <a href="https://docs.rs/parquet/27.0.0/parquet/arrow/arrow_reader/struct.RowSelector.html" target="_blank" rel="noopener">RowSelection</a> API to avoid this coupling.</p>
 <h2>
 <code>RowGroup</code> pruning</h2>
 <p>The simplest form of predicate pushdown, supported by many Parquet based query engines, uses the statistics stored in the footer to skip entire <code>RowGroup</code>s. We call this operation <code>RowGroup</code> <em>pruning</em>, and it is analogous to <a href="https://docs.oracle.com/database/121/VLDBG/GUID-E677C85E-C5E3-4927-B3DF-684007A7B05D.htm#VLDBG00401" target="_blank" rel="noopener">partition pruning</a> in many classical data warehouse systems.</p>
 <p>For the example query above, if the maximum value for A in a particular <code>RowGroup</code> is less than 35, the decoder can skip fetching and decoding any <code>ColumnChunk</code>s from that <strong>entire</strong> <code>RowGroup</code>.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+<pre><code>┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃Row Group 1 Metadata                      ┃
 ┃ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ ┃
 ┃ ┃Column "A" Metadata    Min:0 Max:15   ┃◀╋ ┐
@@ -540,7 +540,7 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
 ┃ ┃Column "C" Metadata                   ┃ ┃
 ┃ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-</code></pre></div></div>
+</code></pre>
 <p>Note that pruning on minimum and maximum values is effective for many data layouts and column types, but not all. Specifically, it is not as effective for columns with many distinct pseudo-random values (e.g. identifiers or uuids). Thankfully for this use case, Parquet also supports per <code>ColumnChunk</code> <a href="https://github.com/apache/parquet-format/blob/master/BloomFilter.md" target="_blank" rel="noopener">Bloom Filters</a>. We are actively working on <a href="https://github.com/apache/arrow-rs/issues/3023" target="_blank" rel="noopener">adding bloom filter</a> support in Apache Rust’s implementation.</p>
 <h2>Page pruning</h2>
 <p>A more sophisticated form of predicate pushdown uses the optional <a href="https://github.com/apache/parquet-format/blob/master/PageIndex.md" target="_blank" rel="noopener">page index</a> in the footer metadata to rule out entire Data Pages. The decoder decodes only the corresponding rows from other columns, often skipping entire pages.</p>
@@ -568,7 +568,7 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
 </li>
 <li>Parquet reader only decodes those 50 rows from Page 2 and Page 4.</li>
 </ul>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┏━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━
+<pre><code>┏━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━
    ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   ┃
 ┃     ┌──────────────┐  │     ┌──────────────┐  │  ┃
 ┃  │  │              │     │  │              │     ┃
@@ -602,7 +602,7 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
 ┃       ColumnChunk            ColumnChunk         ┃
 ┃            A                      B
  ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━━ ━━┛
-</code></pre></div></div>
+</code></pre>
 <p>Support for reading and writing these indexes from Arrow C++, and by extension pyarrow/pandas, is tracked in <a href="https://issues.apache.org/jira/browse/PARQUET-1404" target="_blank" rel="noopener">PARQUET-1404</a>.</p>
 <h2>Late materialization</h2>
 <p>The two previous forms of predicate pushdown only operated on metadata stored for <code>RowGroup</code>s, <code>ColumnChunk</code>s, and Data Pages prior to decoding values. However, the same techniques also extend to values of one or more columns <em>after</em> decoding them but prior to decoding other columns, which is often called “late materialization”.</p>
@@ -626,7 +626,7 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
 </li>
 <li>Only decodes the 5 rows for Column B for those selections</li>
 </ul>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  Row Index
+<pre><code>  Row Index
              ┌────────────────────┐            ┌────────────────────┐
        200   │         30         │            │        "F"         │
              └────────────────────┘            └────────────────────┘
@@ -652,7 +652,7 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
 
                    Column A                          Column B
                     Values                            Values
-</code></pre></div></div>
+</code></pre>
 <p>In certain cases, such as our example where B stores single character values, the cost of late materialization machinery can outweigh the savings in decoding. However, the savings can be substantial when some of the conditions listed above are fulfilled. The query engine must decide which predicates to push down and in which order to apply them for optimal results.</p>
 <p>While it is outside the scope of this document, the same technique can be applied for multiple predicates as well as predicates on multiple columns. See the <a href="https://docs.rs/parquet/latest/parquet/arrow/arrow_reader/struct.RowFilter.html" target="_blank" rel="noopener">RowFilter</a> interface in the Parquet crate for more information, and the <a href="https://github.com/apache/arrow-datafusion/blob/58b43f5c0b629be49a3efa0e37052ec51d9ba3fe/datafusion/core/src/physical_plan/file_format/parquet/row_filter.rs#L40-L70" target="_blank" rel="noopener">row_filter</a> implementation in DataFusion.</p>
 <h1>I/O pushdown</h1>
@@ -680,7 +680,7 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
 <strong>Requires costly “locally attached” storage (or memory)</strong>: Many cloud environments do not offer computing resources with locally attached storage – they either rely on expensive network block storage such as AWS EBS or else restrict local storage to certain classes of VMs.</li>
 </ol>
 <p>Avoiding the need to buffer the entire file requires a sophisticated Parquet decoder, integrated with the I/O subsystem, that can initially fetch and decode the metadata followed by ranged fetches for the relevant data blocks, interleaved with the decoding of Parquet data. This optimization requires careful engineering to fetch large enough blocks of data from the object store that the per request overhead doesn’t dominate gains from reducing the bytes transferred. <a href="https://issues.apache.org/jira/browse/SPARK-36529" target="_blank" rel="noopener">SPARK-36529</a> describes the challenges of sequential processing in more detail.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                       ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+<pre><code>                       ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
                                                                 │
                        │
                Step 1: Fetch                                    │
@@ -694,7 +694,7 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
                                                   │
                      │                   Step 2: Fetch only
                       ─ ─ ─ ─ ─ ─ ─ ─ ─ relevant data blocks
-</code></pre></div></div>
+</code></pre>
 <p>Not included in this diagram picture are details like coalescing requests and ensuring minimum request sizes needed for an actual implementation.</p>
 <p>The Rust Parquet crate provides an async Parquet reader, to efficiently read from any <a href="https://docs.rs/parquet/latest/parquet/arrow/async_reader/trait.AsyncFileReader.html" target="_blank" rel="noopener">AsyncFileReader</a> that:</p>
 <ul>
@@ -707,7 +707,7 @@ Page for column C      │     ┃┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ �
 </li>
 </ul>
 <p>To give a sense of what is possible, the following picture shows a timeline of fetching the footer metadata from remote files, using that metadata to determine what Data Pages to read, and then fetching data and decoding simultaneously. This process often must be done for more than one file at a time in order to match network latency, bandwidth, and available CPU.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                           begin
+<pre><code>                           begin
           metadata        read of   end read
             read  ─ ─ ─ ┐   data    of data          │
  begin    complete         block     block
@@ -735,7 +735,7 @@ metadata  ─ ─ ─ ┐                                       At any time, the
 
 
                                                      │
-</code></pre></div></div>
+</code></pre>
 <h2>Conclusion</h2>
 <p>We hope you enjoyed reading about the Parquet file format, and the various techniques used to quickly query parquet files.</p>
 <p>We believe that the reason most open source implementations of Parquet do not have the breadth of features described in this post is that it takes a monumental effort, that was previously only possible at well-financed commercial enterprises which kept their implementations closed source.</p>

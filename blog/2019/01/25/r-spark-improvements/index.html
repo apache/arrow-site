@@ -277,19 +277,19 @@ Arrow and <code>sparklyr</code>.</p>
 <h1>Setup</h1>
 <p>Since this work is under active development, install <code>sparklyr</code> and
 <code>arrow</code> from GitHub as follows:</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">devtools</span><span class="o">::</span><span class="n">install_github</span><span class="p">(</span><span class="s2">"apache/arrow"</span><span class="p">,</span><span class="w"> </span><span class="n">subdir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"r"</span><span class="p">,</span><span class="w"> </span><span class="n">ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"apache-arrow-0.12.0"</span><span class="p">)</span><span class="w">
-</span><span class="n">devtools</span><span class="o">::</span><span class="n">install_github</span><span class="p">(</span><span class="s2">"rstudio/sparklyr"</span><span class="p">,</span><span class="w"> </span><span class="n">ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"apache-arrow-0.12.0"</span><span class="p">)</span><span class="w">
-</span></code></pre></div></div>
+<pre><code class="language-r">devtools::install_github("apache/arrow", subdir = "r", ref = "apache-arrow-0.12.0")
+devtools::install_github("rstudio/sparklyr", ref = "apache-arrow-0.12.0")
+</code></pre>
 <p>In this benchmark, we will use <a href="https://dplyr.tidyverse.org" target="_blank" rel="noopener">dplyr</a>, but similar improvements can
 be  expected from using <a href="https://cran.r-project.org/package=DBI" target="_blank" rel="noopener">DBI</a>, or <a href="https://spark.rstudio.com/reference/#section-spark-dataframes" target="_blank" rel="noopener">Spark DataFrames</a> in <code>sparklyr</code>.
 The local Spark connection and dataframe with 10M numeric rows was
 initialized as follows:</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">library</span><span class="p">(</span><span class="n">sparklyr</span><span class="p">)</span><span class="w">
-</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">)</span><span class="w">
+<pre><code class="language-r">library(sparklyr)
+library(dplyr)
 
-</span><span class="n">sc</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">spark_connect</span><span class="p">(</span><span class="n">master</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"local"</span><span class="p">,</span><span class="w"> </span><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="s2">"sparklyr.shell.driver-memory"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"6g"</span><span class="p">))</span><span class="w">
-</span><span class="n">data</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">data.frame</span><span class="p">(</span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">runif</span><span class="p">(</span><span class="m">10</span><span class="o">^</span><span class="m">7</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">))</span><span class="w">
-</span></code></pre></div></div>
+sc &lt;- spark_connect(master = "local", config = list("sparklyr.shell.driver-memory" = "6g"))
+data &lt;- data.frame(y = runif(10^7, 0, 1))
+</code></pre>
 <h1>Copying</h1>
 <p>Currently, copying data to Spark using <code>sparklyr</code> is performed by persisting
 data on-disk from R and reading it back from Spark. This was meant to be used
@@ -303,25 +303,25 @@ with and without <code>arrow</code>, there is close to a 16x improvement using <
 <p>This benchmark uses the <a href="https://CRAN.R-project.org/package=microbenchmark" target="_blank" rel="noopener">microbenchmark</a> R package, which runs code
 multiple times, provides stats on total execution time and plots each
 excecution time to understand the distribution over each iteration.</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">microbenchmark</span><span class="o">::</span><span class="n">microbenchmark</span><span class="p">(</span><span class="w">
-  </span><span class="n">setup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">),</span><span class="w">
-  </span><span class="n">arrow_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="n">sparklyr_df</span><span class="w"> </span><span class="o">&lt;&lt;-</span><span class="w"> </span><span class="n">copy_to</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">overwrite</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">T</span><span class="p">)</span><span class="w">
-    </span><span class="n">count</span><span class="p">(</span><span class="n">sparklyr_df</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">collect</span><span class="p">()</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="n">arrow_off</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="s2">"arrow"</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="n">.packages</span><span class="p">())</span><span class="w"> </span><span class="n">detach</span><span class="p">(</span><span class="s2">"package:arrow"</span><span class="p">)</span><span class="w">
-    </span><span class="n">sparklyr_df</span><span class="w"> </span><span class="o">&lt;&lt;-</span><span class="w"> </span><span class="n">copy_to</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">overwrite</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">T</span><span class="p">)</span><span class="w">
-    </span><span class="n">count</span><span class="p">(</span><span class="n">sparklyr_df</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">collect</span><span class="p">()</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="n">times</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">10</span><span class="w">
-</span><span class="p">)</span><span class="w"> </span><span class="o">%T&gt;%</span><span class="w"> </span><span class="n">print</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">ggplot2</span><span class="o">::</span><span class="n">autoplot</span><span class="p">()</span><span class="w">
-</span></code></pre></div></div>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> Unit: seconds
+<pre><code class="language-r">microbenchmark::microbenchmark(
+  setup = library(arrow),
+  arrow_on = {
+    sparklyr_df &lt;&lt;- copy_to(sc, data, overwrite = T)
+    count(sparklyr_df) %&gt;% collect()
+  },
+  arrow_off = {
+    if ("arrow" %in% .packages()) detach("package:arrow")
+    sparklyr_df &lt;&lt;- copy_to(sc, data, overwrite = T)
+    count(sparklyr_df) %&gt;% collect()
+  },
+  times = 10
+) %T&gt;% print() %&gt;% ggplot2::autoplot()
+</code></pre>
+<pre><code> Unit: seconds
       expr       min        lq       mean    median         uq       max neval
   arrow_on  3.011515  4.250025   7.257739  7.273011   8.974331  14.23325    10
  arrow_off 50.051947 68.523081 119.946947 71.898908 138.743419 390.44028    10
-</code></pre></div></div>
+</code></pre>
 <div align="center">
 <img src="/img/arrow-r-spark-copying.png" alt="Copying data with R into Spark with and without Arrow" width="60%" class="img-responsive">
 </div>
@@ -332,23 +332,23 @@ significant as copying data since, <code>sparklyr</code> already collects data i
 columnar format.</p>
 <p>The following benchmark collects 10M rows from Spark into R and shows that
 <code>arrow</code> can bring 3x improvements.</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">microbenchmark</span><span class="o">::</span><span class="n">microbenchmark</span><span class="p">(</span><span class="w">
-  </span><span class="n">setup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">),</span><span class="w">
-  </span><span class="n">arrow_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="n">collect</span><span class="p">(</span><span class="n">sparklyr_df</span><span class="p">)</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="n">arrow_off</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="s2">"arrow"</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="n">.packages</span><span class="p">())</span><span class="w"> </span><span class="n">detach</span><span class="p">(</span><span class="s2">"package:arrow"</span><span class="p">)</span><span class="w">
-    </span><span class="n">collect</span><span class="p">(</span><span class="n">sparklyr_df</span><span class="p">)</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="n">times</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">10</span><span class="w">
-</span><span class="p">)</span><span class="w"> </span><span class="o">%T&gt;%</span><span class="w"> </span><span class="n">print</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">ggplot2</span><span class="o">::</span><span class="n">autoplot</span><span class="p">()</span><span class="w">
-</span></code></pre></div></div>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Unit: seconds
+<pre><code class="language-r">microbenchmark::microbenchmark(
+  setup = library(arrow),
+  arrow_on = {
+    collect(sparklyr_df)
+  },
+  arrow_off = {
+    if ("arrow" %in% .packages()) detach("package:arrow")
+    collect(sparklyr_df)
+  },
+  times = 10
+) %T&gt;% print() %&gt;% ggplot2::autoplot()
+</code></pre>
+<pre><code>Unit: seconds
       expr      min        lq      mean    median        uq       max neval
   arrow_on 4.520593  5.609812  6.154509  5.928099  6.217447  9.432221    10
  arrow_off 7.882841 13.358113 16.670708 16.127704 21.051382 24.373331    10
-</code></pre></div></div>
+</code></pre>
 <div align="center">
 <img src="/img/arrow-r-spark-collecting.png" alt="Collecting data with R from Spark with and without Arrow" width="60%" class="img-responsive">
 </div>
@@ -367,23 +367,23 @@ All the R process needs to do is copy this data from the socket into its heap,
 transform it and copy it back to the socket connection.</p>
 <p>The following example transforms 100K rows with and without <code>arrow</code> enabled,
 <code>arrow</code> makes transformation with R functions close to 41x faster.</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">microbenchmark</span><span class="o">::</span><span class="n">microbenchmark</span><span class="p">(</span><span class="w">
-  </span><span class="n">setup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">),</span><span class="w">
-  </span><span class="n">arrow_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="n">sample_n</span><span class="p">(</span><span class="n">sparklyr_df</span><span class="p">,</span><span class="w"> </span><span class="m">10</span><span class="o">^</span><span class="m">5</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">spark_apply</span><span class="p">(</span><span class="o">~</span><span class="w"> </span><span class="n">.x</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="m">2</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">count</span><span class="p">()</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="n">arrow_off</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="s2">"arrow"</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="n">.packages</span><span class="p">())</span><span class="w"> </span><span class="n">detach</span><span class="p">(</span><span class="s2">"package:arrow"</span><span class="p">)</span><span class="w">
-    </span><span class="n">sample_n</span><span class="p">(</span><span class="n">sparklyr_df</span><span class="p">,</span><span class="w"> </span><span class="m">10</span><span class="o">^</span><span class="m">5</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">spark_apply</span><span class="p">(</span><span class="o">~</span><span class="w"> </span><span class="n">.x</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="m">2</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">count</span><span class="p">()</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="n">times</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">10</span><span class="w">
-</span><span class="p">)</span><span class="w"> </span><span class="o">%T&gt;%</span><span class="w"> </span><span class="n">print</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">ggplot2</span><span class="o">::</span><span class="n">autoplot</span><span class="p">()</span><span class="w">
-</span></code></pre></div></div>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Unit: seconds
+<pre><code class="language-r">microbenchmark::microbenchmark(
+  setup = library(arrow),
+  arrow_on = {
+    sample_n(sparklyr_df, 10^5) %&gt;% spark_apply(~ .x / 2) %&gt;% count()
+  },
+  arrow_off = {
+    if ("arrow" %in% .packages()) detach("package:arrow")
+    sample_n(sparklyr_df, 10^5) %&gt;% spark_apply(~ .x / 2) %&gt;% count()
+  },
+  times = 10
+) %T&gt;% print() %&gt;% ggplot2::autoplot()
+</code></pre>
+<pre><code>Unit: seconds
       expr        min         lq       mean     median         uq        max neval
   arrow_on   3.881293   4.038376   5.136604   4.772739   5.759082   7.873711    10
  arrow_off 178.605733 183.654887 213.296238 227.182018 233.601885 238.877341    10
-</code></pre></div></div>
+</code></pre>
 <div align="center">
 <img src="/img/arrow-r-spark-transforming.png" alt="Transforming data with R in Spark with and without Arrow" width="60%" class="img-responsive">
 </div>

@@ -385,30 +385,30 @@ sequenceDiagram
 However, implementations are already available in C++ and Java, which provide a low-level client that can be used as well as a server skeleton that can be implemented.</p>
 <p>For those interested, a <a href="https://github.com/apache/arrow/blob/release-7.0.0/java/flight/flight-sql/src/test/java/org/apache/arrow/flight/sql/example/FlightSqlExample.java" target="_blank" rel="noopener">server implementation wrapping Apache Derby</a> and <a href="https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/example/sqlite_server.h" target="_blank" rel="noopener">one wrapping SQLite</a> are available in the source.
 A <a href="https://github.com/apache/arrow/blob/release-7.0.0/cpp/src/arrow/flight/sql/test_app_cli.cc" target="_blank" rel="noopener">simple CLI demonstrating the client</a> is also available. Finally, we can look at a brief example of executing a query and fetching results:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="n">flight</span><span class="o">::</span><span class="n">FlightCallOptions</span> <span class="n">call_options</span><span class="p">;</span>
+<pre><code class="language-cpp">flight::FlightCallOptions call_options;
 
-<span class="c1">// Execute the query, getting a FlightInfo describing how to fetch the results</span>
-<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Executing query: '"</span> <span class="o">&lt;&lt;</span> <span class="n">FLAGS_query</span> <span class="o">&lt;&lt;</span> <span class="s">"'"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-<span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">flight</span><span class="o">::</span><span class="n">FlightInfo</span><span class="o">&gt;</span> <span class="n">flight_info</span><span class="p">,</span>
-                      <span class="n">client</span><span class="o">-&gt;</span><span class="n">Execute</span><span class="p">(</span><span class="n">call_options</span><span class="p">,</span> <span class="n">FLAGS_query</span><span class="p">));</span>
+// Execute the query, getting a FlightInfo describing how to fetch the results
+std::cout &lt;&lt; "Executing query: '" &lt;&lt; FLAGS_query &lt;&lt; "'" &lt;&lt; std::endl;
+ARROW_ASSIGN_OR_RAISE(std::unique_ptr&lt;flight::FlightInfo&gt; flight_info,
+                      client-&gt;Execute(call_options, FLAGS_query));
 
-<span class="c1">// Fetch each partition sequentially (though this can be done in parallel)</span>
-<span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">flight</span><span class="o">::</span><span class="n">FlightEndpoint</span><span class="o">&amp;</span> <span class="n">endpoint</span> <span class="o">:</span> <span class="n">flight_info</span><span class="o">-&gt;</span><span class="n">endpoints</span><span class="p">())</span> <span class="p">{</span>
-  <span class="c1">// Here we assume each partition is on the same server we originally queried, but this</span>
-  <span class="c1">// isn't true in general: the server may split the query results between multiple</span>
-  <span class="c1">// other servers, which we would have to connect to.</span>
+// Fetch each partition sequentially (though this can be done in parallel)
+for (const flight::FlightEndpoint&amp; endpoint : flight_info-&gt;endpoints()) {
+  // Here we assume each partition is on the same server we originally queried, but this
+  // isn't true in general: the server may split the query results between multiple
+  // other servers, which we would have to connect to.
 
-  <span class="c1">// The "ticket" in the endpoint is opaque to the client. The server uses it to</span>
-  <span class="c1">// identify which part of the query results to return.</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">stream</span><span class="p">,</span> <span class="n">client</span><span class="o">-&gt;</span><span class="n">DoGet</span><span class="p">(</span><span class="n">call_options</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">.</span><span class="n">ticket</span><span class="p">));</span>
-  <span class="c1">// Read all results into an Arrow Table, though we can iteratively process record</span>
-  <span class="c1">// batches as they arrive as well</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">arrow</span><span class="o">::</span><span class="n">Table</span><span class="o">&gt;</span> <span class="n">table</span><span class="p">;</span>
-  <span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">stream</span><span class="o">-&gt;</span><span class="n">ReadAll</span><span class="p">(</span><span class="o">&amp;</span><span class="n">table</span><span class="p">));</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Read one partition:"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">table</span><span class="o">-&gt;</span><span class="n">ToString</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div></div>
+  // The "ticket" in the endpoint is opaque to the client. The server uses it to
+  // identify which part of the query results to return.
+  ARROW_ASSIGN_OR_RAISE(auto stream, client-&gt;DoGet(call_options, endpoint.ticket));
+  // Read all results into an Arrow Table, though we can iteratively process record
+  // batches as they arrive as well
+  std::shared_ptr&lt;arrow::Table&gt; table;
+  ARROW_RETURN_NOT_OK(stream-&gt;ReadAll(&amp;table));
+  std::cout &lt;&lt; "Read one partition:" &lt;&lt; std::endl;
+  std::cout &lt;&lt; table-&gt;ToString() &lt;&lt; std::endl;
+}
+</code></pre>
 <p>The full source is <a href="https://github.com/apache/arrow/blob/master/cpp/examples/arrow/flight_sql_example.cc" target="_blank" rel="noopener">available on GitHub</a>.</p>
 <h2>What's Next &amp; Getting Involved</h2>
 <p>Compared to existing libraries like PyODBC, <a href="https://www.dremio.com/subsurface/arrow-flight-and-flight-sql-accelerating-data-movement/" target="_blank" rel="noopener">Arrow Flight is already as much as 20x faster</a> (~00:21:00).

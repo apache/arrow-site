@@ -282,14 +282,14 @@
 <h2>Introduction to high cardinality grouping</h2>
 <p>Aggregation is a fancy word for computing summary statistics across many rows that have the same value in one or more columns. We call the rows with the same values <em>groups</em> and “high cardinality” means there are a large number of distinct groups in the dataset. At the time of writing, a “large” number of groups in analytic engines is around 10,000.</p>
 <p>For example the <a href="https://github.com/ClickHouse/ClickBench" target="_blank" rel="noopener">ClickBench</a> <em>hits</em> dataset contains 100 million anonymized user clicks across a set of websites. ClickBench Query 17 is:</p>
-<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="sql"><span class="k">SELECT</span> <span class="nv">"UserID"</span><span class="p">,</span> <span class="nv">"SearchPhrase"</span><span class="p">,</span> <span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span>
-<span class="k">FROM</span> <span class="n">hits</span>
-<span class="k">GROUP</span> <span class="k">BY</span> <span class="nv">"UserID"</span><span class="p">,</span> <span class="nv">"SearchPhrase"</span>
-<span class="k">ORDER</span> <span class="k">BY</span> <span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span>
-<span class="k">DESC</span> <span class="k">LIMIT</span> <span class="mi">10</span><span class="p">;</span>
-</code></pre></div></div>
+<pre><code class="language-sql">SELECT "UserID", "SearchPhrase", COUNT(*)
+FROM hits
+GROUP BY "UserID", "SearchPhrase"
+ORDER BY COUNT(*)
+DESC LIMIT 10;
+</code></pre>
 <p>In English, this query finds “the top ten (user, search phrase) combinations, across all clicks” and produces the following results (there are no search phrases for the top ten users):</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">+---------------------+--------------+-----------------+
+<pre><code class="language-text">+---------------------+--------------+-----------------+
 | UserID              | SearchPhrase | COUNT(UInt8(1)) |
 +---------------------+--------------+-----------------+
 | 1313338681122956954 |              | 29097           |
@@ -303,7 +303,7 @@
 | 835157184735512989  |              | 5209            |
 | 770542365400669095  |              | 4906            |
 +---------------------+--------------+-----------------+
-</code></pre></div></div>
+</code></pre>
 <p>The ClickBench dataset contains</p>
 <ul>
 <li>99,997,497 total rows<sup class="footnote-ref"><a href="#fn1" id="fnref1">1</a></sup>
@@ -317,23 +317,23 @@ Thus, to answer the query, DataFusion must map each of the 100M different input 
 </ul>
 <h2>The solution</h2>
 <p>Like most concepts in databases and other analytic systems, the basic ideas of this algorithm are straightforward and taught in introductory computer science courses. You could compute the query with a program such as this<sup class="footnote-ref"><a href="#fn5" id="fnref5">5</a></sup>:</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">pandas</span> <span class="k">as</span> <span class="n">pd</span>
-<span class="kn">from</span> <span class="n">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
-<span class="kn">from</span> <span class="n">operator</span> <span class="kn">import</span> <span class="n">itemgetter</span>
+<pre><code class="language-python">import pandas as pd
+from collections import defaultdict
+from operator import itemgetter
 
-<span class="c1"># read file
-</span><span class="n">hits</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="nf">read_parquet</span><span class="p">(</span><span class="sh">'</span><span class="s">hits.parquet</span><span class="sh">'</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="sh">'</span><span class="s">pyarrow</span><span class="sh">'</span><span class="p">)</span>
+# read file
+hits = pd.read_parquet('hits.parquet', engine='pyarrow')
 
-<span class="c1"># build groups
-</span><span class="n">counts</span> <span class="o">=</span> <span class="nf">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">.</span><span class="nf">iterrows</span><span class="p">():</span>
-    <span class="n">group</span> <span class="o">=</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="sh">'</span><span class="s">UserID</span><span class="sh">'</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="sh">'</span><span class="s">SearchPhrase</span><span class="sh">'</span><span class="p">]);</span>
-    <span class="c1"># update the dict entry for the corresponding key
-</span>    <span class="n">counts</span><span class="p">[</span><span class="n">group</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+# build groups
+counts = defaultdict(int)
+for index, row in hits.iterrows():
+    group = (row['UserID'], row['SearchPhrase']);
+    # update the dict entry for the corresponding key
+    counts[group] += 1
 
-<span class="c1"># Print the top 10 values
-</span><span class="nf">print </span><span class="p">(</span><span class="nf">dict</span><span class="p">(</span><span class="nf">sorted</span><span class="p">(</span><span class="n">counts</span><span class="p">.</span><span class="nf">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="nf">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]))</span>
-</code></pre></div></div>
+# Print the top 10 values
+print (dict(sorted(counts.items(), key=itemgetter(1), reverse=True)[:10]))
+</code></pre>
 <p>This approach, while simple, is both slow and very memory inefficient. It requires over 40 seconds to compute the results for less than 1% of the dataset<sup class="footnote-ref"><a href="#fn6" id="fnref6">6</a></sup>. Both DataFusion <code>28.0.0</code> and DuckDB <code>0.8.1</code> compute results in under 10 seconds for the <em>entire</em> dataset.</p>
 <p>To answer this query quickly and efficiently, you have to write your code such that it:</p>
 <ol>
@@ -343,7 +343,7 @@ Thus, to answer the query, DataFusion must map each of the 100M different input 
 <p>The rest of this article explains how grouping works in DataFusion and the improvements we made in <code>28.0.0</code>.</p>
 <h3>Two phase parallel partitioned grouping</h3>
 <p>Both DataFusion <code>27.0.</code> and <code>28.0.0</code> use state-of-the-art, two phase parallel hash partitioned grouping, similar to other high-performance vectorized engines like <a href="https://duckdb.org/2022/03/07/aggregate-hashtable.html" target="_blank" rel="noopener">DuckDB’s Parallel Grouped Aggregates</a>. In pictures this looks like:</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">            ▲                        ▲
+<pre><code class="language-text">            ▲                        ▲
             │                        │
             │                        │
             │                        │
@@ -379,10 +379,10 @@ Thus, to answer the query, DataFusion must map each of the 100M different input 
  ╲               ╱            ╲               ╱
   '─.         ,─'              '─.         ,─'
      `───────'                    `───────'
-</code></pre></div></div>
+</code></pre>
 <p><strong>Figure 2</strong>: Two phase repartitioned grouping: data flows from bottom (source) to top (results) in two phases. First (Steps 1 and 2), each core reads the data into a core-specific hash table, computing intermediate aggregates without any cross-core coordination. Then (Steps 3 and 4) DataFusion divides the data (“repartitions”) into distinct subsets by group value, and each subset is sent to a specific core which computes the final aggregate.</p>
 <p>The two phases are critical for keeping cores busy in a multi-core system. Both phases use the same hash table approach (explained in the next section), but differ in how the groups are distributed and the partial results emitted from the accumulators. The first phase aggregates data as soon as possible after it is produced. However, as shown in Figure 2, the groups can be anywhere in any input, so the same group is often found on many different cores. The second phase uses a hash function to redistribute data evenly across the cores, so each group value is processed by exactly one core which emits the final results for that group.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ┌─────┐    ┌─────┐
+<pre><code>    ┌─────┐    ┌─────┐
     │  1  │    │  3  │
     │  2  │    │  4  │   2. After Repartitioning: each
     └─────┘    └─────┘   group key  appears in exactly
@@ -412,7 +412,7 @@ Thus, to answer the query, DataFusion must map each of the 100M different input 
 
     Core A      Core B
 
-</code></pre></div></div>
+</code></pre>
 <p><strong>Figure 3</strong>: Group value distribution across 2 cores during aggregation phases. In the first phase, every group value <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, is present in the input stream processed by each core. In the second phase, after repartitioning, the group values <code>1</code> and <code>2</code> are processed by core A, and values <code>3</code> and <code>4</code> are processed only by core B.</p>
 <p>There are some additional subtleties in the <a href="https://github.com/apache/arrow-datafusion/blob/main/datafusion/core/src/physical_plan/aggregates/row_hash.rs" target="_blank" rel="noopener">DataFusion implementation</a> not mentioned above due to space constraints, such as:</p>
 <ol>
@@ -431,7 +431,7 @@ Thus, to answer the query, DataFusion must map each of the 100M different input 
 <li>In-progress accumulations (e.g. the running counts for the <code>COUNT</code> aggregate) for each group, in one of two possible formats (<a href="https://github.com/apache/arrow-datafusion/blob/a6dcd943051a083693c352c6b4279156548490a0/datafusion/expr/src/accumulator.rs#L24-L49" target="_blank" rel="noopener"><code>Accumulator</code></a>  or <a href="https://github.com/apache/arrow-datafusion/blob/a6dcd943051a083693c352c6b4279156548490a0/datafusion/physical-expr/src/aggregate/row_accumulator.rs#L26-L46" target="_blank" rel="noopener"><code>RowAccumulator</code></a>).</li>
 <li>Scratch space for tracking which rows match each aggregate in each batch.</li>
 </ol>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                           ┌──────────────────────────────────────┐
+<pre><code>                           ┌──────────────────────────────────────┐
                            │                                      │
                            │                  ...                 │
                            │ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │
@@ -465,7 +465,7 @@ Thus, to answer the query, DataFusion must map each of the 100M different input 
 
                            There is one GroupState PER GROUP
 
-</code></pre></div></div>
+</code></pre>
 <p><strong>Figure 4</strong>: Hash group operator structure in DataFusion <code>27.0.0</code>. A hash table maps each group to a GroupState which contains all the per-group states.</p>
 <p>To compute the aggregate, DataFusion performs the following steps for each input batch:</p>
 <ol>
@@ -495,7 +495,7 @@ Thus, to answer the query, DataFusion must map each of the 100M different input 
 </ol>
 </li>
 </ol>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌───────────────────────────────────┐     ┌───────────────────────┐
+<pre><code>┌───────────────────────────────────┐     ┌───────────────────────┐
 │ ┌ ─ ─ ─ ─ ─ ┐  ┌─────────────────┐│     │ ┏━━━━━━━━━━━━━━━━━━━┓ │
 │                │                 ││     │ ┃  ┌──────────────┐ ┃ │
 │ │           │  │ ┌ ─ ─ ┐┌─────┐  ││     │ ┃  │┌───────────┐ │ ┃ │
@@ -523,7 +523,7 @@ and group values.                         per aggregate. Each
 Group values are stored either inline     *ALL* groups, typically
 in the hash table or in a single          using a native Vec&lt;T&gt;
 allocation using the arrow Row format
-</code></pre></div></div>
+</code></pre>
 <p><strong>Figure 5</strong>: Hash group operator structure in DataFusion <code>28.0.0</code>. Group values are stored either directly in the hash table, or in a single allocation using the arrow Row format. The hash table contains group indexes. A single <code>GroupsAccumulator</code> stores the per-aggregate state for <em>all</em> groups.</p>
 <p>This new structure improves performance significantly for high cardinality groups due to:</p>
 <ol>

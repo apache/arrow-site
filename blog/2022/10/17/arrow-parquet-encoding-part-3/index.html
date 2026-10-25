@@ -275,50 +275,50 @@
 <p>Some libraries, such as Rust <a href="https://crates.io/crates/parquet" target="_blank" rel="noopener">parquet</a> implementation, offer complete support for such combinations, and users of those libraries do not need to worry about these details except to satisfy their own curiosity. Other libraries may not handle some corner cases and this post gives some flavor of why it is so complicated to do so.</p>
 <h1>Structs with Lists</h1>
 <p>Consider the following three json documents</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="p">{</span>                     <span class="c1"># &lt;-- First record
-</span>  <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span>           <span class="c1"># &lt;-- top-level field a containing list of integers
-</span>  <span class="sh">"</span><span class="s">b</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span>              <span class="c1"># &lt;-- top-level field b containing list of structures
-</span>    <span class="p">{</span>                 <span class="c1"># &lt;-- list element of b containing two field b1 and b2
-</span>      <span class="sh">"</span><span class="s">b1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">1</span>         <span class="c1"># &lt;-- b1 is always provided (non nullable)
-</span>    <span class="p">},</span>
-    <span class="p">{</span>
-      <span class="sh">"</span><span class="s">b1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-      <span class="sh">"</span><span class="s">b2</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span>         <span class="c1"># &lt;-- b2 contains list of integers
-</span>        <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span>          <span class="c1"># &lt;-- list elements of b.b2 always provided (non nullable)
-</span>      <span class="p">]</span>
-    <span class="p">}</span>
-  <span class="p">]</span>
-<span class="p">}</span>
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="p">{</span>
-  <span class="sh">"</span><span class="s">b</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span>              <span class="c1"># &lt;-- b is always provided (non nullable)
-</span>    <span class="p">{</span>
-      <span class="sh">"</span><span class="s">b1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">2</span>
-    <span class="p">},</span>
-  <span class="p">]</span>
-<span class="p">}</span>
-</code></pre></div></div>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="p">{</span>
-  <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">,</span> <span class="n">null</span><span class="p">],</span>  <span class="c1"># &lt;-- list elements of a are nullable
-</span>  <span class="sh">"</span><span class="s">b</span><span class="sh">"</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">]</span>         <span class="c1"># &lt;-- list elements of b are nullable
-</span><span class="p">}</span>
-</code></pre></div></div>
+<pre><code class="language-python">{                     # &lt;-- First record
+  "a": [1],           # &lt;-- top-level field a containing list of integers
+  "b": [              # &lt;-- top-level field b containing list of structures
+    {                 # &lt;-- list element of b containing two field b1 and b2
+      "b1": 1         # &lt;-- b1 is always provided (non nullable)
+    },
+    {
+      "b1": 1,
+      "b2": [         # &lt;-- b2 contains list of integers
+        3, 4          # &lt;-- list elements of b.b2 always provided (non nullable)
+      ]
+    }
+  ]
+}
+</code></pre>
+<pre><code class="language-python">{
+  "b": [              # &lt;-- b is always provided (non nullable)
+    {
+      "b1": 2
+    },
+  ]
+}
+</code></pre>
+<pre><code class="language-python">{
+  "a": [null, null],  # &lt;-- list elements of a are nullable
+  "b": [null]         # &lt;-- list elements of b are nullable
+}
+</code></pre>
 <p>Documents of this format could be stored in this Arrow schema</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="nc">List</span><span class="p">(</span>
-  <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">element</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
-<span class="p">)</span>
-<span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">b</span><span class="sh">"</span><span class="p">),</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="nc">List</span><span class="p">(</span>
-  <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">element</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Struct</span><span class="p">[</span>
-    <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">b1</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">),</span>
-    <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">b2</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="nc">List</span><span class="p">(</span>
-      <span class="nc">Field</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="sh">"</span><span class="s">element</span><span class="sh">"</span><span class="p">,</span> <span class="n">nullable</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="n">Int32</span><span class="p">)</span>
-    <span class="p">))</span>
-  <span class="p">])</span>
-<span class="p">))</span>
-</code></pre></div></div>
+<pre><code class="language-python">Field(name: "a", nullable: true, datatype: List(
+  Field(name: "element", nullable: true, datatype: Int32),
+)
+Field(name: "b"), nullable: false, datatype: List(
+  Field(name: "element", nullable: true, datatype: Struct[
+    Field(name: "b1", nullable: false, datatype: Int32),
+    Field(name: "b2", nullable: true, datatype: List(
+      Field(name: "element", nullable: false, datatype: Int32)
+    ))
+  ])
+))
+</code></pre>
 <p>As explained previously, Arrow chooses to represent this in a hierarchical fashion. <code>StructArray</code>s are stored as child arrays that contain each field of the struct.  <code>ListArray</code>s are stored as lists of monotonically increasing integers called offsets, with values stored in a single child array. Each consecutive pair of elements in the offset array identifies a slice of the child array for that array index.</p>
 <p>The Arrow encoding of the example would be:</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+<pre><code class="language-text">┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
                      ┌──────────────────┐
 │ ┌─────┐   ┌─────┐  │ ┌─────┐   ┌─────┐│ │
   │  1  │   │  0  │  │ │  1  │   │  1  ││
@@ -358,32 +358,32 @@
   "b"      └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │
 │ ListArray
  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
-</code></pre></div></div>
+</code></pre>
 <p>Documents of this format could be stored in this Parquet schema</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="n">message</span> <span class="n">schema</span> <span class="p">{</span>
-  <span class="n">optional</span> <span class="n">group</span> <span class="nf">a </span><span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
-      <span class="n">optional</span> <span class="n">int32</span> <span class="n">element</span><span class="p">;</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-  <span class="n">required</span> <span class="n">group</span> <span class="nf">b </span><span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
-      <span class="n">optional</span> <span class="n">group</span> <span class="n">element</span> <span class="p">{</span>
-        <span class="n">required</span> <span class="n">int32</span> <span class="n">b1</span><span class="p">;</span>
-        <span class="n">optional</span> <span class="n">group</span> <span class="nf">b2 </span><span class="p">(</span><span class="n">LIST</span><span class="p">)</span> <span class="p">{</span>
-          <span class="n">repeated</span> <span class="n">group</span> <span class="nb">list</span> <span class="p">{</span>
-            <span class="n">required</span> <span class="n">int32</span> <span class="n">element</span><span class="p">;</span>
-          <span class="p">}</span>
-        <span class="p">}</span>
-      <span class="p">}</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
+<pre><code class="language-python">message schema {
+  optional group a (LIST) {
+    repeated group list {
+      optional int32 element;
+    }
+  }
+  required group b (LIST) {
+    repeated group list {
+      optional group element {
+        required int32 b1;
+        optional group b2 (LIST) {
+          repeated group list {
+            required int32 element;
+          }
+        }
+      }
+    }
+  }
+}
+</code></pre>
 <p>As explained in our previous posts, Parquet uses repetition levels and definition levels to encode nested structures and nullability.</p>
 <p>Definition and repetition levels is a non trivial topic. For more detail, you can read the <a href="https://research.google/pubs/pub36632/" target="_blank" rel="noopener">Google Dremel Paper</a> which offers an academic description of the algorithm. You can also explore this <a href="https://gist.github.com/alamb/acd653c49e318ff70672b61325ba3443" target="_blank" rel="noopener">gist</a> to see Rust <a href="https://crates.io/crates/parquet" target="_blank" rel="noopener">parquet</a> code which generates the example below.</p>
 <p>The Parquet encoding of the example would be:</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">┌───────────────────────────────┐ ┌────────────────────────────────┐
+<pre><code class="language-text">┌───────────────────────────────┐ ┌────────────────────────────────┐
 │ ┌─────┐    ┌─────┐    ┌─────┐ │ │  ┌─────┐    ┌─────┐    ┌─────┐ │
 │ │  3  │    │  0  │    │  1  │ │ │  │  2  │    │  0  │    │  1  │ │
 │ ├─────┤    ├─────┤    └─────┘ │ │  ├─────┤    ├─────┤    ├─────┤ │
@@ -417,7 +417,7 @@
 │                               │
 │  "b.b2"                       │
 └───────────────────────────────┘
-</code></pre></div></div>
+</code></pre>
 <h2>Additional Complications</h2>
 <p>This series of posts has necessarily glossed over a number of details that further complicate actual implementations:</p>
 <ul>

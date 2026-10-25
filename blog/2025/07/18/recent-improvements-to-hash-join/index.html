@@ -273,16 +273,16 @@
 <h1>Introduction</h1>
 <p>Hash join is a fundamental operation in analytical processing engines — it matches rows from two tables based on key values using a hash table for fast lookup. In the C++ implementation of Apache Arrow, the hash join is implemented in the C++ engine Acero, which powers query execution in bindings like PyArrow and the R Arrow package. Even if you haven't used Acero directly, your code may already be benefiting from it under the hood.</p>
 <p>For example, this simple PyArrow example uses Acero:</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">pyarrow</span> <span class="k">as</span> <span class="n">pa</span>
+<pre><code class="language-python">import pyarrow as pa
 
-<span class="n">t1</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="nf">table</span><span class="p">({</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
-               <span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">2022</span><span class="p">,</span> <span class="mi">2019</span><span class="p">]})</span>
-<span class="n">t2</span> <span class="o">=</span> <span class="n">pa</span><span class="p">.</span><span class="nf">table</span><span class="p">({</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span>
-               <span class="sh">'</span><span class="s">n_legs</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
-               <span class="sh">'</span><span class="s">animal</span><span class="sh">'</span><span class="p">:</span> <span class="p">[</span><span class="sh">"</span><span class="s">Brittle stars</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">Centipede</span><span class="sh">"</span><span class="p">]})</span>
+t1 = pa.table({'id': [1, 2, 3],
+               'year': [2020, 2022, 2019]})
+t2 = pa.table({'id': [3, 4],
+               'n_legs': [5, 100],
+               'animal': ["Brittle stars", "Centipede"]})
 
-<span class="n">t1</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">).</span><span class="nf">combine_chunks</span><span class="p">().</span><span class="nf">sort_by</span><span class="p">(</span><span class="sh">'</span><span class="s">year</span><span class="sh">'</span><span class="p">)</span>
-</code></pre></div></div>
+t1.join(t2, 'id').combine_chunks().sort_by('year')
+</code></pre>
 <p>Acero was originally created in 2019 to demonstrate that the ever-growing library of compute kernels in Arrow C++ could be linked together into realistic workflows and also to take advantage of the emerging Datasets API to give these workflows access to data. Rather than aiming to compete with full query engines like DuckDB, Acero focuses on enabling flexible, composable, and embeddable query execution — serving as a building block for tools and systems that need fast, modular analytics capabilities — including those built atop Arrow C++, or integrating via bindings like PyArrow, Substrait, or ADBC.</p>
 <p>Across several recent Arrow C++ releases, we've made substantial improvements to the hash join implementation to address common user pain points. These changes improve stability, memory efficiency, and parallel performance, with a focus on making joins more usable and scalable out of the box. If you've had trouble using Arrow’s hash join in the past, now is a great time to try again.</p>
 <h1>Scaling Safely: Improvements to Stability</h1>
@@ -295,22 +295,22 @@
 <li>Row-wise buffer access in C++</li>
 </ul>
 <p>The aforementioned row table stores fixed-length data in tightly packed buffers. Accessing a particular row (and optionally a column within it) typically involves <a href="https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L120" target="_blank" rel="noopener">pointer arithmetic</a>:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="k">const</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">row_ptr</span> <span class="o">=</span> <span class="n">row_ptr_base</span> <span class="o">+</span> <span class="n">row_length</span> <span class="o">*</span> <span class="n">row_id</span><span class="p">;</span>
-</code></pre></div></div>
+<pre><code class="language-cpp">const uint8_t* row_ptr = row_ptr_base + row_length * row_id;
+</code></pre>
 <p>When both <code>row_length</code> and <code>row_id</code> are large 32-bit integers, their product can overflow.</p>
 <p>Similarly, accessing null masks involves <a href="https://github.com/apache/arrow/blob/12f62653c825fbf305bfde61c112d2aa69203c62/cpp/src/arrow/acero/swiss_join_internal.h#L150" target="_blank" rel="noopener">null-bit indexing arithmetic</a>:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="kt">int64_t</span> <span class="n">bit_id</span> <span class="o">=</span> <span class="n">row_id</span> <span class="o">*</span> <span class="n">null_mask_num_bytes</span> <span class="o">*</span> <span class="mi">8</span> <span class="o">+</span> <span class="n">pos_after_encoding</span><span class="p">;</span>
-</code></pre></div></div>
+<pre><code class="language-cpp">int64_t bit_id = row_id * null_mask_num_bytes * 8 + pos_after_encoding;
+</code></pre>
 <p>The intermediate multiplication is performed using 32-bit arithmetic and can overflow even though the final result is stored in a 64-bit variable.</p>
 <ul>
 <li>SIMD gathers with 32-bit offsets</li>
 </ul>
 <p>One essential SIMD instruction is the AVX2 intrinsic <code>__m256i _mm256_i32gather_epi32(int const * base, __m256i vindex, const int scale);</code>, which performs a parallel memory gather of eight 32-bit integers based on eight 32-bit signed offsets. It was extensively used in Arrow for hash table operations, for example, <a href="https://github.com/apache/arrow/blob/0a00e25f2f6fb927fb555b69038d0be9b9d9f265/cpp/src/arrow/compute/key_map_internal_avx2.cc#L404" target="_blank" rel="noopener">fetching 8 group IDs</a> (hash table slots) in parallel during hash table probing:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="n">__m256i</span> <span class="n">group_id</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-</code></pre></div></div>
+<pre><code class="language-cpp">__m256i group_id = _mm256_i32gather_epi32(elements, pos, 1);
+</code></pre>
 <p>and <a href="https://github.com/apache/arrow/blob/69e8a78c018da88b60f9eb2b3b45703f81f3c93d/cpp/src/arrow/compute/row/compare_internal_avx2.cc#L284" target="_blank" rel="noopener">loading 8 corresponding key values</a> from the right-side input in parallel for comparison:</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="n">__m256i</span> <span class="n">right</span> <span class="o">=</span> <span class="n">_mm256_i32gather_epi32</span><span class="p">((</span><span class="k">const</span> <span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">right_base</span><span class="p">,</span> <span class="n">offset_right</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
-</code></pre></div></div>
+<pre><code class="language-cpp">__m256i right = _mm256_i32gather_epi32((const int*)right_base, offset_right, 1);
+</code></pre>
 <p>If any of the computed offsets exceed <code>2^31 - 1</code>, they wrap into the negative range, which can lead to invalid memory access (i.e., a crash) or, more subtly, fetch data from a valid but incorrect location — producing silently wrong results (trust me, you don’t want to debug that).</p>
 <p>To mitigate these risks, PR <a href="https://github.com/apache/arrow/pull/45108" target="_blank" rel="noopener">GH-45108</a>, <a href="https://github.com/apache/arrow/pull/45336" target="_blank" rel="noopener">GH-45336</a>, and <a href="https://github.com/apache/arrow/pull/45515" target="_blank" rel="noopener">GH-45515</a> promoted critical arithmetic to 64-bit and reworked SIMD logic to use safer indexing. Buffer access logic was also encapsulated in safer abstractions to avoid repeated manual casting or unchecked offset math. These examples are not unique to Arrow — they reflect common pitfalls in building data-intensive systems, where unchecked assumptions about integer sizes can silently compromise correctness.</p>
 <p>Together, these changes make Arrow’s hash join implementation significantly more robust and better equipped for modern data workloads. These foundations not only resolve known issues but also reduce the risk of similar bugs in future development.</p>

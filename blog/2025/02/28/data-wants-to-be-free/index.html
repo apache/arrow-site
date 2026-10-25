@@ -327,15 +327,15 @@ makes better trade-offs than its predecessors.</p>
 PostgreSQL wire protocol to send the query and get back the result.  Inside
 that protocol, the result set is encoded with the PostgreSQL binary format<sup class="footnote-ref"><a href="#fn3" id="fnref3">3</a></sup>.</p>
 <p>First, we’ll create a table and fill it with data:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>postgres=# CREATE TABLE demo (id BIGINT, val TEXT, val2 BIGINT);
+<pre><code>postgres=# CREATE TABLE demo (id BIGINT, val TEXT, val2 BIGINT);
 CREATE TABLE
 postgres=# INSERT INTO demo VALUES (1, 'foo', 64), (2, 'a longer string', 128), (3, 'yet another string', 10);
 INSERT 0 3
-</code></pre></div></div>
+</code></pre>
 <p>We can then use the COPY command to dump the raw binary data from PostgreSQL into a file:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>postgres=# COPY demo TO '/tmp/demo.bin' WITH BINARY;
+<pre><code>postgres=# COPY demo TO '/tmp/demo.bin' WITH BINARY;
 COPY 3
-</code></pre></div></div>
+</code></pre>
 <p>Then we can annotate the actual bytes of the data based on the <a href="https://www.postgresql.org/docs/current/sql-copy.html#id-1.9.3.55.9.4" target="_blank" rel="noopener">documentation</a>:</p>
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-header">50 47 43 4f 50 59 0a ff  PGCOPY..</span>  <span class="a-header">COPY signature, flags,</span>
 00000008: <span class="a-header">0d 0a 00 00 00 00 00 00  ........</span>  <span class="a-header">and extension</span>
@@ -367,16 +367,16 @@ COPY 3
 </ul>
 <p>For example, a single column of int32 values would have 4 bytes of data and 6 bytes of overhead per row—<strong>60% is “wasted!”</strong><sup class="footnote-ref"><a href="#fn4" id="fnref4">4</a></sup> The ratio gets a little better with more columns (but not with more rows); in the limit we approach “only” 50% overhead.  And then each of the values has to be converted (even if endian-swapping is trivial).  To PostgreSQL’s credit, its format is at least cheap and easy to parse—<a href="https://protobuf.dev/programming-guides/encoding/" target="_blank" rel="noopener">other formats</a> get fancy with tricks like “varint” encoding which are quite expensive.</p>
 <p>How does Arrow compare? We can use <a href="https://arrow.apache.org/adbc/current/driver/postgresql.html">ADBC</a> to pull the PostgreSQL table into an Arrow table, then annotate it like before:</p>
-<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="console"><span class="gp">&gt;</span><span class="o">&gt;&gt;</span> import adbc_driver_postgresql.dbapi
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> import pyarrow.ipc
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> conn <span class="o">=</span> adbc_driver_postgresql.dbapi.connect<span class="o">(</span><span class="s2">"..."</span><span class="o">)</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> cur <span class="o">=</span> conn.cursor<span class="o">()</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> cur.execute<span class="o">(</span><span class="s2">"SELECT * FROM demo"</span><span class="o">)</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> data <span class="o">=</span> cur.fetchallarrow<span class="o">()</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> writer <span class="o">=</span> pyarrow.ipc.new_stream<span class="o">(</span><span class="s2">"demo.arrows"</span>, data.schema<span class="o">)</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> writer.write_table<span class="o">(</span>data<span class="o">)</span>
-<span class="gp">&gt;</span><span class="o">&gt;&gt;</span> writer.close<span class="o">()</span>
-</code></pre></div></div>
+<pre><code class="language-console">&gt;&gt;&gt; import adbc_driver_postgresql.dbapi
+&gt;&gt;&gt; import pyarrow.ipc
+&gt;&gt;&gt; conn = adbc_driver_postgresql.dbapi.connect("...")
+&gt;&gt;&gt; cur = conn.cursor()
+&gt;&gt;&gt; cur.execute("SELECT * FROM demo")
+&gt;&gt;&gt; data = cur.fetchallarrow()
+&gt;&gt;&gt; writer = pyarrow.ipc.new_stream("demo.arrows", data.schema)
+&gt;&gt;&gt; writer.write_table(data)
+&gt;&gt;&gt; writer.close()
+</code></pre>
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>00000000: <span class="a-length">ff ff ff ff d8 00 00 00  ........  IPC message length</span>
 00000008: <span class="a-header">10 00 00 00 00 00 0a 00  ........  IPC schema</span>
 &amp;vellip;         <span class="a-header">(208 bytes)</span>

@@ -305,30 +305,30 @@ several columns. We often don't know the size of the table in advance and need
 to expand our allocations as the data is loaded.</p>
 <p>To incrementally build a vector using memory expansion of a factor of 2, we
 would use the following C-code with the standard POSIX APIs:</p>
-<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="c"><span class="kt">size_t</span> <span class="n">size</span> <span class="o">=</span> <span class="mi">128</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span>
-<span class="kt">void</span><span class="o">*</span> <span class="n">ptr</span> <span class="o">=</span> <span class="n">aligned_alloc</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
-<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
-  <span class="kt">size_t</span> <span class="n">new_size</span> <span class="o">=</span> <span class="n">size</span> <span class="o">*</span> <span class="mi">2</span><span class="p">;</span>
-  <span class="kt">void</span><span class="o">*</span> <span class="n">ptr2</span> <span class="o">=</span> <span class="n">aligned_alloc</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="n">new_size</span><span class="p">);</span>
-  <span class="n">memcpy</span><span class="p">(</span><span class="n">ptr2</span><span class="p">,</span> <span class="n">ptr</span><span class="p">,</span> <span class="n">size</span><span class="p">);</span>
-  <span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
-  <span class="n">ptr</span> <span class="o">=</span> <span class="n">ptr2</span><span class="p">;</span>
-  <span class="n">size</span> <span class="o">=</span> <span class="n">new_size</span><span class="p">;</span>
-<span class="p">}</span>
-<span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
-</code></pre></div></div>
+<pre><code class="language-c">size_t size = 128 * 1024;
+void* ptr = aligned_alloc(64, size);
+for (int i = 0; i &lt; 10; i++) {
+  size_t new_size = size * 2;
+  void* ptr2 = aligned_alloc(64, new_size);
+  memcpy(ptr2, ptr, size);
+  free(ptr);
+  ptr = ptr2;
+  size = new_size;
+}
+free(ptr);
+</code></pre>
 <p>With jemalloc's special APIs, we are able to omit the explicit call to <code>memcpy</code>.
 In the case where a memory expansion cannot be done in-place, it is still called
 by the allocator but not needed on all occasions. This simplifies our user code
 to:</p>
-<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="c"><span class="kt">size_t</span> <span class="n">size</span> <span class="o">=</span> <span class="mi">128</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span>
-<span class="kt">void</span><span class="o">*</span> <span class="n">ptr</span> <span class="o">=</span> <span class="n">mallocx</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">MALLOCX_ALIGN</span><span class="p">(</span><span class="mi">64</span><span class="p">));</span>
-<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
-  <span class="n">size</span> <span class="o">*=</span> <span class="mi">2</span><span class="p">;</span>
-  <span class="n">ptr</span> <span class="o">=</span> <span class="n">rallocx</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">MALLOCX_ALIGN</span><span class="p">(</span><span class="mi">64</span><span class="p">));</span>
-<span class="p">}</span>
-<span class="n">dallocx</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">MALLOCX_ALIGN</span><span class="p">(</span><span class="mi">64</span><span class="p">));</span>
-</code></pre></div></div>
+<pre><code class="language-c">size_t size = 128 * 1024;
+void* ptr = mallocx(size, MALLOCX_ALIGN(64));
+for (int i = 0; i &lt; 10; i++) {
+  size *= 2;
+  ptr = rallocx(ptr, size, MALLOCX_ALIGN(64));
+}
+dallocx(ptr, MALLOCX_ALIGN(64));
+</code></pre>
 <p>To see the real world benefits of using jemalloc, we look at the benchmarks in
 Arrow C++. There we have modeled a typical use case of incrementally building up
 an array of primitive values. For the build-up of the array, we don't know the
@@ -337,21 +337,21 @@ memory region in which the data is stored. The code for this benchmark is part
 of the <code>builder-benchmark</code> in the Arrow C++ sources as
 <code>BuildPrimitiveArrayNoNulls</code>.</p>
 <p>Runtimes without <code>jemalloc</code>:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>BM_BuildPrimitiveArrayNoNulls/repeats:3                 636726 us   804.114MB/s
+<pre><code>BM_BuildPrimitiveArrayNoNulls/repeats:3                 636726 us   804.114MB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3                 621345 us   824.019MB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3                 625008 us    819.19MB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3_mean            627693 us   815.774MB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3_median          625008 us    819.19MB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3_stddev            8034 us   10.3829MB/s
-</code></pre></div></div>
+</code></pre>
 <p>Runtimes with <code>jemalloc</code>:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>BM_BuildPrimitiveArrayNoNulls/repeats:3                 630881 us   811.563MB/s
+<pre><code>BM_BuildPrimitiveArrayNoNulls/repeats:3                 630881 us   811.563MB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3                 352891 us   1.41687GB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3                 351039 us   1.42434GB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3_mean            444937 us   1.21125GB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3_median          352891 us   1.41687GB/s
 BM_BuildPrimitiveArrayNoNulls/repeats:3_stddev          161035 us   371.335MB/s
-</code></pre></div></div>
+</code></pre>
 <p>The benchmark was run three times for each configuration to see the performance
 differences. The first run in each configuration yielded the same performance but
 in all subsequent runs, the version using jemalloc was about twice as fast. In

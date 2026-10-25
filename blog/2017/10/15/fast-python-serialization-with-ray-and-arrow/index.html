@@ -362,15 +362,15 @@ Python classes and deeply nested objects.</p>
 <h2>The API</h2>
 <p>The serialization library can be used directly through pyarrow as follows. More
 documentation is available <a href="https://arrow.apache.org/docs/python/ipc.html#arbitrary-object-serialization">here</a>.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="n">x</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="sh">'</span><span class="s">hello</span><span class="sh">'</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="p">.</span><span class="nf">array</span><span class="p">([</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">])]</span>
-<span class="n">serialized_x</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="p">.</span><span class="nf">serialize</span><span class="p">(</span><span class="n">x</span><span class="p">).</span><span class="nf">to_buffer</span><span class="p">()</span>
-<span class="n">deserialized_x</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="p">.</span><span class="nf">deserialize</span><span class="p">(</span><span class="n">serialized_x</span><span class="p">)</span>
-</code></pre></div></div>
+<pre><code class="language-python">x = [(1, 2), 'hello', 3, 4, np.array([5.0, 6.0])]
+serialized_x = pyarrow.serialize(x).to_buffer()
+deserialized_x = pyarrow.deserialize(serialized_x)
+</code></pre>
 <p>It can be used directly through the Ray API as follows.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="n">x</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="sh">'</span><span class="s">hello</span><span class="sh">'</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="p">.</span><span class="nf">array</span><span class="p">([</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">])]</span>
-<span class="n">x_id</span> <span class="o">=</span> <span class="n">ray</span><span class="p">.</span><span class="nf">put</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-<span class="n">deserialized_x</span> <span class="o">=</span> <span class="n">ray</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="n">x_id</span><span class="p">)</span>
-</code></pre></div></div>
+<pre><code class="language-python">x = [(1, 2), 'hello', 3, 4, np.array([5.0, 6.0])]
+x_id = ray.put(x)
+deserialized_x = ray.get(x_id)
+</code></pre>
 <h2>Data Representation</h2>
 <p>We use Apache Arrow as the underlying language-independent data layout. Objects
 are stored in two parts: a <strong>schema</strong> and a <strong>data blob</strong>. At a high level, the
@@ -384,17 +384,17 @@ tuples, dicts and sets). Nested sequences are encoded using Arrow
 <a href="http://arrow.apache.org/docs/memory_layout.html#list-type">ListArrays</a>. All tensors are collected and appended to the end of the
 serialized object, and the UnionArray contains references to these tensors.</p>
 <p>To give a concrete example, consider the following object.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="sh">'</span><span class="s">hello</span><span class="sh">'</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="p">.</span><span class="nf">array</span><span class="p">([</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">])]</span>
-</code></pre></div></div>
+<pre><code class="language-python">[(1, 2), 'hello', 3, 4, np.array([5.0, 6.0])]
+</code></pre>
 <p>It would be represented in Arrow with the following structure.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>UnionArray(type_ids=[tuple, string, int, int, ndarray],
+<pre><code>UnionArray(type_ids=[tuple, string, int, int, ndarray],
            tuples=ListArray(offsets=[0, 2],
                             UnionArray(type_ids=[int, int],
                                        ints=[1, 2])),
            strings=['hello'],
            ints=[3, 4],
            ndarrays=[&lt;offset of numpy array&gt;])
-</code></pre></div></div>
+</code></pre>
 <p>Arrow uses Flatbuffers to encode serialized schemas. <strong>Using only the schema, we
 can compute the offsets of each value in the data blob without scanning through
 the data blob</strong> (unlike Pickle, this is what enables fast deserialization). This
@@ -426,74 +426,74 @@ for C++ and Java.</li>
 Benchmarking <code>ray.put</code> and <code>ray.get</code> instead of <code>pyarrow.serialize</code> and
 <code>pyarrow.deserialize</code> gives similar figures. The plots were generated at this
 <a href="https://github.com/apache/arrow/tree/894f7400977693b4e0e8f4b9845fd89481f6bf29" target="_blank" rel="noopener">commit</a>.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">pickle</span>
-<span class="kn">import</span> <span class="n">pyarrow</span>
-<span class="kn">import</span> <span class="n">matplotlib.pyplot</span> <span class="k">as</span> <span class="n">plt</span>
-<span class="kn">import</span> <span class="n">numpy</span> <span class="k">as</span> <span class="n">np</span>
-<span class="kn">import</span> <span class="n">timeit</span>
+<pre><code class="language-python">import pickle
+import pyarrow
+import matplotlib.pyplot as plt
+import numpy as np
+import timeit
 
 
-<span class="k">def</span> <span class="nf">benchmark_object</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">number</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
-    <span class="c1"># Time serialization and deserialization for pickle.
-</span>    <span class="n">pickle_serialize</span> <span class="o">=</span> <span class="n">timeit</span><span class="p">.</span><span class="nf">timeit</span><span class="p">(</span>
-        <span class="k">lambda</span><span class="p">:</span> <span class="n">pickle</span><span class="p">.</span><span class="nf">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="p">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">),</span>
-        <span class="n">number</span><span class="o">=</span><span class="n">number</span><span class="p">)</span>
-    <span class="n">serialized_obj</span> <span class="o">=</span> <span class="n">pickle</span><span class="p">.</span><span class="nf">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">pickle</span><span class="p">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
-    <span class="n">pickle_deserialize</span> <span class="o">=</span> <span class="n">timeit</span><span class="p">.</span><span class="nf">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">pickle</span><span class="p">.</span><span class="nf">loads</span><span class="p">(</span><span class="n">serialized_obj</span><span class="p">),</span>
-                                       <span class="n">number</span><span class="o">=</span><span class="n">number</span><span class="p">)</span>
+def benchmark_object(obj, number=10):
+    # Time serialization and deserialization for pickle.
+    pickle_serialize = timeit.timeit(
+        lambda: pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL),
+        number=number)
+    serialized_obj = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+    pickle_deserialize = timeit.timeit(lambda: pickle.loads(serialized_obj),
+                                       number=number)
 
-    <span class="c1"># Time serialization and deserialization for Ray.
-</span>    <span class="n">ray_serialize</span> <span class="o">=</span> <span class="n">timeit</span><span class="p">.</span><span class="nf">timeit</span><span class="p">(</span>
-        <span class="k">lambda</span><span class="p">:</span> <span class="n">pyarrow</span><span class="p">.</span><span class="nf">serialize</span><span class="p">(</span><span class="n">obj</span><span class="p">).</span><span class="nf">to_buffer</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="n">number</span><span class="p">)</span>
-    <span class="n">serialized_obj</span> <span class="o">=</span> <span class="n">pyarrow</span><span class="p">.</span><span class="nf">serialize</span><span class="p">(</span><span class="n">obj</span><span class="p">).</span><span class="nf">to_buffer</span><span class="p">()</span>
-    <span class="n">ray_deserialize</span> <span class="o">=</span> <span class="n">timeit</span><span class="p">.</span><span class="nf">timeit</span><span class="p">(</span>
-        <span class="k">lambda</span><span class="p">:</span> <span class="n">pyarrow</span><span class="p">.</span><span class="nf">deserialize</span><span class="p">(</span><span class="n">serialized_obj</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="n">number</span><span class="p">)</span>
+    # Time serialization and deserialization for Ray.
+    ray_serialize = timeit.timeit(
+        lambda: pyarrow.serialize(obj).to_buffer(), number=number)
+    serialized_obj = pyarrow.serialize(obj).to_buffer()
+    ray_deserialize = timeit.timeit(
+        lambda: pyarrow.deserialize(serialized_obj), number=number)
 
-    <span class="k">return</span> <span class="p">[[</span><span class="n">pickle_serialize</span><span class="p">,</span> <span class="n">pickle_deserialize</span><span class="p">],</span>
-            <span class="p">[</span><span class="n">ray_serialize</span><span class="p">,</span> <span class="n">ray_deserialize</span><span class="p">]]</span>
-
-
-<span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="n">pickle_times</span><span class="p">,</span> <span class="n">ray_times</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
-    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="p">.</span><span class="nf">subplots</span><span class="p">()</span>
-    <span class="n">fig</span><span class="p">.</span><span class="nf">set_size_inches</span><span class="p">(</span><span class="mf">3.8</span><span class="p">,</span> <span class="mf">2.7</span><span class="p">)</span>
-
-    <span class="n">bar_width</span> <span class="o">=</span> <span class="mf">0.35</span>
-    <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="p">.</span><span class="nf">arange</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-    <span class="n">opacity</span> <span class="o">=</span> <span class="mf">0.6</span>
-
-    <span class="n">plt</span><span class="p">.</span><span class="nf">bar</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pickle_times</span><span class="p">,</span> <span class="n">bar_width</span><span class="p">,</span>
-            <span class="n">alpha</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="sh">'</span><span class="s">r</span><span class="sh">'</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sh">'</span><span class="s">Pickle</span><span class="sh">'</span><span class="p">)</span>
-
-    <span class="n">plt</span><span class="p">.</span><span class="nf">bar</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="n">bar_width</span><span class="p">,</span> <span class="n">ray_times</span><span class="p">,</span> <span class="n">bar_width</span><span class="p">,</span>
-            <span class="n">alpha</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="sh">'</span><span class="s">c</span><span class="sh">'</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sh">'</span><span class="s">Ray</span><span class="sh">'</span><span class="p">)</span>
-
-    <span class="n">plt</span><span class="p">.</span><span class="nf">title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="sh">'</span><span class="s">bold</span><span class="sh">'</span><span class="p">)</span>
-    <span class="n">plt</span><span class="p">.</span><span class="nf">ylabel</span><span class="p">(</span><span class="sh">'</span><span class="s">Time (seconds)</span><span class="sh">'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-    <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="sh">'</span><span class="s">serialization</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">deserialization</span><span class="sh">'</span><span class="p">]</span>
-    <span class="n">plt</span><span class="p">.</span><span class="nf">xticks</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="n">bar_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-    <span class="n">plt</span><span class="p">.</span><span class="nf">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-    <span class="n">plt</span><span class="p">.</span><span class="nf">tight_layout</span><span class="p">()</span>
-    <span class="n">plt</span><span class="p">.</span><span class="nf">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-    <span class="n">plt</span><span class="p">.</span><span class="nf">savefig</span><span class="p">(</span><span class="sh">'</span><span class="s">plot-</span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="sh">'</span><span class="s">.png</span><span class="sh">'</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="sh">'</span><span class="s">png</span><span class="sh">'</span><span class="p">)</span>
+    return [[pickle_serialize, pickle_deserialize],
+            [ray_serialize, ray_deserialize]]
 
 
-<span class="n">test_objects</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="p">[</span><span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="nf">randn</span><span class="p">(</span><span class="mi">50000</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)],</span>
-    <span class="p">{</span><span class="sh">'</span><span class="s">weight-</span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">i</span><span class="p">):</span> <span class="n">np</span><span class="p">.</span><span class="n">random</span><span class="p">.</span><span class="nf">randn</span><span class="p">(</span><span class="mi">50000</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)},</span>
-    <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="nf">set</span><span class="p">([</span><span class="sh">'</span><span class="s">string1</span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="sh">'</span><span class="s">string2</span><span class="sh">'</span> <span class="o">+</span> <span class="nf">str</span><span class="p">(</span><span class="n">i</span><span class="p">)])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">100000</span><span class="p">)},</span>
-    <span class="p">[</span><span class="nf">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">200000</span><span class="p">)]</span>
-<span class="p">]</span>
+def plot(pickle_times, ray_times, title, i):
+    fig, ax = plt.subplots()
+    fig.set_size_inches(3.8, 2.7)
 
-<span class="n">titles</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="sh">'</span><span class="s">List of large numpy arrays</span><span class="sh">'</span><span class="p">,</span>
-    <span class="sh">'</span><span class="s">Dictionary of large numpy arrays</span><span class="sh">'</span><span class="p">,</span>
-    <span class="sh">'</span><span class="s">Large dictionary of small sets</span><span class="sh">'</span><span class="p">,</span>
-    <span class="sh">'</span><span class="s">Large list of strings</span><span class="sh">'</span>
-<span class="p">]</span>
+    bar_width = 0.35
+    index = np.arange(2)
+    opacity = 0.6
 
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="nf">len</span><span class="p">(</span><span class="n">test_objects</span><span class="p">)):</span>
-    <span class="nf">plot</span><span class="p">(</span><span class="o">*</span><span class="nf">benchmark_object</span><span class="p">(</span><span class="n">test_objects</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">titles</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">i</span><span class="p">)</span>
-</code></pre></div></div>
+    plt.bar(index, pickle_times, bar_width,
+            alpha=opacity, color='r', label='Pickle')
+
+    plt.bar(index + bar_width, ray_times, bar_width,
+            alpha=opacity, color='c', label='Ray')
+
+    plt.title(title, fontweight='bold')
+    plt.ylabel('Time (seconds)', fontsize=10)
+    labels = ['serialization', 'deserialization']
+    plt.xticks(index + bar_width / 2, labels, fontsize=10)
+    plt.legend(fontsize=10, bbox_to_anchor=(1, 1))
+    plt.tight_layout()
+    plt.yticks(fontsize=10)
+    plt.savefig('plot-' + str(i) + '.png', format='png')
+
+
+test_objects = [
+    [np.random.randn(50000) for i in range(100)],
+    {'weight-' + str(i): np.random.randn(50000) for i in range(100)},
+    {i: set(['string1' + str(i), 'string2' + str(i)]) for i in range(100000)},
+    [str(i) for i in range(200000)]
+]
+
+titles = [
+    'List of large numpy arrays',
+    'Dictionary of large numpy arrays',
+    'Large dictionary of small sets',
+    'Large list of strings'
+]
+
+for i in range(len(test_objects)):
+    plot(*benchmark_object(test_objects[i]), titles[i], i)
+</code></pre>
 
       </main>
     </div>

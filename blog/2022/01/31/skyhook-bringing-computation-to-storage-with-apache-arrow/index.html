@@ -328,97 +328,97 @@ Additionally, in-memory SQL-based query engines like <a href="/blog/2021/12/03/a
 By pushing filters and projections to the storage layer, we can speed up dataset scans by freeing precious CPU resources on the client, reducing the amount of data sent across the network, and better utilizing the scalability of systems like Ceph.
 To get started, just <a href="https://arrow.apache.org/docs/developers/cpp/building.html">build Arrow</a> with Skyhook enabled, deploy the Skyhook object class extensions to Ceph (see “Usage” in the <a href="https://jayjeetc.medium.com/skyhookdm-is-now-a-part-of-apache-arrow-e5d7b9a810ba" target="_blank" rel="noopener">announcement post</a>), and then use the <code>SkyhookFileFormat</code> to construct an Arrow dataset.
 A small code example is shown here.</p>
-<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="cpp"><span class="c1">// Licensed to the Apache Software Foundation (ASF) under one</span>
-<span class="c1">// or more contributor license agreements. See the NOTICE file</span>
-<span class="c1">// distributed with this work for additional information</span>
-<span class="c1">// regarding copyright ownership. The ASF licenses this file</span>
-<span class="c1">// to you under the Apache License, Version 2.0 (the</span>
-<span class="c1">// "License"); you may not use this file except in compliance</span>
-<span class="c1">// with the License. You may obtain a copy of the License at</span>
-<span class="c1">//</span>
-<span class="c1">// http://www.apache.org/licenses/LICENSE-2.0</span>
-<span class="c1">//</span>
-<span class="c1">// Unless required by applicable law or agreed to in writing,</span>
-<span class="c1">// software distributed under the License is distributed on an</span>
-<span class="c1">// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY</span>
-<span class="c1">// KIND, either express or implied. See the License for the</span>
-<span class="c1">// specific language governing permissions and limitations</span>
-<span class="c1">// under the License.</span>
+<pre><code class="language-cpp">// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements. See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership. The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License. You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
-<span class="cp">#include</span> <span class="cpf">&lt;arrow/compute/api.h&gt;</span><span class="cp">
-#include</span> <span class="cpf">&lt;arrow/dataset/api.h&gt;</span><span class="cp">
-#include</span> <span class="cpf">&lt;arrow/filesystem/api.h&gt;</span><span class="cp">
-#include</span> <span class="cpf">&lt;arrow/table.h&gt;</span><span class="cp">
-#include</span> <span class="cpf">&lt;skyhook/client/file_skyhook.h&gt;</span><span class="cp">
-</span>
-<span class="cp">#include</span> <span class="cpf">&lt;cstdlib&gt;</span><span class="cp">
-#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
-#include</span> <span class="cpf">&lt;memory&gt;</span><span class="cp">
-#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
-</span>
-<span class="k">namespace</span> <span class="n">cp</span> <span class="o">=</span> <span class="n">arrow</span><span class="o">::</span><span class="n">compute</span><span class="p">;</span>
-<span class="k">namespace</span> <span class="n">ds</span> <span class="o">=</span> <span class="n">arrow</span><span class="o">::</span><span class="n">dataset</span><span class="p">;</span>
-<span class="k">namespace</span> <span class="n">fs</span> <span class="o">=</span> <span class="n">arrow</span><span class="o">::</span><span class="n">fs</span><span class="p">;</span>
+#include &lt;arrow/compute/api.h&gt;
+#include &lt;arrow/dataset/api.h&gt;
+#include &lt;arrow/filesystem/api.h&gt;
+#include &lt;arrow/table.h&gt;
+#include &lt;skyhook/client/file_skyhook.h&gt;
 
-<span class="c1">// Demonstrate reading a dataset via Skyhook.</span>
-<span class="n">arrow</span><span class="o">::</span><span class="n">Status</span> <span class="nf">ScanDataset</span><span class="p">()</span> <span class="p">{</span>
-  <span class="c1">// Configure SkyhookFileFormat to connect to our Ceph cluster.</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_config_path</span> <span class="o">=</span> <span class="s">"/etc/ceph/ceph.conf"</span><span class="p">;</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_data_pool</span> <span class="o">=</span> <span class="s">"cephfs_data"</span><span class="p">;</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_user_name</span> <span class="o">=</span> <span class="s">"client.admin"</span><span class="p">;</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_cluster_name</span> <span class="o">=</span> <span class="s">"ceph"</span><span class="p">;</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ceph_cls_name</span> <span class="o">=</span> <span class="s">"skyhook"</span><span class="p">;</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">skyhook</span><span class="o">::</span><span class="n">RadosConnCtx</span><span class="o">&gt;</span> <span class="n">rados_ctx</span> <span class="o">=</span>
-      <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">skyhook</span><span class="o">::</span><span class="n">RadosConnCtx</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ceph_config_path</span><span class="p">,</span> <span class="n">ceph_data_pool</span><span class="p">,</span>
-                                              <span class="n">ceph_user_name</span><span class="p">,</span> <span class="n">ceph_cluster_name</span><span class="p">,</span>
-                                              <span class="n">ceph_cls_name</span><span class="p">);</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">format</span><span class="p">,</span>
-                        <span class="n">skyhook</span><span class="o">::</span><span class="n">SkyhookFileFormat</span><span class="o">::</span><span class="n">Make</span><span class="p">(</span><span class="n">rados_ctx</span><span class="p">,</span> <span class="s">"parquet"</span><span class="p">));</span>
+#include &lt;cstdlib&gt;
+#include &lt;iostream&gt;
+#include &lt;memory&gt;
+#include &lt;string&gt;
 
-  <span class="c1">// Create the filesystem.</span>
-  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">root</span><span class="p">;</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">fs</span><span class="p">,</span> <span class="n">fs</span><span class="o">::</span><span class="n">FileSystemFromUri</span><span class="p">(</span><span class="s">"file:///mnt/cephfs/nyc"</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">root</span><span class="p">));</span>
+namespace cp = arrow::compute;
+namespace ds = arrow::dataset;
+namespace fs = arrow::fs;
 
-  <span class="c1">// Create our dataset.</span>
-  <span class="n">fs</span><span class="o">::</span><span class="n">FileSelector</span> <span class="n">selector</span><span class="p">;</span>
-  <span class="n">selector</span><span class="p">.</span><span class="n">base_dir</span> <span class="o">=</span> <span class="n">root</span><span class="p">;</span>
-  <span class="n">selector</span><span class="p">.</span><span class="n">recursive</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+// Demonstrate reading a dataset via Skyhook.
+arrow::Status ScanDataset() {
+  // Configure SkyhookFileFormat to connect to our Ceph cluster.
+  std::string ceph_config_path = "/etc/ceph/ceph.conf";
+  std::string ceph_data_pool = "cephfs_data";
+  std::string ceph_user_name = "client.admin";
+  std::string ceph_cluster_name = "ceph";
+  std::string ceph_cls_name = "skyhook";
+  std::shared_ptr&lt;skyhook::RadosConnCtx&gt; rados_ctx =
+      std::make_shared&lt;skyhook::RadosConnCtx&gt;(ceph_config_path, ceph_data_pool,
+                                              ceph_user_name, ceph_cluster_name,
+                                              ceph_cls_name);
+  ARROW_ASSIGN_OR_RAISE(auto format,
+                        skyhook::SkyhookFileFormat::Make(rados_ctx, "parquet"));
 
-  <span class="n">ds</span><span class="o">::</span><span class="n">FileSystemFactoryOptions</span> <span class="n">options</span><span class="p">;</span>
-  <span class="n">options</span><span class="p">.</span><span class="n">partitioning</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">ds</span><span class="o">::</span><span class="n">HivePartitioning</span><span class="o">&gt;</span><span class="p">(</span>
-      <span class="n">arrow</span><span class="o">::</span><span class="n">schema</span><span class="p">({</span><span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">"payment_type"</span><span class="p">,</span> <span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">()),</span>
-                     <span class="n">arrow</span><span class="o">::</span><span class="n">field</span><span class="p">(</span><span class="s">"VendorID"</span><span class="p">,</span> <span class="n">arrow</span><span class="o">::</span><span class="n">int32</span><span class="p">())}));</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">factory</span><span class="p">,</span>
-                        <span class="n">ds</span><span class="o">::</span><span class="n">FileSystemDatasetFactory</span><span class="o">::</span><span class="n">Make</span><span class="p">(</span><span class="n">fs</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">selector</span><span class="p">),</span>
-                                                           <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">format</span><span class="p">),</span> <span class="n">options</span><span class="p">));</span>
+  // Create the filesystem.
+  std::string root;
+  ARROW_ASSIGN_OR_RAISE(auto fs, fs::FileSystemFromUri("file:///mnt/cephfs/nyc", &amp;root));
 
-  <span class="n">ds</span><span class="o">::</span><span class="n">InspectOptions</span> <span class="n">inspect_options</span><span class="p">;</span>
-  <span class="n">ds</span><span class="o">::</span><span class="n">FinishOptions</span> <span class="n">finish_options</span><span class="p">;</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">schema</span><span class="p">,</span> <span class="n">factory</span><span class="o">-&gt;</span><span class="n">Inspect</span><span class="p">(</span><span class="n">inspect_options</span><span class="p">));</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">factory</span><span class="o">-&gt;</span><span class="n">Finish</span><span class="p">(</span><span class="n">finish_options</span><span class="p">));</span>
+  // Create our dataset.
+  fs::FileSelector selector;
+  selector.base_dir = root;
+  selector.recursive = true;
 
-  <span class="c1">// Scan the dataset.</span>
-  <span class="k">auto</span> <span class="n">filter</span> <span class="o">=</span> <span class="n">cp</span><span class="o">::</span><span class="n">greater</span><span class="p">(</span><span class="n">cp</span><span class="o">::</span><span class="n">field_ref</span><span class="p">(</span><span class="s">"payment_type"</span><span class="p">),</span> <span class="n">cp</span><span class="o">::</span><span class="n">literal</span><span class="p">(</span><span class="mi">2</span><span class="p">));</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">scanner_builder</span><span class="p">,</span> <span class="n">dataset</span><span class="o">-&gt;</span><span class="n">NewScan</span><span class="p">());</span>
-  <span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">scanner_builder</span><span class="o">-&gt;</span><span class="n">Filter</span><span class="p">(</span><span class="n">filter</span><span class="p">));</span>
-  <span class="n">ARROW_RETURN_NOT_OK</span><span class="p">(</span><span class="n">scanner_builder</span><span class="o">-&gt;</span><span class="n">UseThreads</span><span class="p">(</span><span class="nb">true</span><span class="p">));</span>
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">scanner</span><span class="p">,</span> <span class="n">scanner_builder</span><span class="o">-&gt;</span><span class="n">Finish</span><span class="p">());</span>
+  ds::FileSystemFactoryOptions options;
+  options.partitioning = std::make_shared&lt;ds::HivePartitioning&gt;(
+      arrow::schema({arrow::field("payment_type", arrow::int32()),
+                     arrow::field("VendorID", arrow::int32())}));
+  ARROW_ASSIGN_OR_RAISE(auto factory,
+                        ds::FileSystemDatasetFactory::Make(fs, std::move(selector),
+                                                           std::move(format), options));
 
-  <span class="n">ARROW_ASSIGN_OR_RAISE</span><span class="p">(</span><span class="k">auto</span> <span class="n">table</span><span class="p">,</span> <span class="n">scanner</span><span class="o">-&gt;</span><span class="n">ToTable</span><span class="p">());</span>
+  ds::InspectOptions inspect_options;
+  ds::FinishOptions finish_options;
+  ARROW_ASSIGN_OR_RAISE(auto schema, factory-&gt;Inspect(inspect_options));
+  ARROW_ASSIGN_OR_RAISE(auto dataset, factory-&gt;Finish(finish_options));
 
-  <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Got "</span> <span class="o">&lt;&lt;</span> <span class="n">table</span><span class="o">-&gt;</span><span class="n">num_rows</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">" rows"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-  <span class="k">return</span> <span class="n">arrow</span><span class="o">::</span><span class="n">Status</span><span class="o">::</span><span class="n">OK</span><span class="p">();</span>
-<span class="p">}</span>
+  // Scan the dataset.
+  auto filter = cp::greater(cp::field_ref("payment_type"), cp::literal(2));
+  ARROW_ASSIGN_OR_RAISE(auto scanner_builder, dataset-&gt;NewScan());
+  ARROW_RETURN_NOT_OK(scanner_builder-&gt;Filter(filter));
+  ARROW_RETURN_NOT_OK(scanner_builder-&gt;UseThreads(true));
+  ARROW_ASSIGN_OR_RAISE(auto scanner, scanner_builder-&gt;Finish());
 
-<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span><span class="p">)</span> <span class="p">{</span>
-  <span class="k">auto</span> <span class="n">status</span> <span class="o">=</span> <span class="n">ScanDataset</span><span class="p">();</span>
-  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">status</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span> <span class="p">{</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">cerr</span> <span class="o">&lt;&lt;</span> <span class="n">status</span><span class="p">.</span><span class="n">message</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
-    <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
-  <span class="p">}</span>
-  <span class="k">return</span> <span class="n">EXIT_SUCCESS</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div></div>
+  ARROW_ASSIGN_OR_RAISE(auto table, scanner-&gt;ToTable());
+
+  std::cout &lt;&lt; "Got " &lt;&lt; table-&gt;num_rows() &lt;&lt; " rows" &lt;&lt; std::endl;
+  return arrow::Status::OK();
+}
+
+int main(int, char**) {
+  auto status = ScanDataset();
+  if (!status.ok()) {
+    std::cerr &lt;&lt; status.message() &lt;&lt; std::endl;
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
+}
+</code></pre>
 <p>We would like to acknowledge Ivo Jimenez, Jeff LeFevre, Michael Sevilla, and Noah Watkins for their contributions to this project.</p>
 <p>This work was supported in part by the National Science Foundation under Cooperative Agreement OAC-1836650, the US Department of Energy ASCR DE-NA0003525 (FWP 20-023266), and the Center for Research in Open Source Software (<a href="https://cross.ucsc.edu/" target="_blank" rel="noopener">cross.ucsc.edu</a>).</p>
 <p>For more information, see these papers and articles:</p>

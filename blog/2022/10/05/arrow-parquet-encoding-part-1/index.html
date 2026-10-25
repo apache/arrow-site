@@ -279,15 +279,15 @@
 <h2>Columnar vs Record-Oriented</h2>
 <p>First, it is necessary to take a step back and discuss the difference between columnar and record-oriented data formats. In a record oriented data format, such as newline-delimited JSON (NDJSON), all the values for a given record are stored contiguously.</p>
 <p>For example</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="p">{</span><span class="sh">"</span><span class="s">Column1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="sh">"</span><span class="s">Column2</span><span class="sh">"</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span>
-<span class="p">{</span><span class="sh">"</span><span class="s">Column1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="sh">"</span><span class="s">Column2</span><span class="sh">"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="sh">"</span><span class="s">Column3</span><span class="sh">"</span><span class="p">:</span> <span class="mi">5</span><span class="p">}</span>
-<span class="p">{</span><span class="sh">"</span><span class="s">Column1</span><span class="sh">"</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="sh">"</span><span class="s">Column2</span><span class="sh">"</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="sh">"</span><span class="s">Column3</span><span class="sh">"</span><span class="p">:</span> <span class="mi">5</span><span class="p">}</span>
-</code></pre></div></div>
+<pre><code class="language-python">{"Column1": 1, "Column2": 2}
+{"Column1": 3, "Column2": 4, "Column3": 5}
+{"Column1": 5, "Column2": 4, "Column3": 5}
+</code></pre>
 <p>In a columnar representation, the data for a given column is instead stored contiguously</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="n">Column1</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
-<span class="n">Column2</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
-<span class="n">Column3</span><span class="p">:</span> <span class="p">[</span><span class="n">null</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
-</code></pre></div></div>
+<pre><code class="language-python">Column1: [1, 3, 5]
+Column2: [2, 4, 4]
+Column3: [null, 5, 5]
+</code></pre>
 <p>Aside from potentially yielding better data compression, a columnar layout can dramatically improve performance of certain queries. This is because laying data out contiguously in memory allows both the compiler and CPU to better exploit opportunities for parallelism. The specifics of <a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data" target="_blank" rel="noopener">SIMD</a> and <a href="https://en.wikipedia.org/wiki/Instruction-level_parallelism" target="_blank" rel="noopener">ILP</a> are well beyond the scope of this post, but the important takeaway is that processing large blocks of data without intervening conditional branches has substantial performance benefits.</p>
 <h2>Parquet vs Arrow</h2>
 <p>Parquet and Arrow are complementary technologies, and they make some different design tradeoffs. In particular, Parquet is a storage format designed for maximum space efficiency, whereas Arrow is an in-memory format intended for operation by vectorized computational kernels.</p>
@@ -297,7 +297,7 @@
 <h2>Non-Nullable Primitive Column</h2>
 <p>Let us start with the simplest case of a non-nullable list of 32-bit signed integers.</p>
 <p>In Arrow this would be represented as a <code>PrimitiveArray</code>, which would store them contiguously in memory</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">┌─────┐
+<pre><code class="language-text">┌─────┐
 │  1  │
 ├─────┤
 │  2  │
@@ -307,9 +307,9 @@
 │  4  │
 └─────┘
 Values
-</code></pre></div></div>
+</code></pre>
 <p>Parquet has multiple <a href="https://parquet.apache.org/docs/file-format/data-pages/encodings/" target="_blank" rel="noopener">different encodings</a> that may be used for integer types, the exact details of which are beyond the scope of this post. Broadly speaking the data will be stored in one or more <a href="https://parquet.apache.org/docs/file-format/data-pages/" target="_blank" rel="noopener"><em>DataPage</em></a>s containing the integers in an encoded form</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">┌─────┐
+<pre><code class="language-text">┌─────┐
 │  1  │
 ├─────┤
 |  2  │
@@ -319,11 +319,11 @@ Values
 │  4  │
 └─────┘
 Values
-</code></pre></div></div>
+</code></pre>
 <h1>Nullable Primitive Column</h1>
 <p>Now let us consider the case of a nullable column, where some of the values might have the special sentinel value <code>NULL</code> that designates "this value is unknown".</p>
 <p>In Arrow, nulls are stored separately from the values in the form of a <a href="https://arrow.apache.org/docs/format/Columnar.html#validity-bitmaps">validity bitmask</a>, with arbitrary data in the corresponding positions in the values buffer. This space efficient encoding means that the entire validity mask for the following example is stored using 5 bits</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">┌─────┐   ┌─────┐
+<pre><code class="language-text">┌─────┐   ┌─────┐
 │  1  │   │  1  │
 ├─────┤   ├─────┤
 │  0  │   │ ??  │
@@ -335,9 +335,9 @@ Values
 │  0  │   │ ??  │
 └─────┘   └─────┘
 Validity   Values
-</code></pre></div></div>
+</code></pre>
 <p>In Parquet the validity information is also stored separately from the values, however, instead of being encoded as a validity bitmask it is encoded as a list of 16-bit integers called <em>definition levels</em>. Like other data in Parquet, these integer definition levels are stored using high efficiency encoding, and will be expanded upon in the next post, but for now a definition level of <code>1</code> indicates a valid value, and <code>0</code> a null value. Unlike Arrow, nulls are not encoded in the list of values</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">┌─────┐    ┌─────┐
+<pre><code class="language-text">┌─────┐    ┌─────┐
 │  1  │    │  1  │
 ├─────┤    ├─────┤
 │  0  │    │  3  │
@@ -350,7 +350,7 @@ Validity   Values
 └─────┘
 Definition  Values
  Levels
-</code></pre></div></div>
+</code></pre>
 <h2>Next up: Nested and Hierarchical Data</h2>
 <p>Armed with the foundational understanding of how Arrow and Parquet store nullability / definition differently we are ready to move on to more complex nested types, which you can read about in our <a href="https://arrow.apache.org/blog/2022/10/08/arrow-parquet-encoding-part-2/">next blog post on the topic</a>.</p>
 

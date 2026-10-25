@@ -281,7 +281,7 @@
 </ol>
 <p>Multicolumn sorting is also referred to as lexicographical sorting in some libraries.</p>
 <p>For example, given sales data for various customers and their state of residence, a user might want to find the lowest 10 orders for each state.</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">Customer | State | Orders
+<pre><code class="language-text">Customer | State | Orders
 —--------+-------+-------
 12345    |  MA   |  10.12
 532432   |  MA   |  8.44
@@ -290,9 +290,9 @@
 23442    |  WA   |  132.50
 7844     |  CA   |  9.33
 852353   |  MA   |  1.30
-</code></pre></div></div>
+</code></pre>
 <p>One way to do so is to order the data first by <code>State</code> and then by <code>Orders</code>:</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">Customer | State | Orders
+<pre><code class="language-text">Customer | State | Orders
 —--------+-------+-------
 12345    |  CA   |  3.25
 7844     |  CA   |  9.33
@@ -301,23 +301,23 @@
 12345    |  MA   |  10.12
 56232    |  WA   |  6.00
 23442    |  WA   |  132.50
-</code></pre></div></div>
+</code></pre>
 <p>(Note: While there are specialized ways for computing this particular query other than fully sorting the entire input (e.g. "TopK"), they typically need the same multi-column comparison operation described below. Thus while we will use the simplified example in this series, it applies much more broadly)</p>
 <h2>Basic Implementation</h2>
 <p>Let us take the example of a basic sort kernel which takes a set of columns as input, and returns a list of indices identifying a sorted order.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="o">&gt;</span> <span class="nf">lexsort_to_indices</span><span class="p">([</span>
-    <span class="p">[</span><span class="sh">"</span><span class="s">MA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">MA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">CA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">WA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">WA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">CA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">MA</span><span class="sh">"</span><span class="p">]</span>
-  <span class="p">])</span>
+<pre><code class="language-python">&gt; lexsort_to_indices([
+    ["MA", "MA", "CA", "WA", "WA", "CA", "MA"]
+  ])
 
-<span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+[2, 5, 0, 1, 6, 3, 4]
 
-<span class="o">&gt;</span> <span class="nf">lexsort_to_indices</span><span class="p">([</span>
-    <span class="p">[</span><span class="sh">"</span><span class="s">MA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">MA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">CA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">WA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">WA</span><span class="sh">"</span><span class="p">,</span>   <span class="sh">"</span><span class="s">CA</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">MA</span><span class="sh">"</span><span class="p">],</span>
-    <span class="p">[</span><span class="mf">10.10</span><span class="p">,</span> <span class="mf">8.44</span><span class="p">,</span> <span class="mf">3.25</span><span class="p">,</span> <span class="mf">6.00</span><span class="p">,</span> <span class="mf">132.50</span><span class="p">,</span> <span class="mf">9.33</span><span class="p">,</span> <span class="mf">1.30</span><span class="p">]</span>
-  <span class="p">])</span>
+&gt; lexsort_to_indices([
+    ["MA", "MA", "CA", "WA", "WA",   "CA", "MA"],
+    [10.10, 8.44, 3.25, 6.00, 132.50, 9.33, 1.30]
+  ])
 
-<span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
-</code></pre></div></div>
+[2, 5, 6, 1, 0, 3, 4]
+</code></pre>
 <p>This function returns a list of indices instead of sorting the columns directly because it:</p>
 <ol>
 <li>Avoids expensive copying data during the sorting process</li>
@@ -325,7 +325,7 @@
 <li>Can be used to reorder additional columns that weren’t part of the sort key</li>
 </ol>
 <p>A straightforward implementation of lexsort_to_indices uses a comparator function,</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">   row
+<pre><code class="language-text">   row
   index
         ┌─────┐   ┌─────┐   ┌─────┐     compare(left_index, right_index)
       0 │     │   │     │   │     │
@@ -349,9 +349,9 @@
         └─────┘   └─────┘   └─────┘
         Customer    State    Orders
          UInt64      Utf8     F64
-</code></pre></div></div>
+</code></pre>
 <p>The comparator function compares each row a column at a time, based on the column types</p>
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="text">                         ┌────────────────────────────────┐
+<pre><code class="language-text">                         ┌────────────────────────────────┐
                          │                                │
                          ▼                                │
                      ┌ ─ ─ ─ ┐ ┌ ─ ─ ─ ┐                  │
@@ -373,43 +373,43 @@ left_index  │     │   │     │   │     │                   │
                                     ▲                       │
                                     │                       │
                                     └───────────────────────┘
-</code></pre></div></div>
+</code></pre>
 <p>Pseudocode for this operation might look something like</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="c1"># Takes a list of columns and returns the lexicographically
+<pre><code class="language-python"># Takes a list of columns and returns the lexicographically
 # sorted order as a list of indices
-</span><span class="k">def</span> <span class="nf">lexsort_to_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">):</span>
-  <span class="n">comparator</span> <span class="o">=</span> <span class="nf">build_comparator</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+def lexsort_to_indices(columns):
+  comparator = build_comparator(columns)
 
-  <span class="c1"># Construct a list of integers from 0 to the number of rows
-</span>  <span class="c1"># and sort it according to the comparator
-</span>  <span class="p">[</span><span class="mf">0.</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nf">num_rows</span><span class="p">()].</span><span class="nf">sort_by</span><span class="p">(</span><span class="n">comparator</span><span class="p">)</span>
+  # Construct a list of integers from 0 to the number of rows
+  # and sort it according to the comparator
+  [0..columns.num_rows()].sort_by(comparator)
 
-<span class="c1"># Build a function that given indexes (left_idx, right_idx)
+# Build a function that given indexes (left_idx, right_idx)
 # returns the comparison of the sort keys at the left
 # and right indices respectively
-</span><span class="k">def</span> <span class="nf">build_comparator</span><span class="p">(</span><span class="n">columns</span><span class="p">):</span>
-  <span class="k">def</span> <span class="nf">comparator</span><span class="p">(</span><span class="n">left_idx</span><span class="p">,</span> <span class="n">right_idx</span><span class="p">):</span>
-    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
-      <span class="c1"># call a compare function which performs
-</span>      <span class="c1"># dynamic dispatch on type of left and right columns
-</span>      <span class="n">ordering</span> <span class="o">=</span> <span class="nf">compare</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">left_idx</span><span class="p">,</span><span class="n">right_idx</span><span class="p">)</span>
-      <span class="k">if</span> <span class="n">ordering</span> <span class="o">!=</span> <span class="n">Equal</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="n">ordering</span>
-      <span class="p">}</span>
-    <span class="c1"># All values equal
-</span>    <span class="n">Equal</span>
-  <span class="c1"># Return comparator function
-</span>  <span class="n">comparator</span>
+def build_comparator(columns):
+  def comparator(left_idx, right_idx):
+    for column in columns:
+      # call a compare function which performs
+      # dynamic dispatch on type of left and right columns
+      ordering = compare(column, left_idx,right_idx)
+      if ordering != Equal {
+        return ordering
+      }
+    # All values equal
+    Equal
+  # Return comparator function
+  comparator
 
-  <span class="c1"># compares the values in a single column at left_idx and right_idx
-</span>  <span class="k">def</span> <span class="nf">compare</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">left_idx</span><span class="p">,</span> <span class="n">right_idx</span><span class="p">):</span>
-    <span class="c1"># Choose comparison based on type of column ("dynamic dispatch")
-</span>    <span class="k">if</span> <span class="n">column</span><span class="p">.</span><span class="nb">type</span> <span class="o">==</span> <span class="n">Int</span><span class="p">:</span>
-     <span class="nf">cmp</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="n">left_idx</span><span class="p">].</span><span class="nf">as_int</span><span class="p">(),</span> <span class="n">column</span><span class="p">[</span><span class="n">right_idx</span><span class="p">].</span><span class="nf">as_int</span><span class="p">())</span>
-    <span class="k">elif</span> <span class="n">column</span><span class="p">.</span><span class="nb">type</span> <span class="o">==</span> <span class="n">Float</span><span class="p">:</span>
-     <span class="nf">cmp</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="n">left_idx</span><span class="p">].</span><span class="nf">as_float</span><span class="p">(),</span> <span class="n">column</span><span class="p">[</span><span class="n">right_idx</span><span class="p">].</span><span class="nf">as_float</span><span class="p">())</span>
-    <span class="bp">...</span>
-</code></pre></div></div>
+  # compares the values in a single column at left_idx and right_idx
+  def compare(column, left_idx, right_idx):
+    # Choose comparison based on type of column ("dynamic dispatch")
+    if column.type == Int:
+     cmp(column[left_idx].as_int(), column[right_idx].as_int())
+    elif column.type == Float:
+     cmp(column[left_idx].as_float(), column[right_idx].as_float())
+    ...
+</code></pre>
 <p>Greater detail is beyond the scope of this post, but in general the more predictable the behavior of a block of code, the better its performance will be. In the case of this pseudocode,  there is clear room for improvement:</p>
 <ol>
 <li>
@@ -422,10 +422,10 @@ left_index  │     │   │     │   │     │                   │
 <p>You can find the complete implementation of multi-column comparator construction in arrow-rs in <a href="https://github.com/apache/arrow-rs/blob/f629a2ebe08033e7b78585d82e98c50a4439e7a2/arrow/src/compute/kernels/sort.rs#L905-L1036" target="_blank" rel="noopener">sort.rs</a> and <a href="https://github.com/apache/arrow-rs/blob/f629a2e/arrow/src/array/ord.rs#L178-L313" target="_blank" rel="noopener">ord.rs</a>.</p>
 <h1>Normalized Keys / Byte Array Comparisons</h1>
 <p>Now imagine we had a way to represent each logical row of data as a sequence of bytes, and that byte-wise comparison of that sequence yielded the same result as comparing the actual column values using the code above. Such a representation would require no switching on column types, and the kernel would become</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="k">def</span> <span class="nf">lexsort_to_indices</span><span class="p">(</span><span class="n">columns</span><span class="p">):</span>
-  <span class="n">rows</span> <span class="o">=</span> <span class="nf">convert_to_rows</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
-  <span class="p">[</span><span class="mf">0.</span><span class="p">.</span><span class="n">columns</span><span class="p">.</span><span class="nf">num_rows</span><span class="p">()].</span><span class="nf">sort_by</span><span class="p">(</span><span class="k">lambda</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">:</span> <span class="nf">cmp</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="n">l</span><span class="p">],</span> <span class="n">rows</span><span class="p">[</span><span class="n">r</span><span class="p">]))</span>
-</code></pre></div></div>
+<pre><code class="language-python">def lexsort_to_indices(columns):
+  rows = convert_to_rows(columns)
+  [0..columns.num_rows()].sort_by(lambda l, r: cmp(rows[l], rows[r]))
+</code></pre>
 <p>While this approach does require converting to/from the byte array representation, it has some major advantages:</p>
 <ul>
 <li>Rows can be compared by comparing bytes in memory, which modern computer hardware excels at with the extremely well optimized <a href="https://www.man7.org/linux/man-pages/man3/memcmp.3.html" target="_blank" rel="noopener">memcmp</a>

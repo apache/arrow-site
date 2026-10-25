@@ -278,19 +278,19 @@ prone to memory use problems.</p>
 <h2>Why Python strings can use a lot of memory</h2>
 <p>Let's start with some possibly surprising facts. I'm going to create an empty
 <code>bytes</code> object and an empty <code>str</code> (unicode) object in Python 3.7:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [1]: val = b''
+<pre><code>In [1]: val = b''
 
 In [2]: unicode_val = u''
-</code></pre></div></div>
+</code></pre>
 <p>The <code>sys.getsizeof</code> function accurately reports the number of bytes used by
 built-in Python objects. You might be surprised to find that:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [4]: import sys
+<pre><code>In [4]: import sys
 In [5]: sys.getsizeof(val)
 Out[5]: 33
 
 In [6]: sys.getsizeof(unicode_val)
 Out[6]: 49
-</code></pre></div></div>
+</code></pre>
 <p>Since strings in Python are nul-terminated, we can infer that a bytes object
 has 32 bytes of overhead while unicode has 48 bytes. One must also account for
 <code>PyObject*</code> pointer references to the objects, so the actual overhead is 40 and
@@ -299,8 +299,8 @@ matter much, but when you have a lot of small strings, such as those arising
 from reading a CSV or Apache Parquet file, they can take up an unexpected
 amount of memory. pandas represents strings in NumPy arrays of <code>PyObject*</code>
 pointers, so the total memory used by a unique unicode string is</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>8 (PyObject*) + 48 (Python C struct) + string_length + 1
-</code></pre></div></div>
+<pre><code>8 (PyObject*) + 48 (Python C struct) + string_length + 1
+</code></pre>
 <p>Suppose that we read a CSV file with</p>
 <ul>
 <li>1 column</li>
@@ -349,73 +349,73 @@ values.</p>
 <h2>Memory and Performance Benchmarks</h2>
 <p>We can use the <a href="https://pypi.org/project/memory-profiler/" target="_blank" rel="noopener"><code>memory_profiler</code></a> Python package to easily get process
 memory usage within a running Python application.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">import</span> <span class="n">memory_profiler</span>
-<span class="k">def</span> <span class="nf">mem</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">memory_profiler</span><span class="p">.</span><span class="nf">memory_usage</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-</code></pre></div></div>
+<pre><code class="language-python">import memory_profiler
+def mem():
+    return memory_profiler.memory_usage()[0]
+</code></pre>
 <p>In a new application I have:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [7]: mem()
+<pre><code>In [7]: mem()
 Out[7]: 86.21875
-</code></pre></div></div>
+</code></pre>
 <p>I will generate approximate 1 gigabyte of string data represented as Python
 strings with length 10. The <code>pandas.util.testing</code> module has a handy <code>rands</code>
 function for generating random strings. Here is the data generation function:</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="python"><span class="kn">from</span> <span class="n">pandas.util.testing</span> <span class="kn">import</span> <span class="n">rands</span>
-<span class="k">def</span> <span class="nf">generate_strings</span><span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">nunique</span><span class="p">,</span> <span class="n">string_length</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
-    <span class="n">unique_values</span> <span class="o">=</span> <span class="p">[</span><span class="nf">rands</span><span class="p">(</span><span class="n">string_length</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">nunique</span><span class="p">)]</span>
-    <span class="n">values</span> <span class="o">=</span> <span class="n">unique_values</span> <span class="o">*</span> <span class="p">(</span><span class="n">length</span> <span class="o">//</span> <span class="n">nunique</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">values</span>
-</code></pre></div></div>
+<pre><code class="language-python">from pandas.util.testing import rands
+def generate_strings(length, nunique, string_length=10):
+    unique_values = [rands(string_length) for i in range(nunique)]
+    values = unique_values * (length // nunique)
+    return values
+</code></pre>
 <p>This generates a certain number of unique strings, then duplicates then to
 yield the desired number of total strings. So I'm going to create 100 million
 strings with only 10000 unique values:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [8]: values = generate_strings(100000000, 10000)
+<pre><code>In [8]: values = generate_strings(100000000, 10000)
 
 In [9]: mem()
 Out[9]: 852.140625
-</code></pre></div></div>
+</code></pre>
 <p>100 million <code>PyObject*</code> values is only 745 MB, so this increase of a little
 over 770 MB is consistent with what we know so far. Now I'm going to convert
 this to Arrow format:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [11]: arr = pa.array(values)
+<pre><code>In [11]: arr = pa.array(values)
 
 In [12]: mem()
 Out[12]: 2276.9609375
-</code></pre></div></div>
+</code></pre>
 <p>Since <code>pyarrow</code> exactly accounts for all of its memory allocations, we also
 check that</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [13]: pa.total_allocated_bytes()
+<pre><code>In [13]: pa.total_allocated_bytes()
 Out[13]: 1416777280
-</code></pre></div></div>
+</code></pre>
 <p>Since each string takes about 14 bytes (10 bytes plus 4 bytes of overhead),
 this is what we expect.</p>
 <p>Now, converting <code>arr</code> back to pandas is where things get tricky. The <em>minimum</em>
 amount of memory that pandas can use is a little under 800 MB as above as we
 need 100 million <code>PyObject*</code> values, which are 8 bytes each.</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [14]: arr_as_pandas = arr.to_pandas()
+<pre><code>In [14]: arr_as_pandas = arr.to_pandas()
 
 In [15]: mem()
 Out[15]: 3041.78125
-</code></pre></div></div>
+</code></pre>
 <p>Doing the math, we used 765 MB which seems right. We can disable the string
 deduplication logic by passing <code>deduplicate_objects=False</code> to <code>to_pandas</code>:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [16]: arr_as_pandas_no_dedup = arr.to_pandas(deduplicate_objects=False)
+<pre><code>In [16]: arr_as_pandas_no_dedup = arr.to_pandas(deduplicate_objects=False)
 
 In [17]: mem()
 Out[17]: 10006.95703125
-</code></pre></div></div>
+</code></pre>
 <p>Without object deduplication, we use 6965 megabytes, or an average of 73 bytes
 per value. This is a little bit higher than the theoretical size of 67 bytes
 computed above.</p>
 <p>One of the more surprising results is that the new behavior is about twice as fast:</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In [18]: %time arr_as_pandas_time = arr.to_pandas()
+<pre><code>In [18]: %time arr_as_pandas_time = arr.to_pandas()
 CPU times: user 2.94 s, sys: 213 ms, total: 3.15 s
 Wall time: 3.14 s
 
 In [19]: %time arr_as_pandas_no_dedup_time = arr.to_pandas(deduplicate_objects=False)
 CPU times: user 4.19 s, sys: 2.04 s, total: 6.23 s
 Wall time: 6.21 s
-</code></pre></div></div>
+</code></pre>
 <p>The reason for this is that creating so many Python objects is more expensive
 than hashing the 10 byte values and looking them up in a hash table.</p>
 <p>Note that when you convert Arrow data with mostly unique values back to pandas,

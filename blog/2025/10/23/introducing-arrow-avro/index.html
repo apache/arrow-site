@@ -308,66 +308,66 @@
 <p>Finally, by keeping container and stream framing (OCF vs. SOE) separate from encoding and decoding, the crate composes naturally with the rest of Arrow‑rs: you read or write Arrow <code>RecordBatch</code>es, pick OCF or SOE streams as needed, and wire up fingerprints only when you're on a streaming path. This results in a compact API surface that covers both batch files and high‑throughput streams without sacrificing columnar, vectorized execution.</p>
 <h2>Examples</h2>
 <h3>Decoding a Confluent-framed Kafka Stream</h3>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">reader</span><span class="p">::</span><span class="n">ReaderBuilder</span><span class="p">;</span>
-<span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">schema</span><span class="p">::{</span>
-    <span class="n">SchemaStore</span><span class="p">,</span> <span class="n">AvroSchema</span><span class="p">,</span> <span class="n">Fingerprint</span><span class="p">,</span> <span class="n">FingerprintAlgorithm</span><span class="p">,</span> <span class="n">CONFLUENT_MAGIC</span>
-<span class="p">};</span>
+<pre><code class="language-rust">use arrow_avro::reader::ReaderBuilder;
+use arrow_avro::schema::{
+    SchemaStore, AvroSchema, Fingerprint, FingerprintAlgorithm, CONFLUENT_MAGIC
+};
 
-<span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="p">(),</span> <span class="nb">Box</span><span class="o">&lt;</span><span class="k">dyn</span> <span class="nn">std</span><span class="p">::</span><span class="nn">error</span><span class="p">::</span><span class="n">Error</span><span class="o">&gt;&gt;</span> <span class="p">{</span>
-    <span class="c1">// Register writer schema under Confluent id=1.</span>
-    <span class="k">let</span> <span class="k">mut</span> <span class="n">store</span> <span class="o">=</span> <span class="nn">SchemaStore</span><span class="p">::</span><span class="nf">new_with_type</span><span class="p">(</span><span class="nn">FingerprintAlgorithm</span><span class="p">::</span><span class="n">Id</span><span class="p">);</span>
-    <span class="n">store</span><span class="nf">.set</span><span class="p">(</span>
-        <span class="nn">Fingerprint</span><span class="p">::</span><span class="nf">Id</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
-        <span class="nn">AvroSchema</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="s">r#"{"type":"record","name":"T","fields":[{"name":"x","type":"long"}]}"#</span><span class="nf">.into</span><span class="p">()),</span>
-    <span class="p">)</span><span class="o">?</span><span class="p">;</span>
+fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+    // Register writer schema under Confluent id=1.
+    let mut store = SchemaStore::new_with_type(FingerprintAlgorithm::Id);
+    store.set(
+        Fingerprint::Id(1),
+        AvroSchema::new(r#"{"type":"record","name":"T","fields":[{"name":"x","type":"long"}]}"#.into()),
+    )?;
 
-    <span class="c1">// Define reader schema to enable projection/schema evolution.</span>
-    <span class="k">let</span> <span class="n">reader_schema</span> <span class="o">=</span> <span class="nn">AvroSchema</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="s">r#"{"type":"record","name":"T","fields":[{"name":"x","type":"long"}]}"#</span><span class="nf">.into</span><span class="p">());</span>
+    // Define reader schema to enable projection/schema evolution.
+    let reader_schema = AvroSchema::new(r#"{"type":"record","name":"T","fields":[{"name":"x","type":"long"}]}"#.into());
 
-    <span class="c1">// Build Decoder using reader and writer schemas</span>
-    <span class="k">let</span> <span class="k">mut</span> <span class="n">decoder</span> <span class="o">=</span> <span class="nn">ReaderBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">()</span>
-        <span class="nf">.with_reader_schema</span><span class="p">(</span><span class="n">reader_schema</span><span class="p">)</span>
-        <span class="nf">.with_writer_schema_store</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
-        <span class="nf">.build_decoder</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+    // Build Decoder using reader and writer schemas
+    let mut decoder = ReaderBuilder::new()
+        .with_reader_schema(reader_schema)
+        .with_writer_schema_store(store)
+        .build_decoder()?;
 
-    <span class="c1">// Simulate one frame: magic 0x00 + 4‑byte big‑endian schema ID + Avro body (x=1 encoded as zig‑zag/VLQ).</span>
-    <span class="k">let</span> <span class="k">mut</span> <span class="n">frame</span> <span class="o">=</span> <span class="nn">Vec</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="n">CONFLUENT_MAGIC</span><span class="p">);</span> <span class="n">frame</span><span class="nf">.extend_from_slice</span><span class="p">(</span><span class="o">&amp;</span><span class="mi">1u32</span><span class="nf">.to_be_bytes</span><span class="p">());</span> <span class="n">frame</span><span class="nf">.extend_from_slice</span><span class="p">(</span><span class="o">&amp;</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+    // Simulate one frame: magic 0x00 + 4‑byte big‑endian schema ID + Avro body (x=1 encoded as zig‑zag/VLQ).
+    let mut frame = Vec::from(CONFLUENT_MAGIC); frame.extend_from_slice(&amp;1u32.to_be_bytes()); frame.extend_from_slice(&amp;[2]);
 
-    <span class="c1">// Consume from decoder</span>
-    <span class="k">let</span> <span class="n">_consumed</span> <span class="o">=</span> <span class="n">decoder</span><span class="nf">.decode</span><span class="p">(</span><span class="o">&amp;</span><span class="n">frame</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-    <span class="k">while</span> <span class="k">let</span> <span class="nf">Some</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">=</span> <span class="n">decoder</span><span class="nf">.flush</span><span class="p">()</span><span class="o">?</span> <span class="p">{</span>
-        <span class="nd">println!</span><span class="p">(</span><span class="s">"rows={}, cols={}"</span><span class="p">,</span> <span class="n">batch</span><span class="nf">.num_rows</span><span class="p">(),</span> <span class="n">batch</span><span class="nf">.num_columns</span><span class="p">());</span>
-    <span class="p">}</span>
-    <span class="nf">Ok</span><span class="p">(())</span>
-<span class="p">}</span>
-</code></pre></div></div>
+    // Consume from decoder
+    let _consumed = decoder.decode(&amp;frame)?;
+    while let Some(batch) = decoder.flush()? {
+        println!("rows={}, cols={}", batch.num_rows(), batch.num_columns());
+    }
+    Ok(())
+}
+</code></pre>
 <p>The <code>SchemaStore</code> maps the incoming schema ID to the correct Avro writer schema so the decoder can perform projection/evolution against the reader schema. Confluent's wire format prefixes each message with a magic byte <code>0x00</code> followed by a big‑endian 4‑byte schema ID. After decoding Avro messages, the <code>Decoder::flush()</code> method yields Arrow <code>RecordBatch</code>es suitable for vectorized processing.</p>
 <p>A more advanced example can be found <a href="https://github.com/apache/arrow-rs/blob/main/arrow-avro/examples/decode_kafka_stream.rs" target="_blank" rel="noopener">here</a>.</p>
 <h3>Writing a Snappy Compressed Avro OCF file</h3>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="rust"><span class="k">use</span> <span class="nn">arrow_array</span><span class="p">::{</span><span class="n">Int64Array</span><span class="p">,</span> <span class="n">RecordBatch</span><span class="p">};</span>
-<span class="k">use</span> <span class="nn">arrow_schema</span><span class="p">::{</span><span class="n">Schema</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">DataType</span><span class="p">};</span>
-<span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">writer</span><span class="p">::{</span><span class="n">Writer</span><span class="p">,</span> <span class="n">WriterBuilder</span><span class="p">};</span>
-<span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">writer</span><span class="p">::</span><span class="nn">format</span><span class="p">::</span><span class="n">AvroOcfFormat</span><span class="p">;</span>
-<span class="k">use</span> <span class="nn">arrow_avro</span><span class="p">::</span><span class="nn">compression</span><span class="p">::</span><span class="n">CompressionCodec</span><span class="p">;</span>
-<span class="k">use</span> <span class="nn">std</span><span class="p">::{</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="p">,</span> <span class="nn">fs</span><span class="p">::</span><span class="n">File</span><span class="p">,</span> <span class="nn">io</span><span class="p">::</span><span class="n">BufWriter</span><span class="p">};</span>
+<pre><code class="language-rust">use arrow_array::{Int64Array, RecordBatch};
+use arrow_schema::{Schema, Field, DataType};
+use arrow_avro::writer::{Writer, WriterBuilder};
+use arrow_avro::writer::format::AvroOcfFormat;
+use arrow_avro::compression::CompressionCodec;
+use std::{sync::Arc, fs::File, io::BufWriter};
 
-<span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="p">(),</span> <span class="nb">Box</span><span class="o">&lt;</span><span class="k">dyn</span> <span class="nn">std</span><span class="p">::</span><span class="nn">error</span><span class="p">::</span><span class="n">Error</span><span class="o">&gt;&gt;</span> <span class="p">{</span>
-  <span class="k">let</span> <span class="n">schema</span> <span class="o">=</span> <span class="nn">Schema</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="nd">vec!</span><span class="p">[</span><span class="nn">Field</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="s">"id"</span><span class="p">,</span> <span class="nn">DataType</span><span class="p">::</span><span class="n">Int64</span><span class="p">,</span> <span class="kc">false</span><span class="p">)]);</span>
-  <span class="k">let</span> <span class="n">batch</span> <span class="o">=</span> <span class="nn">RecordBatch</span><span class="p">::</span><span class="nf">try_new</span><span class="p">(</span>
-    <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">schema</span><span class="nf">.clone</span><span class="p">()),</span>
-    <span class="nd">vec!</span><span class="p">[</span><span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="nn">Int64Array</span><span class="p">::</span><span class="nf">from</span><span class="p">(</span><span class="nd">vec!</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]))],</span>
-  <span class="p">)</span><span class="o">?</span><span class="p">;</span>
-  <span class="k">let</span> <span class="n">file</span> <span class="o">=</span> <span class="nn">File</span><span class="p">::</span><span class="nf">create</span><span class="p">(</span><span class="s">"target/example.avro"</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+fn main() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+  let schema = Schema::new(vec![Field::new("id", DataType::Int64, false)]);
+  let batch = RecordBatch::try_new(
+    Arc::new(schema.clone()),
+    vec![Arc::new(Int64Array::from(vec![1,2,3]))],
+  )?;
+  let file = File::create("target/example.avro")?;
 
-  <span class="c1">// Choose OCF block compression (e.g., None, Deflate, Snappy, Zstd)</span>
-  <span class="k">let</span> <span class="k">mut</span> <span class="n">writer</span><span class="p">:</span> <span class="n">Writer</span><span class="o">&lt;</span><span class="n">_</span><span class="p">,</span> <span class="n">AvroOcfFormat</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nn">WriterBuilder</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span>
-      <span class="nf">.with_compression</span><span class="p">(</span><span class="nf">Some</span><span class="p">(</span><span class="nn">CompressionCodec</span><span class="p">::</span><span class="n">Snappy</span><span class="p">))</span>
-      <span class="nf">.build</span><span class="p">(</span><span class="nn">BufWriter</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">file</span><span class="p">))</span><span class="o">?</span><span class="p">;</span>
-  <span class="n">writer</span><span class="nf">.write</span><span class="p">(</span><span class="o">&amp;</span><span class="n">batch</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
-  <span class="n">writer</span><span class="nf">.finish</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
-  <span class="nf">Ok</span><span class="p">(())</span>
-<span class="p">}</span>
-</code></pre></div></div>
+  // Choose OCF block compression (e.g., None, Deflate, Snappy, Zstd)
+  let mut writer: Writer&lt;_, AvroOcfFormat&gt; = WriterBuilder::new(schema)
+      .with_compression(Some(CompressionCodec::Snappy))
+      .build(BufWriter::new(file))?;
+  writer.write(&amp;batch)?;
+  writer.finish()?;
+  Ok(())
+}
+</code></pre>
 <p>The example above configures an Avro OCF <code>Writer</code>. It constructs a <code>Writer&lt;_, AvroOcfFormat&gt;</code> using <code>WriterBuilder::new(schema)</code> and wraps a <code>File</code> in a <code>BufWriter</code> for efficient I/O. The call to <code>.with_compression(Some(CompressionCodec::Snappy))</code> enables block‑level snappy compression. Finally, <code>writer.write(&amp;batch)?</code> serializes the batch as an Avro encoded block, and <code>writer.finish()?</code> flushes and finalizes the outputted file.</p>
 <h2>Alternatives &amp; Benchmarks</h2>
 <p>There are fundamentally two different approaches for bringing Avro into Arrow:</p>

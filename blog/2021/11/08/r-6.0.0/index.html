@@ -275,64 +275,64 @@
 <h2>Grouped aggregation</h2>
 <p>With <code>arrow</code> 6.0.0, you can now <code>summarise()</code> on Arrow data, both with or without <code>group_by()</code>. These are supported both with in-memory Arrow tables as well as across partitioned datasets. Most common aggregation functions are supported: <code>n()</code>, <code>n_distinct()</code>, <code>min(),</code> <code>max()</code>, <code>sum()</code>, <code>mean()</code>, <code>var()</code>, <code>sd()</code>, <code>any()</code>, and <code>all()</code>. <code>median()</code> and <code>quantile()</code> with one probability are also supported and currently return approximate results using the t-digest algorithm.</p>
 <p>As usual, Arrow will read and process data in chunks and in parallel when possible to produce results much faster than one could by loading it all into memory then processing. This allows for operations that wouldn't fit into memory on a single machine. For example, using the 1.5-billion row NYC Taxi dataset we use for examples in the <a href="https://arrow.apache.org/docs/r/articles/dataset.html">package vignette</a>, we can aggregate over the whole dataset even on a laptop:</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">ds</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">open_dataset</span><span class="p">(</span><span class="s2">"nyc-taxi"</span><span class="p">,</span><span class="w"> </span><span class="n">partitioning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"year"</span><span class="p">,</span><span class="w"> </span><span class="s2">"month"</span><span class="p">))</span><span class="w">
-</span><span class="n">ds</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">filter</span><span class="p">(</span><span class="w">
-    </span><span class="n">passenger_count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w">
-    </span><span class="n">passenger_count</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="m">6</span><span class="p">,</span><span class="w">
-    </span><span class="n">grepl</span><span class="p">(</span><span class="s2">"csh"</span><span class="p">,</span><span class="w"> </span><span class="n">payment_type</span><span class="p">,</span><span class="w"> </span><span class="n">ignore.case</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
-  </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">group_by</span><span class="p">(</span><span class="n">passenger_count</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">summarize</span><span class="p">(</span><span class="w">
-    </span><span class="n">avg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">total_amount</span><span class="p">,</span><span class="w"> </span><span class="n">na.rm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">),</span><span class="w">
-    </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="p">()</span><span class="w">
-  </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">arrange</span><span class="p">(</span><span class="n">desc</span><span class="p">(</span><span class="n">count</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">collect</span><span class="p">()</span><span class="w">
+<pre><code class="language-r">ds &lt;- open_dataset("nyc-taxi", partitioning = c("year", "month"))
+ds %&gt;%
+  filter(
+    passenger_count &gt; 0,
+    passenger_count &lt; 6,
+    grepl("csh", payment_type, ignore.case = TRUE)
+  ) %&gt;%
+  group_by(passenger_count) %&gt;%
+  summarize(
+    avg = mean(total_amount, na.rm = TRUE),
+    count = n()
+  ) %&gt;%
+  arrange(desc(count)) %&gt;%
+  collect()
 
-</span><span class="c1">#&gt; # A tibble: 5 × 3</span><span class="w">
-</span><span class="c1">#&gt;   passenger_count   avg     count</span><span class="w">
-</span><span class="c1">#&gt;             &lt;int&gt; &lt;dbl&gt;     &lt;int&gt;</span><span class="w">
-</span><span class="c1">#&gt; 1               1  11.1 257738064</span><span class="w">
-</span><span class="c1">#&gt; 2               2  12.1  58824482</span><span class="w">
-</span><span class="c1">#&gt; 3               5  11.4  26056438</span><span class="w">
-</span><span class="c1">#&gt; 4               3  12.0  18852606</span><span class="w">
-</span><span class="c1">#&gt; 5               4  12.3  10081632</span><span class="w">
-</span></code></pre></div></div>
+#&gt; # A tibble: 5 × 3
+#&gt;   passenger_count   avg     count
+#&gt;             &lt;int&gt; &lt;dbl&gt;     &lt;int&gt;
+#&gt; 1               1  11.1 257738064
+#&gt; 2               2  12.1  58824482
+#&gt; 3               5  11.4  26056438
+#&gt; 4               3  12.0  18852606
+#&gt; 5               4  12.3  10081632
+</code></pre>
 <h2>Joins</h2>
 <p>In addition to aggregation, Arrow also supports all of dplyr's mutating joins (inner, left, right, and full) and filtering joins (semi and anti).</p>
 <p>Suppose I want to get a table of all the flights from JFK to Las Vegas Airport on
 9th October 2013, with the full name of the airline included.</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">arrow_table</span><span class="p">(</span><span class="n">nycflights13</span><span class="o">::</span><span class="n">flights</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">filter</span><span class="p">(</span><span class="w">
-    </span><span class="n">year</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">2013</span><span class="p">,</span><span class="w">
-    </span><span class="n">month</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">10</span><span class="p">,</span><span class="w">
-    </span><span class="n">day</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">9</span><span class="p">,</span><span class="w">
-    </span><span class="n">origin</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"JFK"</span><span class="p">,</span><span class="w">
-    </span><span class="n">dest</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"LAS"</span><span class="w">
-    </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">select</span><span class="p">(</span><span class="n">dep_time</span><span class="p">,</span><span class="w"> </span><span class="n">arr_time</span><span class="p">,</span><span class="w"> </span><span class="n">carrier</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">left_join</span><span class="p">(</span><span class="w">
-    </span><span class="n">arrow_table</span><span class="p">(</span><span class="n">nycflights13</span><span class="o">::</span><span class="n">airlines</span><span class="p">)</span><span class="w">
-   </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">collect</span><span class="p">()</span><span class="w">
+<pre><code class="language-r">arrow_table(nycflights13::flights) %&gt;%
+  filter(
+    year == 2013,
+    month == 10,
+    day == 9,
+    origin == "JFK",
+    dest == "LAS"
+    ) %&gt;%
+  select(dep_time, arr_time, carrier) %&gt;%
+  left_join(
+    arrow_table(nycflights13::airlines)
+   ) %&gt;%
+  collect()
 
-</span><span class="c1">#&gt; # A tibble: 12 × 4</span><span class="w">
-</span><span class="c1">#&gt;    dep_time arr_time carrier name</span><span class="w">
-</span><span class="c1">#&gt;       &lt;int&gt;    &lt;int&gt; &lt;chr&gt;   &lt;chr&gt;</span><span class="w">
-</span><span class="c1">#&gt;  1      637      853 B6      JetBlue Airways</span><span class="w">
-</span><span class="c1">#&gt;  2      648      912 AA      American Airlines Inc.</span><span class="w">
-</span><span class="c1">#&gt;  3      812     1029 DL      Delta Air Lines Inc.</span><span class="w">
-</span><span class="c1">#&gt;  4      945     1206 VX      Virgin America</span><span class="w">
-</span><span class="c1">#&gt;  5      955     1219 B6      JetBlue Airways</span><span class="w">
-</span><span class="c1">#&gt;  6     1018     1231 DL      Delta Air Lines Inc.</span><span class="w">
-</span><span class="c1">#&gt;  7     1120     1338 B6      JetBlue Airways</span><span class="w">
-</span><span class="c1">#&gt;  8     1451     1705 DL      Delta Air Lines Inc.</span><span class="w">
-</span><span class="c1">#&gt;  9     1656     1915 AA      American Airlines Inc.</span><span class="w">
-</span><span class="c1">#&gt; 10     1755     2001 DL      Delta Air Lines Inc.</span><span class="w">
-</span><span class="c1">#&gt; 11     1827     2049 B6      JetBlue Airways</span><span class="w">
-</span><span class="c1">#&gt; 12     1917     2126 DL      Delta Air Lines Inc.</span><span class="w">
-</span></code></pre></div></div>
+#&gt; # A tibble: 12 × 4
+#&gt;    dep_time arr_time carrier name
+#&gt;       &lt;int&gt;    &lt;int&gt; &lt;chr&gt;   &lt;chr&gt;
+#&gt;  1      637      853 B6      JetBlue Airways
+#&gt;  2      648      912 AA      American Airlines Inc.
+#&gt;  3      812     1029 DL      Delta Air Lines Inc.
+#&gt;  4      945     1206 VX      Virgin America
+#&gt;  5      955     1219 B6      JetBlue Airways
+#&gt;  6     1018     1231 DL      Delta Air Lines Inc.
+#&gt;  7     1120     1338 B6      JetBlue Airways
+#&gt;  8     1451     1705 DL      Delta Air Lines Inc.
+#&gt;  9     1656     1915 AA      American Airlines Inc.
+#&gt; 10     1755     2001 DL      Delta Air Lines Inc.
+#&gt; 11     1827     2049 B6      JetBlue Airways
+#&gt; 12     1917     2126 DL      Delta Air Lines Inc.
+</code></pre>
 <p>In this example, we're working on an in-memory table, so you wouldn't need <code>arrow</code> to do this--but the same code would work on a larger-than-memory dataset backed by thousands of Parquet files.</p>
 <h2>Under the hood</h2>
 <p>To support these features, we've made some internal changes to how queries are built up and--importantly--when they are evaluated. As a result, there are some changes in behavior compared to past versions of <code>arrow</code>.</p>
@@ -342,94 +342,94 @@
 <h1>Integration with DuckDB</h1>
 <p>The Arrow engine is not the only new way to query Arrow Datasets in this release. If you have the <a href="https://cran.r-project.org/package=duckdb" target="_blank" rel="noopener">duckdb</a> package installed, you can hand off an Arrow Dataset or query object to <a href="https://duckdb.org/" target="_blank" rel="noopener">DuckDB</a> for further querying using the <code>to_duckdb()</code> function. This allows you to use duckdb's <code>dbplyr</code> methods, as well as its SQL interface, to aggregate data. DuckDB supports filter pushdown, so you can take advantage of Arrow Datasets and Arrow-based optimizations even within a DuckDB SQL query with a <code>where</code> clause. Filtering and column projection specified before the <code>to_duckdb()</code> call in a pipeline is evaluated in Arrow; this can be helpful in some circumstances like complicated dbplyr pipelines.  You can also hand off DuckDB data (or the result of a query) to arrow with the <code>to_arrow()</code> call.</p>
 <p>In the example below, we are looking at flights between NYC and Chicago, and want to avoid the worst-of-the-worst delays. To do this, we can use <code>percent_rank()</code>; however that requires a window function which isn’t yet available in Arrow, so let’s try sending the data to DuckDB to do that, then pull it back into Arrow:</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">,</span><span class="w"> </span><span class="n">warn.conflicts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
-</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">,</span><span class="w"> </span><span class="n">warn.conflicts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+<pre><code class="language-r">library(arrow, warn.conflicts = FALSE)
+library(dplyr, warn.conflicts = FALSE)
 
-</span><span class="n">flights_filtered</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">arrow_table</span><span class="p">(</span><span class="n">nycflights13</span><span class="o">::</span><span class="n">flights</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">select</span><span class="p">(</span><span class="n">carrier</span><span class="p">,</span><span class="w"> </span><span class="n">origin</span><span class="p">,</span><span class="w"> </span><span class="n">dest</span><span class="p">,</span><span class="w"> </span><span class="n">arr_delay</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="c1"># arriving early doesn't matter, so call negative delays 0</span><span class="w">
-  </span><span class="n">mutate</span><span class="p">(</span><span class="n">arr_delay</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pmax</span><span class="p">(</span><span class="n">arr_delay</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">to_duckdb</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="c1"># for each carrier-origin-dest, take the worst 5% of delays</span><span class="w">
-  </span><span class="n">group_by</span><span class="p">(</span><span class="n">carrier</span><span class="p">,</span><span class="w"> </span><span class="n">origin</span><span class="p">,</span><span class="w"> </span><span class="n">dest</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">mutate</span><span class="p">(</span><span class="n">arr_delay_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">percent_rank</span><span class="p">(</span><span class="n">arr_delay</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">filter</span><span class="p">(</span><span class="n">arr_delay_rank</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0.95</span><span class="p">)</span><span class="w">
+flights_filtered &lt;- arrow_table(nycflights13::flights) %&gt;%
+  select(carrier, origin, dest, arr_delay) %&gt;%
+  # arriving early doesn't matter, so call negative delays 0
+  mutate(arr_delay = pmax(arr_delay, 0)) %&gt;%
+  to_duckdb() %&gt;%
+  # for each carrier-origin-dest, take the worst 5% of delays
+  group_by(carrier, origin, dest) %&gt;%
+  mutate(arr_delay_rank = percent_rank(arr_delay)) %&gt;%
+  filter(arr_delay_rank &gt; 0.95)
 
-</span><span class="n">head</span><span class="p">(</span><span class="n">flights_filtered</span><span class="p">)</span><span class="w">
-</span><span class="c1">#&gt; # Source:   lazy query [?? x 5]</span><span class="w">
-</span><span class="c1">#&gt; # Database: duckdb_connection</span><span class="w">
-</span><span class="c1">#&gt; # Groups:   carrier, origin, dest</span><span class="w">
-</span><span class="c1">#&gt;   carrier origin dest  arr_delay arr_delay_rank</span><span class="w">
-</span><span class="c1">#&gt;   &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;     &lt;dbl&gt;          &lt;dbl&gt;</span><span class="w">
-</span><span class="c1">#&gt; 1 9E      JFK    RIC         119          0.952</span><span class="w">
-</span><span class="c1">#&gt; 2 9E      JFK    RIC         125          0.956</span><span class="w">
-</span><span class="c1">#&gt; 3 9E      JFK    RIC         137          0.960</span><span class="w">
-</span><span class="c1">#&gt; 4 9E      JFK    RIC         137          0.960</span><span class="w">
-</span><span class="c1">#&gt; 5 9E      JFK    RIC         158          0.968</span><span class="w">
-</span><span class="c1">#&gt; 6 9E      JFK    RIC         163          0.972</span><span class="w">
-</span></code></pre></div></div>
+head(flights_filtered)
+#&gt; # Source:   lazy query [?? x 5]
+#&gt; # Database: duckdb_connection
+#&gt; # Groups:   carrier, origin, dest
+#&gt;   carrier origin dest  arr_delay arr_delay_rank
+#&gt;   &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;     &lt;dbl&gt;          &lt;dbl&gt;
+#&gt; 1 9E      JFK    RIC         119          0.952
+#&gt; 2 9E      JFK    RIC         125          0.956
+#&gt; 3 9E      JFK    RIC         137          0.960
+#&gt; 4 9E      JFK    RIC         137          0.960
+#&gt; 5 9E      JFK    RIC         158          0.968
+#&gt; 6 9E      JFK    RIC         163          0.972
+</code></pre>
 <p>Now we have all of the flights filtered to those that are the worst-of-the-worst, and stored as a dbplyr lazy <code>tbl</code> with our DuckDB connection. This is an example of using Arrow -&gt; DuckDB.</p>
 <p>But we can do more: we can then bring that data back into Arrow just as easily. For the rest of our analysis, we pick up where we left off with the <code>tbl</code> referring to the DuckDB query:</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="c1"># pull data back into arrow to complete analysis</span><span class="w">
-</span><span class="n">flights_filtered</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">to_arrow</span><span class="p">()</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="c1"># now summarise to get mean/min</span><span class="w">
-  </span><span class="n">group_by</span><span class="p">(</span><span class="n">carrier</span><span class="p">,</span><span class="w"> </span><span class="n">origin</span><span class="p">,</span><span class="w"> </span><span class="n">dest</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">summarise</span><span class="p">(</span><span class="w">
-    </span><span class="n">arr_delay_mean</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mean</span><span class="p">(</span><span class="n">arr_delay</span><span class="p">),</span><span class="w">
-    </span><span class="n">arr_delay_min</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">min</span><span class="p">(</span><span class="n">arr_delay</span><span class="p">),</span><span class="w">
-    </span><span class="n">num_flights</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="p">()</span><span class="w">
-  </span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">filter</span><span class="p">(</span><span class="n">dest</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"ORD"</span><span class="p">,</span><span class="w"> </span><span class="s2">"MDW"</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">arrange</span><span class="p">(</span><span class="n">desc</span><span class="p">(</span><span class="n">arr_delay_mean</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
-  </span><span class="n">collect</span><span class="p">()</span><span class="w">
-</span><span class="c1">#&gt; # A tibble: 10 × 6</span><span class="w">
-</span><span class="c1">#&gt; # Groups:   carrier, origin [10]</span><span class="w">
-</span><span class="c1">#&gt;    carrier origin dest  arr_delay_mean arr_delay_min num_flights</span><span class="w">
-</span><span class="c1">#&gt;    &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;          &lt;dbl&gt;         &lt;dbl&gt;       &lt;int&gt;</span><span class="w">
-</span><span class="c1">#&gt;  1 MQ      EWR    ORD             190.           103         113</span><span class="w">
-</span><span class="c1">#&gt;  2 9E      JFK    ORD             185.           134          52</span><span class="w">
-</span><span class="c1">#&gt;  3 UA      LGA    ORD             179.           101         157</span><span class="w">
-</span><span class="c1">#&gt;  4 WN      LGA    MDW             178.           107         103</span><span class="w">
-</span><span class="c1">#&gt;  5 AA      JFK    ORD             178.           133          19</span><span class="w">
-</span><span class="c1">#&gt;  6 B6      JFK    ORD             174.           129          46</span><span class="w">
-</span><span class="c1">#&gt;  7 WN      EWR    MDW             167.           107         103</span><span class="w">
-</span><span class="c1">#&gt;  8 UA      EWR    ORD             149.            87         189</span><span class="w">
-</span><span class="c1">#&gt;  9 AA      LGA    ORD             135.            78         280</span><span class="w">
-</span><span class="c1">#&gt; 10 EV      EWR    ORD              35             35           1</span><span class="w">
-</span></code></pre></div></div>
+<pre><code class="language-r"># pull data back into arrow to complete analysis
+flights_filtered %&gt;%
+  to_arrow() %&gt;%
+  # now summarise to get mean/min
+  group_by(carrier, origin, dest) %&gt;%
+  summarise(
+    arr_delay_mean = mean(arr_delay),
+    arr_delay_min = min(arr_delay),
+    num_flights = n()
+  ) %&gt;%
+  filter(dest %in% c("ORD", "MDW")) %&gt;%
+  arrange(desc(arr_delay_mean)) %&gt;%
+  collect()
+#&gt; # A tibble: 10 × 6
+#&gt; # Groups:   carrier, origin [10]
+#&gt;    carrier origin dest  arr_delay_mean arr_delay_min num_flights
+#&gt;    &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt;          &lt;dbl&gt;         &lt;dbl&gt;       &lt;int&gt;
+#&gt;  1 MQ      EWR    ORD             190.           103         113
+#&gt;  2 9E      JFK    ORD             185.           134          52
+#&gt;  3 UA      LGA    ORD             179.           101         157
+#&gt;  4 WN      LGA    MDW             178.           107         103
+#&gt;  5 AA      JFK    ORD             178.           133          19
+#&gt;  6 B6      JFK    ORD             174.           129          46
+#&gt;  7 WN      EWR    MDW             167.           107         103
+#&gt;  8 UA      EWR    ORD             149.            87         189
+#&gt;  9 AA      LGA    ORD             135.            78         280
+#&gt; 10 EV      EWR    ORD              35             35           1
+</code></pre>
 <p>And just like that, we've passed data back and forth between Arrow and DuckDB without having to write a single file to disk!</p>
 <h1>Expanded use of ALTREP</h1>
 <p>We are continuing our use of R’s <a href="https://svn.r-project.org/R/branches/ALTREP/ALTREP.html" target="_blank" rel="noopener">ALTREP</a> where possible. In 5.0.0 there were a limited set of circumstances that took advantage of ALTREP, but in 6.0.0 we have expanded types to include strings, as well as vectors with <code>NA</code>s.</p>
-<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code data-lang="r"><span class="n">library</span><span class="p">(</span><span class="n">microbenchmark</span><span class="p">)</span><span class="w">
-</span><span class="n">library</span><span class="p">(</span><span class="n">arrow</span><span class="p">)</span><span class="w">
+<pre><code class="language-r">library(microbenchmark)
+library(arrow)
 
-</span><span class="n">tbl</span><span class="w"> </span><span class="o">&lt;-</span><span class="w">
-  </span><span class="n">arrow_table</span><span class="p">(</span><span class="n">data.frame</span><span class="p">(</span><span class="w">
-    </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rnorm</span><span class="p">(</span><span class="m">10000000</span><span class="p">),</span><span class="w">
-    </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sample</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="nb">letters</span><span class="p">,</span><span class="w"> </span><span class="kc">NA</span><span class="p">),</span><span class="w"> </span><span class="m">10000000</span><span class="p">,</span><span class="w"> </span><span class="n">replace</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
-  </span><span class="p">))</span><span class="w">
+tbl &lt;-
+  arrow_table(data.frame(
+    x = rnorm(10000000),
+    y = sample(c(letters, NA), 10000000, replace = TRUE)
+  ))
 
-</span><span class="n">with_altrep</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">data</span><span class="p">){</span><span class="w">
-  </span><span class="n">options</span><span class="p">(</span><span class="n">arrow.use_altrep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
-  </span><span class="n">as.data.frame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="w">
-</span><span class="p">}</span><span class="w">
+with_altrep &lt;- function(data){
+  options(arrow.use_altrep = TRUE)
+  as.data.frame(data)
+}
 
-</span><span class="n">without_altrep</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">data</span><span class="p">){</span><span class="w">
-  </span><span class="n">options</span><span class="p">(</span><span class="n">arrow.use_altrep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
-  </span><span class="n">as.data.frame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="w">
-</span><span class="p">}</span><span class="w">
+without_altrep &lt;- function(data){
+  options(arrow.use_altrep = FALSE)
+  as.data.frame(data)
+}
 
-</span><span class="n">microbenchmark</span><span class="p">(</span><span class="w">
-  </span><span class="n">without_altrep</span><span class="p">(</span><span class="n">tbl</span><span class="p">),</span><span class="w">
-  </span><span class="n">with_altrep</span><span class="p">(</span><span class="n">tbl</span><span class="p">)</span><span class="w">
-</span><span class="p">)</span><span class="w">
+microbenchmark(
+  without_altrep(tbl),
+  with_altrep(tbl)
+)
 
-</span><span class="c1">#&gt; Unit: milliseconds</span><span class="w">
-</span><span class="c1">#&gt;                 expr      min        lq      mean    median        uq      max neval</span><span class="w">
-</span><span class="c1">#&gt;  without_altrep(tbl) 191.0788 213.82235 249.65076 225.52120 244.26977 512.1652   100</span><span class="w">
-</span><span class="c1">#&gt;     with_altrep(tbl)  48.7152  50.97269  65.56832  52.93795  55.24505 338.4602   100</span><span class="w">
-</span></code></pre></div></div>
+#&gt; Unit: milliseconds
+#&gt;                 expr      min        lq      mean    median        uq      max neval
+#&gt;  without_altrep(tbl) 191.0788 213.82235 249.65076 225.52120 244.26977 512.1652   100
+#&gt;     with_altrep(tbl)  48.7152  50.97269  65.56832  52.93795  55.24505 338.4602   100
+</code></pre>
 <h1>Airgapped installation on Linux</h1>
 <p>With every release, we continue to improve the installation experience on Linux. Unlike macOS and Windows, CRAN does not host binary packages for Linux, and unless you're using a service like RStudio Package Manger that hosts binaries, you have to build <code>arrow</code> from source. Because Arrow involves a large C++ project, this can be slow and sensitive to differences in build environments. To ensure a reliable installation experience, we work hard to test on a wide range of platforms and configurations and eagerly seek to simplify the process so that <code>install.packages("arrow")</code> just works and you don't have to think about it.</p>
 <p>A big improvement in 6.0.0 is that <code>arrow</code> can now install in a fully offline mode. The R package now includes the C++ source, so it does not need to be downloaded at build time. This does not include optional dependencies like compression libraries, the AWS SDK for accessing data in S3, and more. For folks who need to install Arrow on an airgapped server with all of those features, we have included a helper function to download and assemble a "fat" pacakge that contains everything that would be downloaded lazily at build time.
