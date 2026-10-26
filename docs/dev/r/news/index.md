@@ -4,6 +4,8 @@
 
 ## arrow 26.0.0
 
+CRAN release: 2026-10-24
+
 ### Breaking changes
 
 - The `.data.frame` argument to
