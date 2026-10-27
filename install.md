@@ -58,6 +58,9 @@ These include the Apache Arrow and Apache Parquet C++ binary libraries bundled w
 
 ### C++ and GLib (C) Packages for Debian GNU/Linux, Ubuntu, AlmaLinux, CentOS, Red Hat Enterprise Linux, Amazon Linux and Oracle Linux
 
+{% assign arrow_version = site.data.versions['current'].number | split: '.' -%}
+{% assign arrow_so_version = arrow_version[0] | times: 100 | plus: arrow_version[1] -%}
+
 We have provided APT and Yum repositories for Apache Arrow C++ and Apache Arrow GLib (C). Here are supported platforms:
 
 * Debian GNU/Linux bookworm
@@ -94,6 +97,7 @@ sudo apt install -y -V libarrow-flight-dev # For Apache Arrow Flight C++
 sudo apt install -y -V libarrow-flight-glib-dev # For Apache Arrow Flight GLib (C)
 sudo apt install -y -V libarrow-flight-sql-dev # For Apache Arrow Flight SQL C++
 sudo apt install -y -V libarrow-flight-sql-glib-dev # For Apache Arrow Flight SQL GLib (C)
+# NOTE: The ODBC driver for Apache Arrow Flight SQL is only available as RPM, not on DEB-based platforms
 sudo apt install -y -V libgandiva-dev # For Gandiva C++
 sudo apt install -y -V libgandiva-glib-dev # For Gandiva GLib (C)
 sudo apt install -y -V libparquet-dev # For Apache Parquet C++
@@ -120,6 +124,7 @@ sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
 sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
 sudo dnf install -y arrow-flight-sql-devel # For Apache Arrow Flight SQL C++
 sudo dnf install -y arrow-flight-sql-glib-devel # For Apache Arrow Flight SQL GLib (C)
+sudo dnf install -y arrow{{arrow_so_version}}-flight-sql-odbc-libs # For Apache Arrow Flight SQL ODBC Driver
 sudo dnf install -y gandiva-devel # For Apache Gandiva C++
 sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
 sudo dnf install -y parquet-devel # For Apache Parquet C++
@@ -153,6 +158,7 @@ sudo dnf install -y arrow-flight-devel # For Apache Arrow Flight C++
 sudo dnf install -y arrow-flight-glib-devel # For Apache Arrow Flight GLib (C)
 sudo dnf install -y arrow-flight-sql-devel # For Apache Arrow Flight SQL C++
 sudo dnf install -y arrow-flight-sql-glib-devel # For Apache Arrow Flight SQL GLib (C)
+sudo dnf install -y arrow{{arrow_so_version}}-flight-sql-odbc-libs # For Apache Arrow Flight SQL ODBC Driver
 sudo dnf install -y gandiva-devel # For Apache Gandiva C++
 sudo dnf install -y gandiva-glib-devel # For Apache Gandiva GLib (C)
 sudo dnf install -y parquet-devel # For Apache Parquet C++
