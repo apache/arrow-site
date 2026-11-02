@@ -65,7 +65,6 @@ We have provided APT and Yum repositories for Apache Arrow C++ and Apache Arrow 
 
 * Debian GNU/Linux trixie
 * Debian GNU/Linux forky
-* Ubuntu 20.04 LTS
 * Ubuntu 22.04 LTS
 * Ubuntu 24.04 LTS
 * Ubuntu 26.04 LTS
