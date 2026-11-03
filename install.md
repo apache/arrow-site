@@ -74,6 +74,7 @@ We have provided APT and Yum repositories for Apache Arrow C++ and Apache Arrow 
 * CentOS Stream 9
 * Red Hat Enterprise Linux 8
 * Red Hat Enterprise Linux 9
+* Red Hat Enterprise Linux 10
 * Amazon Linux 2023
 * Oracle Linux 8
 * Oracle Linux 9
@@ -102,7 +103,7 @@ sudo apt install -y -V libparquet-dev # For Apache Parquet C++
 sudo apt install -y -V libparquet-glib-dev # For Apache Parquet GLib (C)
 ```
 
-AlmaLinux 8/9/10, Oracle Linux 8/9, Red Hat Enterprise Linux 8/9 and CentOS Stream 9:
+AlmaLinux 8/9/10, Oracle Linux 8/9, Red Hat Enterprise Linux 8/9/10 and CentOS Stream 9:
 
 ```shell
 sudo dnf install -y epel-release || sudo dnf install -y oracle-epel-release-el$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1) || sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(cut -d: -f5 /etc/system-release-cpe | cut -d. -f1).noarch.rpm
