@@ -46,7 +46,7 @@ ds |>
   to_arrow() |>
   collect()
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> i /tmp/RtmpJU6uN3/duckdb
+#> i /tmp/RtmpToaSsY/duckdb
 #> This is removed when the R session ends.
 #> * Extensions are re-downloaded each session.
 #> * Secrets are lost.
