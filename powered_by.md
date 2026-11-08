@@ -192,6 +192,10 @@ short description of your use case.
   on both GPUs and CPUs. OmniSci supports Arrow for data ingest and data interchange
   via CUDA IPC handles. This work is part of the [GPU Open Analytics Initiative][11]
 * **[OpenObserve][50]:** Petabyte scale observability tool for logs, metrics, and traces with visualizations. High focus on usability and simplicity. Supports opentelemetry and many existing log and metrics forwarders.
+* **[Opteryx][69]:** Hosted SQL engine for querying files where they live.
+  Its Arrow Flight SQL endpoint, built on `pyarrow.flight`, returns query
+  results as Arrow record batches, so ADBC, JDBC and Python Flight SQL clients
+  can connect and read them directly.
 * **[pandas][12]:** data analysis toolkit for Python programmers. pandas
   supports reading and writing Parquet files using pyarrow. Several pandas
   core developers are also contributors to Apache Arrow.
@@ -341,3 +345,4 @@ short description of your use case.
 [66]: https://query.farm/products/extensions/airport/
 [67]: https://query.farm/vgi/
 [68]: https://supermetal.io/
+[69]: https://opteryx.app/
