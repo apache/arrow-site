@@ -82,6 +82,12 @@ short description of your use case.
    ClickHouse is using Apache Arrow for data import and export, and for direct querying of external datasets 
    in Arrow, ArrowStream, Parquet and ORC formats.
 * **[CloudQuery][48]**: An open-source high performance ELT framework powered by Apache Arrow's type system.
+* **[Columnwire][69]:** A Spring Boot starter and npm package that serve Java records as
+  Arrow IPC streams from existing Spring MVC endpoints whenever a client asks for
+  `application/vnd.apache.arrow.stream`, while every other client keeps receiving JSON.
+  It uses Arrow Java (`arrow-vector`, `arrow-memory-unsafe`) to encode record batches as they are
+  produced, and Arrow JS to stream them into a React hook and a virtualized grid that reads
+  columns without building row objects.
 * **[Cylon][35]:**  An open-source high performance distributed data processing library 
   that can be seamlessly integrated with existing Big Data and AI/ML frameworks. Cylon
   uses Arrow memory format and exposes language bindings to C++, Java, and Python.
@@ -341,3 +347,4 @@ short description of your use case.
 [66]: https://query.farm/products/extensions/airport/
 [67]: https://query.farm/vgi/
 [68]: https://supermetal.io/
+[69]: https://github.com/DHARANEESH-SRINIVASAN/columnwire
