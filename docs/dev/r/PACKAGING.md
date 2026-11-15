@@ -115,7 +115,7 @@ Tag the tip of the CRAN-specific release branch with
 `r-universe-release`;
 e.g. `git tag -f r-universe-release maint-X.Y.Z-r && git push upstream r-universe-release --force`
 
-Add a new line to the matrix in the [backwards compatability
+Add a new line to the matrix in the [backwards compatibility
 job](https://github.com/apache/arrow/blob/main/dev/tasks/r/github.linux.arrow.version.back.compat.yml).
 
 (patch releases only) Update the package version in
