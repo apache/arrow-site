@@ -196,6 +196,12 @@ short description of your use case.
   Its Arrow Flight SQL endpoint, built on `pyarrow.flight`, returns query
   results as Arrow record batches, so ADBC, JDBC and Python Flight SQL clients
   can connect and read them directly.
+* **[Orkidea][70]:** An open source ADBC driver for Oracle Database, written in
+  Rust, and a DuckDB extension built on it. The driver decodes Oracle's network
+  protocol straight into Arrow record batches with arrow-rs, implements the
+  ADBC API with the arrow-adbc Rust crates, and loads Arrow data into Oracle.
+  The extension streams those batches into DuckDB through the Arrow C stream
+  interface.
 * **[pandas][12]:** data analysis toolkit for Python programmers. pandas
   supports reading and writing Parquet files using pyarrow. Several pandas
   core developers are also contributors to Apache Arrow.
@@ -346,3 +352,4 @@ short description of your use case.
 [67]: https://query.farm/vgi/
 [68]: https://supermetal.io/
 [69]: https://opteryx.app/
+[70]: https://github.com/Tnsor-Labs/orkidea-adbc
