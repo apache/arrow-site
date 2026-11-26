@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Reading and Writing the Apache ORC Format &#8212; Apache Arrow v27.0.0.dev161</title>
+    <title>Reading and Writing the Apache ORC Format &#8212; Apache Arrow v27.0.0.dev171</title>
   
   
   
@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=4fbabe9c"></script>
+    <script src="../_static/documentation_options.js?v=2b756ed8"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -65,7 +65,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="27.0.0.dev161" />
+  <meta name="docsearch:version" content="27.0.0.dev171" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -156,8 +156,8 @@
       
     
     
-    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v27.0.0.dev161 - Home"/>
-    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v27.0.0.dev161 - Home"/>
+    <img src="../_static/arrow.png" class="logo__image only-light" alt="Apache Arrow v27.0.0.dev171 - Home"/>
+    <img src="../_static/arrow-dark.png" class="logo__image only-dark pst-js-only" alt="Apache Arrow v27.0.0.dev171 - Home"/>
   
   
 </a></div>
@@ -1481,7 +1481,9 @@
 <li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.FileSystemFactoryOptions.html">pyarrow.dataset.FileSystemFactoryOptions</a></li>
 <li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.FileSystemDatasetFactory.html">pyarrow.dataset.FileSystemDatasetFactory</a></li>
 <li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.UnionDataset.html">pyarrow.dataset.UnionDataset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.FilteredDataset.html">pyarrow.dataset.FilteredDataset</a></li>
 <li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.Fragment.html">pyarrow.dataset.Fragment</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.FilteredFragment.html">pyarrow.dataset.FilteredFragment</a></li>
 <li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.FragmentScanOptions.html">pyarrow.dataset.FragmentScanOptions</a></li>
 <li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.TaggedRecordBatch.html">pyarrow.dataset.TaggedRecordBatch</a></li>
 <li class="toctree-l4"><a class="reference internal" href="generated/pyarrow.dataset.Scanner.html">pyarrow.dataset.Scanner</a></li>
@@ -1710,6 +1712,30 @@ concatenate them into a single table. You can read individual stripes with
 <span class="go">three: [true,false,true]</span>
 </pre></div>
 </div>
+<p>To consume a file in batches without first materializing an entire stripe as
+Arrow data, use <a class="reference internal" href="generated/pyarrow.orc.ORCFile.html#pyarrow.orc.ORCFile.iter_batches" title="pyarrow.orc.ORCFile.iter_batches"><code class="xref py py-meth docutils literal notranslate"><span class="pre">iter_batches()</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">batches</span> <span class="o">=</span> <span class="n">orc_file</span><span class="o">.</span><span class="n">iter_batches</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stripes</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">'one'</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">batch</span><span class="o">.</span><span class="n">num_rows</span> <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">]</span>
+<span class="go">[2, 1]</span>
+</pre></div>
+</div>
+<p>Omitting <code class="docutils literal notranslate"><span class="pre">stripes</span></code> reads the entire file in physical order. An explicit
+sequence reads stripes in the supplied order, including repetitions; an empty
+sequence reads nothing. Column selection uses the same syntax as <code class="docutils literal notranslate"><span class="pre">read_stripe</span></code>:
+column names (including nested paths) or top-level integer indices. Mixing names and
+indices is not supported. <code class="docutils literal notranslate"><span class="pre">columns=[]</span></code> returns zero-column batches with the
+correct row counts.</p>
+<p>Reading begins when the iterator is consumed. When stopping early, call
+<code class="docutils literal notranslate"><span class="pre">close()</span></code> to release its reader:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">batches</span> <span class="o">=</span> <span class="n">orc_file</span><span class="o">.</span><span class="n">iter_batches</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">first_batch</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">batches</span><span class="p">)</span>
+<span class="gp">... </span><span class="k">finally</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">batches</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Closing the iterator does not close a file object supplied by the caller.
+<code class="docutils literal notranslate"><span class="pre">batch_size</span></code> bounds the number of output rows, not total process memory.</p>
 <p>We can write an ORC file using <code class="docutils literal notranslate"><span class="pre">ORCWriter</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">orc</span><span class="o">.</span><span class="n">ORCWriter</span><span class="p">(</span><span class="s1">'example2.orc'</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
