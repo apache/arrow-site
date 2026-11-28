@@ -356,7 +356,7 @@ sw |>
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## i /tmp/RtmpddY7xX/duckdb
+    ## i /tmp/Rtmp4BCf8I/duckdb
     ## This is removed when the R session ends.
     ## * Extensions are re-downloaded each session.
     ## * Secrets are lost.
